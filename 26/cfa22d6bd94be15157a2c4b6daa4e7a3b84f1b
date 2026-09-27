@@ -1,0 +1,25 @@
+internal/kitty/kitty_test.go
+  s_c039b43dfc0ee5::t_40c821f3071606 1-133
+internal/kitty/kitty.go
+  s_c039b43dfc0ee5::t_e605c7190c3d20 1-170
+internal/browser/browser.go
+  s_c039b43dfc0ee5::t_15355258ab7421 1-29
+internal/browser/browser_test.go
+  s_c039b43dfc0ee5::t_88cf0f2ae9d65f 1-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "26cfa22d6bd94be15157a2c4b6daa4e7a3b84f1b",
+  "prompts": {},
+  "sessions": {
+    "s_c039b43dfc0ee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "121ad4b1-ee50-491a-98e8-f8d585471f34",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

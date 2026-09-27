@@ -72,3 +72,6 @@ func (s *State) TouchProject(gid string) {
 func (s *State) LinkRepo(projectGID, path string) {
 	s.Repos[projectGID] = path
 }
+
+// Path returns the file the state is saved to.
+func (s *State) Path() string { return s.path }

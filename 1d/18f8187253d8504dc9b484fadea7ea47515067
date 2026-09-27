@@ -1,0 +1,27 @@
+go.mod
+  s_c039b43dfc0ee5::t_58c6427c208f8e 1-5
+internal/config/config.go
+  s_c039b43dfc0ee5::t_8cbdd764ac8589 1-157
+.gitignore
+  s_c039b43dfc0ee5::t_58c6427c208f8e 1-2
+internal/config/config_test.go
+  s_c039b43dfc0ee5::t_90467b78fd9596 1-106
+go.sum
+  s_c039b43dfc0ee5::t_8bc3b4d2925ba2 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1d18f8187253d8504dc9b484fadea7ea47515067",
+  "prompts": {},
+  "sessions": {
+    "s_c039b43dfc0ee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "121ad4b1-ee50-491a-98e8-f8d585471f34",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

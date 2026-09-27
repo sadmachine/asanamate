@@ -2,15 +2,19 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/setup"
+	"github.com/sadmachine/asanamate/internal/state"
 	"github.com/sadmachine/asanamate/internal/writeback"
 )
 
@@ -34,6 +38,8 @@ func run(args []string) int {
 	}
 	var err error
 	switch name {
+	case "setup":
+		err = runSetup()
 	case "comment", "move", "field":
 		err = writeCommand(name, args[1:])
 	case "version":
@@ -127,4 +133,23 @@ func writeCommand(name string, args []string) error {
 	default:
 		return svc.SetField(ctx, gid, rest[1], rest[2])
 	}
+}
+
+func runSetup() error {
+	client, err := newClient()
+	if err != nil {
+		return err
+	}
+	configPath, err := config.Path()
+	if err != nil {
+		return err
+	}
+	stateDir, err := config.StateDir()
+	if err != nil {
+		return err
+	}
+	return setup.Run(context.Background(), setup.Options{
+		In: bufio.NewReader(os.Stdin), Out: os.Stdout, Client: client,
+		ConfigPath: configPath, StatePath: filepath.Join(stateDir, state.FileName),
+	})
 }

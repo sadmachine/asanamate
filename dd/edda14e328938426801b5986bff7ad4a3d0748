@@ -1,0 +1,46 @@
+docs/superpowers/plans/2026-09-27-asanamate.md
+  s_c039b43dfc0ee5::t_829f9c9aa1550a 18-19
+  s_c039b43dfc0ee5::t_139fee7eb085c5 1519
+  s_c039b43dfc0ee5::t_5a42105aacab89 1147-1148
+  s_c039b43dfc0ee5::t_1b3f1ac5a2c556 553
+  s_c039b43dfc0ee5::t_31376e0e75cc18 671
+  s_c039b43dfc0ee5::t_e85476b9c1686f 1679-1689
+  s_c039b43dfc0ee5::t_0363b04b6f295f 1580-1589
+  s_c039b43dfc0ee5::t_63ddf455b422bf 4497
+  s_c039b43dfc0ee5::t_5c3fac0ff10c80 1-17,20-552,554-670,672-791,804-1146,1149-1261,1290-1305,1307-1312,1327-1518,1520-1579,1590-1678,1690-3947,3949-4099,4102-4145,4147-4369,4377,4379-4496,4498-4685,4687-4933,4935-5194,5699-5847,5849-5865,5886-5987,5990-6022
+  s_c039b43dfc0ee5::t_fba10dc53169eb 1262-1289
+  s_c039b43dfc0ee5::t_a4ea667c6a7f0c 5988-5989
+  s_c039b43dfc0ee5::t_3b5136a9cdfd02 5866-5885
+  s_c039b43dfc0ee5::t_6e51b2bb33dfcf 792-803
+  s_c039b43dfc0ee5::t_77611cbeeaa337 5195-5698
+  s_c039b43dfc0ee5::t_11af1e318346eb 4934
+  s_c039b43dfc0ee5::t_9ca3ad817c37a8 5848
+  s_c039b43dfc0ee5::t_41aca530235ed2 4100-4101
+  s_c039b43dfc0ee5::t_80f393670111bd 3948
+  s_c039b43dfc0ee5::t_79c60a6e075eeb 4146
+  s_c039b43dfc0ee5::t_1cf9f1913cbe76 4370-4376,4378
+  s_c039b43dfc0ee5::t_ce496dd5231bc6 1306,1313-1326
+  s_c039b43dfc0ee5::t_3eb52956e93aac 4686
+docs/superpowers/specs/2026-09-27-asanamate-design.md
+  s_c039b43dfc0ee5::t_8baaff98705a0a 288-315
+  s_c039b43dfc0ee5::t_cebe149254d78e 1-29,32-274,276-287,316-338,341-344
+  s_c039b43dfc0ee5::t_3d6edc762baba4 30-31
+  s_c039b43dfc0ee5::t_cb27a7ea667c25 275
+  s_c039b43dfc0ee5::t_8c057825a1a076 339-340
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ddedda14e328938426801b5986bff7ad4a3d0748",
+  "prompts": {},
+  "sessions": {
+    "s_c039b43dfc0ee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "121ad4b1-ee50-491a-98e8-f8d585471f34",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

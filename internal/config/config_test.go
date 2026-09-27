@@ -1,0 +1,106 @@
+package config
+
+import (
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func writeFile(t *testing.T, body string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestLoadAppliesDefaults(t *testing.T) {
+	cfg, err := Load(writeFile(t, `workspace = "123"
+[[actions]]
+name = "View"
+key = "v"
+command = "less \"$ASANAMATE_TICKET_MD\""
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Theme != "dark" || cfg.Images != "auto" || cfg.DefaultFilter != "is:open" || !cfg.ConfirmWrites {
+		t.Fatalf("defaults not applied: %+v", cfg)
+	}
+	if cfg.Actions[0].Mode != ModeForeground {
+		t.Fatalf("mode = %q, want %q", cfg.Actions[0].Mode, ModeForeground)
+	}
+}
+
+func TestLoadMissingFile(t *testing.T) {
+	_, err := Load(filepath.Join(t.TempDir(), "missing.toml"))
+	if !errors.Is(err, ErrNotConfigured) {
+		t.Fatalf("err = %v, want ErrNotConfigured", err)
+	}
+}
+
+func TestLoadRejectsInvalid(t *testing.T) {
+	cases := map[string]string{
+		"unknown key":   "workspace = \"1\"\nworkspaec = \"2\"\n",
+		"no workspace":  "theme = \"dark\"\n",
+		"bad theme":     "workspace = \"1\"\ntheme = \"blue\"\n",
+		"bad images":    "workspace = \"1\"\nimages = \"sixel\"\n",
+		"bad mode":      "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"a\"\nmode = \"later\"\ncommand = \"true\"\n",
+		"long key":      "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"ab\"\ncommand = \"true\"\n",
+		"duplicate key": "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"x\"\ncommand = \"true\"\n[[actions]]\nname = \"b\"\nkey = \"x\"\ncommand = \"true\"\n",
+		"no command":    "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"a\"\n",
+	}
+	for name, body := range cases {
+		t.Run(name, func(t *testing.T) {
+			if _, err := Load(writeFile(t, body)); err == nil {
+				t.Fatal("expected an error")
+			}
+		})
+	}
+}
+
+func TestConfirmWritesFor(t *testing.T) {
+	off := false
+	cfg := Config{ConfirmWrites: true}
+	if !cfg.ConfirmWritesFor(Action{}) {
+		t.Fatal("want the global default (true)")
+	}
+	if cfg.ConfirmWritesFor(Action{ConfirmWrites: &off}) {
+		t.Fatal("want the action override (false)")
+	}
+}
+
+func TestDirsHonorXDG(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "/tmp/cfg")
+	t.Setenv("XDG_STATE_HOME", "/tmp/state")
+	p, _ := Path()
+	s, _ := StateDir()
+	if p != "/tmp/cfg/asanamate/config.toml" || s != "/tmp/state/asanamate" {
+		t.Fatalf("got %s and %s", p, s)
+	}
+}
+
+func TestDirsFallBackToHome(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("XDG_STATE_HOME", "")
+	t.Setenv("HOME", "/home/u")
+	p, _ := Path()
+	s, _ := StateDir()
+	if p != "/home/u/.config/asanamate/config.toml" || s != "/home/u/.local/state/asanamate" {
+		t.Fatalf("got %s and %s", p, s)
+	}
+}
+
+func TestToken(t *testing.T) {
+	t.Setenv(TokenEnv, "  ")
+	if _, err := Token(); err == nil || !strings.Contains(err.Error(), TokenEnv) {
+		t.Fatalf("err = %v, want mention of %s", err, TokenEnv)
+	}
+	t.Setenv(TokenEnv, "abc")
+	if tok, err := Token(); err != nil || tok != "abc" {
+		t.Fatalf("token = %q, err = %v", tok, err)
+	}
+}

@@ -16,6 +16,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/prompt"
 	"github.com/sadmachine/asanamate/internal/repo"
+	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
 const defaultRepoRoot = "~/code"
@@ -44,7 +45,7 @@ func Run(ctx context.Context, o Options) error {
 	if err != nil {
 		return fmt.Errorf("could not authenticate with %s: %w", config.TokenEnv, err)
 	}
-	fmt.Fprintf(o.Out, "Authenticated as %s.\n", me.Name)
+	fmt.Fprintf(o.Out, "Authenticated as %s.\n", ticket.Clean(me.Name))
 	workspace, err := chooseWorkspace(o, me.Workspaces)
 	if err != nil {
 		return err
@@ -71,12 +72,12 @@ func chooseWorkspace(o Options, workspaces []asana.Ref) (asana.Ref, error) {
 	case 0:
 		return asana.Ref{}, errors.New("your Asana account has no workspaces")
 	case 1:
-		fmt.Fprintf(o.Out, "Using workspace %s.\n", workspaces[0].Name)
+		fmt.Fprintf(o.Out, "Using workspace %s.\n", ticket.Clean(workspaces[0].Name))
 		return workspaces[0], nil
 	}
 	fmt.Fprintln(o.Out, "Workspaces:")
 	for i, w := range workspaces {
-		fmt.Fprintf(o.Out, "  %d) %s\n", i+1, w.Name)
+		fmt.Fprintf(o.Out, "  %d) %s\n", i+1, ticket.Clean(w.Name))
 	}
 	for {
 		answer, err := prompt.Line(o.In, o.Out, "Workspace number", "1")
@@ -114,7 +115,7 @@ func chooseRepoRoot(o Options) (string, error) {
 
 // Render returns the commented config file for a workspace and repo directory.
 func Render(workspace asana.Ref, repoRoot string) string {
-	name := strings.Join(strings.Fields(workspace.Name), " ")
+	name := strings.Join(strings.Fields(ticket.Clean(workspace.Name)), " ")
 	return fmt.Sprintf(configTemplate, name, workspace.GID, repoRoot, repoRoot)
 }
 

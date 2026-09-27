@@ -23,6 +23,9 @@ import (
 
 const chunkSize = 4096
 
+// maxPixels caps decoded image size; a small file can declare huge dimensions.
+const maxPixels = 50_000_000
+
 var (
 	httpClient    = &http.Client{Timeout: 30 * time.Second}
 	maxImageBytes = 20 << 20
@@ -101,6 +104,13 @@ func Download(ctx context.Context, rawURL string) ([]byte, error) {
 // Encode converts an image to kitty graphics escape sequences sized to fit
 // cols x rows cells, assuming cells are about twice as tall as wide.
 func Encode(data []byte, cols, rows int, inTmux bool) (string, error) {
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("decode image: %w", err)
+	}
+	if cfg.Width*cfg.Height > maxPixels {
+		return "", fmt.Errorf("image is too large to display (%dx%d)", cfg.Width, cfg.Height)
+	}
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("decode image: %w", err)

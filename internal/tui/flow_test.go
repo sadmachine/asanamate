@@ -128,3 +128,15 @@ func TestNonRepoActionUsesViewedProject(t *testing.T) {
 		t.Fatalf("exit command = %+v", cmd)
 	}
 }
+
+func TestRepoLinkInsideParentRepoReprompts(t *testing.T) {
+	outer := gitRepo(t)
+	inner := filepath.Join(outer, "proj")
+	os.Mkdir(inner, 0o755)
+	m, st := flowModel(t, web)
+	st.LinkRepo("p1", inner)
+	cmd := m.pickedAction(0)
+	if m.ExitCommand() != nil || cmd == nil || !strings.Contains(m.status, "no longer a git repository") {
+		t.Fatalf("ran in parent repo: exit = %+v, status = %q", m.ExitCommand(), m.status)
+	}
+}

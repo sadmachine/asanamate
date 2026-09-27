@@ -188,8 +188,10 @@ func Command(a config.Action, c Context) *exec.Cmd {
 	return cmd
 }
 
-// RunBackground runs cmd in its own process group with output appended to
-// logPath, and waits for it to exit. The process survives asanamate quitting.
+// RunBackground runs cmd in a new session with output appended to logPath,
+// and waits for it to exit. The new session has no controlling terminal, so a
+// confirmation prompt fails fast instead of blocking, and the process survives
+// asanamate quitting.
 func RunBackground(cmd *exec.Cmd, logPath string) error {
 	if err := os.MkdirAll(filepath.Dir(logPath), 0o700); err != nil {
 		return err
@@ -201,6 +203,17 @@ func RunBackground(cmd *exec.Cmd, logPath string) error {
 	defer log.Close()
 	fmt.Fprintf(log, "--- %s %s\n", time.Now().Format(time.RFC3339), cmd.Args[len(cmd.Args)-1])
 	cmd.Stdout, cmd.Stderr = log, log
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	return cmd.Run()
+}
+
+// Exec replaces the current process with cmd, so the command owns the
+// terminal, receives signals directly, and its exit status becomes ours.
+func Exec(cmd *exec.Cmd) error {
+	if cmd.Dir != "" {
+		if err := os.Chdir(cmd.Dir); err != nil {
+			return err
+		}
+	}
+	return syscall.Exec(cmd.Path, cmd.Args, cmd.Env)
 }

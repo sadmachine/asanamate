@@ -3,6 +3,8 @@ package kitty
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/png"
@@ -129,5 +131,22 @@ func TestViewerWritesPayloadAndClears(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "PAYLOAD") || !strings.HasSuffix(out.String(), Clear(false)) {
 		t.Fatalf("out = %q", out.String())
+	}
+}
+
+func TestEncodeRejectsHugeDimensions(t *testing.T) {
+	ihdr := make([]byte, 13)
+	binary.BigEndian.PutUint32(ihdr[0:], 40000)
+	binary.BigEndian.PutUint32(ihdr[4:], 40000)
+	ihdr[8], ihdr[9] = 8, 6
+	var b bytes.Buffer
+	b.WriteString("\x89PNG\r\n\x1a\n")
+	binary.Write(&b, binary.BigEndian, uint32(len(ihdr)))
+	chunk := append([]byte("IHDR"), ihdr...)
+	b.Write(chunk)
+	binary.Write(&b, binary.BigEndian, crc32.ChecksumIEEE(chunk))
+	_, err := Encode(b.Bytes(), 80, 24, false)
+	if err == nil || !strings.Contains(err.Error(), "too large") {
+		t.Fatalf("err = %v, want a too-large error", err)
 	}
 }

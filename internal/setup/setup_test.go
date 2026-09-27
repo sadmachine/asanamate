@@ -70,3 +70,19 @@ func TestRunKeepsExistingConfigWhenDeclined(t *testing.T) {
 		t.Fatalf("config overwritten: %q", data)
 	}
 }
+
+func TestOutputStripsControlCharacters(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"data":{"gid":"u","name":"Ann\u001b[2J","workspaces":[{"gid":"w1","name":"Evil\u001b]0;x\u0007"}]}}`)
+	}))
+	defer srv.Close()
+	o, out := options(t, t.TempDir()+"\n")
+	o.Client = asana.New("tok")
+	o.Client.BaseURL = srv.URL
+	if err := Run(context.Background(), o); err != nil {
+		t.Fatal(err)
+	}
+	if strings.ContainsAny(out.String(), "\x1b\x07") {
+		t.Fatalf("control characters printed: %q", out.String())
+	}
+}

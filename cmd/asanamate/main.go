@@ -4,18 +4,17 @@ package main
 import (
 	"bufio"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/filter"
@@ -71,10 +70,6 @@ func run(args []string) int {
 			return 2
 		}
 		err = runTUI(args)
-	}
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		return exitErr.ExitCode()
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "asanamate:", err)
@@ -219,8 +214,7 @@ func runTUI(args []string) error {
 	if cmd == nil {
 		return nil
 	}
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	return cmd.Run()
+	return action.Exec(cmd)
 }
 
 func runList(args []string) error {

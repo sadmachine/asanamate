@@ -96,7 +96,9 @@ func (m *Model) continueRun() tea.Cmd {
 	}
 	if r.project != nil {
 		if path, ok := m.deps.State.Repos[r.project.GID]; ok {
-			if resolved, err := repo.Resolve(path); err == nil {
+			// Links are saved as top-level paths; a different result means the
+			// directory is no longer its own repo (it may sit inside a parent one).
+			if resolved, err := repo.Resolve(path); err == nil && resolved == path {
 				return m.execute(resolved)
 			}
 			m.status = fmt.Sprintf("linked repo %s is no longer a git repository; pick again", path)

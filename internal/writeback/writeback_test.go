@@ -163,3 +163,23 @@ func TestSetFieldRejectsBadInput(t *testing.T) {
 		t.Fatalf("writes = %+v", *writes)
 	}
 }
+
+func TestMessagesStripControlCharacters(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/tasks/1":
+			io.WriteString(w, `{"data":{"gid":"1","name":"T","memberships":[{"project":{"gid":"p1","name":"Web\u001b]0;x\u0007"}},{"project":{"gid":"p2","name":"API"}}]}}`)
+		case "/projects/p1/sections":
+			io.WriteString(w, `{"data":[{"gid":"s1","name":"To Do\u001b[2J"}]}`)
+		}
+	}))
+	defer srv.Close()
+	c := asana.New("tok")
+	c.BaseURL = srv.URL
+	svc := Service{Client: c}
+	for _, err := range []error{svc.Move(ctx, "1", "Nope", "p1"), svc.Move(ctx, "1", "Nope", "")} {
+		if err == nil || strings.ContainsAny(err.Error(), "\x1b\x07") {
+			t.Errorf("err = %q", err)
+		}
+	}
+}

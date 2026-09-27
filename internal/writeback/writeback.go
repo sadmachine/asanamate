@@ -12,6 +12,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/prompt"
+	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
 var (
@@ -102,14 +103,14 @@ func (s Service) Move(ctx context.Context, gid, sectionName, projectGID string) 
 	var names []string
 	for _, sec := range sections {
 		if strings.EqualFold(strings.TrimSpace(sec.Name), strings.TrimSpace(sectionName)) {
-			if err := s.confirm(fmt.Sprintf("Move %q to %s / %s?", t.Name, project.Name, sec.Name)); err != nil {
+			if err := s.confirm(fmt.Sprintf("Move %q to %s / %s?", t.Name, ticket.Clean(project.Name), ticket.Clean(sec.Name))); err != nil {
 				return err
 			}
 			return s.Client.AddToSection(ctx, sec.GID, gid)
 		}
-		names = append(names, sec.Name)
+		names = append(names, ticket.Clean(sec.Name))
 	}
-	return fmt.Errorf("no section %q in %s; sections: %s", sectionName, project.Name, strings.Join(names, ", "))
+	return fmt.Errorf("no section %q in %s; sections: %s", sectionName, ticket.Clean(project.Name), strings.Join(names, ", "))
 }
 
 func pickProject(t asana.Task, projectGID string) (asana.Ref, error) {
@@ -118,7 +119,7 @@ func pickProject(t asana.Task, projectGID string) (asana.Ref, error) {
 		if m.Project.GID == projectGID {
 			return m.Project, nil
 		}
-		choices = append(choices, fmt.Sprintf("%s (%s)", m.Project.Name, m.Project.GID))
+		choices = append(choices, fmt.Sprintf("%s (%s)", ticket.Clean(m.Project.Name), m.Project.GID))
 	}
 	switch {
 	case projectGID != "":
@@ -154,7 +155,7 @@ func (s Service) SetField(ctx context.Context, gid, fieldName, value string) err
 }
 
 func fieldValue(f asana.CustomField, value string) (any, error) {
-	name := strings.TrimSpace(f.Name)
+	name := ticket.Clean(strings.TrimSpace(f.Name))
 	if value == "" {
 		return nil, nil
 	}
@@ -173,7 +174,7 @@ func fieldValue(f asana.CustomField, value string) (any, error) {
 			if strings.EqualFold(o.Name, value) {
 				return o.GID, nil
 			}
-			options = append(options, o.Name)
+			options = append(options, ticket.Clean(o.Name))
 		}
 		return nil, fmt.Errorf("%s has no option %q; options: %s", name, value, strings.Join(options, ", "))
 	}

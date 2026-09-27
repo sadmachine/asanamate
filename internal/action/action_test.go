@@ -2,12 +2,16 @@ package action
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
@@ -121,5 +125,47 @@ func TestRunBackgroundLogsOutput(t *testing.T) {
 	data, _ := os.ReadFile(logPath)
 	if !strings.Contains(string(data), "hello") {
 		t.Fatalf("log = %q", data)
+	}
+}
+
+func TestRunBackgroundStartsNewSession(t *testing.T) {
+	cmd := exec.Command("/bin/sh", "-c", "sleep 1")
+	done := make(chan error, 1)
+	go func() { done <- RunBackground(cmd, filepath.Join(t.TempDir(), "actions.log")) }()
+	for i := 0; i < 100 && cmd.Process == nil; i++ {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if cmd.Process == nil {
+		t.Fatal("process did not start")
+	}
+	child, err := unix.Getsid(cmd.Process.Pid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent, _ := unix.Getsid(0)
+	if child == parent {
+		t.Fatal("background action shares asanamate's session, so it can open /dev/tty and block on a prompt")
+	}
+	<-done
+}
+
+func TestExecReplacesProcess(t *testing.T) {
+	if os.Getenv("ASANAMATE_TEST_EXEC") == "1" {
+		cmd := exec.Command("/bin/sh", "-c", "trap '' INT; sleep 0.5; exit 7")
+		cmd.Env = os.Environ()
+		err := Exec(cmd)
+		t.Fatalf("Exec returned: %v", err)
+	}
+	helper := exec.Command(os.Args[0], "-test.run=^TestExecReplacesProcess$")
+	helper.Env = append(os.Environ(), "ASANAMATE_TEST_EXEC=1")
+	if err := helper.Start(); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(200 * time.Millisecond)
+	helper.Process.Signal(os.Interrupt)
+	err := helper.Wait()
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 7 {
+		t.Fatalf("want the command's exit code 7 after Ctrl+C, got %v", err)
 	}
 }

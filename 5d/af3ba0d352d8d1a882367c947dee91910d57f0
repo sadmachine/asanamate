@@ -1,0 +1,25 @@
+.goreleaser.yaml
+  s_c039b43dfc0ee5::t_8bbeadcdf22f76 1-41
+.github/workflows/release.yml
+  s_c039b43dfc0ee5::t_55c1b59e9d486e 1-23
+README.md
+  s_c039b43dfc0ee5::t_9cece0fbc442f7 2-195
+.github/workflows/ci.yml
+  s_c039b43dfc0ee5::t_d91658628118fd 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5daf3ba0d352d8d1a882367c947dee91910d57f0",
+  "prompts": {},
+  "sessions": {
+    "s_c039b43dfc0ee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "121ad4b1-ee50-491a-98e8-f8d585471f34",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

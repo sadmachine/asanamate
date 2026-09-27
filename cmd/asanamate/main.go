@@ -4,17 +4,23 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime/debug"
 
+	tea "charm.land/bubbletea/v2"
+
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/kitty"
 	"github.com/sadmachine/asanamate/internal/setup"
 	"github.com/sadmachine/asanamate/internal/state"
+	"github.com/sadmachine/asanamate/internal/tui"
 	"github.com/sadmachine/asanamate/internal/writeback"
 )
 
@@ -48,9 +54,15 @@ func run(args []string) int {
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 		return 0
+	case "":
+		err = runTUI()
 	default:
 		fmt.Fprint(os.Stderr, usage)
 		return 2
+	}
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return exitErr.ExitCode()
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "asanamate:", err)
@@ -152,4 +164,40 @@ func runSetup() error {
 		In: bufio.NewReader(os.Stdin), Out: os.Stdout, Client: client,
 		ConfigPath: configPath, StatePath: filepath.Join(stateDir, state.FileName),
 	})
+}
+
+func runTUI() error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	client, err := newClient()
+	if err != nil {
+		return err
+	}
+	stateDir, err := config.StateDir()
+	if err != nil {
+		return err
+	}
+	st, err := state.Load(filepath.Join(stateDir, state.FileName))
+	if err != nil {
+		return err
+	}
+	m := tui.New(tui.Deps{
+		Config:   cfg,
+		State:    st,
+		Client:   client,
+		StateDir: stateDir,
+		Images:   kitty.Supported(cfg.Images, os.Getenv, kitty.TmuxPassthrough),
+		InTmux:   os.Getenv("TMUX") != "",
+	})
+	if _, err := tea.NewProgram(m).Run(); err != nil {
+		return err
+	}
+	cmd := m.ExitCommand()
+	if cmd == nil {
+		return nil
+	}
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	return cmd.Run()
 }

@@ -32,6 +32,8 @@ type Deps struct {
 	StateDir string
 	Images   bool
 	InTmux   bool
+	// NoPreview hides the reading pane and gives the list the full width.
+	NoPreview bool
 }
 
 // Model is the Bubble Tea model for asanamate.
@@ -58,6 +60,7 @@ type Model struct {
 	projects []asana.Project
 	modal    *picker
 	run      *pendingRun
+	menuFor  string // gid whose action menu opens once its details arrive
 	status   string
 	exitCmd  *exec.Cmd
 }
@@ -113,11 +116,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if isSelected {
 				m.status = "loading ticket: " + msg.err.Error()
 			}
+			if m.menuFor == msg.gid {
+				m.menuFor = ""
+			}
 			return m, nil
 		}
 		m.details[msg.gid] = msg.ticket
 		if isSelected {
 			m.showDetail()
+			if m.menuFor == msg.gid {
+				m.menuFor = ""
+				m.openActionMenu()
+			}
 		}
 	case projectsMsg:
 		if msg.err != nil {
@@ -175,7 +185,9 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "q":
 		return tea.Quit
 	case "tab":
-		m.focusReader = !m.focusReader
+		if !m.deps.NoPreview {
+			m.focusReader = !m.focusReader
+		}
 		return nil
 	case "/":
 		m.filtering = true
@@ -196,9 +208,8 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return openURL(t.PermalinkURL)
 		}
 		return nil
-	case "a":
-		m.openActionMenu()
-		return nil
+	case "a", "enter":
+		return m.requestActionMenu()
 	case "f":
 		m.openAttachments()
 		return nil
@@ -323,6 +334,10 @@ func (m *Model) showDetail() {
 	if !ok {
 		return
 	}
+	if m.deps.NoPreview {
+		m.shownGID = t.GID
+		return
+	}
 	_, readerW, _ := m.paneWidths()
 	m.reader.SetContent(m.renderMarkdown(t.Markdown(), max(readerW-2, 20)))
 	m.reader.GotoTop()
@@ -383,7 +398,7 @@ func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {
 }
 
 func (m *Model) paneWidths() (listW, readerW int, split bool) {
-	if m.width < narrowWidth {
+	if m.deps.NoPreview || m.width < narrowWidth {
 		return m.width, m.width, false
 	}
 	listW = m.width * 2 / 5
@@ -424,7 +439,11 @@ func (m *Model) header() string {
 func (m *Model) footer() string {
 	s := m.status
 	if s == "" {
-		s = dimStyle.Render("j/k move · tab focus · / filter · p projects · a actions · f files · o open · r reload · q quit")
+		hints := "j/k move · enter actions · tab focus · / filter · p projects · f files · o open · r reload · q quit"
+		if m.deps.NoPreview {
+			hints = strings.Replace(hints, " · tab focus", "", 1)
+		}
+		s = dimStyle.Render(hints)
 	}
 	return ansi.Truncate(s, m.width, "…")
 }

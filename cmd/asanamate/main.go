@@ -12,14 +12,18 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/filter"
 	"github.com/sadmachine/asanamate/internal/kitty"
+	"github.com/sadmachine/asanamate/internal/listing"
 	"github.com/sadmachine/asanamate/internal/setup"
 	"github.com/sadmachine/asanamate/internal/state"
+	"github.com/sadmachine/asanamate/internal/ticket"
 	"github.com/sadmachine/asanamate/internal/tui"
 	"github.com/sadmachine/asanamate/internal/writeback"
 )
@@ -27,7 +31,10 @@ import (
 var version = "dev"
 
 const usage = `usage:
-  asanamate                                        open the TUI
+  asanamate [--no-preview]                         open the TUI (--no-preview: list only)
+  asanamate list [--project <gid>] [--filter <query>] [--format tsv|jsonl]
+                                                   print tickets (tsv: gid, section, due, title, url)
+  asanamate show [--format md|json] <gid>          print one ticket
   asanamate setup                                  create the config file
   asanamate comment [--yes] <gid> <text | ->       comment on a task ("-" reads stdin)
   asanamate move    [--yes] [--project <gid>] <gid> <section>
@@ -54,11 +61,16 @@ func run(args []string) int {
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 		return 0
-	case "":
-		err = runTUI()
+	case "list":
+		err = runList(args[1:])
+	case "show":
+		err = runShow(args[1:])
 	default:
-		fmt.Fprint(os.Stderr, usage)
-		return 2
+		if name != "" && !strings.HasPrefix(name, "-") {
+			fmt.Fprint(os.Stderr, usage)
+			return 2
+		}
+		err = runTUI(args)
 	}
 	var exitErr *exec.ExitError
 	if errors.As(err, &exitErr) {
@@ -166,7 +178,15 @@ func runSetup() error {
 	})
 }
 
-func runTUI() error {
+func runTUI(args []string) error {
+	fs := flag.NewFlagSet("asanamate", flag.ContinueOnError)
+	noPreview := fs.Bool("no-preview", false, "show only the ticket list")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("unexpected arguments %v\n%s", fs.Args(), usage)
+	}
 	cfg, err := loadConfig()
 	if err != nil {
 		return err
@@ -184,12 +204,13 @@ func runTUI() error {
 		return err
 	}
 	m := tui.New(tui.Deps{
-		Config:   cfg,
-		State:    st,
-		Client:   client,
-		StateDir: stateDir,
-		Images:   kitty.Supported(cfg.Images, os.Getenv, kitty.TmuxPassthrough),
-		InTmux:   os.Getenv("TMUX") != "",
+		Config:    cfg,
+		State:     st,
+		Client:    client,
+		StateDir:  stateDir,
+		Images:    kitty.Supported(cfg.Images, os.Getenv, kitty.TmuxPassthrough),
+		InTmux:    os.Getenv("TMUX") != "",
+		NoPreview: *noPreview,
 	})
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		return err
@@ -200,4 +221,62 @@ func runTUI() error {
 	}
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	return cmd.Run()
+}
+
+func runList(args []string) error {
+	fs := flag.NewFlagSet("list", flag.ContinueOnError)
+	project := fs.String("project", "", "project gid (default: My Tasks)")
+	query := fs.String("filter", "", "filter query (default: default_filter from the config)")
+	format := fs.String("format", listing.FormatTSV, "tsv or jsonl")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("unexpected arguments %v\n%s", fs.Args(), usage)
+	}
+	if *project != "" && !asana.ValidGID(*project) {
+		return fmt.Errorf("project gid must be numeric, got %q", *project)
+	}
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	client, err := newClient()
+	if err != nil {
+		return err
+	}
+	filterSet := false
+	fs.Visit(func(f *flag.Flag) { filterSet = filterSet || f.Name == "filter" })
+	if !filterSet {
+		*query = cfg.DefaultFilter
+	}
+	tasks, err := ticket.List(context.Background(), client, cfg.Workspace, *project)
+	if err != nil {
+		return err
+	}
+	return listing.Tasks(os.Stdout, *format, filter.Parse(*query).Apply(tasks), *project)
+}
+
+func runShow(args []string) error {
+	fs := flag.NewFlagSet("show", flag.ContinueOnError)
+	format := fs.String("format", listing.FormatMarkdown, "md or json")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() != 1 {
+		return fmt.Errorf("show needs exactly one task gid\n%s", usage)
+	}
+	gid := fs.Arg(0)
+	if !asana.ValidGID(gid) {
+		return fmt.Errorf("task gid must be numeric, got %q", gid)
+	}
+	client, err := newClient()
+	if err != nil {
+		return err
+	}
+	t, err := ticket.Fetch(context.Background(), client, gid)
+	if err != nil {
+		return err
+	}
+	return listing.Ticket(os.Stdout, *format, t)
 }

@@ -42,6 +42,22 @@ func (m *Model) openActionMenu() {
 	m.run = &pendingRun{ticket: t}
 }
 
+// requestActionMenu opens the action menu, first fetching the ticket's
+// details if they have not arrived yet.
+func (m *Model) requestActionMenu() tea.Cmd {
+	t, ok := m.selected()
+	if !ok {
+		return nil
+	}
+	if _, cached := m.details[t.GID]; cached {
+		m.openActionMenu()
+		return nil
+	}
+	m.menuFor = t.GID
+	m.status = "loading ticket…"
+	return loadDetail(m.deps.Client, t.GID)
+}
+
 func (m *Model) pickedAction(i int) tea.Cmd {
 	m.modal = nil
 	m.run.action = m.deps.Config.Actions[i]

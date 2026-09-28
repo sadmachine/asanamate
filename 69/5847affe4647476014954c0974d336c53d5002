@@ -1,0 +1,27 @@
+internal/setup/update.go
+  s_eebc4d8b941267::t_8719465eaa498c 1-116,119-324
+  s_eebc4d8b941267::t_46c91da0b2d7dd 117-118
+internal/setup/setup.go
+  s_eebc4d8b941267::t_4490e71206a7b0 60
+README.md
+  s_eebc4d8b941267::t_4490e71206a7b0 34-37
+cmd/asanamate/main.go
+  s_eebc4d8b941267::t_4490e71206a7b0 44-45,196-198,221-234
+  s_eebc4d8b941267::t_06d84d07d6bf2c 235-236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "695847affe4647476014954c0974d336c53d5002",
+  "prompts": {},
+  "sessions": {
+    "s_eebc4d8b941267": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19bb4866-5000-4f53-b072-85ce3159e04b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

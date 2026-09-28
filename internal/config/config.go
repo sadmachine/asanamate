@@ -117,10 +117,12 @@ type List struct {
 }
 
 // Header configures group headers. Style draws them as a reversed bar or a
-// rule. Color overrides the accent color when set.
+// rule; Spacing adds that many blank lines below each. Color overrides the
+// accent color when set.
 type Header struct {
-	Style string `toml:"style"`
-	Color string `toml:"color"`
+	Style   string `toml:"style"`
+	Spacing int    `toml:"spacing"`
+	Color   string `toml:"color"`
 }
 
 // Selection configures the selected ticket. Style marks it with a bold title
@@ -165,7 +167,7 @@ func Default() Config {
 		Theme: "dark", AccentColor: "4", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true,
 		List: List{
 			Layout: LayoutSingle, Fields: []string{"section"},
-			Header: Header{Style: StyleBar}, Selection: Selection{Style: StyleMarker},
+			Header: Header{Style: StyleBar, Spacing: 1}, Selection: Selection{Style: StyleMarker},
 		},
 		Reader: Reader{View: ViewCards},
 	}
@@ -226,6 +228,9 @@ func (c Config) validate() error {
 	}
 	if c.List.Header.Style != StyleBar && c.List.Header.Style != StyleRule {
 		return fmt.Errorf("list.header.style must be %q or %q, got %q", StyleBar, StyleRule, c.List.Header.Style)
+	}
+	if c.List.Header.Spacing < 0 {
+		return fmt.Errorf("list.header.spacing must be 0 or more, got %d", c.List.Header.Spacing)
 	}
 	for key, color := range map[string]string{"accent_color": c.AccentColor, "list.header.color": c.List.Header.Color, "list.selection.color": c.List.Selection.Color} {
 		if (key == "accent_color" || color != "") && !validColor(color) {

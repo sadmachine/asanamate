@@ -1,0 +1,35 @@
+internal/config/config.go
+  s_441dde81c39dff::t_4071a8c2585801 120-131,168
+  s_441dde81c39dff::t_8d494e48952a80 111-119,227-228,230,235-236
+internal/config/config_test.go
+  s_441dde81c39dff::t_4071a8c2585801 114
+  s_441dde81c39dff::t_2f22f1262fcf99 118-119,133-138
+README.md
+  s_441dde81c39dff::t_3738d40a688e3a 112-115
+internal/setup/setup.go
+  s_441dde81c39dff::t_01db5cc7f51cd9 178-179,181-185,187-189
+internal/tui/group.go
+  s_441dde81c39dff::t_96ee6488128520 138
+internal/tui/listrow_test.go
+  s_441dde81c39dff::t_4bcbcf53191744 202,219,224
+internal/tui/model.go
+  s_441dde81c39dff::t_978de89727626b 107-108,762,764,839,907
+internal/tui/model_test.go
+  s_441dde81c39dff::t_335e46c0af72d9 28-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7fc8c0a999e708af7d01a3ac1ca1e90ba0ac27be",
+  "prompts": {},
+  "sessions": {
+    "s_441dde81c39dff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70434a60-1c82-4c5a-802a-f47925f44229",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

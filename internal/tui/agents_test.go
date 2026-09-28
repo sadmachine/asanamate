@@ -213,3 +213,15 @@ func TestAgentActionPicksAmongSeveral(t *testing.T) {
 		t.Fatalf("exit = %+v", cmd)
 	}
 }
+
+func TestHeaderCountsSharedAgentsOnce(t *testing.T) {
+	m := agentModel(t, config.SymbolsUnicode, true)
+	twin := agentTask("feat/x")
+	twin.GID = "3"
+	m.Update(tasksMsg{tasks: []asana.Task{agentTask("feat/x"), twin}})
+	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1")}})
+	m.width = 120
+	if h := ansi.Strip(m.header()); !strings.HasSuffix(h, "agents ◐1") {
+		t.Fatalf("header = %q", h)
+	}
+}

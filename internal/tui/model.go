@@ -512,9 +512,16 @@ func (m *Model) header() string {
 	}
 	count := dimStyle.Render(fmt.Sprintf("%d/%d", len(m.visible), len(m.tasks)))
 	line := titleStyle.Render("asanamate · "+name) + "  " + f + "  " + count
+	// Tickets can share a branch, so count each agent once.
 	var linked []agents.Agent
+	seen := map[agents.Agent]bool{}
 	for _, t := range m.tasks {
-		linked = append(linked, m.viewAgents(t)...)
+		for _, a := range m.viewAgents(t) {
+			if !seen[a] {
+				seen[a] = true
+				linked = append(linked, a)
+			}
+		}
 	}
 	if s := m.sym.summary(linked, m.frame); s != "" {
 		line += "  " + dimStyle.Render("agents") + " " + s

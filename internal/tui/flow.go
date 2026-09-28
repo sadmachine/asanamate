@@ -27,6 +27,7 @@ type pendingRun struct {
 	agent          *agents.Agent // chosen agent for agent = true actions
 	input          string        // text typed for an input action
 	inputDone      bool
+	branchOK       bool // user chose to run despite the branch falling back to the slug
 }
 
 // sharesFieldNames reports whether two of the task's custom fields share a
@@ -188,6 +189,16 @@ func (m *Model) pickedRepo(path string) tea.Cmd {
 	return m.execute(resolved)
 }
 
+func (m *Model) pickedBranchFallback(run bool) tea.Cmd {
+	m.modal = nil
+	if !run {
+		m.run = nil
+		return nil
+	}
+	m.run.branchOK = true
+	return m.execute(m.run.repo)
+}
+
 func (m *Model) typedInput(text string) tea.Cmd {
 	m.input = nil
 	m.run.input, m.run.inputDone = text, true
@@ -208,8 +219,20 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 			return loadProjectFields(m.deps.Client, p.GID)
 		}
 	}
-	m.run = nil
 	preferred := m.projectFields[gidOf(r.project)]
+	if !r.branchOK && strings.Contains(r.action.Command, "ASANAMATE_BRANCH") {
+		if w := action.BranchWarning(r.ticket.Task, m.deps.Config.BranchField, preferred); w != "" {
+			r.repo = repoPath
+			p := newPicker(pickBranchFallback, "Branch falls back to the title slug", []pickItem{
+				{Label: "Run anyway", Key: "y", Value: true},
+				{Label: "Cancel", Key: "n", Value: false},
+			})
+			p.keySelect, p.err = true, w
+			m.modal = p
+			return nil
+		}
+	}
+	m.run = nil
 	linked := m.ticketAgents(r.ticket.Task, preferred)
 	agent := r.agent
 	if agent == nil {

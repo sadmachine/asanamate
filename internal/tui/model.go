@@ -33,6 +33,10 @@ type Deps struct {
 	StateDir string
 	Images   bool
 	InTmux   bool
+	// Symbols is the resolved symbol set: unicode, nerd, or ascii.
+	Symbols string
+	// ReducedMotion shows static symbols instead of the working spinner.
+	ReducedMotion bool
 	// NoPreview hides the reading pane and gives the list the full width.
 	NoPreview bool
 }
@@ -62,6 +66,9 @@ type Model struct {
 	projectFields map[string]map[string]bool // project gid -> its custom field gids
 	agents        []agents.Agent
 	agentsErr     string
+	sym           symbolSet
+	frame         int  // spinner frame
+	spinning      bool // a spinner tick is scheduled
 	modal         *picker
 	run           *pendingRun
 	menuFor       string // gid whose action menu opens once its details arrive
@@ -80,6 +87,7 @@ func New(d Deps) *Model {
 		reader:        viewport.New(),
 		details:       map[string]ticket.Ticket{},
 		projectFields: map[string]map[string]bool{},
+		sym:           newSymbols(d.Symbols, d.Config.Agents.Symbols, d.ReducedMotion),
 		loading:       true,
 	}
 }
@@ -159,8 +167,21 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		} else {
 			m.agents, m.agentsErr = msg.list, ""
+			m.applyFilter()
 		}
-		return m, scheduleAgents()
+		cmds := []tea.Cmd{scheduleAgents()}
+		if !m.spinning && m.sym.spinner != nil && m.anyWorking() {
+			m.spinning = true
+			cmds = append(cmds, scheduleSpinner())
+		}
+		return m, tea.Batch(cmds...)
+	case spinnerTickMsg:
+		if !m.anyWorking() {
+			m.spinning = false
+			return m, nil
+		}
+		m.frame++
+		return m, scheduleSpinner()
 	case agentTickMsg:
 		return m, loadAgents(m.deps.Config.Agents)
 	case projectFieldsMsg:
@@ -320,9 +341,29 @@ func (m *Model) reload() tea.Cmd {
 	return loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject)
 }
 
+// applyFilter recomputes the visible tasks, keeping the selected ticket
+// selected when it is still visible.
 func (m *Model) applyFilter() {
-	m.visible = filter.Parse(m.filterInput.Value()).Apply(m.tasks)
+	prev, hadSelection := m.selected()
+	m.visible = filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates)
+	if hadSelection {
+		for i, t := range m.visible {
+			if t.GID == prev.GID {
+				m.cursor = i
+				break
+			}
+		}
+	}
 	m.moveTo(m.cursor)
+}
+
+func (m *Model) anyWorking() bool {
+	for _, a := range m.agents {
+		if a.State == agents.Working {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *Model) moveTo(i int) {
@@ -468,7 +509,15 @@ func (m *Model) header() string {
 		f = m.filterInput.View()
 	}
 	count := dimStyle.Render(fmt.Sprintf("%d/%d", len(m.visible), len(m.tasks)))
-	return ansi.Truncate(titleStyle.Render("asanamate · "+name)+"  "+f+"  "+count, m.width, "…")
+	line := titleStyle.Render("asanamate · "+name) + "  " + f + "  " + count
+	var linked []agents.Agent
+	for _, t := range m.tasks {
+		linked = append(linked, m.viewAgents(t)...)
+	}
+	if s := m.sym.summary(linked, m.frame); s != "" {
+		line += "  " + dimStyle.Render("agents") + " " + s
+	}
+	return ansi.Truncate(line, m.width, "…")
 }
 
 func (m *Model) footer() string {
@@ -502,6 +551,31 @@ func (m *Model) body() string {
 	}
 }
 
+// renderRowLine fits line into width with tail right-aligned, and applies the
+// selection style to the line (the tail keeps its colors).
+func (m *Model) renderRowLine(line, tail string, width int, selected bool) string {
+	tailW := ansi.StringWidth(tail)
+	if tail != "" && width-tailW-1 < 8 {
+		tail, tailW = "", 0
+	}
+	room := width
+	if tail != "" {
+		room = width - tailW - 1
+	}
+	line = ansi.Truncate(line, room, "…")
+	if selected && line != "" {
+		style := selectedStyle
+		if m.focusReader {
+			style = titleStyle
+		}
+		line = style.Render(ansi.Strip(line))
+	}
+	if tail == "" {
+		return line
+	}
+	return line + strings.Repeat(" ", max(width-ansi.StringWidth(line)-tailW, 1)) + tail
+}
+
 func (m *Model) listView(width, height int) string {
 	switch {
 	case m.loading:
@@ -528,12 +602,17 @@ func (m *Model) listView(width, height int) string {
 			lines = append(lines, sep)
 		}
 		t := m.visible[i]
-		mark := "○"
+		mark := m.sym.open
 		if t.Completed {
-			mark = "✓"
+			mark = m.sym.done
 		}
 		title := mark + " " + ticket.OneLine(t.Name)
-		details := strings.Join(rowFields(t, m.deps.Config.List.Fields, m.rowContext(t)), " · ")
+		linked := m.viewAgents(t)
+		badge := m.sym.badge(linked, m.frame)
+		if len(linked) > 0 && linked[0].State == agents.Waiting && i != m.cursor {
+			title = stateStyles[agents.Waiting].Render(title)
+		}
+		details := strings.Join(rowFields(t, m.deps.Config.List.Fields, m.rowContext()), " · ")
 		row := []string{title}
 		switch {
 		case multi && details != "":
@@ -543,16 +622,12 @@ func (m *Model) listView(width, height int) string {
 		case details != "":
 			row[0] += "  " + dimStyle.Render(details)
 		}
-		for _, line := range row {
-			line = ansi.Truncate(line, width, "…")
-			if i == m.cursor && line != "" {
-				style := selectedStyle
-				if m.focusReader {
-					style = titleStyle
-				}
-				line = style.Render(ansi.Strip(line))
+		for j, line := range row {
+			tail := ""
+			if j == 0 && badge != "" {
+				tail = badge
 			}
-			lines = append(lines, line)
+			lines = append(lines, m.renderRowLine(line, tail, width, i == m.cursor))
 		}
 	}
 	if sepH > 0 {

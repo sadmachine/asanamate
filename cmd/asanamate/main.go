@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"runtime/debug"
 	"strings"
 
@@ -203,13 +205,15 @@ func runTUI(args []string) error {
 		return err
 	}
 	m := tui.New(tui.Deps{
-		Config:    cfg,
-		State:     st,
-		Client:    client,
-		StateDir:  stateDir,
-		Images:    kitty.Supported(cfg.Images, os.Getenv, kitty.TmuxPassthrough),
-		InTmux:    os.Getenv("TMUX") != "",
-		NoPreview: *noPreview,
+		Config:        cfg,
+		State:         st,
+		Client:        client,
+		StateDir:      stateDir,
+		Images:        kitty.Supported(cfg.Images, os.Getenv, kitty.TmuxPassthrough),
+		InTmux:        os.Getenv("TMUX") != "",
+		NoPreview:     *noPreview,
+		Symbols:       cfg.SymbolSet(os.Getenv),
+		ReducedMotion: reducedMotion(cfg),
 	})
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		return err
@@ -219,6 +223,23 @@ func runTUI(args []string) error {
 		return nil
 	}
 	return action.Exec(cmd)
+}
+
+// reducedMotion honors the config, else the OS accessibility setting
+// (macOS Reduce Motion, GNOME animations).
+func reducedMotion(cfg config.Config) bool {
+	if cfg.ReducedMotion != nil {
+		return *cfg.ReducedMotion
+	}
+	switch runtime.GOOS {
+	case "darwin":
+		out, err := exec.Command("defaults", "read", "com.apple.universalaccess", "reduceMotion").Output()
+		return err == nil && strings.TrimSpace(string(out)) == "1"
+	case "linux":
+		out, err := exec.Command("gsettings", "get", "org.gnome.desktop.interface", "enable-animations").Output()
+		return err == nil && strings.TrimSpace(string(out)) == "false"
+	}
+	return false
 }
 
 func runList(args []string) error {
@@ -252,7 +273,7 @@ func runList(args []string) error {
 	if err != nil {
 		return err
 	}
-	return listing.Tasks(os.Stdout, *format, filter.Parse(*query).Apply(tasks), *project)
+	return listing.Tasks(os.Stdout, *format, filter.Parse(*query).Apply(tasks, nil), *project)
 }
 
 func runShow(args []string) error {

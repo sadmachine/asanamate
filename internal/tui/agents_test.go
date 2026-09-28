@@ -21,36 +21,107 @@ func agentTask(branch string) asana.Task {
 		CustomFields: []asana.CustomField{{GID: "f1", Name: "Branch Name ", DisplayValue: strp(branch)}}}
 }
 
-func TestAgentLinkedByBranchAndRepo(t *testing.T) {
+func agentModel(t *testing.T, set string, reduced bool) *Model {
+	t.Helper()
 	m, st := testModel(t, config.Config{
 		BranchField: "Branch Name",
 		Agents:      config.Agents{Command: "unused"},
-		List:        config.List{Layout: config.LayoutSingle, Fields: []string{"agent"}},
 		Actions:     []config.Action{goAction},
 	})
+	m.sym = newSymbols(set, nil, reduced)
 	st.LinkRepo("p1", "/code/web")
-	tk := agentTask("feat/x")
-	m.Update(tasksMsg{tasks: []asana.Task{tk}})
-	m.Update(agentsMsg{list: []agents.Agent{
-		{Path: "/other/wt", Status: "idle", Branch: "feat/x", Repo: "/other"},
-		{Path: "/code/web/.claude/worktrees/feat-x", Status: "running", Target: "s1", Branch: "feat/x", Repo: "/code/web"},
-	}})
-	if got := ansi.Strip(m.listView(80, 3)); got != "○ Fix login  agent running" {
-		t.Fatalf("list = %q", got)
+	m.Update(tasksMsg{tasks: []asana.Task{agentTask("feat/x"), {GID: "2", Name: "Other"}}})
+	return m
+}
+
+func onBranch(state agents.State, target string) agents.Agent {
+	return agents.Agent{Path: "/code/web/wt", Status: string(state), State: state, Target: target, Branch: "feat/x", Repo: "/code/web"}
+}
+
+func TestAgentColumnOrdersByUrgency(t *testing.T) {
+	m := agentModel(t, config.SymbolsUnicode, true)
+	other := onBranch(agents.Working, "elsewhere")
+	other.Repo = "/other"
+	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1"), other, onBranch(agents.Waiting, "q1")}})
+	first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]
+	if first != "□ Fix login"+strings.Repeat(" ", 16)+"⚠ ◐" {
+		t.Fatalf("row = %q", first)
 	}
-	m.details["1"] = ticket.Ticket{Task: tk}
+	m.width = 120
+	if !strings.Contains(ansi.Strip(m.header()), "agents ⚠1 ◐1") {
+		t.Fatalf("header = %q", ansi.Strip(m.header()))
+	}
+	m.details["1"] = ticket.Ticket{Task: agentTask("feat/x")}
 	m.openActionMenu()
 	m.Update(key("x"))
-	env := m.ExitCommand().Env
-	for _, want := range []string{"ASANAMATE_AGENT_TARGET=s1", "ASANAMATE_AGENT_STATUS=running", "ASANAMATE_BRANCH=feat/x"} {
-		if !slices.Contains(env, want) {
-			t.Errorf("env missing %q", want)
-		}
+	if env := m.ExitCommand().Env; !slices.Contains(env, "ASANAMATE_AGENT_TARGET=q1") || !slices.Contains(env, "ASANAMATE_AGENT_STATE=waiting") {
+		t.Fatalf("want the most urgent agent in env, got %v", env)
+	}
+}
+
+func TestAgentColumnGroupsManyAgents(t *testing.T) {
+	m := agentModel(t, config.SymbolsUnicode, true)
+	var list []agents.Agent
+	for _, s := range []agents.State{agents.Working, agents.Completed, agents.Working, agents.Waiting, agents.Working, agents.Completed} {
+		list = append(list, onBranch(s, ""))
+	}
+	m.Update(agentsMsg{list: list})
+	if first := strings.Split(ansi.Strip(m.listView(40, 4)), "\n")[0]; !strings.HasSuffix(first, "⚠1 ◐3 ●2") {
+		t.Fatalf("row = %q", first)
+	}
+}
+
+func TestSpinnerAnimatesWorkingAgents(t *testing.T) {
+	m := agentModel(t, config.SymbolsUnicode, false)
+	_, cmd := m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "")}})
+	if cmd == nil || !m.spinning || !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⠋") {
+		t.Fatalf("spinning = %v, row = %q", m.spinning, ansi.Strip(m.listView(30, 4)))
+	}
+	m.Update(spinnerTickMsg{})
+	if !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⠙") {
+		t.Fatal("spinner did not advance")
+	}
+	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Idle, "")}})
+	if _, cmd := m.Update(spinnerTickMsg{}); cmd != nil || m.spinning {
+		t.Fatal("spinner must stop when nothing is working")
+	}
+}
+
+func TestReducedMotionAndASCII(t *testing.T) {
+	m := agentModel(t, config.SymbolsASCII, false)
+	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, ""), onBranch(agents.Idle, "")}})
+	if first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]; !strings.HasPrefix(first, "[ ] Fix login") || !strings.HasSuffix(first, "(~) (-)") || m.spinning {
+		t.Fatalf("ascii row = %q, spinning = %v", first, m.spinning)
+	}
+	r := agentModel(t, config.SymbolsUnicode, true)
+	r.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "")}})
+	if first := strings.Split(ansi.Strip(r.listView(30, 4)), "\n")[0]; !strings.HasSuffix(first, "◐") || r.spinning {
+		t.Fatalf("reduced motion row = %q, spinning = %v", first, r.spinning)
+	}
+}
+
+func TestSymbolOverrides(t *testing.T) {
+	s := newSymbols(config.SymbolsUnicode, map[string]string{"working": "W", "idle": "i"}, false)
+	if s.agent(agents.Working, 3) != "W" || s.agent(agents.Idle, 0) != "i" || s.spinner != nil {
+		t.Fatalf("overrides not applied: %+v", s)
+	}
+}
+
+func TestAgentFilterFollowsRefreshes(t *testing.T) {
+	m := agentModel(t, config.SymbolsUnicode, true)
+	m.filterInput.SetValue("agent:waiting")
+	m.applyFilter()
+	if len(m.visible) != 0 {
+		t.Fatalf("visible = %+v", m.visible)
+	}
+	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Waiting, "")}})
+	if len(m.visible) != 1 || m.visible[0].GID != "1" {
+		t.Fatalf("after refresh visible = %+v", m.visible)
 	}
 }
 
 func TestAgentsDisabledShowNothing(t *testing.T) {
-	m, _ := testModel(t, config.Config{BranchField: "Branch Name", List: config.List{Layout: config.LayoutSingle, Fields: []string{"agent"}}})
+	m, _ := testModel(t, config.Config{BranchField: "Branch Name"})
 	m.Update(tasksMsg{tasks: []asana.Task{agentTask("feat/x")}})
 	if m.Init() == nil {
 		t.Fatal("Init must still load tasks")
@@ -58,7 +129,7 @@ func TestAgentsDisabledShowNothing(t *testing.T) {
 	if _, cmd := m.Update(agentsMsg{}); cmd != nil {
 		t.Fatal("disabled agents must not schedule refreshes")
 	}
-	if got := ansi.Strip(m.listView(80, 3)); got != "○ Fix login" {
+	if got := ansi.Strip(m.listView(80, 3)); got != "□ Fix login" {
 		t.Fatalf("list = %q", got)
 	}
 }

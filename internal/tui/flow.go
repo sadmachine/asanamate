@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/sadmachine/asanamate/internal/action"
+	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/kitty"
@@ -184,7 +185,7 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		Files:         files,
 		Preferred:     preferred,
 		BranchField:   m.deps.Config.BranchField,
-		Agent:         m.ticketAgent(r.ticket.Task, preferred),
+		Agent:         firstAgent(m.ticketAgents(r.ticket.Task, preferred)),
 	})
 	name := r.action.Name
 	switch r.action.Mode {
@@ -200,6 +201,13 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		m.exitCmd = cmd
 		return tea.Quit
 	}
+}
+
+func firstAgent(list []agents.Agent) *agents.Agent {
+	if len(list) == 0 {
+		return nil
+	}
+	return &list[0]
 }
 
 func actionStatus(msg actionDoneMsg) string {

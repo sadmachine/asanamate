@@ -2,8 +2,9 @@
 //
 // A query is space-separated terms that must all match. Bare words match the
 // title. section:, project:, assignee:, and tag: match names by substring.
-// is:open and is:done match completion. A leading "-" negates a term, and
-// double quotes group words.
+// is:open and is:done match completion. agent:any, agent:none, and
+// agent:<state> match linked agents. A leading "-" negates a term, and double
+// quotes group words.
 package filter
 
 import (
@@ -13,7 +14,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 )
 
-var keys = map[string]bool{"section": true, "project": true, "assignee": true, "tag": true, "is": true}
+var keys = map[string]bool{"section": true, "project": true, "assignee": true, "tag": true, "is": true, "agent": true}
 
 type term struct {
 	key, value string
@@ -67,29 +68,48 @@ func tokenize(query string) []string {
 	return toks
 }
 
-// Match reports whether t satisfies every term.
-func (f Filter) Match(t asana.Task) bool {
+// Match reports whether t satisfies every term. agentStates are the states of
+// the agents linked to t.
+func (f Filter) Match(t asana.Task, agentStates []string) bool {
 	for _, tm := range f.terms {
-		if tm.match(t) == tm.negate {
+		if tm.match(t, agentStates) == tm.negate {
 			return false
 		}
 	}
 	return true
 }
 
-// Apply returns the tasks that match, in their original order.
-func (f Filter) Apply(tasks []asana.Task) []asana.Task {
+// Apply returns the tasks that match, in their original order. agentStates
+// may be nil when agents are not tracked.
+func (f Filter) Apply(tasks []asana.Task, agentStates func(asana.Task) []string) []asana.Task {
 	var out []asana.Task
 	for _, t := range tasks {
-		if f.Match(t) {
+		var states []string
+		if agentStates != nil {
+			states = agentStates(t)
+		}
+		if f.Match(t, states) {
 			out = append(out, t)
 		}
 	}
 	return out
 }
 
-func (tm term) match(t asana.Task) bool {
+func (tm term) match(t asana.Task, agentStates []string) bool {
 	switch tm.key {
+	case "agent":
+		switch tm.value {
+		case "any":
+			return len(agentStates) > 0
+		case "none":
+			return len(agentStates) == 0
+		}
+		for _, s := range agentStates {
+			if s == tm.value {
+				return true
+			}
+		}
+		return false
 	case "":
 		return contains(t.Name, tm.value)
 	case "is":

@@ -45,7 +45,7 @@ func TestMatch(t *testing.T) {
 		f := Parse(c.query)
 		got := ""
 		for _, task := range []asana.Task{open, done} {
-			if f.Match(task) {
+			if f.Match(task, nil) {
 				got += task.GID
 			}
 		}
@@ -56,11 +56,29 @@ func TestMatch(t *testing.T) {
 }
 
 func TestApplyKeepsOrder(t *testing.T) {
-	got := Parse("").Apply([]asana.Task{done, open})
+	got := Parse("").Apply([]asana.Task{done, open}, nil)
 	if len(got) != 2 || got[0].GID != "b" || got[1].GID != "a" {
 		t.Fatalf("got %+v", got)
 	}
-	if got := Parse("is:done").Apply([]asana.Task{open}); len(got) != 0 {
+	if got := Parse("is:done").Apply([]asana.Task{open}, nil); len(got) != 0 {
 		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestAgentTerms(t *testing.T) {
+	states := func(t asana.Task) []string {
+		if t.GID == "a" {
+			return []string{"waiting", "working"}
+		}
+		return nil
+	}
+	for q, want := range map[string]string{"agent:any": "a", "agent:none": "b", "agent:waiting": "a", "agent:idle": "", "-agent:any": "b"} {
+		got := ""
+		for _, task := range Parse(q).Apply([]asana.Task{open, done}, states) {
+			got += task.GID
+		}
+		if got != want {
+			t.Errorf("%q matched %q, want %q", q, got, want)
+		}
 	}
 }

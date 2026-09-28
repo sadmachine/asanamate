@@ -57,22 +57,24 @@ func TestListReportsCommandFailure(t *testing.T) {
 	}
 }
 
-func TestMatch(t *testing.T) {
-	agents := []Agent{
-		{Path: "/a/wt", Status: "running", Branch: "fix", Repo: "/a"},
-		{Path: "/b/wt", Status: "idle", Branch: "fix", Repo: "/b"},
+func TestMatchAll(t *testing.T) {
+	list := []Agent{
+		{Path: "/a/wt", State: Idle, Branch: "fix", Repo: "/a"},
+		{Path: "/b/wt", State: Idle, Branch: "fix", Repo: "/b"},
+		{Path: "/a/wt2", State: Waiting, Branch: "fix", Repo: "/a"},
+		{Path: "/a/wt3", State: Working, Branch: "other", Repo: "/a"},
 	}
-	if a := Match(agents, "fix", []string{"/b"}); a == nil || a.Repo != "/b" {
-		t.Fatalf("repo-scoped match = %+v", a)
+	if got := MatchAll(list, "fix", []string{"/a"}); len(got) != 2 || got[0].Path != "/a/wt2" || got[1].Path != "/a/wt" {
+		t.Fatalf("repo-scoped, urgency order = %+v", got)
 	}
-	if a := Match(agents, "fix", nil); a == nil || a.Repo != "/a" {
-		t.Fatalf("unscoped match = %+v", a)
+	if got := MatchAll(list, "fix", nil); len(got) != 3 {
+		t.Fatalf("unscoped = %+v", got)
 	}
-	if a := Match(agents, "fix", []string{"/c"}); a != nil {
-		t.Fatalf("other repo matched: %+v", a)
+	if got := MatchAll(list, "fix", []string{"/c"}); len(got) != 0 {
+		t.Fatalf("other repo matched: %+v", got)
 	}
-	if a := Match(agents, "", nil); a != nil {
-		t.Fatalf("empty branch matched: %+v", a)
+	if got := MatchAll(list, "", nil); len(got) != 0 {
+		t.Fatalf("empty branch matched: %+v", got)
 	}
 }
 

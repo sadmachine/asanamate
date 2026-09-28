@@ -20,7 +20,14 @@ const (
 	detailDelay    = 200 * time.Millisecond
 	requestTimeout = time.Minute
 	agentRefresh   = 5 * time.Second
+	spinnerFrame   = 100 * time.Millisecond
 )
+
+type spinnerTickMsg struct{}
+
+func scheduleSpinner() tea.Cmd {
+	return tea.Tick(spinnerFrame, func(time.Time) tea.Msg { return spinnerTickMsg{} })
+}
 
 type tasksMsg struct {
 	project *asana.Ref

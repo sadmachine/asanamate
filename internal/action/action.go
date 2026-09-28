@@ -103,11 +103,13 @@ func Env(c Context) []string {
 		"SECTION":        "",
 		"BRANCH":         Branch(t.Task, c.BranchField, c.Preferred),
 		"AGENT_STATUS":   "",
+		"AGENT_STATE":    "",
 		"AGENT_PATH":     "",
 		"AGENT_TARGET":   "",
 	}
 	if c.Agent != nil {
 		vars["AGENT_STATUS"], vars["AGENT_PATH"], vars["AGENT_TARGET"] = c.Agent.Status, c.Agent.Path, c.Agent.Target
+		vars["AGENT_STATE"] = string(c.Agent.State)
 	}
 	if c.ConfirmWrites {
 		vars["CONFIRM_WRITES"] = "1"

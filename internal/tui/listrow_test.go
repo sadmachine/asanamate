@@ -43,18 +43,18 @@ func TestListViewLayouts(t *testing.T) {
 	other := asana.Task{GID: "2", Name: "Fix footer"}
 	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Fields: []string{"section", "due"}}})
 	single.Update(tasksMsg{tasks: []asana.Task{fieldTask, other}})
-	if got := strings.Split(ansi.Strip(single.listView(80, 5)), "\n"); len(got) != 2 || got[0] != "○ Fix login  Today · due 2026-10-01" {
+	if got := strings.Split(ansi.Strip(single.listView(80, 5)), "\n"); len(got) != 2 || got[0] != "□ Fix login  Today · due 2026-10-01" {
 		t.Fatalf("single = %q", got)
 	}
 
 	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Fields: []string{"section", "due"}}})
 	multi.Update(tasksMsg{tasks: []asana.Task{fieldTask, other}})
 	got := strings.Split(ansi.Strip(multi.listView(80, 4)), "\n")
-	if want := []string{"○ Fix login", "  Today · due 2026-10-01", "○ Fix footer", ""}; !slices.Equal(got, want) {
+	if want := []string{"□ Fix login", "  Today · due 2026-10-01", "□ Fix footer", ""}; !slices.Equal(got, want) {
 		t.Fatalf("multi = %q, want %q", got, want)
 	}
 	multi.moveTo(1)
-	if got := strings.Split(ansi.Strip(multi.listView(80, 3)), "\n"); got[0] != "○ Fix footer" {
+	if got := strings.Split(ansi.Strip(multi.listView(80, 3)), "\n"); got[0] != "□ Fix footer" {
 		t.Fatalf("multi scroll keeps the cursor's whole row visible: %q", got)
 	}
 }
@@ -63,13 +63,13 @@ func TestListViewSeparator(t *testing.T) {
 	a, b, c := asana.Task{GID: "1", Name: "A"}, asana.Task{GID: "2", Name: "B"}, asana.Task{GID: "3", Name: "C"}
 	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Separator: true}})
 	single.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
-	if got := strings.Split(ansi.Strip(single.listView(4, 5)), "\n"); !slices.Equal(got, []string{"────", "○ A", "────", "○ B", "────"}) {
+	if got := strings.Split(ansi.Strip(single.listView(4, 5)), "\n"); !slices.Equal(got, []string{"────", "□ A", "────", "□ B", "────"}) {
 		t.Fatalf("single = %q", got)
 	}
 	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Separator: true}})
 	multi.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
 	multi.moveTo(2)
-	if got := strings.Split(ansi.Strip(multi.listView(3, 7)), "\n"); !slices.Equal(got, []string{"───", "○ B", "", "───", "○ C", "", "───"}) {
+	if got := strings.Split(ansi.Strip(multi.listView(3, 7)), "\n"); !slices.Equal(got, []string{"───", "□ B", "", "───", "□ C", "", "───"}) {
 		t.Fatalf("multi scrolled = %q", got)
 	}
 }

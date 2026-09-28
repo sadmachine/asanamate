@@ -13,19 +13,18 @@ import (
 type rowContext struct {
 	projectGID string          // viewed project, "" for My Tasks
 	preferred  map[string]bool // the viewed project's custom field gids
-	agent      *agents.Agent   // running agent linked to the task
 }
 
 // rowContext builds the row context for t in the current view.
-func (m *Model) rowContext(t asana.Task) rowContext {
+func (m *Model) rowContext() rowContext {
 	view := gidOf(m.viewProject)
-	preferred := m.projectFields[view]
-	return rowContext{projectGID: view, preferred: preferred, agent: m.ticketAgent(t, preferred)}
+	return rowContext{projectGID: view, preferred: m.projectFields[view]}
 }
 
-// ticketAgent returns the running agent on the ticket's branch in one of the
-// repos linked to the ticket's projects (any repo if none are linked).
-func (m *Model) ticketAgent(t asana.Task, preferred map[string]bool) *agents.Agent {
+// ticketAgents returns the running agents on the ticket's branch in the repos
+// linked to the ticket's projects (any repo if none are linked), most urgent
+// first. preferred picks between same-named branch fields.
+func (m *Model) ticketAgents(t asana.Task, preferred map[string]bool) []agents.Agent {
 	if len(m.agents) == 0 {
 		return nil
 	}
@@ -35,7 +34,21 @@ func (m *Model) ticketAgent(t asana.Task, preferred map[string]bool) *agents.Age
 			repos = append(repos, path)
 		}
 	}
-	return agents.Match(m.agents, action.Branch(t, m.deps.Config.BranchField, preferred), repos)
+	return agents.MatchAll(m.agents, action.Branch(t, m.deps.Config.BranchField, preferred), repos)
+}
+
+// viewAgents returns the agents linked to t in the current view.
+func (m *Model) viewAgents(t asana.Task) []agents.Agent {
+	return m.ticketAgents(t, m.projectFields[gidOf(m.viewProject)])
+}
+
+// agentStates lists the states of t's agents, for filter terms.
+func (m *Model) agentStates(t asana.Task) []string {
+	var out []string
+	for _, a := range m.viewAgents(t) {
+		out = append(out, string(a.State))
+	}
+	return out
 }
 
 // rowFields returns the non-empty display values of the configured list
@@ -56,11 +69,6 @@ func fieldValue(t asana.Task, name string, rc rowContext) string {
 	switch strings.ToLower(name) {
 	case "section":
 		return t.SectionFor(rc.projectGID)
-	case "agent":
-		if rc.agent != nil {
-			return "agent " + rc.agent.Status
-		}
-		return ""
 	case "completed":
 		if t.Completed {
 			return "done"

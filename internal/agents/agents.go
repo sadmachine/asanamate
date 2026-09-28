@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -160,24 +161,25 @@ func gitInfo(ctx context.Context, path string) (branch, repo string) {
 	return lines[0], common
 }
 
-// Match returns the first agent on branch whose repository is one of repos,
-// or on branch in any repository when repos is empty.
-func Match(agents []Agent, branch string, repos []string) *Agent {
+// MatchAll returns the agents on branch whose repository is one of repos (any
+// repository when repos is empty), most urgent state first.
+func MatchAll(list []Agent, branch string, repos []string) []Agent {
 	if branch == "" {
 		return nil
 	}
-	for i, a := range agents {
-		if a.Branch != branch {
-			continue
-		}
-		if len(repos) == 0 {
-			return &agents[i]
-		}
-		for _, r := range repos {
-			if a.Repo == r {
-				return &agents[i]
-			}
+	var out []Agent
+	for _, a := range list {
+		if a.Branch == branch && (len(repos) == 0 || slices.Contains(repos, a.Repo)) {
+			out = append(out, a)
 		}
 	}
-	return nil
+	slices.SortStableFunc(out, func(a, b Agent) int { return rank(a.State) - rank(b.State) })
+	return out
+}
+
+func rank(s State) int {
+	if i := slices.Index(States, s); i >= 0 {
+		return i
+	}
+	return len(States)
 }

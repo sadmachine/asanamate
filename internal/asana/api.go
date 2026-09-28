@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	listFields       = "name,completed,due_on,assignee.name,assignee_section.name,memberships.project.name,memberships.section.name,tags.name,permalink_url"
-	detailFields     = listFields + ",html_notes,custom_fields.name,custom_fields.display_value,custom_fields.resource_subtype,custom_fields.enum_options.name,dependencies.name,dependents.name,parent.name,created_at,modified_at"
+	listFields       = "name,completed,due_on,assignee.name,assignee_section.name,memberships.project.name,memberships.section.name,tags.name,permalink_url,custom_fields.name,custom_fields.display_value"
+	detailFields     = listFields + ",html_notes,custom_fields.resource_subtype,custom_fields.enum_options.name,dependencies.name,dependents.name,parent.name,created_at,modified_at"
 	attachmentFields = "name,host,download_url,permanent_url,view_url"
 )
 

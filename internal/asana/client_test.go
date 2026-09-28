@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -88,6 +89,9 @@ func TestMyTasksResolvesTaskList(t *testing.T) {
 		case "/user_task_lists/55/tasks":
 			if r.URL.Query().Get("completed_since") == "" {
 				t.Error("missing completed_since")
+			}
+			if !strings.Contains(r.URL.Query().Get("opt_fields"), "custom_fields.display_value") {
+				t.Error("list must fetch custom fields for list display")
 			}
 			io.WriteString(w, `{"data":[{"gid":"1","name":"Fix","assignee_section":{"gid":"s","name":"Today"},"memberships":[{"project":{"gid":"p","name":"Web"},"section":{"gid":"x","name":"Doing"}}]}]}`)
 		default:

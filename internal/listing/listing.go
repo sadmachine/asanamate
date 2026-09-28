@@ -19,8 +19,6 @@ const (
 	FormatJSON     = "json"
 )
 
-var flatten = strings.NewReplacer("\t", " ", "\n", " ")
-
 // Tasks writes one line per task. TSV columns are gid, section, due, title,
 // url; section is the My Tasks section, or the section in projectGID.
 func Tasks(w io.Writer, format string, tasks []asana.Task, projectGID string) error {
@@ -33,7 +31,7 @@ func Tasks(w io.Writer, format string, tasks []asana.Task, projectGID string) er
 			}
 			cols := []string{t.GID, t.SectionFor(projectGID), due, t.Name, t.PermalinkURL}
 			for i, c := range cols {
-				cols[i] = flatten.Replace(ticket.Clean(c))
+				cols[i] = ticket.OneLine(c)
 			}
 			if _, err := fmt.Fprintln(w, strings.Join(cols, "\t")); err != nil {
 				return err

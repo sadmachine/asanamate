@@ -133,6 +133,14 @@ Unknown keys are errors, so typos are reported instead of ignored.
   - a leading `-` negates a term, for example `-section:done`
   - double quotes group words, for example `section:"in progress"`
 - `/` edits the filter. The list updates on every keystroke.
+- `[list]` configures each row. The title is always shown. `layout = "single"`
+  (default) puts the fields after the title on one line; `"multi"` puts them on
+  a second line. `fields` (default `["section"]`) lists the values to show, in
+  order, joined by ` · `. Built-ins: `section`, `due` (shown as `due
+  YYYY-MM-DD`), `assignee`, `project`, `tags`, `completed` (open/done). Any
+  other name matches a custom field by name (case-insensitive, trimmed); the
+  first matching field with a value wins. Empty values are skipped. List
+  fetches include custom field display values for this.
 
 ## Project picker
 

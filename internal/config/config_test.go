@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -102,5 +103,25 @@ func TestToken(t *testing.T) {
 	t.Setenv(TokenEnv, "abc")
 	if tok, err := Token(); err != nil || tok != "abc" {
 		t.Fatalf("token = %q, err = %v", tok, err)
+	}
+}
+
+func TestListConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
+	if err != nil || cfg.List.Layout != LayoutSingle || !slices.Equal(cfg.List.Fields, []string{"section"}) {
+		t.Fatalf("defaults: %+v, err = %v", cfg.List, err)
+	}
+	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[list]\nlayout = \"multi\"\nfields = [\"status\", \"Branch Name\", \"due\"]\n"))
+	if err != nil || cfg.List.Layout != LayoutMulti || len(cfg.List.Fields) != 3 {
+		t.Fatalf("custom: %+v, err = %v", cfg.List, err)
+	}
+	for name, body := range map[string]string{
+		"bad layout":  "[list]\nlayout = \"grid\"\n",
+		"title field": "[list]\nfields = [\"Title\"]\n",
+		"empty field": "[list]\nfields = [\" \"]\n",
+	} {
+		if _, err := Load(writeFile(t, "workspace = \"1\"\n"+body)); err == nil {
+			t.Errorf("%s: expected an error", name)
+		}
 	}
 }

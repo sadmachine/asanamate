@@ -21,6 +21,12 @@ const (
 	ModeExit       = "exit"
 )
 
+// List layouts.
+const (
+	LayoutSingle = "single"
+	LayoutMulti  = "multi"
+)
+
 // ErrNotConfigured means the config file does not exist yet.
 var ErrNotConfigured = errors.New("asanamate is not configured; run `asanamate setup`")
 
@@ -32,7 +38,16 @@ type Config struct {
 	DefaultFilter string     `toml:"default_filter"`
 	ConfirmWrites bool       `toml:"confirm_writes"`
 	RepoSource    RepoSource `toml:"repo_source"`
+	List          List       `toml:"list"`
 	Actions       []Action   `toml:"actions"`
+}
+
+// List configures how tickets appear in the list. The title is always shown;
+// Fields are extra values: section, due, assignee, project, tags, completed,
+// or any custom field name.
+type List struct {
+	Layout string   `toml:"layout"`
+	Fields []string `toml:"fields"`
 }
 
 // RepoSource configures where repo picker candidates come from.
@@ -52,7 +67,10 @@ type Action struct {
 
 // Default returns the values used for keys the config file omits.
 func Default() Config {
-	return Config{Theme: "dark", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true}
+	return Config{
+		Theme: "dark", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true,
+		List: List{Layout: LayoutSingle, Fields: []string{"section"}},
+	}
 }
 
 // Load reads and validates the config file at path.
@@ -90,6 +108,17 @@ func (c Config) validate() error {
 	case "auto", "kitty", "off":
 	default:
 		return fmt.Errorf("images must be \"auto\", \"kitty\", or \"off\", got %q", c.Images)
+	}
+	if c.List.Layout != LayoutSingle && c.List.Layout != LayoutMulti {
+		return fmt.Errorf("list.layout must be %q or %q, got %q", LayoutSingle, LayoutMulti, c.List.Layout)
+	}
+	for _, f := range c.List.Fields {
+		switch name := strings.TrimSpace(f); {
+		case name == "":
+			return errors.New("list.fields must not contain empty names")
+		case strings.EqualFold(name, "title"):
+			return errors.New("the title is always shown; remove it from list.fields")
+		}
 	}
 	keys := map[string]string{}
 	for _, a := range c.Actions {

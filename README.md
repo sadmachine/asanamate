@@ -86,7 +86,20 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `images` | `"auto"` | `auto`, `kitty` (force on), or `off` |
 | `default_filter` | `"is:open"` | filter applied at startup |
 | `confirm_writes` | `true` | write-back subcommands ask before writing |
+| `list.layout` | `"single"` | `single` (one line per ticket) or `multi` (title, then fields on a second line) |
+| `list.fields` | `["section"]` | values shown with the title |
 | `repo_source.command` | lists repos in your setup directory | prints one repo path per line |
+
+The title is always shown. `list.fields` accepts the built-ins `section`,
+`due`, `assignee`, `project`, `tags`, and `completed` (open/done). Any other
+name is matched to a custom field, ignoring case and surrounding spaces; if
+several fields match, the first with a value is shown. For example:
+
+```toml
+[list]
+layout = "multi"
+fields = ["section", "Status", "Branch Name", "due"]
+```
 
 To pick repos from sesh or zoxide instead:
 

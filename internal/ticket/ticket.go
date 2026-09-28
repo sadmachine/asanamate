@@ -56,6 +56,12 @@ func Clean(s string) string {
 	}, s)
 }
 
+var flatten = strings.NewReplacer("\t", " ", "\n", " ")
+
+// OneLine cleans s and replaces tabs and newlines with spaces, for text that
+// must stay on one line (list rows, TSV cells).
+func OneLine(s string) string { return flatten.Replace(Clean(s)) }
+
 // AttachmentURL returns the best browser URL for an attachment.
 func AttachmentURL(a asana.Attachment) string {
 	if a.PermanentURL != "" {

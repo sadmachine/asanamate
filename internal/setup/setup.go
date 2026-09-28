@@ -152,6 +152,14 @@ default_filter = "is:open"
 # Override per action with confirm_writes, or per call with --yes.
 confirm_writes = true
 
+[list]
+# "single": one line per ticket. "multi": title on line one, fields on line two.
+layout = "single"
+# Values shown with the title (the title is always shown). Built-ins: section,
+# due, assignee, project, tags, completed. Any other name is matched to a
+# custom field, for example "Status" or "Branch Name".
+fields = ["section"]
+
 [repo_source]
 # Prints one git repository path per line for the repo picker.
 # The default lists repositories directly inside %s.

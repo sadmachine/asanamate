@@ -474,27 +474,41 @@ func (m *Model) listView(width, height int) string {
 	case len(m.visible) == 0:
 		return dimStyle.Render("No tasks match the filter.")
 	}
-	start := max(m.cursor-height+1, 0)
+	multi := m.deps.Config.List.Layout == config.LayoutMulti
+	rows := height
+	if multi {
+		rows = max(height/2, 1)
+	}
+	start := max(m.cursor-rows+1, 0)
 	var lines []string
-	for i := start; i < len(m.visible) && i < start+height; i++ {
+	for i := start; i < len(m.visible) && i < start+rows; i++ {
 		t := m.visible[i]
 		mark := "○"
 		if t.Completed {
 			mark = "✓"
 		}
-		line := mark + " " + ticket.Clean(t.Name)
-		if sec := t.SectionFor(gidOf(m.viewProject)); sec != "" {
-			line += "  " + dimStyle.Render(ticket.Clean(sec))
+		title := mark + " " + ticket.OneLine(t.Name)
+		details := strings.Join(rowFields(t, m.deps.Config.List.Fields, gidOf(m.viewProject)), " · ")
+		row := []string{title}
+		switch {
+		case multi && details != "":
+			row = append(row, dimStyle.Render("  "+details))
+		case multi:
+			row = append(row, "")
+		case details != "":
+			row[0] += "  " + dimStyle.Render(details)
 		}
-		line = ansi.Truncate(line, width, "…")
-		if i == m.cursor {
-			style := selectedStyle
-			if m.focusReader {
-				style = titleStyle
+		for _, line := range row {
+			line = ansi.Truncate(line, width, "…")
+			if i == m.cursor && line != "" {
+				style := selectedStyle
+				if m.focusReader {
+					style = titleStyle
+				}
+				line = style.Render(ansi.Strip(line))
 			}
-			line = style.Render(ansi.Strip(line))
+			lines = append(lines, line)
 		}
-		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")
 }

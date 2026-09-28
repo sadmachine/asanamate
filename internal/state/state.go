@@ -1,4 +1,5 @@
-// Package state stores data asanamate learns while running: repo links and recent projects.
+// Package state stores data asanamate learns while running: repo links, recent
+// projects, and each project's last list view.
 package state
 
 import (
@@ -24,8 +25,16 @@ type State struct {
 	Repos map[string]string `toml:"repos"`
 	// RecentProjects holds project gids, most recently opened first.
 	RecentProjects []string `toml:"recent_projects"`
+	// Views maps a project gid ("" for My Tasks) to the list view last used there.
+	Views map[string]View `toml:"views"`
 
 	path string
+}
+
+// View is a project's list grouping and filter; "" GroupBy is ungrouped.
+type View struct {
+	GroupBy string `toml:"group_by"`
+	Filter  string `toml:"filter"`
 }
 
 // Load reads the state file. A missing file yields empty state.
@@ -36,6 +45,9 @@ func Load(path string) (*State, error) {
 	}
 	if s.Repos == nil {
 		s.Repos = map[string]string{}
+	}
+	if s.Views == nil {
+		s.Views = map[string]View{}
 	}
 	return s, nil
 }
@@ -73,6 +85,17 @@ func (s *State) TouchProject(gid string) {
 // LinkRepo remembers the repository used for a project.
 func (s *State) LinkRepo(projectGID, path string) {
 	s.Repos[projectGID] = path
+}
+
+// SetView remembers the list view used for a project.
+func (s *State) SetView(projectGID string, v View) {
+	s.Views[projectGID] = v
+}
+
+// View returns the list view last used for a project, if any.
+func (s *State) View(projectGID string) (View, bool) {
+	v, ok := s.Views[projectGID]
+	return v, ok
 }
 
 // Path returns the file the state is saved to.

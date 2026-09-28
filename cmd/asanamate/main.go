@@ -13,10 +13,12 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/sadmachine/asanamate/internal/action"
+	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/filter"
@@ -41,6 +43,7 @@ const usage = `usage:
   asanamate move    [--yes] [--project <gid>] <gid> <section>
   asanamate field   [--yes] [--project <gid>] <gid> <field> <value>
                                                    set a custom field ("" clears it)
+  asanamate doctor [<gid>]                         show agents and why they link (or not) to a ticket
   asanamate version
 `
 
@@ -67,6 +70,8 @@ func run(args []string) int {
 		err = runList(args[1:])
 	case "show":
 		err = runShow(args[1:])
+	case "doctor":
+		err = runDoctor(args[1:])
 	default:
 		if name != "" && !strings.HasPrefix(name, "-") {
 			fmt.Fprint(os.Stderr, usage)
@@ -298,4 +303,95 @@ func runShow(args []string) error {
 		return err
 	}
 	return listing.Ticket(os.Stdout, *format, t)
+}
+
+func runDoctor(args []string) error {
+	if len(args) > 1 || (len(args) == 1 && !asana.ValidGID(args[0])) {
+		return fmt.Errorf("doctor takes at most one numeric task gid\n%s", usage)
+	}
+	path, err := config.Path()
+	if err != nil {
+		return err
+	}
+	cfg, err := config.Load(path)
+	if err != nil {
+		return err
+	}
+	stateDir, err := config.StateDir()
+	if err != nil {
+		return err
+	}
+	st, err := state.Load(filepath.Join(stateDir, state.FileName))
+	if err != nil {
+		return err
+	}
+	w := os.Stdout
+	fmt.Fprintf(w, "config        %s\n", path)
+	if cfg.BranchField == "" {
+		fmt.Fprintln(w, "branch_field  unset: tickets use their title slug as the branch")
+	} else {
+		fmt.Fprintf(w, "branch_field  %q\n", cfg.BranchField)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	var list []agents.Agent
+	if !cfg.AgentsEnabled() {
+		fmt.Fprintln(w, "agents        off: set agents.preset or agents.command")
+	} else {
+		if cfg.Agents.Preset != "" {
+			fmt.Fprintf(w, "agents        preset %q\n", cfg.Agents.Preset)
+		} else {
+			fmt.Fprintf(w, "agents        command %q\n", cfg.Agents.Command)
+		}
+		if list, err = agents.Fetch(ctx, cfg.Agents.Preset, cfg.Agents.Command, cfg.Agents.States); err != nil {
+			return err
+		}
+		fmt.Fprintf(w, "\n%d running:\n", len(list))
+		for _, a := range list {
+			fmt.Fprintf(w, "  %s  branch %s  %s  repo %s\n", a.Path, orNone(a.Branch), a.State, orNone(a.Repo))
+		}
+	}
+	if len(args) == 0 {
+		return nil
+	}
+	client, err := newClient()
+	if err != nil {
+		return err
+	}
+	t, err := ticket.Fetch(ctx, client, args[0])
+	if err != nil {
+		return err
+	}
+	branch := action.Branch(t.Task, cfg.BranchField, nil)
+	repos := st.LinkedRepos(t.Task)
+	fmt.Fprintf(w, "\nticket  %s\nbranch  %s\n", ticket.OneLine(t.Name), branch)
+	if warn := action.BranchWarning(t.Task, cfg.BranchField, nil); warn != "" {
+		fmt.Fprintf(w, "warning %s\n", warn)
+	}
+	if len(repos) == 0 {
+		fmt.Fprintln(w, "repos   none linked: agents in any repo can match (run a repo = true action to link one)")
+	} else {
+		fmt.Fprintf(w, "repos   %s\n", strings.Join(repos, ", "))
+	}
+	if !cfg.AgentsEnabled() {
+		return nil
+	}
+	linked := agents.MatchAll(list, branch, repos)
+	fmt.Fprintf(w, "linked  %d agent(s)\n", len(linked))
+	for _, a := range linked {
+		fmt.Fprintf(w, "  %s  %s\n", a.Path, a.State)
+	}
+	if len(linked) == 0 {
+		for _, a := range agents.Unlinked(list, branch, repos) {
+			fmt.Fprintf(w, "  %s\n", agents.Hint(a, branch))
+		}
+	}
+	return nil
+}
+
+func orNone(s string) string {
+	if s == "" {
+		return "(none)"
+	}
+	return s
 }

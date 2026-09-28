@@ -70,6 +70,8 @@ with `default_filter`.
     by tabs. `--format jsonl` prints one JSON object per task.
 - `asanamate show <gid>` prints one ticket as Markdown. `--format json` prints
   JSON instead.
+- `asanamate doctor [<gid>]` shows the running agents and, for a ticket, why
+  they link to it or not. See [Agents](#agents-optional).
 
 Pick a ticket with fzf:
 
@@ -223,6 +225,20 @@ characters), else its pane title.
 **Linking.** A ticket matches every agent whose working directory has
 `$ASANAMATE_BRANCH` checked out, in a repo linked to one of the ticket's
 projects (worktrees count as their repo).
+
+Agents missing from a ticket usually come down to one of these:
+
+- `branch_field` is unset, or empty for the ticket, so the branch is the title
+  slug rather than the branch you work on. The reading pane warns when a set
+  `branch_field` is empty.
+- The repo is on another branch or a detached HEAD. When a ticket has no
+  agents, the reading pane lists the agents in its repos and the branch each
+  one is on. Start agents with an action that switches to `$ASANAMATE_BRANCH`
+  first, like the Start Claude example in [Actions](#actions).
+
+`asanamate doctor [<gid>]` prints the agents asanamate sees, with their branches
+and repos, and for a ticket, its branch, linked repos, and why each agent in
+them does or does not match.
 
 **Display.** Linked agents appear right-aligned on the ticket's title line,
 most urgent first; more than four show as grouped counts (`⚠1 ◐3 ●2`). The

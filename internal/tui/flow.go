@@ -108,7 +108,7 @@ func (m *Model) continueRun() tea.Cmd {
 		default:
 			items := make([]pickItem, len(list))
 			for i, a := range list {
-				label := m.sym.agent(a.State, 0) + " " + string(a.State) + "  " + ticket.OneLine(a.Path)
+				label := m.sym.states[a.State] + " " + string(a.State) + "  " + ticket.OneLine(a.Path)
 				items[i] = pickItem{Label: label, Hint: ticket.OneLine(a.Target), Value: a}
 			}
 			m.modal = newPicker(pickAgent, "Which agent?", items)

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/agents"
@@ -223,5 +224,27 @@ func TestHeaderCountsSharedAgentsOnce(t *testing.T) {
 	m.width = 120
 	if h := ansi.Strip(m.header()); !strings.HasSuffix(h, "agents ◐1") {
 		t.Fatalf("header = %q", h)
+	}
+}
+
+func TestPickerUsesStaticWorkingSymbol(t *testing.T) {
+	m := agentModel(t, config.SymbolsUnicode, false)
+	m.deps.Config.Actions = []config.Action{jumpAction}
+	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "a1"), onBranch(agents.Idle, "a2")}})
+	m.details["1"] = ticket.Ticket{Task: agentTask("feat/x")}
+	m.openActionMenu()
+	m.pickedAction(0)
+	if m.modal == nil || !strings.HasPrefix(m.modal.items[0].Label, "◐ working") {
+		t.Fatalf("picker label = %q", m.modal.items[0].Label)
+	}
+}
+
+func TestListKeepsGapBeforeDivider(t *testing.T) {
+	m := agentModel(t, config.SymbolsUnicode, true)
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 10})
+	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Waiting, "")}})
+	line := strings.Split(ansi.Strip(m.body()), "\n")[0]
+	if !strings.Contains(line, "⚠ │") {
+		t.Fatalf("badge touches the divider: %q", line)
 	}
 }

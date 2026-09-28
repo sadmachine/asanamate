@@ -548,7 +548,11 @@ func (m *Model) body() string {
 		return lipgloss.Place(m.width, h, lipgloss.Center, lipgloss.Center, box)
 	}
 	listW, _, split := m.paneWidths()
-	list := lipgloss.NewStyle().Width(listW).Height(h).Render(m.listView(listW, h))
+	contentW := listW
+	if split {
+		contentW = max(listW-1, 1) // keep a gap before the divider
+	}
+	list := lipgloss.NewStyle().Width(listW).Height(h).Render(m.listView(contentW, h))
 	switch {
 	case split:
 		sep := dimStyle.Render(strings.TrimSuffix(strings.Repeat("│\n", h), "\n"))

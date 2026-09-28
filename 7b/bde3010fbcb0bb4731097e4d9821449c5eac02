@@ -1,0 +1,42 @@
+internal/tui/agents_test.go
+  s_c039b43dfc0ee5::t_a9762e063cb9bf 172-215
+internal/action/action.go
+  s_c039b43dfc0ee5::t_5c2628b36ac71a 46,48-49,109,156-162
+  s_c039b43dfc0ee5::t_fb4b8edbaa637a 163-164
+internal/action/action_test.go
+  s_c039b43dfc0ee5::t_a9762e063cb9bf 199-208
+internal/tui/picker.go
+  s_c039b43dfc0ee5::t_5c2628b36ac71a 19
+README.md
+  s_c039b43dfc0ee5::t_734ebca96506ac 53,93-95,100-101,146-147,190-192,198,201-202,204-246,261-262
+internal/tui/model.go
+  s_c039b43dfc0ee5::t_5c2628b36ac71a 321-322
+internal/tui/flow.go
+  s_c039b43dfc0ee5::t_5c2628b36ac71a 26,84-89,100-117,200-204,218-219
+internal/setup/setup.go
+  s_c039b43dfc0ee5::t_734ebca96506ac 175-178,180-181
+  s_c039b43dfc0ee5::t_7314b08bdd2aa7 159-164
+internal/config/config.go
+  s_c039b43dfc0ee5::t_5c2628b36ac71a 110
+internal/setup/setup_test.go
+  s_c039b43dfc0ee5::t_7314b08bdd2aa7 90-91,94-95,100-110
+  s_c039b43dfc0ee5::t_cd70a88a1a924a 11,92-93,96-99
+docs/superpowers/specs/2026-09-27-asanamate-design.md
+  s_c039b43dfc0ee5::t_313b36b7ed0481 248-274
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7bbde3010fbcb0bb4731097e4d9821449c5eac02",
+  "prompts": {},
+  "sessions": {
+    "s_c039b43dfc0ee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "121ad4b1-ee50-491a-98e8-f8d585471f34",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

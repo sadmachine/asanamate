@@ -66,6 +66,23 @@ func TestDetailForOtherTicketCachedNotShown(t *testing.T) {
 	}
 }
 
+func TestReloadReselectsTicket(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask, sideTask}})
+	m.Update(key("j"))
+	m.Update(key("j"))
+	m.Update(key("r"))
+	m.Update(tasksMsg{tasks: []asana.Task{openTask, sideTask, doneTask}})
+	if t2, _ := m.selected(); t2.GID != "3" {
+		t.Fatalf("selected = %q, want 3 after reorder", t2.GID)
+	}
+	m.Update(key("r"))
+	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask}})
+	if t2, _ := m.selected(); t2.GID != "1" {
+		t.Fatalf("selected = %q, want first when ticket is gone", t2.GID)
+	}
+}
+
 func TestFilterTyping(t *testing.T) {
 	m, _ := testModel(t, config.Config{DefaultFilter: "is:open"})
 	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask, sideTask}})

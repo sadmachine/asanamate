@@ -51,6 +51,7 @@ type Model struct {
 	tasks       []asana.Task
 	visible     []asana.Task
 	cursor      int
+	reselectGID string // ticket to reselect once a reload lands
 	loading     bool
 
 	filterInput textinput.Model
@@ -126,6 +127,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.tasks = msg.tasks
 		m.applyFilter()
+		m.reselectGID = ""
 		return m, m.selectionChanged()
 	case detailTickMsg:
 		if t, ok := m.selected(); ok && t.GID == msg.gid {
@@ -357,18 +359,25 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
 
 func (m *Model) reload() tea.Cmd {
 	m.loading = true
+	if t, ok := m.selected(); ok {
+		m.reselectGID = t.GID
+	}
 	m.tasks, m.visible, m.cursor = nil, nil, 0
 	return loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject)
 }
 
 // applyFilter recomputes the visible tasks, keeping the selected ticket
-// selected when it is still visible.
+// selected when it is still visible. After a reload it reselects the ticket
+// selected before the reload.
 func (m *Model) applyFilter() {
-	prev, hadSelection := m.selected()
+	prevGID := m.reselectGID
+	if prev, ok := m.selected(); ok {
+		prevGID = prev.GID
+	}
 	m.visible = filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates)
-	if hadSelection {
+	if prevGID != "" {
 		for i, t := range m.visible {
-			if t.GID == prev.GID {
+			if t.GID == prevGID {
 				m.cursor = i
 				break
 			}

@@ -1,0 +1,21 @@
+internal/tui/symbols.go
+  s_2643afb4c1a7d9::t_151aafba7ad910 27-33,35-55
+  s_2643afb4c1a7d9::t_7eef793e3cb574 73,75,77
+  s_2643afb4c1a7d9::t_b1bc760bfef5ba 4,6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "513c4e4dc758373ed60de2bdabb34583a2b11583",
+  "prompts": {},
+  "sessions": {
+    "s_2643afb4c1a7d9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c1c53a-3b98-4d99-9df5-33f71bc881a2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

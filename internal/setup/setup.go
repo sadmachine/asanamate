@@ -224,6 +224,8 @@ command = '${PAGER:-less} "$ASANAMATE_TICKET_MD"'
 # key = "c"
 # mode = "background"
 # repo = true
+# # Switch to the ticket's branch first so the agent links to the ticket.
 # # tmux new-window does not inherit this environment; pass variables with -e.
-# command = '''tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "ASANAMATE_TICKET_MD=$ASANAMATE_TICKET_MD" -e "ASANAMATE_GID=$ASANAMATE_GID" 'claude "$(cat "$ASANAMATE_TICKET_MD")"' '''
+# command = '''git switch "$ASANAMATE_BRANCH" 2>/dev/null || git switch -c "$ASANAMATE_BRANCH" &&
+# tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "ASANAMATE_TICKET_MD=$ASANAMATE_TICKET_MD" -e "ASANAMATE_GID=$ASANAMATE_GID" 'claude "$(cat "$ASANAMATE_TICKET_MD")"' '''
 `

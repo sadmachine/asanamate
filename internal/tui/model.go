@@ -87,17 +87,15 @@ type Model struct {
 	exitCmd       *exec.Cmd
 }
 
-// New returns a model that starts on My Tasks with the configured default filter.
+// New returns a model that starts on My Tasks with its last used grouping and filter.
 func New(d Deps) *Model {
 	in := textinput.New()
 	in.Prompt = "/"
-	in.SetValue(d.Config.DefaultFilter)
-	return &Model{
+	m := &Model{
 		deps:          d,
 		filterInput:   in,
 		reader:        viewport.New(),
 		readerView:    d.Config.Reader.View,
-		groupBy:       strings.TrimSpace(d.Config.List.GroupBy),
 		accentStyle:   colorStyle(d.Config.AccentColor),
 		headerStyle:   colorStyle(cmp.Or(d.Config.List.HeaderColor, d.Config.AccentColor)),
 		markerStyle:   colorStyle(cmp.Or(d.Config.List.MarkerColor, d.Config.AccentColor)),
@@ -107,6 +105,8 @@ func New(d Deps) *Model {
 		sym:           newSymbols(d.Symbols, d.Config.Agents.Symbols, d.ReducedMotion),
 		loading:       true,
 	}
+	m.restoreView()
+	return m
 }
 
 // colorStyle is bold text in a configured color.
@@ -387,6 +387,7 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
 	case "enter", "esc":
 		m.filtering = false
 		m.filterInput.Blur()
+		m.saveView()
 		return nil
 	}
 	var cmd tea.Cmd
@@ -561,6 +562,7 @@ func (m *Model) openProjectPicker() {
 func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {
 	m.modal = nil
 	m.viewProject = ref
+	m.restoreView()
 	if ref != nil {
 		m.deps.State.TouchProject(ref.GID)
 		if err := m.deps.State.Save(); err != nil {
@@ -568,6 +570,25 @@ func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {
 		}
 	}
 	return m.reload()
+}
+
+// restoreView applies the viewed project's last used grouping and filter, else
+// the configured group_by and default_filter.
+func (m *Model) restoreView() {
+	v, ok := m.deps.State.View(gidOf(m.viewProject))
+	if !ok {
+		v = state.View{GroupBy: strings.TrimSpace(m.deps.Config.List.GroupBy), Filter: m.deps.Config.DefaultFilter}
+	}
+	m.groupBy = v.GroupBy
+	m.filterInput.SetValue(v.Filter)
+}
+
+// saveView remembers the viewed project's grouping and filter.
+func (m *Model) saveView() {
+	m.deps.State.SetView(gidOf(m.viewProject), state.View{GroupBy: m.groupBy, Filter: m.filterInput.Value()})
+	if err := m.deps.State.Save(); err != nil {
+		m.status = "saving state: " + err.Error()
+	}
 }
 
 func (m *Model) paneWidths() (listW, readerW int, split bool) {

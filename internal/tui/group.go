@@ -125,6 +125,7 @@ func (m *Model) openGroupPicker() {
 func (m *Model) pickedGroup(by string) tea.Cmd {
 	m.modal = nil
 	m.groupBy = by
+	m.saveView()
 	m.applyFilter()
 	return m.selectionChanged()
 }

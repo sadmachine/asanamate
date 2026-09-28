@@ -1,0 +1,64 @@
+cmd/asanamate/main.go
+  s_c039b43dfc0ee5::t_bd0be118cccd50 40-41,112-113,127-129,157
+internal/agents/agents_test.go
+  s_c039b43dfc0ee5::t_98da9084b8ea7a 1-77
+README.md
+  s_c039b43dfc0ee5::t_880ac3f6f52167 91-92,97-104,143-144,185-226,232
+internal/config/config.go
+  s_c039b43dfc0ee5::t_ef828a79d62b1d 40,42,47-54
+  s_c039b43dfc0ee5::t_ab04bf84bc7009 55
+internal/asana/client_test.go
+  s_c039b43dfc0ee5::t_f4836cd4783a15 154-184
+internal/tui/agents_test.go
+  s_c039b43dfc0ee5::t_36c66f5382676f 1-100
+internal/tui/flow.go
+  s_c039b43dfc0ee5::t_37d222b4cded5d 19-37,165-171,173,185-187
+internal/tui/listrow_test.go
+  s_c039b43dfc0ee5::t_36c66f5382676f 32,37
+internal/action/action.go
+  s_c039b43dfc0ee5::t_256fbd296d112d 20,41-58,104-110,134,136-137,139-141
+internal/asana/api.go
+  s_c039b43dfc0ee5::t_7197dfe76ca14b 106-120
+internal/asana/types.go
+  s_c039b43dfc0ee5::t_7197dfe76ca14b 3-4,74-118
+  s_c039b43dfc0ee5::t_68365e86db54bd 119
+internal/writeback/writeback_test.go
+  s_c039b43dfc0ee5::t_2da53b52822f97 101,142,158,186-224
+  s_c039b43dfc0ee5::t_794ee06341b63e 225
+internal/action/action_test.go
+  s_c039b43dfc0ee5::t_98da9084b8ea7a 16,173-197
+  s_c039b43dfc0ee5::t_f325464288e509 198
+internal/tui/model.go
+  s_c039b43dfc0ee5::t_37d222b4cded5d 17,61-69,78-83,91-95,112-114,152-174,536
+internal/agents/agents.go
+  s_c039b43dfc0ee5::t_1e92aad83435af 1-82
+internal/tui/listrow.go
+  s_c039b43dfc0ee5::t_37d222b4cded5d 6-7,12-40,43,46,53-55,58-63,92-93
+internal/writeback/writeback.go
+  s_c039b43dfc0ee5::t_bd0be118cccd50 136-138,143-160,162-163,165-180,183
+internal/config/config_test.go
+  s_c039b43dfc0ee5::t_ef828a79d62b1d 128-138
+docs/superpowers/specs/2026-09-27-asanamate-design.md
+  s_c039b43dfc0ee5::t_880ac3f6f52167 238-259
+internal/setup/setup.go
+  s_c039b43dfc0ee5::t_880ac3f6f52167 155-158,169-175
+  s_c039b43dfc0ee5::t_29c54052d6138a 176
+internal/tui/cmds.go
+  s_c039b43dfc0ee5::t_37d222b4cded5d 10,21,27,31-43,81-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "50c7303fac916cb211586c915a3d836c708b77b4",
+  "prompts": {},
+  "sessions": {
+    "s_c039b43dfc0ee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "121ad4b1-ee50-491a-98e8-f8d585471f34",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -41,6 +41,8 @@ const usage = `usage:
   asanamate show [--format md|json] <gid>          print one ticket
   asanamate setup                                  create the config file
   asanamate config                                 edit the config file in $VISUAL or $EDITOR
+  asanamate config update [--yes]                  refresh the config's comments and new defaults,
+                                                   keeping your values (old file saved as .bak)
   asanamate comment [--yes] <gid> <text | ->       comment on a task ("-" reads stdin)
   asanamate move    [--yes] [--project <gid>] <gid> <section>
   asanamate field   [--yes] [--project <gid>] <gid> <field> <value>
@@ -191,6 +193,9 @@ func runSetup() error {
 // runConfig opens the config file in the user's editor, then checks that it
 // still loads.
 func runConfig(args []string) error {
+	if len(args) > 0 && args[0] == "update" {
+		return runConfigUpdate(args[1:])
+	}
 	if len(args) > 0 {
 		return fmt.Errorf("config takes no arguments\n%s", usage)
 	}
@@ -211,6 +216,22 @@ func runConfig(args []string) error {
 	}
 	_, err = config.Load(path)
 	return err
+}
+
+func runConfigUpdate(args []string) error {
+	fs := flag.NewFlagSet("config update", flag.ContinueOnError)
+	yes := fs.Bool("yes", false, "rewrite without asking for confirmation")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("unexpected arguments %v\n%s", fs.Args(), usage)
+	}
+	path, err := config.Path()
+	if err != nil {
+		return err
+	}
+	return setup.Update(setup.Options{In: bufio.NewReader(os.Stdin), Out: os.Stdout, ConfigPath: path}, *yes)
 }
 
 func runTUI(args []string) error {

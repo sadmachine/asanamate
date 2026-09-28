@@ -174,10 +174,26 @@ separator = false
 
 # Optional: show running coding agents next to their tickets. Off unless a
 # preset or command is set. A ticket matches agents on its branch (see
-# branch_field) in one of its linked repos. See the README for states, symbols,
-# and agent actions.
+# branch_field) in one of its linked repos. See the README for agent actions.
 # [agents]
 # preset = "ccmux"
+#
+# Or, instead of preset, any tool: a command printing one line per agent,
+#   path<TAB>status[<TAB>target[<TAB>title]]
+# command = '''my-agents --tsv'''
+#
+# Map the tool's raw statuses onto asanamate's states. A status equal to a
+# state name already maps to it; anything unmapped shows as "unknown".
+# [agents.states]
+# working   = ["working", "running", "busy"]
+# waiting   = ["waiting", "permission", "input"]
+# completed = ["done", "finished"]
+# idle      = ["idle"]
+#
+# Override the symbol for any state (working, waiting, completed, idle,
+# unknown). Overriding working turns the spinner off.
+# [agents.symbols]
+# waiting = "!"
 
 
 [repo_source]

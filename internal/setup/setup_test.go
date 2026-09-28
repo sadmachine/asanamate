@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -89,11 +90,13 @@ func TestOutputStripsControlCharacters(t *testing.T) {
 }
 
 func TestTemplateOptionsStayTopLevel(t *testing.T) {
-	// Uncomment every commented setting and table, but not prose.
-	setting := regexp.MustCompile(`^# (\[|[a-z_]+ = )`)
+	// Uncomment every commented setting and table, but not prose. The
+	// custom agents command is the documented alternative to the preset, so
+	// it stays commented.
+	setting := regexp.MustCompile(`^# (\[|[a-z_]+ +=)`)
 	var body strings.Builder
 	for _, line := range strings.Split(Render(asana.Ref{GID: "1", Name: "W"}, "/code"), "\n") {
-		if setting.MatchString(line) {
+		if setting.MatchString(line) && !strings.HasPrefix(line, "# command = '''my-agents") {
 			line = strings.TrimPrefix(line, "# ")
 		}
 		body.WriteString(line + "\n")
@@ -104,7 +107,8 @@ func TestTemplateOptionsStayTopLevel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("config with every commented option enabled does not load: %v", err)
 	}
-	if cfg.Symbols != "unicode" || cfg.ReducedMotion == nil || cfg.Agents.Preset != "ccmux" {
+	if cfg.Symbols != "unicode" || cfg.ReducedMotion == nil || cfg.Agents.Preset != "ccmux" ||
+		!slices.Contains(cfg.Agents.States["working"], "running") || cfg.Agents.Symbols["waiting"] == "" {
 		t.Fatalf("cfg = %+v", cfg)
 	}
 }

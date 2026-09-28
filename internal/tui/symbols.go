@@ -1,7 +1,9 @@
 package tui
 
 import (
+	"cmp"
 	"fmt"
+	"maps"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -22,14 +24,35 @@ type symbolSet struct {
 
 var braille = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
-var symbolSets = map[string]symbolSet{
-	config.SymbolsUnicode: {open: "□", done: "✓", cursor: "▌", robot: "🤖", spinner: braille, border: lipgloss.RoundedBorder(), states: map[agents.State]string{
-		agents.Waiting: "⚠", agents.Working: "◐", agents.Completed: "●", agents.Idle: "○", agents.Unknown: "?"}},
+// Each set only sets what it changes: nerd falls back to unicode, unicode to
+// ascii, which defines everything.
+var (
+	asciiSymbols = symbolSet{open: "[ ]", done: "[x]", cursor: ">", robot: "@", border: lipgloss.ASCIIBorder(), states: map[agents.State]string{
+		agents.Waiting: "(!)", agents.Working: "(~)", agents.Completed: "(+)", agents.Idle: "(-)", agents.Unknown: "(?)"}}
+	unicodeSymbols = asciiSymbols.with(symbolSet{open: "□", done: "✓", cursor: "▌", robot: "🤖", spinner: braille, border: lipgloss.RoundedBorder(), states: map[agents.State]string{
+		agents.Waiting: "⚠", agents.Working: "◐", agents.Completed: "●", agents.Idle: "○", agents.Unknown: "?"}})
 	// Nerd Font (Font Awesome) glyphs; needs a Nerd Font.
-	config.SymbolsNerd: {open: "", done: "", robot: "󰚩", spinner: braille, states: map[agents.State]string{
-		agents.Waiting: "", agents.Working: "", agents.Completed: "", agents.Idle: "", agents.Unknown: ""}},
-	config.SymbolsASCII: {open: "[ ]", done: "[x]", cursor: ">", robot: "@", border: lipgloss.ASCIIBorder(), states: map[agents.State]string{
-		agents.Waiting: "(!)", agents.Working: "(~)", agents.Completed: "(+)", agents.Idle: "(-)", agents.Unknown: "(?)"}},
+	nerdSymbols = unicodeSymbols.with(symbolSet{open: "", done: "", robot: "󰚩", states: map[agents.State]string{
+		agents.Waiting: "", agents.Working: "", agents.Completed: "", agents.Idle: "", agents.Unknown: ""}})
+)
+
+var symbolSets = map[string]symbolSet{
+	config.SymbolsASCII:   asciiSymbols,
+	config.SymbolsUnicode: unicodeSymbols,
+	config.SymbolsNerd:    nerdSymbols,
+}
+
+// with returns s with every field o sets replacing its own.
+func (s symbolSet) with(o symbolSet) symbolSet {
+	s.open, s.done = cmp.Or(o.open, s.open), cmp.Or(o.done, s.done)
+	s.cursor, s.robot = cmp.Or(o.cursor, s.cursor), cmp.Or(o.robot, s.robot)
+	s.border = cmp.Or(o.border, s.border)
+	if o.spinner != nil {
+		s.spinner = o.spinner
+	}
+	s.states = maps.Clone(s.states)
+	maps.Copy(s.states, o.states)
+	return s
 }
 
 var stateStyles = map[agents.State]lipgloss.Style{
@@ -47,14 +70,11 @@ func newSymbols(set string, overrides map[string]string, reducedMotion bool) sym
 	if !ok {
 		base = symbolSets[config.SymbolsUnicode]
 	}
-	s := base
-	s.states = make(map[agents.State]string, len(base.states))
-	for k, v := range base.states {
-		s.states[k] = v
-	}
+	states := make(map[agents.State]string, len(overrides))
 	for k, v := range overrides {
-		s.states[agents.State(k)] = v
+		states[agents.State(k)] = v
 	}
+	s := base.with(symbolSet{states: states})
 	if reducedMotion || overrides[string(agents.Working)] != "" {
 		s.spinner = nil
 	}

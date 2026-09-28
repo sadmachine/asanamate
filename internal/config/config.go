@@ -44,7 +44,7 @@ type Config struct {
 
 // List configures how tickets appear in the list. The title is always shown;
 // Fields are extra values: section, due, assignee, project, tags, completed,
-// or any custom field name. Separator draws a line above each ticket.
+// or any custom field name. Separator frames each ticket with lines; neighbours share one.
 type List struct {
 	Layout    string   `toml:"layout"`
 	Fields    []string `toml:"fields"`

@@ -159,7 +159,7 @@ layout = "single"
 # due, assignee, project, tags, completed. Any other name is matched to a
 # custom field, for example "Status" or "Branch Name".
 fields = ["section"]
-# Draw a line above each ticket.
+# Frame each ticket with lines above and below (neighbours share one).
 separator = false
 
 [repo_source]

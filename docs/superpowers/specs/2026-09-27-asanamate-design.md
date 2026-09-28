@@ -141,8 +141,8 @@ Unknown keys are errors, so typos are reported instead of ignored.
   other name matches a custom field by name (case-insensitive, trimmed); the
   first matching field with a value wins. Empty values are skipped. List
   fetches include custom field display values for this. `separator = true`
-  (default false) draws a dim line above each ticket, including the first,
-  in either layout.
+  (default false) frames each ticket with dim lines above and
+  below, in either layout; neighbouring tickets share one line.
 
 ## Project picker
 

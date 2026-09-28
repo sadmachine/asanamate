@@ -482,13 +482,15 @@ func (m *Model) listView(width, height int) string {
 	if m.deps.Config.List.Separator {
 		sepH = 1
 	}
-	// Each item is preceded by a separator when enabled: n*(itemH+sepH) lines.
-	rows := max(height/(itemH+sepH), 1)
+	// Separators frame every item and neighbours share one: n*(itemH+sepH)+sepH lines.
+	rows := max((height-sepH)/(itemH+sepH), 1)
 	start := max(m.cursor-rows+1, 0)
+	end := min(start+rows, len(m.visible))
+	sep := dimStyle.Render(strings.Repeat("─", width))
 	var lines []string
-	for i := start; i < len(m.visible) && i < start+rows; i++ {
+	for i := start; i < end; i++ {
 		if sepH > 0 {
-			lines = append(lines, dimStyle.Render(strings.Repeat("─", width)))
+			lines = append(lines, sep)
 		}
 		t := m.visible[i]
 		mark := "○"
@@ -517,6 +519,9 @@ func (m *Model) listView(width, height int) string {
 			}
 			lines = append(lines, line)
 		}
+	}
+	if sepH > 0 {
+		lines = append(lines, sep)
 	}
 	return strings.Join(lines, "\n")
 }

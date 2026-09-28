@@ -169,11 +169,21 @@ func loadCandidates(command string) tea.Cmd {
 	}
 }
 
-func loadSections(c *asana.Client, project asana.Ref) tea.Cmd {
+// loadSections loads a project's sections, or My Tasks' sections when
+// project has no gid.
+func loadSections(c *asana.Client, workspace string, project asana.Ref) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 		defer cancel()
-		sections, err := c.Sections(ctx, project.GID)
+		gid := project.GID
+		if gid == "" {
+			list, err := c.MyTaskList(ctx, workspace)
+			if err != nil {
+				return sectionsMsg{project: project, err: err}
+			}
+			gid = list.GID
+		}
+		sections, err := c.Sections(ctx, gid)
 		return sectionsMsg{project: project, sections: sections, err: err}
 	}
 }

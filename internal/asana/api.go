@@ -20,9 +20,15 @@ func (c *Client) Me(ctx context.Context) (User, error) {
 	return getOne[User](ctx, c, "/users/me", fields("name,workspaces.name"))
 }
 
+// MyTaskList returns the user's My Tasks list. Project endpoints such as
+// Sections accept its gid.
+func (c *Client) MyTaskList(ctx context.Context, workspace string) (Ref, error) {
+	return getOne[Ref](ctx, c, "/users/me/user_task_list", url.Values{"workspace": {workspace}})
+}
+
 // MyTasks returns the user's My Tasks list: incomplete tasks plus tasks completed after since.
 func (c *Client) MyTasks(ctx context.Context, workspace string, since time.Time) ([]Task, error) {
-	list, err := getOne[Ref](ctx, c, "/users/me/user_task_list", url.Values{"workspace": {workspace}})
+	list, err := c.MyTaskList(ctx, workspace)
 	if err != nil {
 		return nil, err
 	}
@@ -146,4 +152,10 @@ func (c *Client) SetAssignee(ctx context.Context, taskGID, userGID string) error
 		assignee = userGID
 	}
 	return c.do(ctx, http.MethodPut, "/tasks/"+taskGID, nil, map[string]any{"assignee": assignee}, nil)
+}
+
+// SetMyTasksSection moves a task into a section of its assignee's My Tasks.
+// Only the assignee can do this.
+func (c *Client) SetMyTasksSection(ctx context.Context, taskGID, sectionGID string) error {
+	return c.do(ctx, http.MethodPut, "/tasks/"+taskGID, nil, map[string]any{"assignee_section": sectionGID}, nil)
 }

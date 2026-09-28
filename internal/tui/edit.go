@@ -21,11 +21,15 @@ const (
 	editAssignee
 )
 
+// myTasks stands for the My Tasks list among a ticket's projects.
+var myTasks = asana.Ref{Name: "My Tasks"}
+
 // pendingEdit tracks a ticket update between opening the edit menu and
 // writing it.
 type pendingEdit struct {
-	ticket ticket.Ticket
-	field  *asana.CustomField // the field being set, once picked
+	ticket  ticket.Ticket
+	field   *asana.CustomField // the field being set, once picked
+	myTasks bool               // moving within My Tasks, not a project
 }
 
 func (m *Model) openEditMenu() {
@@ -52,15 +56,16 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 	case editComment:
 		m.input = newInputBox("Comment on "+ticket.Clean(t.Name), "comment text")
 	case editSection:
-		switch len(t.Memberships) {
+		targets := m.sectionTargets(t.Task)
+		switch len(targets) {
 		case 0:
-			m.edit, m.status = nil, "ticket is not in any project"
+			m.edit, m.status = nil, "ticket is not in any project or your My Tasks"
 		case 1:
-			return m.pickedEditProject(t.Memberships[0].Project)
+			return m.pickedEditProject(targets[0])
 		default:
-			items := make([]pickItem, len(t.Memberships))
-			for i, mb := range t.Memberships {
-				items[i] = pickItem{Label: ticket.Clean(mb.Project.Name), Value: mb.Project}
+			items := make([]pickItem, len(targets))
+			for i, p := range targets {
+				items[i] = pickItem{Label: ticket.Clean(p.Name), Value: p}
 			}
 			m.modal = newPicker(pickEditProject, "Move within which project?", items)
 		}
@@ -77,10 +82,28 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 	return nil
 }
 
+// sectionTargets are the ticket's projects plus My Tasks when the ticket is
+// yours (Asana only returns its My Tasks section to its assignee). My Tasks
+// comes first while viewing it.
+func (m *Model) sectionTargets(t asana.Task) []asana.Ref {
+	var targets []asana.Ref
+	for _, mb := range t.Memberships {
+		targets = append(targets, mb.Project)
+	}
+	if t.AssigneeSection == nil {
+		return targets
+	}
+	if m.viewProject == nil {
+		return append([]asana.Ref{myTasks}, targets...)
+	}
+	return append(targets, myTasks)
+}
+
 func (m *Model) pickedEditProject(project asana.Ref) tea.Cmd {
 	m.modal = nil
+	m.edit.myTasks = project.GID == ""
 	m.status = "loading sections…"
-	return loadSections(m.deps.Client, project)
+	return loadSections(m.deps.Client, m.deps.Config.Workspace, project)
 }
 
 func (m *Model) openSectionPicker(msg sectionsMsg) {
@@ -93,6 +116,9 @@ func (m *Model) openSectionPicker(msg sectionsMsg) {
 	}
 	m.status = ""
 	current := m.edit.ticket.SectionIn(msg.project.GID)
+	if m.edit.myTasks {
+		current = m.edit.ticket.AssigneeSection.Name
+	}
 	items := make([]pickItem, len(msg.sections))
 	for i, sec := range msg.sections {
 		items[i] = pickItem{Label: ticket.Clean(sec.Name), Value: sec}
@@ -105,8 +131,11 @@ func (m *Model) openSectionPicker(msg sectionsMsg) {
 
 func (m *Model) pickedSection(sec asana.Ref) tea.Cmd {
 	m.modal = nil
-	c, gid := m.deps.Client, m.edit.ticket.GID
+	c, gid, mine := m.deps.Client, m.edit.ticket.GID, m.edit.myTasks
 	return m.saveEdit("move to "+ticket.Clean(sec.Name), func(ctx context.Context) error {
+		if mine {
+			return c.SetMyTasksSection(ctx, gid, sec.GID)
+		}
 		return c.AddToSection(ctx, sec.GID, gid)
 	})
 }

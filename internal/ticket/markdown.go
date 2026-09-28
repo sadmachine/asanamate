@@ -10,7 +10,11 @@ import (
 )
 
 // Markdown renders the ticket for the reading pane and for $ASANAMATE_TICKET_MD.
-func (t Ticket) Markdown() string {
+func (t Ticket) Markdown() string { return t.MarkdownWith("") }
+
+// MarkdownWith renders the ticket with extra Markdown inserted after the
+// fields, before the description.
+func (t Ticket) MarkdownWith(extra string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# %s\n\n", Clean(t.Name))
 	item := func(label, value string) {
@@ -52,6 +56,7 @@ func (t Ticket) Markdown() string {
 		}
 	}
 	section(&b, "Fields", strings.Join(fields, "\n"))
+	b.WriteString(extra)
 	section(&b, "Description", htmlToMarkdown(t.HTMLNotes))
 
 	var subtasks []string

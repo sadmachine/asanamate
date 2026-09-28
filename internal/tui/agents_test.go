@@ -274,7 +274,10 @@ func TestReaderListsAgentsAndKeepsScroll(t *testing.T) {
 	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: long}})
 	m.Update(agentsMsg{list: []agents.Agent{titled(agents.Working, "w1", "Refactor the queue")}})
 	content := ansi.Strip(m.reader.GetContent())
-	if !strings.Contains(content, "Agents") || !strings.Contains(content, "◐ working · Refactor the queue") {
+	if i, j := strings.Index(content, "Agents"), strings.Index(content, "Description"); i < 0 || j < 0 || i > j {
+		t.Fatalf("agents section must come before the description:\n%s", content)
+	}
+	if !strings.Contains(content, "◐ working · Refactor the queue") {
 		t.Fatalf("reader missing agents section:\n%s", content)
 	}
 	m.reader.SetYOffset(5)

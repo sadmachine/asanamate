@@ -427,7 +427,7 @@ func (m *Model) renderDetail(keepScroll bool) {
 	_, readerW, _ := m.paneWidths()
 	section := m.agentsSection(t.Task)
 	offset := m.reader.YOffset()
-	m.reader.SetContent(m.renderMarkdown(t.Markdown()+section, max(readerW-2, 20)))
+	m.reader.SetContent(m.renderMarkdown(t.MarkdownWith(section), max(readerW-2, 20)))
 	if keepScroll {
 		m.reader.SetYOffset(offset)
 	} else {

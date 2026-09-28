@@ -199,7 +199,7 @@ func TestGroupPicker(t *testing.T) {
 }
 
 func TestSelectionMarker(t *testing.T) {
-	m, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, SelectionStyle: config.StyleMarker}})
+	m, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Selection: config.Selection{Style: config.StyleMarker}}})
 	m.Update(tasksMsg{tasks: []asana.Task{{GID: "1", Name: "A"}, {GID: "2", Name: "B"}}})
 	got := strings.Split(m.listView(10, 2), "\n")
 	if want := m.markerStyle.Render("▌ ") + titleStyle.Render("□ A"); got[0] != want {
@@ -216,12 +216,12 @@ func TestSelectionMarker(t *testing.T) {
 
 func TestHeaderStyles(t *testing.T) {
 	tasks := []asana.Task{{GID: "1", Name: "A", AssigneeSection: &asana.Ref{Name: "Doing"}}}
-	rule, _ := testModel(t, config.Config{List: config.List{GroupBy: "section", HeaderStyle: config.StyleRule, HeaderColor: "5"}})
+	rule, _ := testModel(t, config.Config{List: config.List{GroupBy: "section", Header: config.Header{Style: config.StyleRule, Color: "5"}}})
 	rule.Update(tasksMsg{tasks: tasks})
 	if got := listLines(rule, 20, 2)[0]; got != "── Doing (1) ───────" {
 		t.Fatalf("rule header = %q", got)
 	}
-	bar, _ := testModel(t, config.Config{AccentColor: "2", List: config.List{GroupBy: "section", HeaderColor: "#ff0000"}})
+	bar, _ := testModel(t, config.Config{AccentColor: "2", List: config.List{GroupBy: "section", Header: config.Header{Color: "#ff0000"}}})
 	bar.Update(tasksMsg{tasks: tasks})
 	want := colorStyle("#ff0000").Reverse(true).Render(" Doing (1)" + strings.Repeat(" ", 10))
 	if got := strings.Split(bar.listView(20, 2), "\n")[0]; got != want {

@@ -111,12 +111,12 @@ func TestListConfig(t *testing.T) {
 	if err != nil || cfg.List.Layout != LayoutSingle || !slices.Equal(cfg.List.Fields, []string{"section"}) || cfg.Reader.View != ViewCards {
 		t.Fatalf("defaults: %+v, err = %v", cfg.List, err)
 	}
-	if cfg.AccentColor != "4" || cfg.List.HeaderStyle != StyleBar || cfg.List.HeaderColor != "" || cfg.List.SelectionStyle != StyleMarker || cfg.List.MarkerColor != "" {
+	if cfg.AccentColor != "4" || cfg.List.Header != (Header{Style: StyleBar, Spacing: 1}) || cfg.List.Selection != (Selection{Style: StyleMarker}) {
 		t.Fatalf("style defaults: %+v", cfg.List)
 	}
 	for _, color := range []string{"0", "255", "#abc", "#A1b2C3"} {
-		if _, err := Load(writeFile(t, "workspace = \"1\"\n[list]\nheader_color = \""+color+"\"\n")); err != nil {
-			t.Errorf("header_color %q: %v", color, err)
+		if _, err := Load(writeFile(t, "workspace = \"1\"\n[list.header]\ncolor = \""+color+"\"\n")); err != nil {
+			t.Errorf("header.color %q: %v", color, err)
 		}
 	}
 	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[list]\nlayout = \"multi\"\nfields = [\"status\", \"Branch Name\", \"due\"]\n"))
@@ -130,12 +130,12 @@ func TestListConfig(t *testing.T) {
 		"title field":   "[list]\nfields = [\"Title\"]\n",
 		"empty field":   "[list]\nfields = [\" \"]\n",
 		"title group":   "[list]\ngroup_by = \"title\"\n",
-		"bad header":    "[list]\nheader_style = \"box\"\n",
-		"bad color":     "[list]\nheader_color = \"blue\"\n",
-		"color range":   "[list]\nheader_color = \"256\"\n",
-		"bad hex":       "[list]\nheader_color = \"#12345g\"\n",
-		"bad selection": "[list]\nselection_style = \"rule\"\n",
-		"bad marker":    "[list]\nmarker_color = \"red\"\n",
+		"bad header":    "[list.header]\nstyle = \"box\"\n",
+		"bad color":     "[list.header]\ncolor = \"blue\"\n",
+		"color range":   "[list.header]\ncolor = \"256\"\n",
+		"bad hex":       "[list.header]\ncolor = \"#12345g\"\n",
+		"bad selection": "[list.selection]\nstyle = \"rule\"\n",
+		"bad marker":    "[list.selection]\ncolor = \"red\"\n",
 		"empty accent":  "accent_color = \"\"\n",
 	} {
 		if _, err := Load(writeFile(t, "workspace = \"1\"\n"+body)); err == nil {

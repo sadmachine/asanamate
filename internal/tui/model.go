@@ -103,8 +103,8 @@ func New(d Deps) *Model {
 		reader:        viewport.New(),
 		readerView:    d.Config.Reader.View,
 		accentStyle:   colorStyle(d.Config.AccentColor),
-		headerStyle:   colorStyle(cmp.Or(d.Config.List.HeaderColor, d.Config.AccentColor)),
-		markerStyle:   colorStyle(cmp.Or(d.Config.List.MarkerColor, d.Config.AccentColor)),
+		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
+		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),
 		renderers:     map[rendererKey]*glamour.TermRenderer{},
 		details:       map[string]ticket.Ticket{},
 		projectFields: map[string]map[string]bool{},
@@ -778,9 +778,9 @@ func (m *Model) panes(h int) string {
 }
 
 // selectionBar reports whether the selected ticket is drawn as a reversed bar
-// (the list has focus and selection_style is bar).
+// (the list has focus and selection.style is bar).
 func (m *Model) selectionBar() bool {
-	return m.deps.Config.List.SelectionStyle == config.StyleBar && !m.focusReader
+	return m.deps.Config.List.Selection.Style == config.StyleBar && !m.focusReader
 }
 
 // renderRowLine fits line into width with tail right-aligned. A selected line
@@ -824,13 +824,14 @@ func (m *Model) listView(width, height int) string {
 	}
 	// Separators frame every item and neighbours share one; a group header
 	// takes the place of the separator above its item. The first row shown
-	// always has its group header.
+	// always has its group header, followed by header.spacing blank lines.
+	spacing := m.deps.Config.List.Header.Spacing
 	header := func(i, start int) bool {
 		return m.groups != nil && (i == start || m.groups[i] != m.groups[i-1])
 	}
 	rowH := func(i, start int) int {
 		if header(i, start) {
-			return itemH + 1
+			return itemH + 1 + spacing
 		}
 		return itemH + sepH
 	}
@@ -855,7 +856,7 @@ func (m *Model) listView(width, height int) string {
 	sep := dimStyle.Render(strings.Repeat("─", width))
 	// The marker style keeps a gutter on every row so text doesn't shift.
 	var cursor, gutter string
-	if m.deps.Config.List.SelectionStyle == config.StyleMarker {
+	if m.deps.Config.List.Selection.Style == config.StyleMarker {
 		cursor = m.sym.cursor + " "
 		gutter = strings.Repeat(" ", ansi.StringWidth(cursor))
 		cursorStyle := m.markerStyle
@@ -870,6 +871,9 @@ func (m *Model) listView(width, height int) string {
 		switch {
 		case header(i, start):
 			lines = append(lines, m.groupHeader(m.groups[i], counts[m.groups[i]], width))
+			for range spacing {
+				lines = append(lines, "")
+			}
 		case sepH > 0:
 			lines = append(lines, sep)
 		}
@@ -923,7 +927,7 @@ func (m *Model) listRow(i int) (row []string, badge string) {
 // reader at least minPaneW columns.
 func (m *Model) fitList() {
 	gutter := 0
-	if m.deps.Config.List.SelectionStyle == config.StyleMarker {
+	if m.deps.Config.List.Selection.Style == config.StyleMarker {
 		gutter = ansi.StringWidth(m.sym.cursor + " ")
 	}
 	counts := map[string]int{}

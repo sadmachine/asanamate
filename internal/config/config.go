@@ -123,8 +123,11 @@ type List struct {
 
 // Reader configures the reading pane. View is its starting view: cards
 // (sections and boxed comments) or markdown (the rendered ticket Markdown).
+// MaxTextWidth caps the wrap width of the cards view's description and
+// comment text; 0 wraps at the pane width.
 type Reader struct {
-	View string `toml:"view"`
+	View         string `toml:"view"`
+	MaxTextWidth int    `toml:"max_text_width"`
 }
 
 // RepoSource configures where repo picker candidates come from.
@@ -199,6 +202,9 @@ func (c Config) validate() error {
 	}
 	if c.Reader.View != ViewCards && c.Reader.View != ViewMarkdown {
 		return fmt.Errorf("reader.view must be %q or %q, got %q", ViewCards, ViewMarkdown, c.Reader.View)
+	}
+	if c.Reader.MaxTextWidth < 0 {
+		return fmt.Errorf("reader.max_text_width must be 0 (no limit) or more, got %d", c.Reader.MaxTextWidth)
 	}
 	for _, f := range c.List.Fields {
 		switch name := strings.TrimSpace(f); {

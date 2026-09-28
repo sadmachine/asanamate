@@ -187,6 +187,9 @@ selection_style = "marker"
 # Starting view for the reading pane; press v to switch. "cards": sections
 # and boxed comments. "markdown": the rendered ticket Markdown.
 view = "cards"
+# Wrap description and comment text in the cards view at this many columns;
+# 0 wraps at the pane width.
+max_text_width = 0
 
 # Optional: show running coding agents next to their tickets. Off unless a
 # preset or command is set. A ticket matches agents on its branch (see

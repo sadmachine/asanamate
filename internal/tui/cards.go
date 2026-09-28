@@ -65,10 +65,12 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	add("Attachments", strings.Join(attachments, "\n"))
 
 	if len(t.Comments) > 0 {
+		// Cards hug the capped text: its width plus border and padding.
+		cardW := m.textWidth(width-4) + 4
 		comments := make([]string, len(t.Comments))
 		for i, c := range t.Comments {
 			title := ticket.Author(c) + dimStyle.Render(" · "+ticket.Day(c.CreatedAt))
-			comments[i] = m.card(title, m.renderBody(ticket.HTMLToMarkdown(c.HTMLText), width-4), width)
+			comments[i] = m.card(title, m.renderBody(ticket.HTMLToMarkdown(c.HTMLText), cardW-4), cardW)
 		}
 		add(fmt.Sprintf("Comments %d", len(t.Comments)), strings.Join(comments, "\n\n"))
 	}
@@ -135,13 +137,21 @@ func (m *Model) card(title, body string, width int) string {
 	return top + "\n" + box
 }
 
-// renderBody renders Markdown to fit width columns, without the document
-// margins the markdown view uses.
+// renderBody renders Markdown to fit width columns, capped at
+// reader.max_text_width, without the document margins the markdown view uses.
 func (m *Model) renderBody(md string, width int) string {
 	if md == "" {
 		return ""
 	}
-	return strings.Trim(m.glamour(md, width, true), "\n")
+	return strings.Trim(m.glamour(md, m.textWidth(width), true), "\n")
+}
+
+// textWidth caps width at reader.max_text_width when one is set.
+func (m *Model) textWidth(width int) int {
+	if limit := m.deps.Config.Reader.MaxTextWidth; limit > 0 {
+		return min(width, limit)
+	}
+	return width
 }
 
 func wrap(s string, width int) string {

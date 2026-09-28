@@ -126,6 +126,7 @@ func TestListConfig(t *testing.T) {
 	for name, body := range map[string]string{
 		"bad layout":    "[list]\nlayout = \"grid\"\n",
 		"bad view":      "[reader]\nview = \"grid\"\n",
+		"neg width":     "[reader]\nmax_text_width = -1\n",
 		"title field":   "[list]\nfields = [\"Title\"]\n",
 		"empty field":   "[list]\nfields = [\" \"]\n",
 		"title group":   "[list]\ngroup_by = \"title\"\n",

@@ -9,8 +9,10 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 )
 
-// Field is a cleaned label and value shown for a ticket.
-type Field struct{ Label, Value string }
+// Field is a cleaned label and value shown for a ticket. Key names the
+// ticket property behind an editable field: "assignee", "my_tasks",
+// "project:<gid>", or "field:<custom field gid>"; it is "" otherwise.
+type Field struct{ Label, Value, Key string }
 
 // Status is "done" for completed tickets, else "open".
 func (t Ticket) Status() string {
@@ -23,32 +25,32 @@ func (t Ticket) Status() string {
 // Meta returns the ticket's built-in fields, omitting empty ones.
 func (t Ticket) Meta() []Field {
 	var fields []Field
-	add := func(label, value string) {
+	add := func(label, value, key string) {
 		if value != "" {
-			fields = append(fields, Field{label, Clean(value)})
+			fields = append(fields, Field{label, Clean(value), key})
 		}
 	}
-	add("Status", t.Status())
-	add("URL", t.PermalinkURL)
+	add("Status", t.Status(), "")
+	add("URL", t.PermalinkURL, "")
 	if t.Assignee != nil {
-		add("Assignee", t.Assignee.Name)
+		add("Assignee", t.Assignee.Name, "assignee")
 	}
 	if t.DueOn != nil {
-		add("Due", *t.DueOn)
+		add("Due", *t.DueOn, "")
 	}
 	for _, m := range t.Memberships {
 		value := m.Project.Name
 		if m.Section != nil {
 			value += " / " + m.Section.Name
 		}
-		add("Project", value)
+		add("Project", value, "project:"+m.Project.GID)
 	}
 	if t.AssigneeSection != nil {
-		add("My Tasks section", t.AssigneeSection.Name)
+		add("My Tasks section", t.AssigneeSection.Name, "my_tasks")
 	}
-	add("Tags", joinNames(t.Tags, ", "))
+	add("Tags", joinNames(t.Tags, ", "), "")
 	if t.Parent != nil {
-		add("Parent", t.Parent.Name)
+		add("Parent", t.Parent.Name, "")
 	}
 	return fields
 }
@@ -58,7 +60,7 @@ func (t Ticket) FieldValues() []Field {
 	var fields []Field
 	for _, f := range t.CustomFields {
 		if f.DisplayValue != nil && *f.DisplayValue != "" {
-			fields = append(fields, Field{Clean(strings.TrimSpace(f.Name)), Clean(*f.DisplayValue)})
+			fields = append(fields, Field{Clean(strings.TrimSpace(f.Name)), Clean(*f.DisplayValue), "field:" + f.GID})
 		}
 	}
 	return fields

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
@@ -178,5 +179,93 @@ func TestEditSkipsUnsupportedFields(t *testing.T) {
 		if it.Label == "Formula" {
 			t.Fatal("formula fields are read-only")
 		}
+	}
+}
+
+func TestTabCyclesFields(t *testing.T) {
+	m, _ := editModel(t)
+	var got []string
+	for range 6 {
+		press(m, "tab")
+		got = append(got, m.fieldKey)
+	}
+	press(m, "shift+tab", "shift+tab")
+	got = append(got, m.fieldKey)
+	want := []string{"assignee", "project:p1", "my_tasks", "field:f1", commentKey, "assignee", "field:f1"}
+	if !m.focusReader || strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Fatalf("keys = %q, want %q (focusReader %v)", got, want, m.focusReader)
+	}
+}
+
+func TestFieldLinesMatchRows(t *testing.T) {
+	m, _ := editModel(t)
+	tk := m.details["1"]
+	lines := strings.Split(ansi.Strip(m.renderCards(tk, 60)), "\n")
+	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Comments"}
+	for _, key := range fieldTargets(tk) {
+		if l := lines[m.fieldLines[key]]; !strings.Contains(l, labels[key]) {
+			t.Errorf("%s line %d = %q", key, m.fieldLines[key], l)
+		}
+	}
+}
+
+func TestTabFieldEdits(t *testing.T) {
+	cases := []struct {
+		name string
+		do   func(m *Model)
+		want string
+	}{
+		{"assign", func(m *Model) {
+			press(m, "tab", "enter", "down", "down", "enter")
+		}, `PUT /tasks/1 {"data":{"assignee":"u2"}}`},
+		{"project section", func(m *Model) {
+			press(m, "tab", "tab", "enter", "down", "enter")
+		}, `POST /sections/s2/addTask {"data":{"task":"1"}}`},
+		{"my tasks section", func(m *Model) {
+			press(m, "tab", "tab", "tab", "enter", "down", "enter")
+		}, `PUT /tasks/1 {"data":{"assignee_section":"m2"}}`},
+		{"text field", func(m *Model) {
+			press(m, "shift+tab", "shift+tab", "enter")
+			if got := m.input.area.Value(); got != "old" {
+				t.Errorf("prefill = %q", got)
+			}
+			m.input.area.SetValue("feat/x")
+			send(m, ctrlS)
+		}, `PUT /tasks/1 {"data":{"custom_fields":{"f1":"feat/x"}}}`},
+		{"comment", func(m *Model) {
+			press(m, "shift+tab", "enter")
+			m.input.area.SetValue("hello")
+			send(m, ctrlS)
+		}, `POST /tasks/1/stories {"data":{"text":"hello"}}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m, writes := editModel(t)
+			tc.do(m)
+			if len(*writes) != 1 || strings.TrimSpace((*writes)[0]) != tc.want {
+				t.Fatalf("writes = %q, want %q (status %q)", *writes, tc.want, m.status)
+			}
+		})
+	}
+}
+
+func TestEscLeavesFields(t *testing.T) {
+	m, _ := editModel(t)
+	press(m, "tab", "esc")
+	if m.focusReader || m.fieldKey != "" {
+		t.Fatalf("focusReader = %v, fieldKey = %q", m.focusReader, m.fieldKey)
+	}
+}
+
+func TestTabTogglesInMarkdownView(t *testing.T) {
+	m, _ := editModel(t)
+	m.readerView = config.ViewMarkdown
+	press(m, "tab")
+	if !m.focusReader || m.fieldKey != "" {
+		t.Fatalf("focusReader = %v, fieldKey = %q", m.focusReader, m.fieldKey)
+	}
+	press(m, "tab")
+	if m.focusReader {
+		t.Fatal("tab should return focus to the list")
 	}
 }

@@ -98,7 +98,7 @@ func TestDeclineBlocksWrite(t *testing.T) {
 func TestConfirmErrorBlocksWrite(t *testing.T) {
 	c, writes := fake(t)
 	svc := Service{Client: c, Confirm: func(string) (bool, error) { return false, ErrNoTTY }}
-	if err := svc.SetField(ctx, "1", "points", "3"); !errors.Is(err, ErrNoTTY) {
+	if err := svc.SetField(ctx, "1", "points", "3", ""); !errors.Is(err, ErrNoTTY) {
 		t.Fatalf("err = %v", err)
 	}
 	if len(*writes) != 0 {
@@ -139,7 +139,7 @@ func TestSetFieldValues(t *testing.T) {
 	}
 	for _, tc := range cases {
 		c, writes := fake(t)
-		if err := (Service{Client: c}).SetField(ctx, "1", tc.field, tc.value); err != nil {
+		if err := (Service{Client: c}).SetField(ctx, "1", tc.field, tc.value, ""); err != nil {
 			t.Fatalf("%s=%q: %v", tc.field, tc.value, err)
 		}
 		fields := (*writes)[0].body["custom_fields"].(map[string]any)
@@ -155,7 +155,7 @@ func TestSetFieldRejectsBadInput(t *testing.T) {
 	c, writes := fake(t)
 	svc := Service{Client: c}
 	for _, args := range [][2]string{{"Points", "many"}, {"Stage", "Shipped"}, {"When", "2026-01-01"}, {"Nope", "x"}} {
-		if err := svc.SetField(ctx, "1", args[0], args[1]); err == nil {
+		if err := svc.SetField(ctx, "1", args[0], args[1], ""); err == nil {
 			t.Errorf("SetField(%q, %q) succeeded", args[0], args[1])
 		}
 	}
@@ -181,5 +181,45 @@ func TestMessagesStripControlCharacters(t *testing.T) {
 		if err == nil || strings.ContainsAny(err.Error(), "\x1b\x07") {
 			t.Errorf("err = %q", err)
 		}
+	}
+}
+
+func TestSetFieldSameNameNeedsProject(t *testing.T) {
+	var puts []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/tasks/1" && r.Method == http.MethodGet:
+			io.WriteString(w, `{"data":{"gid":"1","name":"T","custom_fields":[
+				{"gid":"f1","name":"Branch Name ","resource_subtype":"text"},
+				{"gid":"f5","name":"Branch name","resource_subtype":"text"}]}}`)
+		case r.URL.Path == "/projects/p2/custom_field_settings":
+			io.WriteString(w, `{"data":[{"custom_field":{"gid":"f5"}}]}`)
+		case r.URL.Path == "/projects/p3/custom_field_settings":
+			io.WriteString(w, `{"data":[{"custom_field":{"gid":"zz"}}]}`)
+		case r.Method == http.MethodPut:
+			var body struct {
+				Data struct {
+					CustomFields map[string]any `json:"custom_fields"`
+				} `json:"data"`
+			}
+			json.NewDecoder(r.Body).Decode(&body)
+			for gid := range body.Data.CustomFields {
+				puts = append(puts, gid)
+			}
+			io.WriteString(w, `{"data":{}}`)
+		}
+	}))
+	defer srv.Close()
+	c := asana.New("tok")
+	c.BaseURL = srv.URL
+	svc := Service{Client: c}
+	if err := svc.SetField(ctx, "1", "branch name", "x", ""); err == nil || !strings.Contains(err.Error(), "--project") {
+		t.Fatalf("no project: err = %v", err)
+	}
+	if err := svc.SetField(ctx, "1", "branch name", "x", "p3"); err == nil {
+		t.Fatal("project without either field must fail")
+	}
+	if err := svc.SetField(ctx, "1", "branch name", "x", "p2"); err != nil || len(puts) != 1 || puts[0] != "f5" {
+		t.Fatalf("err = %v, puts = %v", err, puts)
 	}
 }

@@ -152,6 +152,10 @@ default_filter = "is:open"
 # Override per action with confirm_writes, or per call with --yes.
 confirm_writes = true
 
+# Custom field holding a ticket's git branch, exposed to actions as
+# $ASANAMATE_BRANCH. Empty uses the title slug. Example: "Branch Name".
+branch_field = ""
+
 [list]
 # "single": one line per ticket. "multi": title on line one, fields on line two.
 layout = "single"
@@ -161,6 +165,14 @@ layout = "single"
 fields = ["section"]
 # Frame each ticket with lines above and below (neighbours share one).
 separator = false
+
+# Optional: link tickets to running coding agents. Off unless command is set.
+# The command prints "<path>\t<status>[\t<target>]" per agent. A ticket matches
+# an agent whose git branch equals its branch (see branch_field) in one of the
+# ticket's linked repos. Adds the "agent" list field and the
+# $ASANAMATE_AGENT_STATUS, $ASANAMATE_AGENT_PATH, $ASANAMATE_AGENT_TARGET variables.
+# [agents]
+# command = '''ccmux show --json | jq -r '.[] | "\(.cwd)\t\(.status)\t\(.sessionId)"' '''
 
 [repo_source]
 # Prints one git repository path per line for the repo picker.

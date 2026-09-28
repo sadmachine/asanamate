@@ -37,10 +37,21 @@ type Config struct {
 	Images        string     `toml:"images"`
 	DefaultFilter string     `toml:"default_filter"`
 	ConfirmWrites bool       `toml:"confirm_writes"`
+	BranchField   string     `toml:"branch_field"`
 	RepoSource    RepoSource `toml:"repo_source"`
+	Agents        Agents     `toml:"agents"`
 	List          List       `toml:"list"`
 	Actions       []Action   `toml:"actions"`
 }
+
+// Agents links tickets to running coding agents. It is off unless Command is
+// set; Command prints "<path>\t<status>[\t<target>]" per agent.
+type Agents struct {
+	Command string `toml:"command"`
+}
+
+// AgentsEnabled reports whether agent tracking is turned on.
+func (c Config) AgentsEnabled() bool { return strings.TrimSpace(c.Agents.Command) != "" }
 
 // List configures how tickets appear in the list. The title is always shown;
 // Fields are extra values: section, due, assignee, project, tags, completed,

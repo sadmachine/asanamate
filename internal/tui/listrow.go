@@ -3,28 +3,64 @@ package tui
 import (
 	"strings"
 
+	"github.com/sadmachine/asanamate/internal/action"
+	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
+// rowContext is what a row needs beyond the task itself.
+type rowContext struct {
+	projectGID string          // viewed project, "" for My Tasks
+	preferred  map[string]bool // the viewed project's custom field gids
+	agent      *agents.Agent   // running agent linked to the task
+}
+
+// rowContext builds the row context for t in the current view.
+func (m *Model) rowContext(t asana.Task) rowContext {
+	view := gidOf(m.viewProject)
+	preferred := m.projectFields[view]
+	return rowContext{projectGID: view, preferred: preferred, agent: m.ticketAgent(t, preferred)}
+}
+
+// ticketAgent returns the running agent on the ticket's branch in one of the
+// repos linked to the ticket's projects (any repo if none are linked).
+func (m *Model) ticketAgent(t asana.Task, preferred map[string]bool) *agents.Agent {
+	if len(m.agents) == 0 {
+		return nil
+	}
+	var repos []string
+	for _, mb := range t.Memberships {
+		if path, ok := m.deps.State.Repos[mb.Project.GID]; ok {
+			repos = append(repos, path)
+		}
+	}
+	return agents.Match(m.agents, action.Branch(t, m.deps.Config.BranchField, preferred), repos)
+}
+
 // rowFields returns the non-empty display values of the configured list
 // fields, in order.
-func rowFields(t asana.Task, names []string, projectGID string) []string {
+func rowFields(t asana.Task, names []string, rc rowContext) []string {
 	var out []string
 	for _, name := range names {
-		if v := ticket.OneLine(fieldValue(t, strings.TrimSpace(name), projectGID)); v != "" {
+		if v := ticket.OneLine(fieldValue(t, strings.TrimSpace(name), rc)); v != "" {
 			out = append(out, v)
 		}
 	}
 	return out
 }
 
-// fieldValue resolves a built-in field name, falling back to the first custom
-// field with that name (case-insensitive) that has a value.
-func fieldValue(t asana.Task, name, projectGID string) string {
+// fieldValue resolves a built-in field name, falling back to the custom field
+// with that name (see asana.Task.Field for same-named fields).
+func fieldValue(t asana.Task, name string, rc rowContext) string {
 	switch strings.ToLower(name) {
 	case "section":
-		return t.SectionFor(projectGID)
+		return t.SectionFor(rc.projectGID)
+	case "agent":
+		if rc.agent != nil {
+			return "agent " + rc.agent.Status
+		}
+		return ""
 	case "completed":
 		if t.Completed {
 			return "done"
@@ -53,10 +89,8 @@ func fieldValue(t asana.Task, name, projectGID string) string {
 		}
 		return strings.Join(names, ", ")
 	}
-	for _, f := range t.CustomFields {
-		if strings.EqualFold(strings.TrimSpace(f.Name), name) && f.DisplayValue != nil && *f.DisplayValue != "" {
-			return *f.DisplayValue
-		}
+	if f, ok := t.Field(name, rc.preferred); ok {
+		return f.Value()
 	}
 	return ""
 }

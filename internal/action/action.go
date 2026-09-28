@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -37,6 +38,24 @@ type Context struct {
 	Repo          string
 	ConfirmWrites bool
 	Files         Files
+	// Preferred holds the gids of the active project's custom fields; it
+	// decides between fields that share a name.
+	Preferred map[string]bool
+	// BranchField names the custom field holding the ticket's git branch.
+	BranchField string
+	// Agent is the running agent linked to the ticket, if any.
+	Agent *agents.Agent
+}
+
+// Branch returns the ticket's git branch: the value of branchField when set,
+// otherwise the title slug.
+func Branch(t asana.Task, branchField string, preferred map[string]bool) string {
+	if branchField != "" {
+		if f, ok := t.Field(branchField, preferred); ok && f.Value() != "" {
+			return f.Value()
+		}
+	}
+	return Slug(t.Name)
 }
 
 // WriteFiles exports the ticket to <stateDir>/tickets/<gid>/ticket.{json,md}.
@@ -82,6 +101,13 @@ func Env(c Context) []string {
 		"PROJECT":        "",
 		"PROJECT_GID":    "",
 		"SECTION":        "",
+		"BRANCH":         Branch(t.Task, c.BranchField, c.Preferred),
+		"AGENT_STATUS":   "",
+		"AGENT_PATH":     "",
+		"AGENT_TARGET":   "",
+	}
+	if c.Agent != nil {
+		vars["AGENT_STATUS"], vars["AGENT_PATH"], vars["AGENT_TARGET"] = c.Agent.Status, c.Agent.Path, c.Agent.Target
 	}
 	if c.ConfirmWrites {
 		vars["CONFIRM_WRITES"] = "1"
@@ -105,16 +131,14 @@ func Env(c Context) []string {
 		tags[i] = tag.Name
 	}
 	vars["TAGS"] = strings.Join(tags, ",")
+	byName := map[string][]asana.CustomField{}
 	for _, f := range t.CustomFields {
-		name := envName(f.Name)
-		if name == "" {
-			continue
+		if name := envName(f.Name); name != "" {
+			byName[name] = append(byName[name], f)
 		}
-		value := ""
-		if f.DisplayValue != nil {
-			value = *f.DisplayValue
-		}
-		vars["FIELD_"+name] = value
+	}
+	for name, fields := range byName {
+		vars["FIELD_"+name] = asana.PickField(fields, c.Preferred).Value()
 	}
 	env := make([]string, 0, len(vars))
 	for k, v := range vars {

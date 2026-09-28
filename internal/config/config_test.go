@@ -125,3 +125,14 @@ func TestListConfig(t *testing.T) {
 		}
 	}
 }
+
+func TestAgentsOffByDefault(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
+	if err != nil || cfg.AgentsEnabled() || cfg.BranchField != "" {
+		t.Fatalf("defaults: %+v, err = %v", cfg, err)
+	}
+	cfg, err = Load(writeFile(t, "workspace = \"1\"\nbranch_field = \"Branch Name\"\n[agents]\ncommand = \"ccmux show --json\"\n"))
+	if err != nil || !cfg.AgentsEnabled() || cfg.BranchField != "Branch Name" {
+		t.Fatalf("enabled: %+v, err = %v", cfg, err)
+	}
+}

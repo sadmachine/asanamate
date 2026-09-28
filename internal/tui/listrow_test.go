@@ -29,12 +29,12 @@ var fieldTask = asana.Task{
 
 func TestRowFields(t *testing.T) {
 	names := []string{"section", "completed", "STATUS", "branch name", "due", "assignee", "project", "tags", "empty", "missing"}
-	got := rowFields(fieldTask, names, "")
+	got := rowFields(fieldTask, names, rowContext{})
 	want := []string{"Today", "open", "In Review", "feat/x", "due 2026-10-01", "Ann", "Web", "bug, p1"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("got %q\nwant %q", got, want)
 	}
-	if got := rowFields(fieldTask, []string{"section"}, "p"); !slices.Equal(got, []string{"Doing"}) {
+	if got := rowFields(fieldTask, []string{"section"}, rowContext{projectGID: "p"}); !slices.Equal(got, []string{"Doing"}) {
 		t.Fatalf("project view section: %q", got)
 	}
 }

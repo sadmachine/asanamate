@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -167,5 +168,31 @@ func TestExecReplacesProcess(t *testing.T) {
 	var exitErr *exec.ExitError
 	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 7 {
 		t.Fatalf("want the command's exit code 7 after Ctrl+C, got %v", err)
+	}
+}
+
+func TestEnvResolvesSameNamedFieldsAndBranch(t *testing.T) {
+	a, b := "from-fuse", "from-eng"
+	tk := ticket.Ticket{Task: asana.Task{GID: "1", Name: "Fix Login", CustomFields: []asana.CustomField{
+		{GID: "f1", Name: "Branch Name ", DisplayValue: &a},
+		{GID: "f5", Name: "Branch name", DisplayValue: &b},
+	}}}
+	env := Env(Context{Ticket: tk, BranchField: "branch name", Preferred: map[string]bool{"f5": true}})
+	for _, want := range []string{"ASANAMATE_FIELD_BRANCH_NAME=from-eng", "ASANAMATE_BRANCH=from-eng"} {
+		if !slices.Contains(env, want) {
+			t.Errorf("preferred: env missing %q", want)
+		}
+	}
+	env = Env(Context{Ticket: tk})
+	for _, want := range []string{"ASANAMATE_FIELD_BRANCH_NAME=from-fuse", "ASANAMATE_BRANCH=fix-login", "ASANAMATE_AGENT_STATUS="} {
+		if !slices.Contains(env, want) {
+			t.Errorf("default: env missing %q", want)
+		}
+	}
+	env = Env(Context{Ticket: tk, Agent: &agents.Agent{Path: "/w", Status: "running", Target: "s1"}})
+	for _, want := range []string{"ASANAMATE_AGENT_STATUS=running", "ASANAMATE_AGENT_PATH=/w", "ASANAMATE_AGENT_TARGET=s1"} {
+		if !slices.Contains(env, want) {
+			t.Errorf("agent: env missing %q", want)
+		}
 	}
 }

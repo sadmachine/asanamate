@@ -133,25 +133,54 @@ func pickProject(t asana.Task, projectGID string) (asana.Ref, error) {
 }
 
 // SetField sets a text, number, or enum custom field. An empty value clears it.
-func (s Service) SetField(ctx context.Context, gid, fieldName, value string) error {
+// When the task has several fields with that name, projectGID picks the one
+// attached to that project.
+func (s Service) SetField(ctx context.Context, gid, fieldName, value, projectGID string) error {
 	t, err := s.Client.Task(ctx, gid)
 	if err != nil {
 		return err
 	}
-	for _, f := range t.CustomFields {
-		if !strings.EqualFold(strings.TrimSpace(f.Name), strings.TrimSpace(fieldName)) {
-			continue
-		}
-		v, err := fieldValue(f, value)
-		if err != nil {
-			return err
-		}
-		if err := s.confirm(fmt.Sprintf("Set %q on %q to %q?", strings.TrimSpace(f.Name), t.Name, value)); err != nil {
-			return err
-		}
-		return s.Client.SetCustomField(ctx, gid, f.GID, v)
+	f, err := s.resolveField(ctx, t, fieldName, projectGID)
+	if err != nil {
+		return err
 	}
-	return fmt.Errorf("task has no custom field %q", fieldName)
+	v, err := fieldValue(f, value)
+	if err != nil {
+		return err
+	}
+	if err := s.confirm(fmt.Sprintf("Set %q on %q to %q?", ticket.Clean(strings.TrimSpace(f.Name)), t.Name, value)); err != nil {
+		return err
+	}
+	return s.Client.SetCustomField(ctx, gid, f.GID, v)
+}
+
+// resolveField finds the one field to write. Writes never guess between
+// same-named fields: they need the project that owns the intended one.
+func (s Service) resolveField(ctx context.Context, t asana.Task, name, projectGID string) (asana.CustomField, error) {
+	var matches []asana.CustomField
+	for _, f := range t.CustomFields {
+		if asana.SameFieldName(f.Name, name) {
+			matches = append(matches, f)
+		}
+	}
+	switch {
+	case len(matches) == 0:
+		return asana.CustomField{}, fmt.Errorf("task has no custom field %q", name)
+	case len(matches) == 1:
+		return matches[0], nil
+	case projectGID == "":
+		return asana.CustomField{}, fmt.Errorf("task has %d custom fields named %q; pass --project with the gid of the project whose field to set", len(matches), name)
+	}
+	onProject, err := s.Client.ProjectFieldGIDs(ctx, projectGID)
+	if err != nil {
+		return asana.CustomField{}, err
+	}
+	for _, f := range matches {
+		if onProject[f.GID] {
+			return f, nil
+		}
+	}
+	return asana.CustomField{}, fmt.Errorf("none of the fields named %q is on project %s", name, projectGID)
 }
 
 func fieldValue(f asana.CustomField, value string) (any, error) {

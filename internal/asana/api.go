@@ -103,6 +103,21 @@ func (c *Client) Sections(ctx context.Context, projectGID string) ([]Ref, error)
 	return getAll[Ref](ctx, c, "/projects/"+projectGID+"/sections", fields("name"))
 }
 
+// ProjectFieldGIDs returns the gids of the custom fields attached to a project.
+func (c *Client) ProjectFieldGIDs(ctx context.Context, projectGID string) (map[string]bool, error) {
+	settings, err := getAll[struct {
+		CustomField Ref `json:"custom_field"`
+	}](ctx, c, "/projects/"+projectGID+"/custom_field_settings", fields("custom_field.gid"))
+	if err != nil {
+		return nil, err
+	}
+	gids := make(map[string]bool, len(settings))
+	for _, s := range settings {
+		gids[s.CustomField.GID] = true
+	}
+	return gids, nil
+}
+
 // AddComment posts a plain-text comment on a task.
 func (c *Client) AddComment(ctx context.Context, taskGID, text string) error {
 	return c.do(ctx, http.MethodPost, "/tasks/"+taskGID+"/stories", nil, map[string]any{"text": text}, nil)

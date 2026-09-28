@@ -14,6 +14,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/filter"
@@ -57,12 +58,15 @@ type Model struct {
 	details       map[string]ticket.Ticket
 	shownGID      string
 
-	projects []asana.Project
-	modal    *picker
-	run      *pendingRun
-	menuFor  string // gid whose action menu opens once its details arrive
-	status   string
-	exitCmd  *exec.Cmd
+	projects      []asana.Project
+	projectFields map[string]map[string]bool // project gid -> its custom field gids
+	agents        []agents.Agent
+	agentsErr     string
+	modal         *picker
+	run           *pendingRun
+	menuFor       string // gid whose action menu opens once its details arrive
+	status        string
+	exitCmd       *exec.Cmd
 }
 
 // New returns a model that starts on My Tasks with the configured default filter.
@@ -71,11 +75,12 @@ func New(d Deps) *Model {
 	in.Prompt = "/"
 	in.SetValue(d.Config.DefaultFilter)
 	return &Model{
-		deps:        d,
-		filterInput: in,
-		reader:      viewport.New(),
-		details:     map[string]ticket.Ticket{},
-		loading:     true,
+		deps:          d,
+		filterInput:   in,
+		reader:        viewport.New(),
+		details:       map[string]ticket.Ticket{},
+		projectFields: map[string]map[string]bool{},
+		loading:       true,
 	}
 }
 
@@ -83,7 +88,11 @@ func New(d Deps) *Model {
 func (m *Model) ExitCommand() *exec.Cmd { return m.exitCmd }
 
 func (m *Model) Init() tea.Cmd {
-	return loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject)
+	cmd := loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject)
+	if m.deps.Config.AgentsEnabled() {
+		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents.Command))
+	}
+	return cmd
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -99,6 +108,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.status = "loading tasks: " + msg.err.Error()
 			return m, nil
+		}
+		if msg.fields != nil {
+			m.projectFields[msg.project.GID] = msg.fields
 		}
 		m.tasks = msg.tasks
 		m.applyFilter()
@@ -137,6 +149,29 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status = ""
 		m.projects = msg.projects
 		m.openProjectPicker()
+	case agentsMsg:
+		if !m.deps.Config.AgentsEnabled() {
+			return m, nil
+		}
+		if msg.err != nil {
+			if s := "agents: " + msg.err.Error(); s != m.agentsErr {
+				m.status, m.agentsErr = s, s
+			}
+		} else {
+			m.agents, m.agentsErr = msg.list, ""
+		}
+		return m, scheduleAgents()
+	case agentTickMsg:
+		return m, loadAgents(m.deps.Config.Agents.Command)
+	case projectFieldsMsg:
+		if msg.err != nil {
+			m.status = "loading project fields: " + msg.err.Error()
+		}
+		m.projectFields[msg.gid] = msg.fields
+		if m.run != nil && m.run.awaitingFields {
+			m.run.awaitingFields = false
+			return m, m.execute(m.run.repo)
+		}
 	case candidatesMsg:
 		m.openRepoPicker(msg)
 	case actionDoneMsg:
@@ -498,7 +533,7 @@ func (m *Model) listView(width, height int) string {
 			mark = "✓"
 		}
 		title := mark + " " + ticket.OneLine(t.Name)
-		details := strings.Join(rowFields(t, m.deps.Config.List.Fields, gidOf(m.viewProject)), " · ")
+		details := strings.Join(rowFields(t, m.deps.Config.List.Fields, m.rowContext(t)), " · ")
 		row := []string{title}
 		switch {
 		case multi && details != "":

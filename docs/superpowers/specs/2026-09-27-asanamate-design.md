@@ -235,6 +235,28 @@ Only actions with `repo = true` resolve a repo.
 4. Save the repo top-level path for the project (if a project was chosen), then
    run the action with `cwd` set to the repo.
 
+## Branches and agents (optional)
+
+- `branch_field` (default empty) names the custom field holding a ticket's git
+  branch. `$ASANAMATE_BRANCH` is its value, or the title slug.
+- Custom fields are separate objects that can share a name (one per project).
+  Reads prefer the field attached to the active project (viewed project for
+  the list, action project for env), then the first with a value. Project
+  field sets come from `GET /projects/{gid}/custom_field_settings` and are
+  cached per session. Writes (`asanamate field`) never guess: with several
+  same-named fields they need `--project` (default `$ASANAMATE_PROJECT_GID`).
+- `[agents] command` turns on agent tracking; unset means off (default), with
+  no polling and empty agent values. The command prints
+  `<path>\t<status>[\t<target>]` per agent and runs every 5 s. Each path's
+  branch and repository come from `git rev-parse` (worktrees resolve to their
+  main repo). A ticket matches the first agent whose branch equals the
+  ticket's branch in one of the repos linked to the ticket's projects (any repo
+  if none are linked).
+- Linked tickets expose the `agent` list field and
+  `ASANAMATE_AGENT_STATUS`/`_PATH`/`_TARGET` to actions, so actions can start
+  agents (for example `ccmux spawn --worktree "$ASANAMATE_BRANCH"`) and jump
+  to them (`ccmux switch "$ASANAMATE_AGENT_TARGET"`).
+
 ## Write-back subcommands
 
 ```

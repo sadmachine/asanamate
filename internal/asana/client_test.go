@@ -151,3 +151,34 @@ func TestValidGID(t *testing.T) {
 		}
 	}
 }
+
+func TestTaskFieldPrefersProjectThenValue(t *testing.T) {
+	v := func(s string) *string { return &s }
+	task := Task{CustomFields: []CustomField{
+		{GID: "a", Name: "Branch Name ", DisplayValue: v("")},
+		{GID: "b", Name: "branch name", DisplayValue: v("feat/b")},
+		{GID: "c", Name: "Other", DisplayValue: v("x")},
+	}}
+	if f, ok := task.Field("Branch Name", nil); !ok || f.GID != "b" {
+		t.Fatalf("no preference: want first with a value (b), got %+v", f)
+	}
+	if f, _ := task.Field("BRANCH NAME", map[string]bool{"a": true}); f.GID != "a" {
+		t.Fatalf("project preference: want a, got %+v", f)
+	}
+	if _, ok := task.Field("missing", nil); ok {
+		t.Fatal("missing field found")
+	}
+}
+
+func TestProjectFieldGIDs(t *testing.T) {
+	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/projects/9/custom_field_settings" {
+			t.Errorf("path %s", r.URL.Path)
+		}
+		io.WriteString(w, `{"data":[{"custom_field":{"gid":"f1"}},{"custom_field":{"gid":"f2"}}]}`)
+	})
+	got, err := c.ProjectFieldGIDs(ctx, "9")
+	if err != nil || !got["f1"] || !got["f2"] || len(got) != 2 {
+		t.Fatalf("got %v, err %v", got, err)
+	}
+}

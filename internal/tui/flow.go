@@ -16,10 +16,25 @@ import (
 
 // pendingRun tracks an action between picking it and launching it.
 type pendingRun struct {
-	action        config.Action
-	ticket        ticket.Ticket
-	project       *asana.Ref
-	projectChosen bool
+	action         config.Action
+	ticket         ticket.Ticket
+	project        *asana.Ref
+	projectChosen  bool
+	repo           string // resolved repo, kept while project fields load
+	awaitingFields bool
+}
+
+// sharesFieldNames reports whether two of the task's custom fields share a
+// name, in which case the active project decides which one an action sees.
+func sharesFieldNames(t asana.Task) bool {
+	for i, a := range t.CustomFields {
+		for _, b := range t.CustomFields[i+1:] {
+			if asana.SameFieldName(a.Name, b.Name) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (m *Model) openActionMenu() {
@@ -147,7 +162,15 @@ func (m *Model) pickedRepo(path string) tea.Cmd {
 
 func (m *Model) execute(repoPath string) tea.Cmd {
 	r := m.run
+	if p := r.project; p != nil && sharesFieldNames(r.ticket.Task) {
+		if _, ok := m.projectFields[p.GID]; !ok {
+			r.repo, r.awaitingFields = repoPath, true
+			m.status = "loading project fields…"
+			return loadProjectFields(m.deps.Client, p.GID)
+		}
+	}
 	m.run = nil
+	preferred := m.projectFields[gidOf(r.project)]
 	files, err := action.WriteFiles(m.deps.StateDir, r.ticket)
 	if err != nil {
 		m.status = "writing ticket files: " + err.Error()
@@ -159,6 +182,9 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		Repo:          repoPath,
 		ConfirmWrites: m.deps.Config.ConfirmWritesFor(r.action),
 		Files:         files,
+		Preferred:     preferred,
+		BranchField:   m.deps.Config.BranchField,
+		Agent:         m.ticketAgent(r.ticket.Task, preferred),
 	})
 	name := r.action.Name
 	switch r.action.Mode {

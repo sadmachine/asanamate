@@ -37,7 +37,8 @@ const usage = `usage:
   asanamate setup                                  create the config file
   asanamate comment [--yes] <gid> <text | ->       comment on a task ("-" reads stdin)
   asanamate move    [--yes] [--project <gid>] <gid> <section>
-  asanamate field   [--yes] <gid> <field> <value>  set a custom field ("" clears it)
+  asanamate field   [--yes] [--project <gid>] <gid> <field> <value>
+                                                   set a custom field ("" clears it)
   asanamate version
 `
 
@@ -108,8 +109,8 @@ func writeCommand(name string, args []string) error {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	yes := fs.Bool("yes", false, "write without asking for confirmation")
 	project := new(string)
-	if name == "move" {
-		project = fs.String("project", "", "project gid; required when the task is in several projects")
+	if name == "move" || name == "field" {
+		project = fs.String("project", os.Getenv("ASANAMATE_PROJECT_GID"), "project gid; picks the project (move) or the project's field (field) when ambiguous; defaults to $ASANAMATE_PROJECT_GID")
 	}
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -122,6 +123,9 @@ func writeCommand(name string, args []string) error {
 	gid := rest[0]
 	if !asana.ValidGID(gid) {
 		return fmt.Errorf("task gid must be numeric, got %q", gid)
+	}
+	if *project != "" && !asana.ValidGID(*project) {
+		return fmt.Errorf("project gid must be numeric, got %q", *project)
 	}
 	cfg, err := loadConfig()
 	if err != nil {
@@ -150,7 +154,7 @@ func writeCommand(name string, args []string) error {
 	case "move":
 		return svc.Move(ctx, gid, rest[1], *project)
 	default:
-		return svc.SetField(ctx, gid, rest[1], rest[2])
+		return svc.SetField(ctx, gid, rest[1], rest[2], *project)
 	}
 }
 

@@ -88,13 +88,20 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `confirm_writes` | `true` | write-back subcommands ask before writing |
 | `list.layout` | `"single"` | `single` (one line per ticket) or `multi` (title, then fields on a second line) |
 | `list.fields` | `["section"]` | values shown with the title |
+| `branch_field` | `""` | custom field holding the ticket's git branch (`$ASANAMATE_BRANCH`); empty uses the title slug |
+| `agents.command` | unset (off) | opt-in agent tracking; see [Agents](#agents-optional) |
 | `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one |
 | `repo_source.command` | lists repos in your setup directory | prints one repo path per line |
 
 The title is always shown. `list.fields` accepts the built-ins `section`,
-`due`, `assignee`, `project`, `tags`, and `completed` (open/done). Any other
-name is matched to a custom field, ignoring case and surrounding spaces; if
-several fields match, the first with a value is shown. For example:
+`due`, `assignee`, `project`, `tags`, `completed` (open/done), and `agent`
+(when [agents](#agents-optional) are on). Any other name is matched to a custom
+field, ignoring case and surrounding spaces.
+
+Custom fields are separate Asana objects, so two can share a name (for example
+one per project). When that happens, asanamate uses the one attached to the
+active project; otherwise the first with a value. Writes never guess:
+`asanamate field` needs `--project` (actions pass it automatically). For example:
 
 ```toml
 [list]
@@ -133,6 +140,8 @@ paste ticket text into the command, because ticket content is untrusted.
 | `ASANAMATE_MY_SECTION` | My Tasks section |
 | `ASANAMATE_PROJECT`, `ASANAMATE_PROJECT_GID`, `ASANAMATE_SECTION` | active project and the ticket's section in it |
 | `ASANAMATE_REPO` | resolved repo (`repo = true` actions) |
+| `ASANAMATE_BRANCH` | the ticket's branch: `branch_field`'s value, or the title slug |
+| `ASANAMATE_AGENT_STATUS`, `ASANAMATE_AGENT_PATH`, `ASANAMATE_AGENT_TARGET` | the linked running agent, when [agents](#agents-optional) are on (empty otherwise) |
 | `ASANAMATE_TICKET_JSON`, `ASANAMATE_TICKET_MD` | full ticket as JSON / Markdown |
 | `ASANAMATE_FIELD_<NAME>` | custom field display values, e.g. `ASANAMATE_FIELD_BRANCH_NAME` |
 | `ASANAMATE_CONFIRM_WRITES` | `1`/`0`, read by the write-back subcommands |
@@ -173,12 +182,54 @@ repo = true
 command = 'sesh connect "$ASANAMATE_REPO"'
 ```
 
+## Agents (optional)
+
+asanamate can link tickets to coding agents that another tool is running, such
+as [ccmux](https://github.com/motherskitchenblr2/ccmux), agent-deck, or dmux. It
+is off until you set a command:
+
+```toml
+branch_field = "Branch Name"
+
+[agents]
+# Prints "<path>\t<status>[\t<target>]" per running agent.
+command = '''ccmux show --json | jq -r '.[] | "\(.cwd)\t\(.status)\t\(.sessionId)"' '''
+```
+
+Check the field names against your tool's output (`ccmux show --json`); the
+line format is all asanamate relies on. The command runs every 5 seconds.
+
+The link is the git branch: a ticket matches an agent whose working directory
+has `$ASANAMATE_BRANCH` checked out, in a repo linked to one of the ticket's
+projects (worktrees count as their repo). Linked tickets get the `agent` list
+field and the `ASANAMATE_AGENT_*` variables, so actions can start and jump to
+agents:
+
+```toml
+[[actions]]
+name = "Start agent in a worktree"
+key = "c"
+mode = "background"
+repo = true
+command = '''ccmux spawn claude --cwd "$ASANAMATE_REPO" --worktree "$ASANAMATE_BRANCH" --detach --prompt "$(cat "$ASANAMATE_TICKET_MD")" &&
+asanamate field --yes "$ASANAMATE_GID" "Branch Name" "$ASANAMATE_BRANCH"'''
+
+[[actions]]
+name = "Jump to agent"
+key = "j"
+mode = "exit"
+command = '[ -n "$ASANAMATE_AGENT_TARGET" ] && ccmux switch "$ASANAMATE_AGENT_TARGET"'
+```
+
+Ticket text becomes the agent's prompt, so anyone who can edit a ticket can
+steer the agent. Be careful combining this with auto-approved tools.
+
 ## Writing back to Asana
 
 ```sh
 asanamate comment [--yes] <gid> "Opened PR https://..."   # "-" reads stdin
 asanamate move    [--yes] [--project <gid>] <gid> "In Review"
-asanamate field   [--yes] <gid> "Branch Name" feature/fix-login
+asanamate field   [--yes] [--project <gid>] <gid> "Branch Name" feature/fix-login
 ```
 
 Each command asks on the terminal before writing unless `--yes` is given,

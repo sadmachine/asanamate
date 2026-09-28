@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/browser"
 	"github.com/sadmachine/asanamate/internal/kitty"
@@ -17,12 +18,27 @@ import (
 const (
 	detailDelay    = 200 * time.Millisecond
 	requestTimeout = time.Minute
+	agentRefresh   = 5 * time.Second
 )
 
 type tasksMsg struct {
 	project *asana.Ref
 	tasks   []asana.Task
+	fields  map[string]bool // the project's custom field gids, when known
 	err     error
+}
+
+type agentsMsg struct {
+	list []agents.Agent
+	err  error
+}
+
+type agentTickMsg struct{}
+
+type projectFieldsMsg struct {
+	gid    string
+	fields map[string]bool
+	err    error
 }
 
 type detailTickMsg struct{ gid string }
@@ -62,7 +78,34 @@ func loadTasks(c *asana.Client, workspace string, project *asana.Ref) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 		defer cancel()
 		tasks, err := ticket.List(ctx, c, workspace, gidOf(project))
-		return tasksMsg{project: project, tasks: tasks, err: err}
+		msg := tasksMsg{project: project, tasks: tasks, err: err}
+		if err == nil && project != nil {
+			// Best effort: only used to pick between same-named fields.
+			msg.fields, _ = c.ProjectFieldGIDs(ctx, project.GID)
+		}
+		return msg
+	}
+}
+
+func loadAgents(command string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), agentRefresh*2)
+		defer cancel()
+		list, err := agents.List(ctx, command)
+		return agentsMsg{list: list, err: err}
+	}
+}
+
+func scheduleAgents() tea.Cmd {
+	return tea.Tick(agentRefresh, func(time.Time) tea.Msg { return agentTickMsg{} })
+}
+
+func loadProjectFields(c *asana.Client, gid string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+		defer cancel()
+		fields, err := c.ProjectFieldGIDs(ctx, gid)
+		return projectFieldsMsg{gid: gid, fields: fields, err: err}
 	}
 }
 

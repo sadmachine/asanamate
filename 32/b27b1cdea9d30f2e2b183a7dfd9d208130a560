@@ -1,0 +1,26 @@
+internal/asana/client_test.go
+  s_cdbe5d3a58c3b2::t_d0b4e55cc06d5e 148-175
+  s_cdbe5d3a58c3b2::t_174078fb59859b 10
+internal/tui/edit.go
+  s_cdbe5d3a58c3b2::t_10e735ae188e8f 24-26,30-32,59-60,62,64,66-68,85-101,104,106,119-121,134,136-138
+internal/tui/cmds.go
+  s_cdbe5d3a58c3b2::t_10e735ae188e8f 172-174,178-186
+internal/asana/api.go
+  s_cdbe5d3a58c3b2::t_11c146fc519893 23-28,31,156-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "32b27b1cdea9d30f2e2b183a7dfd9d208130a560",
+  "prompts": {},
+  "sessions": {
+    "s_cdbe5d3a58c3b2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dd5581f0-98c5-4807-940e-a31f9ba1af38",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

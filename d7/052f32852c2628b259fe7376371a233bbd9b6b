@@ -1,0 +1,44 @@
+internal/tui/listrow.go
+  s_c039b43dfc0ee5::t_7058418a112ffa 1-62
+docs/superpowers/specs/2026-09-27-asanamate-design.md
+  s_c039b43dfc0ee5::t_a71f9424131c93 136-143
+internal/setup/setup.go
+  s_c039b43dfc0ee5::t_a71f9424131c93 155-162
+README.md
+  s_c039b43dfc0ee5::t_a71f9424131c93 89-90,93-102
+  s_c039b43dfc0ee5::t_a390be137777f9 103
+internal/config/config_test.go
+  s_c039b43dfc0ee5::t_257554ea8a97e7 7,108-126
+  s_c039b43dfc0ee5::t_a67b9ac1ac3113 127
+internal/listing/listing.go
+  s_c039b43dfc0ee5::t_7058418a112ffa 34
+internal/asana/client_test.go
+  s_c039b43dfc0ee5::t_257554ea8a97e7 10,93-94
+  s_c039b43dfc0ee5::t_d07a170ec0b1af 95
+internal/config/config.go
+  s_c039b43dfc0ee5::t_7058418a112ffa 24-29,41,45-52,70-73,112-122
+internal/tui/listrow_test.go
+  s_c039b43dfc0ee5::t_257554ea8a97e7 1-60
+internal/asana/api.go
+  s_c039b43dfc0ee5::t_7058418a112ffa 11-12
+internal/tui/model.go
+  s_c039b43dfc0ee5::t_7058418a112ffa 477-482,484,490-499,501-508,510
+internal/ticket/ticket.go
+  s_c039b43dfc0ee5::t_7058418a112ffa 59-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d7052f32852c2628b259fe7376371a233bbd9b6b",
+  "prompts": {},
+  "sessions": {
+    "s_c039b43dfc0ee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "121ad4b1-ee50-491a-98e8-f8d585471f34",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

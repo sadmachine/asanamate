@@ -31,6 +31,10 @@ Prebuilt binaries are attached to each [GitHub release](https://github.com/sadma
 `asanamate config` opens the config file in `$VISUAL` or `$EDITOR` (falling
 back to `vi`) and reports any errors in it after you save.
 
+`asanamate config update` rewrites the config from the current template so it
+picks up new settings and comments, keeping every value you set. The previous
+file is saved as `config.toml.bak`; copy any comments of your own back from it.
+
 ## Keys
 
 | Key | Action |

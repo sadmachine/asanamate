@@ -57,10 +57,7 @@ func Run(ctx context.Context, o Options) error {
 	if err := os.MkdirAll(filepath.Dir(o.ConfigPath), 0o700); err != nil {
 		return err
 	}
-	if err := os.WriteFile(o.ConfigPath, []byte(Render(workspace, root)), 0o600); err != nil {
-		return err
-	}
-	if err := os.Chmod(o.ConfigPath, 0o600); err != nil {
+	if err := writePrivate(o.ConfigPath, []byte(Render(workspace, root))); err != nil {
 		return err
 	}
 	fmt.Fprintf(o.Out, summary, o.ConfigPath, root, o.StatePath)

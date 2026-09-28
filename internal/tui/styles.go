@@ -8,4 +8,5 @@ var (
 	selectedStyle = lipgloss.NewStyle().Reverse(true)
 	errorStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
 	modalStyle    = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(0, 1)
+	loadingStyle  = modalStyle.BorderForeground(lipgloss.Color("3")).Padding(2, 4)
 )

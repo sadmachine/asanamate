@@ -193,11 +193,12 @@ branch_field = "Branch Name"
 
 [agents]
 # Prints "<path>\t<status>[\t<target>]" per running agent.
-command = '''ccmux show --json | jq -r '.[] | "\(.cwd)\t\(.status)\t\(.sessionId)"' '''
+command = '''ccmux show --json | jq -r '.[] | "\(.cwd)\t\(.status)\t\(.id)"' '''
 ```
 
-Check the field names against your tool's output (`ccmux show --json`); the
-line format is all asanamate relies on. The command runs every 5 seconds.
+For ccmux (checked against 1.4.1), `status` is `working`, `waiting`, or
+`idle`, and `id` is what `ccmux switch` takes. For other tools, only the line
+format matters. The command runs every 5 seconds.
 
 The link is the git branch: a ticket matches an agent whose working directory
 has `$ASANAMATE_BRANCH` checked out, in a repo linked to one of the ticket's

@@ -172,7 +172,7 @@ separator = false
 # ticket's linked repos. Adds the "agent" list field and the
 # $ASANAMATE_AGENT_STATUS, $ASANAMATE_AGENT_PATH, $ASANAMATE_AGENT_TARGET variables.
 # [agents]
-# command = '''ccmux show --json | jq -r '.[] | "\(.cwd)\t\(.status)\t\(.sessionId)"' '''
+# command = '''ccmux show --json | jq -r '.[] | "\(.cwd)\t\(.status)\t\(.id)"' '''
 
 [repo_source]
 # Prints one git repository path per line for the repo picker.

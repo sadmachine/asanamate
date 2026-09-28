@@ -28,18 +28,33 @@ func (m *Model) ticketAgents(t asana.Task, preferred map[string]bool) []agents.A
 	if len(m.agents) == 0 {
 		return nil
 	}
-	var repos []string
-	for _, mb := range t.Memberships {
-		if path, ok := m.deps.State.Repos[mb.Project.GID]; ok {
-			repos = append(repos, path)
-		}
-	}
-	return agents.MatchAll(m.agents, action.Branch(t, m.deps.Config.BranchField, preferred), repos)
+	return agents.MatchAll(m.agents, action.Branch(t, m.deps.Config.BranchField, preferred), m.deps.State.LinkedRepos(t))
 }
 
 // viewAgents returns the agents linked to t in the current view.
 func (m *Model) viewAgents(t asana.Task) []agents.Agent {
 	return m.ticketAgents(t, m.projectFields[gidOf(m.viewProject)])
+}
+
+// agentNotes explains, in the current view, why t may be missing agents: an
+// empty branch field, and, when nothing is linked, the agents in t's repos
+// that are on another branch.
+func (m *Model) agentNotes(t asana.Task) []string {
+	if !m.deps.Config.AgentsEnabled() {
+		return nil
+	}
+	preferred := m.projectFields[gidOf(m.viewProject)]
+	var notes []string
+	if w := action.BranchWarning(t, m.deps.Config.BranchField, preferred); w != "" {
+		notes = append(notes, w)
+	}
+	if len(m.viewAgents(t)) == 0 {
+		branch := action.Branch(t, m.deps.Config.BranchField, preferred)
+		for _, a := range agents.Unlinked(m.agents, branch, m.deps.State.LinkedRepos(t)) {
+			notes = append(notes, agents.Hint(a, branch))
+		}
+	}
+	return notes
 }
 
 // agentStates lists the states of t's agents, for filter terms.

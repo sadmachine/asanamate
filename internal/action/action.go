@@ -52,12 +52,27 @@ type Context struct {
 // Branch returns the ticket's git branch: the value of branchField when set,
 // otherwise the title slug.
 func Branch(t asana.Task, branchField string, preferred map[string]bool) string {
-	if branchField != "" {
-		if f, ok := t.Field(branchField, preferred); ok && f.Value() != "" {
-			return f.Value()
-		}
+	if v := fieldBranch(t, branchField, preferred); v != "" {
+		return v
 	}
 	return Slug(t.Name)
+}
+
+// BranchWarning explains a Branch that fell back to the title slug even though
+// branchField is set, or returns "" when there is nothing to warn about.
+func BranchWarning(t asana.Task, branchField string, preferred map[string]bool) string {
+	if branchField == "" || fieldBranch(t, branchField, preferred) != "" {
+		return ""
+	}
+	return fmt.Sprintf("%q is empty, so the branch is the title slug %q", branchField, Slug(t.Name))
+}
+
+func fieldBranch(t asana.Task, branchField string, preferred map[string]bool) string {
+	if branchField == "" {
+		return ""
+	}
+	f, _ := t.Field(branchField, preferred)
+	return f.Value()
 }
 
 // WriteFiles exports the ticket to <stateDir>/tickets/<gid>/ticket.{json,md}.

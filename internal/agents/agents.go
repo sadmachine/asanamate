@@ -208,6 +208,31 @@ func MatchAll(list []Agent, branch string, repos []string) []Agent {
 	return out
 }
 
+// Unlinked returns the agents in repos that are not on branch: the ones a
+// ticket without linked agents most likely meant to match. It returns nil
+// when repos is empty, since any repo would qualify.
+func Unlinked(list []Agent, branch string, repos []string) []Agent {
+	var out []Agent
+	for _, a := range list {
+		if a.Branch != branch && slices.Contains(repos, a.Repo) {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// Hint explains why a is not linked to a ticket on branch.
+func Hint(a Agent, branch string) string {
+	on := "on " + a.Branch
+	switch a.Branch {
+	case "HEAD":
+		on = "on a detached HEAD"
+	case "":
+		on = "not on a git branch"
+	}
+	return fmt.Sprintf("%s is %s, not %s", filepath.Base(a.Path), on, branch)
+}
+
 func rank(s State) int {
 	if i := slices.Index(States, s); i >= 0 {
 		return i

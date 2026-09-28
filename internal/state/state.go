@@ -9,6 +9,8 @@ import (
 	"slices"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/sadmachine/asanamate/internal/asana"
 )
 
 // FileName is the state file's name inside the state directory.
@@ -75,3 +77,14 @@ func (s *State) LinkRepo(projectGID, path string) {
 
 // Path returns the file the state is saved to.
 func (s *State) Path() string { return s.path }
+
+// LinkedRepos returns the repos linked to t's projects, in membership order.
+func (s *State) LinkedRepos(t asana.Task) []string {
+	var repos []string
+	for _, m := range t.Memberships {
+		if path, ok := s.Repos[m.Project.GID]; ok {
+			repos = append(repos, path)
+		}
+	}
+	return repos
+}

@@ -245,14 +245,17 @@ func (m *Model) agentLabel(a agents.Agent) string {
 
 // agentsSection is the reading pane's Markdown list of t's agents.
 func (m *Model) agentsSection(t asana.Task) string {
-	linked := m.viewAgents(t)
-	if len(linked) == 0 {
+	linked, notes := m.viewAgents(t), m.agentNotes(t)
+	if len(linked) == 0 && len(notes) == 0 {
 		return ""
 	}
 	var b strings.Builder
 	b.WriteString("\n## Agents\n\n")
 	for _, a := range linked {
 		fmt.Fprintf(&b, "- %s — `%s`\n", m.agentLabel(a), ticket.OneLine(filepath.Base(a.Path)))
+	}
+	for _, n := range notes {
+		fmt.Fprintf(&b, "- *%s*\n", ticket.OneLine(n))
 	}
 	return b.String()
 }

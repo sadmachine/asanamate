@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/agents"
@@ -112,7 +113,7 @@ func (m *Model) continueRun() tea.Cmd {
 		default:
 			items := make([]pickItem, len(list))
 			for i, a := range list {
-				items[i] = pickItem{Label: m.agentLabel(a), Hint: ticket.OneLine(filepath.Base(a.Path)), Value: a}
+				items[i] = pickItem{Label: m.agentLabel(a, lipgloss.NewStyle()), Hint: ticket.OneLine(filepath.Base(a.Path)), Value: a}
 			}
 			m.modal = newPicker(pickAgent, "Which agent?", items)
 			return nil
@@ -276,9 +277,10 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 	}
 }
 
-// agentLabel is an agent's static symbol, state, and title.
-func (m *Model) agentLabel(a agents.Agent) string {
-	label := m.sym.states[a.State] + " " + string(a.State)
+// agentLabel is an agent's static symbol, state, and title; style colors the
+// symbol and state.
+func (m *Model) agentLabel(a agents.Agent, style lipgloss.Style) string {
+	label := style.Render(m.sym.states[a.State] + " " + string(a.State))
 	if a.Title != "" {
 		label += " · " + a.Title
 	}
@@ -294,7 +296,7 @@ func (m *Model) agentsSection(t asana.Task) string {
 	var b strings.Builder
 	b.WriteString("\n## Agents\n\n")
 	for _, a := range linked {
-		fmt.Fprintf(&b, "- %s — `%s`\n", m.agentLabel(a), ticket.OneLine(filepath.Base(a.Path)))
+		fmt.Fprintf(&b, "- %s — `%s`\n", m.agentLabel(a, lipgloss.NewStyle()), ticket.OneLine(filepath.Base(a.Path)))
 	}
 	for _, n := range notes {
 		fmt.Fprintf(&b, "- *%s*\n", ticket.OneLine(n))

@@ -33,7 +33,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 
 	var agentLines []string
 	for _, a := range m.viewAgents(t.Task) {
-		agentLines = append(agentLines, m.agentLabel(a)+dimStyle.Render(" — "+ticket.OneLine(filepath.Base(a.Path))))
+		agentLines = append(agentLines, m.agentLabel(a, stateStyles[a.State])+dimStyle.Render(" — "+ticket.OneLine(filepath.Base(a.Path))))
 	}
 	for _, n := range m.agentNotes(t.Task) {
 		agentLines = append(agentLines, dimStyle.Render(ticket.OneLine(n)))

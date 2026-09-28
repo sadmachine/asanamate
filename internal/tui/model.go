@@ -593,10 +593,23 @@ func (m *Model) footer() string {
 
 func (m *Model) body() string {
 	h := m.bodyHeight()
-	if m.modal != nil {
-		box := modalStyle.Render(m.modal.view(max(min(m.width-4, 80), 10), max(h-2, 3)))
-		return lipgloss.Place(m.width, h, lipgloss.Center, lipgloss.Center, box)
+	panes := m.panes(h)
+	if m.modal == nil {
+		return panes
 	}
+	// Float the modal over the panes, faded so the modal stands out.
+	box := modalStyle.Render(m.modal.view(max(min(m.width-4, 80), 10), max(h-2, 3)))
+	x := max((m.width-lipgloss.Width(box))/2, 0)
+	y := max((h-lipgloss.Height(box))/2, 0)
+	canvas := lipgloss.NewCanvas(m.width, h).Compose(lipgloss.NewCompositor(
+		lipgloss.NewLayer(dimStyle.Render(ansi.Strip(panes))),
+		lipgloss.NewLayer(box).X(x).Y(y).Z(1),
+	))
+	// Canvas trims trailing blanks; restore the full body height.
+	return lipgloss.NewStyle().Height(h).Render(canvas.Render())
+}
+
+func (m *Model) panes(h int) string {
 	listW, _, split := m.paneWidths()
 	contentW := listW
 	if split {

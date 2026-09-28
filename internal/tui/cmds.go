@@ -10,6 +10,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/browser"
+	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/kitty"
 	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -87,11 +88,11 @@ func loadTasks(c *asana.Client, workspace string, project *asana.Ref) tea.Cmd {
 	}
 }
 
-func loadAgents(command string) tea.Cmd {
+func loadAgents(cfg config.Agents) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), agentRefresh*2)
 		defer cancel()
-		list, err := agents.List(ctx, command)
+		list, err := agents.Fetch(ctx, cfg.Preset, cfg.Command, cfg.States)
 		return agentsMsg{list: list, err: err}
 	}
 }

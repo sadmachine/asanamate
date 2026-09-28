@@ -136,3 +136,41 @@ func TestAgentsOffByDefault(t *testing.T) {
 		t.Fatalf("enabled: %+v, err = %v", cfg, err)
 	}
 }
+
+func TestAgentsPresetAndValidation(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n[agents]\npreset = \"ccmux\"\n[agents.states]\nworking = [\"busy\"]\n[agents.symbols]\nwaiting = \"!!\"\n"))
+	if err != nil || !cfg.AgentsEnabled() || cfg.Agents.States["working"][0] != "busy" || cfg.Agents.Symbols["waiting"] != "!!" {
+		t.Fatalf("cfg = %+v, err = %v", cfg.Agents, err)
+	}
+	for name, body := range map[string]string{
+		"unknown preset":   "[agents]\npreset = \"tmux\"\n",
+		"preset + command": "[agents]\npreset = \"ccmux\"\ncommand = \"x\"\n",
+		"bad state":        "[agents]\ncommand = \"x\"\n[agents.states]\nsleeping = [\"z\"]\n",
+		"bad symbol":       "[agents]\ncommand = \"x\"\n[agents.symbols]\nsleeping = \"z\"\n",
+		"bad symbols set":  "symbols = \"emoji\"\n",
+	} {
+		if _, err := Load(writeFile(t, "workspace = \"1\"\n"+body)); err == nil {
+			t.Errorf("%s: expected an error", name)
+		}
+	}
+}
+
+func TestSymbolSet(t *testing.T) {
+	env := func(vars map[string]string) func(string) string { return func(k string) string { return vars[k] } }
+	cases := []struct {
+		set  string
+		vars map[string]string
+		want string
+	}{
+		{"", map[string]string{"LANG": "en_US.UTF-8"}, "unicode"},
+		{"", map[string]string{"LC_ALL": "C", "LANG": "en_US.UTF-8"}, "ascii"},
+		{"", map[string]string{"LC_CTYPE": "en_US.utf8"}, "unicode"},
+		{"", nil, "ascii"},
+		{"nerd", nil, "nerd"},
+	}
+	for _, c := range cases {
+		if got := (Config{Symbols: c.set}).SymbolSet(env(c.vars)); got != c.want {
+			t.Errorf("SymbolSet(%q, %v) = %q, want %q", c.set, c.vars, got, c.want)
+		}
+	}
+}

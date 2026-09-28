@@ -90,7 +90,7 @@ func (m *Model) ExitCommand() *exec.Cmd { return m.exitCmd }
 func (m *Model) Init() tea.Cmd {
 	cmd := loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject)
 	if m.deps.Config.AgentsEnabled() {
-		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents.Command))
+		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents))
 	}
 	return cmd
 }
@@ -162,7 +162,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, scheduleAgents()
 	case agentTickMsg:
-		return m, loadAgents(m.deps.Config.Agents.Command)
+		return m, loadAgents(m.deps.Config.Agents)
 	case projectFieldsMsg:
 		if msg.err != nil {
 			m.status = "loading project fields: " + msg.err.Error()

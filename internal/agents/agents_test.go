@@ -75,3 +75,45 @@ func TestMatch(t *testing.T) {
 		t.Fatalf("empty branch matched: %+v", a)
 	}
 }
+
+func TestClassify(t *testing.T) {
+	list := []Agent{{Status: "Running"}, {Status: "idle"}, {Status: "permission"}, {Status: "completed"}, {Status: "weird"}, {Status: ""}}
+	Classify(list, map[string][]string{"working": {"running", "busy"}, "waiting": {"Permission"}})
+	want := []State{Working, Idle, Waiting, Completed, Unknown, Unknown}
+	for i, w := range want {
+		if list[i].State != w {
+			t.Errorf("%q → %q, want %q", list[i].Status, list[i].State, w)
+		}
+	}
+}
+
+// Trimmed from real `ccmux show --json` output (ccmux 1.4.1).
+const ccmuxJSON = `[
+ {"id":"d48f","cwd":"/r/.claude/worktrees/wicpa","status":"idle","attentionState":"unread",
+  "gitBranch":"update/3068","mainRepoRoot":"/r","isWorktree":true,"tmuxTarget":"amagent:1.0"},
+ {"id":"e19a","cwd":"/nowhere","status":"working","attentionState":null,"gitBranch":"main","mainRepoRoot":null},
+ {"id":"f2c0","cwd":"/r","status":"idle","attentionState":"seen","gitBranch":"main","mainRepoRoot":"/r"}
+]`
+
+func TestParseCCMux(t *testing.T) {
+	got, err := parseCCMux(context.Background(), []byte(ccmuxJSON))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Agent{
+		{Path: "/r/.claude/worktrees/wicpa", Status: "completed", Target: "d48f", Branch: "update/3068", Repo: "/r"},
+		{Path: "/nowhere", Status: "working", Target: "e19a", Branch: "main"},
+		{Path: "/r", Status: "idle", Target: "f2c0", Branch: "main", Repo: "/r"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %+v", got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("session %d = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+	if _, err := parseCCMux(context.Background(), []byte("not json")); err == nil {
+		t.Fatal("want a parse error")
+	}
+}

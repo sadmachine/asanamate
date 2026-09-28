@@ -38,20 +38,54 @@ type Config struct {
 	DefaultFilter string     `toml:"default_filter"`
 	ConfirmWrites bool       `toml:"confirm_writes"`
 	BranchField   string     `toml:"branch_field"`
+	Symbols       string     `toml:"symbols"`
+	ReducedMotion *bool      `toml:"reduced_motion"`
 	RepoSource    RepoSource `toml:"repo_source"`
 	Agents        Agents     `toml:"agents"`
 	List          List       `toml:"list"`
 	Actions       []Action   `toml:"actions"`
 }
 
-// Agents links tickets to running coding agents. It is off unless Command is
-// set; Command prints "<path>\t<status>[\t<target>]" per agent.
+// Agents links tickets to running coding agents. It is off unless Preset or
+// Command is set. Command prints "<path>\t<status>[\t<target>]" per agent.
+// States maps extra raw statuses onto asanamate's states; Symbols overrides
+// the symbol shown per state.
 type Agents struct {
-	Command string `toml:"command"`
+	Preset  string              `toml:"preset"`
+	Command string              `toml:"command"`
+	States  map[string][]string `toml:"states"`
+	Symbols map[string]string   `toml:"symbols"`
 }
 
 // AgentsEnabled reports whether agent tracking is turned on.
-func (c Config) AgentsEnabled() bool { return strings.TrimSpace(c.Agents.Command) != "" }
+func (c Config) AgentsEnabled() bool {
+	return c.Agents.Preset != "" || strings.TrimSpace(c.Agents.Command) != ""
+}
+
+// Symbol sets.
+const (
+	SymbolsUnicode = "unicode"
+	SymbolsNerd    = "nerd"
+	SymbolsASCII   = "ascii"
+)
+
+// SymbolSet returns the symbol set to use. When none is configured it is
+// unicode if the locale is UTF-8, else ascii.
+func (c Config) SymbolSet(getenv func(string) string) string {
+	if c.Symbols != "" {
+		return c.Symbols
+	}
+	for _, k := range []string{"LC_ALL", "LC_CTYPE", "LANG"} {
+		if v := getenv(k); v != "" {
+			v = strings.ToLower(v)
+			if strings.Contains(v, "utf-8") || strings.Contains(v, "utf8") {
+				return SymbolsUnicode
+			}
+			return SymbolsASCII
+		}
+	}
+	return SymbolsASCII
+}
 
 // List configures how tickets appear in the list. The title is always shown;
 // Fields are extra values: section, due, assignee, project, tags, completed,
@@ -132,6 +166,14 @@ func (c Config) validate() error {
 			return errors.New("the title is always shown; remove it from list.fields")
 		}
 	}
+	switch c.Symbols {
+	case "", SymbolsUnicode, SymbolsNerd, SymbolsASCII:
+	default:
+		return fmt.Errorf("symbols must be %q, %q, or %q, got %q", SymbolsUnicode, SymbolsNerd, SymbolsASCII, c.Symbols)
+	}
+	if err := c.Agents.validate(); err != nil {
+		return err
+	}
 	keys := map[string]string{}
 	for _, a := range c.Actions {
 		if a.Name == "" || a.Command == "" {
@@ -149,6 +191,28 @@ func (c Config) validate() error {
 			return fmt.Errorf("actions %q and %q share key %q", other, a.Name, a.Key)
 		}
 		keys[a.Key] = a.Name
+	}
+	return nil
+}
+
+var agentStates = map[string]bool{"working": true, "waiting": true, "completed": true, "idle": true}
+
+func (a Agents) validate() error {
+	switch {
+	case a.Preset != "" && a.Preset != "ccmux":
+		return fmt.Errorf("agents.preset must be \"ccmux\", got %q", a.Preset)
+	case a.Preset != "" && strings.TrimSpace(a.Command) != "":
+		return errors.New("set agents.preset or agents.command, not both")
+	}
+	for state := range a.States {
+		if !agentStates[state] {
+			return fmt.Errorf("agents.states: unknown state %q (use working, waiting, completed, idle)", state)
+		}
+	}
+	for state := range a.Symbols {
+		if !agentStates[state] && state != "unknown" {
+			return fmt.Errorf("agents.symbols: unknown state %q (use working, waiting, completed, idle, unknown)", state)
+		}
 	}
 	return nil
 }

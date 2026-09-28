@@ -68,24 +68,30 @@ func (s symbolSet) agent(state agents.State, frame int) string {
 }
 
 // badge renders agents (already in urgency order) as one symbol each, or as
-// grouped counts when there are more than four.
-func (s symbolSet) badge(list []agents.Agent, frame int) string {
+// grouped counts when there are more than four. Reversed badges swap each
+// state's colors, to sit inside a selection highlight.
+func (s symbolSet) badge(list []agents.Agent, frame int, reversed bool) string {
 	if len(list) == 0 {
 		return ""
 	}
+	style := func(st agents.State) lipgloss.Style { return stateStyles[st].Reverse(reversed) }
 	var parts []string
 	if len(list) <= 4 {
 		for _, a := range list {
-			parts = append(parts, stateStyles[a.State].Render(s.agent(a.State, frame)))
+			parts = append(parts, style(a.State).Render(s.agent(a.State, frame)))
 		}
 	} else {
 		for _, st := range agents.States {
 			if n := countState(list, st); n > 0 {
-				parts = append(parts, stateStyles[st].Render(fmt.Sprintf("%s%d", s.agent(st, frame), n)))
+				parts = append(parts, style(st).Render(fmt.Sprintf("%s%d", s.agent(st, frame), n)))
 			}
 		}
 	}
-	return strings.Join(parts, " ")
+	sep := " "
+	if reversed {
+		sep = selectedStyle.Render(sep)
+	}
+	return strings.Join(parts, sep)
 }
 
 // summary renders grouped counts, for the header.

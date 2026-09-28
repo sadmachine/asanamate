@@ -649,8 +649,8 @@ func (m *Model) panes(h int) string {
 	}
 }
 
-// renderRowLine fits line into width with tail right-aligned, and applies the
-// selection style to the line (the tail keeps its colors).
+// renderRowLine fits line into width with tail right-aligned. A selected
+// line is highlighted across the row up to the tail, which styles itself.
 func (m *Model) renderRowLine(line, tail string, width int, selected bool) string {
 	tailW := ansi.StringWidth(tail)
 	if tail != "" && width-tailW-1 < 8 {
@@ -661,12 +661,13 @@ func (m *Model) renderRowLine(line, tail string, width int, selected bool) strin
 		room = width - tailW - 1
 	}
 	line = ansi.Truncate(line, room, "…")
-	if selected && line != "" {
+	if selected {
 		style := selectedStyle
 		if m.focusReader {
 			style = titleStyle
 		}
-		line = style.Render(ansi.Strip(line))
+		line = style.Render(ansi.Strip(line) + strings.Repeat(" ", max(width-tailW-ansi.StringWidth(line), 0)))
+		return line + tail
 	}
 	if tail == "" {
 		return line
@@ -735,7 +736,7 @@ func (m *Model) listView(width, height int) string {
 		}
 		title := mark + " " + ticket.OneLine(t.Name)
 		linked := m.viewAgents(t)
-		badge := m.sym.badge(linked, m.frame)
+		badge := m.sym.badge(linked, m.frame, i == m.cursor && !m.focusReader)
 		if len(linked) > 0 && linked[0].State == agents.Waiting && i != m.cursor {
 			title = stateStyles[agents.Waiting].Render(title)
 		}

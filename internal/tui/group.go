@@ -128,10 +128,9 @@ func (m *Model) pickedGroup(by string) tea.Cmd {
 	return m.selectionChanged()
 }
 
-// groupHeader renders "── Label (n) ─────" across width in the accent color,
-// so it stands apart from ticket rows and dim separators.
+// groupHeader renders " Label (n)" as a reversed accent bar across width, so
+// it stands apart from ticket rows and dim separators.
 func groupHeader(label string, n, width int) string {
-	rule := accentStyle.UnsetBold()
-	head := rule.Render("── ") + accentStyle.Render(label) + rule.Render(" ("+strconv.Itoa(n)+") ")
-	return ansi.Truncate(head+rule.Render(strings.Repeat("─", max(width-ansi.StringWidth(head), 0))), width, "…")
+	head := ansi.Truncate(" "+label+" ("+strconv.Itoa(n)+")", width, "…")
+	return accentStyle.Reverse(true).Render(head + strings.Repeat(" ", max(width-ansi.StringWidth(head), 0)))
 }

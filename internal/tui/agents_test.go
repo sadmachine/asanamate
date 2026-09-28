@@ -60,6 +60,19 @@ func TestAgentColumnOrdersByUrgency(t *testing.T) {
 	}
 }
 
+func TestSelectedBadgeReversesItsColors(t *testing.T) {
+	m := agentModel(t, config.SymbolsUnicode, true)
+	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1")}})
+	working := stateStyles[agents.Working]
+	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Reverse(true).Render("◐")) || !strings.HasPrefix(row, selectedStyle.Render("□ Fix login        ")) {
+		t.Fatalf("selected row = %q", row)
+	}
+	m.moveTo(1)
+	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Render("◐")) {
+		t.Fatalf("unselected row = %q", row)
+	}
+}
+
 func TestAgentColumnGroupsManyAgents(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, true)
 	var list []agents.Agent
@@ -130,7 +143,7 @@ func TestAgentsDisabledShowNothing(t *testing.T) {
 	if _, cmd := m.Update(agentsMsg{}); cmd != nil {
 		t.Fatal("disabled agents must not schedule refreshes")
 	}
-	if got := ansi.Strip(m.listView(80, 3)); got != "□ Fix login" {
+	if got := strings.Join(listLines(m, 80, 3), "\n"); got != "□ Fix login" {
 		t.Fatalf("list = %q", got)
 	}
 }

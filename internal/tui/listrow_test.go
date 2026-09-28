@@ -29,6 +29,28 @@ var fieldTask = asana.Task{
 	},
 }
 
+// listLines renders the list as plain lines without the trailing padding of
+// highlighted rows.
+func listLines(m *Model, width, height int) []string {
+	lines := strings.Split(ansi.Strip(m.listView(width, height)), "\n")
+	for i, l := range lines {
+		lines[i] = strings.TrimRight(l, " ")
+	}
+	return lines
+}
+
+func TestSelectedRowFillsWidth(t *testing.T) {
+	m, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle}})
+	m.Update(tasksMsg{tasks: []asana.Task{{GID: "1", Name: "A"}, {GID: "2", Name: "B"}}})
+	got := strings.Split(m.listView(10, 2), "\n")
+	if want := selectedStyle.Render("□ A       "); got[0] != want {
+		t.Fatalf("selected = %q, want %q", got[0], want)
+	}
+	if ansi.Strip(got[1]) != "□ B" {
+		t.Fatalf("unselected rows are not padded: %q", got[1])
+	}
+}
+
 func TestRowFields(t *testing.T) {
 	names := []string{"section", "completed", "STATUS", "branch name", "due", "assignee", "project", "tags", "empty", "missing"}
 	got := rowFields(fieldTask, names, rowContext{})
@@ -45,18 +67,18 @@ func TestListViewLayouts(t *testing.T) {
 	other := asana.Task{GID: "2", Name: "Fix footer"}
 	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Fields: []string{"section", "due"}}})
 	single.Update(tasksMsg{tasks: []asana.Task{fieldTask, other}})
-	if got := strings.Split(ansi.Strip(single.listView(80, 5)), "\n"); len(got) != 2 || got[0] != "□ Fix login  Today · due 2026-10-01" {
+	if got := listLines(single, 80, 5); len(got) != 2 || got[0] != "□ Fix login  Today · due 2026-10-01" {
 		t.Fatalf("single = %q", got)
 	}
 
 	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Fields: []string{"section", "due"}}})
 	multi.Update(tasksMsg{tasks: []asana.Task{fieldTask, other}})
-	got := strings.Split(ansi.Strip(multi.listView(80, 4)), "\n")
+	got := listLines(multi, 80, 4)
 	if want := []string{"□ Fix login", "  Today · due 2026-10-01", "□ Fix footer", ""}; !slices.Equal(got, want) {
 		t.Fatalf("multi = %q, want %q", got, want)
 	}
 	multi.moveTo(1)
-	if got := strings.Split(ansi.Strip(multi.listView(80, 3)), "\n"); got[0] != "□ Fix footer" {
+	if got := listLines(multi, 80, 3); got[0] != "□ Fix footer" {
 		t.Fatalf("multi scroll keeps the cursor's whole row visible: %q", got)
 	}
 }
@@ -65,13 +87,13 @@ func TestListViewSeparator(t *testing.T) {
 	a, b, c := asana.Task{GID: "1", Name: "A"}, asana.Task{GID: "2", Name: "B"}, asana.Task{GID: "3", Name: "C"}
 	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Separator: true}})
 	single.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
-	if got := strings.Split(ansi.Strip(single.listView(4, 5)), "\n"); !slices.Equal(got, []string{"────", "□ A", "────", "□ B", "────"}) {
+	if got := listLines(single, 4, 5); !slices.Equal(got, []string{"────", "□ A", "────", "□ B", "────"}) {
 		t.Fatalf("single = %q", got)
 	}
 	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Separator: true}})
 	multi.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
 	multi.moveTo(2)
-	if got := strings.Split(ansi.Strip(multi.listView(3, 7)), "\n"); !slices.Equal(got, []string{"───", "□ B", "", "───", "□ C", "", "───"}) {
+	if got := listLines(multi, 3, 7); !slices.Equal(got, []string{"───", "□ B", "", "───", "□ C", "", "───"}) {
 		t.Fatalf("multi scrolled = %q", got)
 	}
 }
@@ -121,13 +143,13 @@ func TestListViewGroups(t *testing.T) {
 	tasks := []asana.Task{sec("1", "A", "Doing"), sec("2", "B", "Next"), sec("3", "C", "Doing")}
 	m, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Separator: true, GroupBy: "section"}})
 	m.Update(tasksMsg{tasks: tasks})
-	got := strings.Split(ansi.Strip(m.listView(24, 10)), "\n")
+	got := listLines(m, 24, 10)
 	want := []string{
-		"── Doing (2) ───────────",
+		" Doing (2)",
 		"□ A",
 		strings.Repeat("─", 24),
 		"□ C",
-		"── Next (1) ────────────",
+		" Next (1)",
 		"□ B",
 		strings.Repeat("─", 24),
 	}
@@ -135,11 +157,11 @@ func TestListViewGroups(t *testing.T) {
 		t.Fatalf("grouped =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 	m.moveTo(2)
-	if got := strings.Split(ansi.Strip(m.listView(24, 3)), "\n"); got[0] != "── Next (1) ────────────" || got[1] != "□ B" {
+	if got := listLines(m, 24, 3); got[0] != " Next (1)" || got[1] != "□ B" {
 		t.Fatalf("scrolled view keeps the cursor's group header: %q", got)
 	}
 	m.moveTo(1)
-	if got := strings.Split(ansi.Strip(m.listView(24, 4)), "\n"); got[0] != "── Doing (2) ───────────" || got[1] != "□ C" {
+	if got := listLines(m, 24, 4); got[0] != " Doing (2)" || got[1] != "□ C" {
 		t.Fatalf("first row shown mid-group gets its header: %q", got)
 	}
 }

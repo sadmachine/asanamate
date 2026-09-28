@@ -475,13 +475,21 @@ func (m *Model) listView(width, height int) string {
 		return dimStyle.Render("No tasks match the filter.")
 	}
 	multi := m.deps.Config.List.Layout == config.LayoutMulti
-	rows := height
+	itemH, sepH := 1, 0
 	if multi {
-		rows = max(height/2, 1)
+		itemH = 2
 	}
+	if m.deps.Config.List.Separator {
+		sepH = 1
+	}
+	// n items take n*itemH + (n-1)*sepH lines.
+	rows := max((height+sepH)/(itemH+sepH), 1)
 	start := max(m.cursor-rows+1, 0)
 	var lines []string
 	for i := start; i < len(m.visible) && i < start+rows; i++ {
+		if sepH > 0 && i > start {
+			lines = append(lines, dimStyle.Render(strings.Repeat("─", width)))
+		}
 		t := m.visible[i]
 		mark := "○"
 		if t.Completed {

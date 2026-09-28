@@ -44,10 +44,11 @@ type Config struct {
 
 // List configures how tickets appear in the list. The title is always shown;
 // Fields are extra values: section, due, assignee, project, tags, completed,
-// or any custom field name.
+// or any custom field name. Separator draws a line between tickets.
 type List struct {
-	Layout string   `toml:"layout"`
-	Fields []string `toml:"fields"`
+	Layout    string   `toml:"layout"`
+	Fields    []string `toml:"fields"`
+	Separator bool     `toml:"separator"`
 }
 
 // RepoSource configures where repo picker candidates come from.

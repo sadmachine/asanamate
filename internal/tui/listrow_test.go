@@ -58,3 +58,18 @@ func TestListViewLayouts(t *testing.T) {
 		t.Fatalf("multi scroll keeps the cursor's whole row visible: %q", got)
 	}
 }
+
+func TestListViewSeparator(t *testing.T) {
+	a, b, c := asana.Task{GID: "1", Name: "A"}, asana.Task{GID: "2", Name: "B"}, asana.Task{GID: "3", Name: "C"}
+	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Separator: true}})
+	single.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
+	if got := strings.Split(ansi.Strip(single.listView(4, 4)), "\n"); !slices.Equal(got, []string{"○ A", "────", "○ B"}) {
+		t.Fatalf("single = %q", got)
+	}
+	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Separator: true}})
+	multi.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
+	multi.moveTo(2)
+	if got := strings.Split(ansi.Strip(multi.listView(3, 5)), "\n"); !slices.Equal(got, []string{"○ B", "", "───", "○ C", ""}) {
+		t.Fatalf("multi scrolled = %q", got)
+	}
+}

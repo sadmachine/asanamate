@@ -159,6 +159,8 @@ layout = "single"
 # due, assignee, project, tags, completed. Any other name is matched to a
 # custom field, for example "Status" or "Branch Name".
 fields = ["section"]
+# Draw a line between tickets.
+separator = false
 
 [repo_source]
 # Prints one git repository path per line for the repo picker.

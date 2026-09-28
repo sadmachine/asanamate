@@ -88,6 +88,7 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `confirm_writes` | `true` | write-back subcommands ask before writing |
 | `list.layout` | `"single"` | `single` (one line per ticket) or `multi` (title, then fields on a second line) |
 | `list.fields` | `["section"]` | values shown with the title |
+| `list.separator` | `false` | draw a line between tickets |
 | `repo_source.command` | lists repos in your setup directory | prints one repo path per line |
 
 The title is always shown. `list.fields` accepts the built-ins `section`,

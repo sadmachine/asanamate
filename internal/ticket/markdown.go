@@ -9,6 +9,80 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 )
 
+// Field is a cleaned label and value shown for a ticket.
+type Field struct{ Label, Value string }
+
+// Status is "done" for completed tickets, else "open".
+func (t Ticket) Status() string {
+	if t.Completed {
+		return "done"
+	}
+	return "open"
+}
+
+// Meta returns the ticket's built-in fields, omitting empty ones.
+func (t Ticket) Meta() []Field {
+	var fields []Field
+	add := func(label, value string) {
+		if value != "" {
+			fields = append(fields, Field{label, Clean(value)})
+		}
+	}
+	add("Status", t.Status())
+	add("URL", t.PermalinkURL)
+	if t.Assignee != nil {
+		add("Assignee", t.Assignee.Name)
+	}
+	if t.DueOn != nil {
+		add("Due", *t.DueOn)
+	}
+	for _, m := range t.Memberships {
+		value := m.Project.Name
+		if m.Section != nil {
+			value += " / " + m.Section.Name
+		}
+		add("Project", value)
+	}
+	if t.AssigneeSection != nil {
+		add("My Tasks section", t.AssigneeSection.Name)
+	}
+	add("Tags", joinNames(t.Tags, ", "))
+	if t.Parent != nil {
+		add("Parent", t.Parent.Name)
+	}
+	return fields
+}
+
+// FieldValues returns the ticket's custom fields that have a value.
+func (t Ticket) FieldValues() []Field {
+	var fields []Field
+	for _, f := range t.CustomFields {
+		if f.DisplayValue != nil && *f.DisplayValue != "" {
+			fields = append(fields, Field{Clean(strings.TrimSpace(f.Name)), Clean(*f.DisplayValue)})
+		}
+	}
+	return fields
+}
+
+// Description returns the ticket's notes as Markdown.
+func (t Ticket) Description() string { return HTMLToMarkdown(t.HTMLNotes) }
+
+// Author returns the cleaned name of a comment's author.
+func Author(c asana.Story) string {
+	if c.CreatedBy == nil {
+		return "Unknown"
+	}
+	return Clean(c.CreatedBy.Name)
+}
+
+// Day returns the date part of an Asana timestamp.
+func Day(timestamp string) string {
+	if len(timestamp) >= 10 {
+		return timestamp[:10]
+	}
+	return timestamp
+}
+
 // Markdown renders the ticket for the reading pane and for $ASANAMATE_TICKET_MD.
 func (t Ticket) Markdown() string { return t.MarkdownWith("") }
 
@@ -17,47 +91,11 @@ func (t Ticket) Markdown() string { return t.MarkdownWith("") }
 func (t Ticket) MarkdownWith(extra string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# %s\n\n", Clean(t.Name))
-	item := func(label, value string) {
-		if value != "" {
-			fmt.Fprintf(&b, "- **%s:** %s\n", label, Clean(value))
-		}
-	}
-	status := "open"
-	if t.Completed {
-		status = "done"
-	}
-	item("Status", status)
-	item("URL", t.PermalinkURL)
-	if t.Assignee != nil {
-		item("Assignee", t.Assignee.Name)
-	}
-	if t.DueOn != nil {
-		item("Due", *t.DueOn)
-	}
-	for _, m := range t.Memberships {
-		value := m.Project.Name
-		if m.Section != nil {
-			value += " / " + m.Section.Name
-		}
-		item("Project", value)
-	}
-	if t.AssigneeSection != nil {
-		item("My Tasks section", t.AssigneeSection.Name)
-	}
-	item("Tags", joinNames(t.Tags, ", "))
-	if t.Parent != nil {
-		item("Parent", t.Parent.Name)
-	}
-
-	var fields []string
-	for _, f := range t.CustomFields {
-		if f.DisplayValue != nil && *f.DisplayValue != "" {
-			fields = append(fields, fmt.Sprintf("- **%s:** %s", Clean(strings.TrimSpace(f.Name)), Clean(*f.DisplayValue)))
-		}
-	}
-	section(&b, "Fields", strings.Join(fields, "\n"))
+	b.WriteString(bulletFields(t.Meta()))
+	b.WriteString("\n")
+	section(&b, "Fields", bulletFields(t.FieldValues()))
 	b.WriteString(extra)
-	section(&b, "Description", htmlToMarkdown(t.HTMLNotes))
+	section(&b, "Description", t.Description())
 
 	var subtasks []string
 	for _, s := range t.Subtasks {
@@ -79,11 +117,7 @@ func (t Ticket) MarkdownWith(extra string) string {
 
 	var comments []string
 	for _, c := range t.Comments {
-		author := "Unknown"
-		if c.CreatedBy != nil {
-			author = Clean(c.CreatedBy.Name)
-		}
-		comments = append(comments, fmt.Sprintf("### %s · %s\n\n%s", author, day(c.CreatedAt), htmlToMarkdown(c.HTMLText)))
+		comments = append(comments, fmt.Sprintf("### %s · %s\n\n%s", Author(c), Day(c.CreatedAt), HTMLToMarkdown(c.HTMLText)))
 	}
 	section(&b, "Comments", strings.Join(comments, "\n\n"))
 	return b.String()
@@ -93,6 +127,17 @@ func section(b *strings.Builder, title, body string) {
 	if body != "" {
 		fmt.Fprintf(b, "\n## %s\n\n%s\n", title, body)
 	}
+}
+
+func bulletFields(fields []Field) string {
+	var b strings.Builder
+	for i, f := range fields {
+		if i > 0 {
+			b.WriteString("\n")
+		}
+		fmt.Fprintf(&b, "- **%s:** %s", f.Label, f.Value)
+	}
+	return b.String()
 }
 
 func joinNames(refs []asana.Ref, sep string) string {
@@ -111,14 +156,8 @@ func bulletNames(refs []asana.Ref) string {
 	return strings.Join(lines, "\n")
 }
 
-func day(timestamp string) string {
-	if len(timestamp) >= 10 {
-		return timestamp[:10]
-	}
-	return timestamp
-}
-
-func htmlToMarkdown(html string) string {
+// HTMLToMarkdown converts Asana rich text to cleaned Markdown.
+func HTMLToMarkdown(html string) string {
 	if strings.TrimSpace(html) == "" {
 		return ""
 	}

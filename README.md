@@ -42,6 +42,7 @@ back to `vi`) and reports any errors in it after you save.
 | `p` | switch project (recent first) |
 | `enter`, `a` | run an action on the selected ticket |
 | `f` | attachments: view images inline or open in the browser |
+| `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) |
 | `v` | switch the reader between the cards and markdown views |
 | `o` | open the ticket in the browser |
 | `r` | reload |
@@ -100,12 +101,18 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `symbols` | `unicode` on UTF-8, else `ascii` | `unicode`, `nerd`, or `ascii` for ticket markers and agent states |
 | `reduced_motion` | OS setting | `true` shows static agent symbols instead of the spinner |
 | `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one |
+| `list.group_by` | `""` (ungrouped) | starting grouping: any `list.fields` name; `b` picks another |
 | `reader.view` | `"cards"` | reader's starting view: `cards` (details card, titled sections, one box per comment) or `markdown` (the rendered ticket Markdown); `v` switches |
 | `repo_source.command` | lists repos in your setup directory | prints one repo path per line |
 
 The title is always shown. `list.fields` accepts the built-ins `section`,
 `due`, `assignee`, `project`, `tags`, and `completed` (open/done). Any other
 name is matched to a custom field, ignoring case and surrounding spaces.
+
+`list.group_by` takes the same names and puts a `── Value (count) ───` header
+above each group. Groups keep Asana's order (first seen), with tickets missing
+the value last. `due` groups into Overdue, Today, Tomorrow, Next 7 days, Later,
+and No due date.
 
 Custom fields are separate Asana objects, so two can share a name (for example
 one per project). When that happens, asanamate uses the one attached to the

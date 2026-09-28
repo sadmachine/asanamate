@@ -17,6 +17,7 @@ const (
 	pickRepo
 	pickAttachment
 	pickAgent
+	pickGroup
 )
 
 type pickItem struct {

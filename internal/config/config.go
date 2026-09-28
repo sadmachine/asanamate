@@ -97,10 +97,12 @@ func (c Config) SymbolSet(getenv func(string) string) string {
 // List configures how tickets appear in the list. The title is always shown;
 // Fields are extra values: section, due, assignee, project, tags, completed,
 // or any custom field name. Separator frames each ticket with lines; neighbours share one.
+// GroupBy groups tickets under a header per value of one such field; "" is ungrouped.
 type List struct {
 	Layout    string   `toml:"layout"`
 	Fields    []string `toml:"fields"`
 	Separator bool     `toml:"separator"`
+	GroupBy   string   `toml:"group_by"`
 }
 
 // Reader configures the reading pane. View is its starting view: cards
@@ -183,6 +185,9 @@ func (c Config) validate() error {
 		case strings.EqualFold(name, "title"):
 			return errors.New("the title is always shown; remove it from list.fields")
 		}
+	}
+	if strings.EqualFold(strings.TrimSpace(c.List.GroupBy), "title") {
+		return errors.New("list.group_by can't be the title; use a field such as section or due")
 	}
 	switch c.Symbols {
 	case "", SymbolsUnicode, SymbolsNerd, SymbolsASCII:

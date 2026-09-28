@@ -120,6 +120,7 @@ func TestListConfig(t *testing.T) {
 		"bad view":    "[reader]\nview = \"grid\"\n",
 		"title field": "[list]\nfields = [\"Title\"]\n",
 		"empty field": "[list]\nfields = [\" \"]\n",
+		"title group": "[list]\ngroup_by = \"title\"\n",
 	} {
 		if _, err := Load(writeFile(t, "workspace = \"1\"\n"+body)); err == nil {
 			t.Errorf("%s: expected an error", name)

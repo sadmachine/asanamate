@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
@@ -50,6 +51,8 @@ type Model struct {
 	viewProject *asana.Ref
 	tasks       []asana.Task
 	visible     []asana.Task
+	groups      []string // group label per visible task; nil when ungrouped
+	groupBy     string   // list field the list is grouped by; "" for none
 	cursor      int
 	reselectGID string // ticket to reselect once a reload lands
 	loading     bool
@@ -89,6 +92,7 @@ func New(d Deps) *Model {
 		filterInput:   in,
 		reader:        viewport.New(),
 		readerView:    d.Config.Reader.View,
+		groupBy:       strings.TrimSpace(d.Config.List.GroupBy),
 		renderers:     map[rendererKey]*glamour.TermRenderer{},
 		details:       map[string]ticket.Ticket{},
 		projectFields: map[string]map[string]bool{},
@@ -278,6 +282,9 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "f":
 		m.openAttachments()
 		return nil
+	case "b":
+		m.openGroupPicker()
+		return nil
 	case "v":
 		if m.deps.NoPreview {
 			return nil
@@ -340,6 +347,8 @@ func (m *Model) handlePick(kind pickKind, res pickResult) tea.Cmd {
 		return m.pickedAttachment(res.item.Value.(asana.Attachment))
 	case pickAgent:
 		return m.pickedAgent(res.item.Value.(agents.Agent))
+	case pickGroup:
+		return m.pickedGroup(res.item.Value.(string))
 	}
 	return nil
 }
@@ -362,19 +371,20 @@ func (m *Model) reload() tea.Cmd {
 	if t, ok := m.selected(); ok {
 		m.reselectGID = t.GID
 	}
-	m.tasks, m.visible, m.cursor = nil, nil, 0
+	m.tasks, m.visible, m.groups, m.cursor = nil, nil, nil, 0
 	return loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject)
 }
 
-// applyFilter recomputes the visible tasks, keeping the selected ticket
-// selected when it is still visible. After a reload it reselects the ticket
+// applyFilter recomputes the visible tasks and their groups, keeping the
+// selected ticket selected when it is still visible. After a reload it reselects the ticket
 // selected before the reload.
 func (m *Model) applyFilter() {
 	prevGID := m.reselectGID
 	if prev, ok := m.selected(); ok {
 		prevGID = prev.GID
 	}
-	m.visible = filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates)
+	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates)
+	m.visible, m.groups = groupTasks(visible, m.groupBy, m.rowContext(), time.Now())
 	if prevGID != "" {
 		for i, t := range m.visible {
 			if t.GID == prevGID {
@@ -571,6 +581,9 @@ func (m *Model) header() string {
 	}
 	count := dimStyle.Render(fmt.Sprintf("%d/%d", len(m.visible), len(m.tasks)))
 	line := titleStyle.Render("asanamate · "+name) + "  " + f + "  " + count
+	if m.groupBy != "" {
+		line += "  " + dimStyle.Render("group: "+m.groupBy)
+	}
 	// Tickets can share a branch, so count each agent once.
 	var linked []agents.Agent
 	seen := map[agents.Agent]bool{}
@@ -591,7 +604,7 @@ func (m *Model) header() string {
 func (m *Model) footer() string {
 	s := m.status
 	if s == "" {
-		hints := "j/k move · enter actions · tab focus · / filter · p projects · f files · v view · o open · r reload · q quit"
+		hints := "j/k move · enter actions · tab focus · / filter · b group · p projects · f files · v view · o open · r reload · q quit"
 		if m.deps.NoPreview {
 			hints = strings.NewReplacer(" · tab focus", "", " · v view", "").Replace(hints)
 		}
@@ -676,14 +689,43 @@ func (m *Model) listView(width, height int) string {
 	if m.deps.Config.List.Separator {
 		sepH = 1
 	}
-	// Separators frame every item and neighbours share one: n*(itemH+sepH)+sepH lines.
-	rows := max((height-sepH)/(itemH+sepH), 1)
-	start := max(m.cursor-rows+1, 0)
-	end := min(start+rows, len(m.visible))
+	// Separators frame every item and neighbours share one; a group header
+	// takes the place of the separator above its item. The first row shown
+	// always has its group header.
+	header := func(i, start int) bool {
+		return m.groups != nil && (i == start || m.groups[i] != m.groups[i-1])
+	}
+	rowH := func(i, start int) int {
+		if header(i, start) {
+			return itemH + 1
+		}
+		return itemH + sepH
+	}
+	// Scroll so the cursor's row is the last that fits, then fill below it.
+	start, used := m.cursor, sepH+rowH(m.cursor, m.cursor)
+	for start > 0 {
+		next := used - rowH(start, start) + rowH(start, start-1) + rowH(start-1, start-1)
+		if next > height {
+			break
+		}
+		start, used = start-1, next
+	}
+	end := m.cursor + 1
+	for end < len(m.visible) && used+rowH(end, start) <= height {
+		used += rowH(end, start)
+		end++
+	}
+	counts := map[string]int{}
+	for _, g := range m.groups {
+		counts[g]++
+	}
 	sep := dimStyle.Render(strings.Repeat("─", width))
 	var lines []string
 	for i := start; i < end; i++ {
-		if sepH > 0 {
+		switch {
+		case header(i, start):
+			lines = append(lines, groupHeader(m.groups[i], counts[m.groups[i]], width))
+		case sepH > 0:
 			lines = append(lines, sep)
 		}
 		t := m.visible[i]

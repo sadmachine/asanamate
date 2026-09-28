@@ -28,6 +28,9 @@ Prebuilt binaries are attached to each [GitHub release](https://github.com/sadma
    `~/.config/asanamate/config.toml` with every default explained.
 3. Run `asanamate`.
 
+`asanamate config` opens the config file in `$VISUAL` or `$EDITOR` (falling
+back to `vi`) and reports any errors in it after you save.
+
 ## Keys
 
 | Key | Action |

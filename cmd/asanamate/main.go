@@ -3,6 +3,7 @@ package main
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"flag"
 	"fmt"
@@ -39,6 +40,7 @@ const usage = `usage:
                                                    print tickets (tsv: gid, section, due, title, url)
   asanamate show [--format md|json] <gid>          print one ticket
   asanamate setup                                  create the config file
+  asanamate config                                 edit the config file in $VISUAL or $EDITOR
   asanamate comment [--yes] <gid> <text | ->       comment on a task ("-" reads stdin)
   asanamate move    [--yes] [--project <gid>] <gid> <section>
   asanamate field   [--yes] [--project <gid>] <gid> <field> <value>
@@ -58,6 +60,8 @@ func run(args []string) int {
 	switch name {
 	case "setup":
 		err = runSetup()
+	case "config":
+		err = runConfig(args[1:])
 	case "comment", "move", "field":
 		err = writeCommand(name, args[1:])
 	case "version":
@@ -182,6 +186,31 @@ func runSetup() error {
 		In: bufio.NewReader(os.Stdin), Out: os.Stdout, Client: client,
 		ConfigPath: configPath, StatePath: filepath.Join(stateDir, state.FileName),
 	})
+}
+
+// runConfig opens the config file in the user's editor, then checks that it
+// still loads.
+func runConfig(args []string) error {
+	if len(args) > 0 {
+		return fmt.Errorf("config takes no arguments\n%s", usage)
+	}
+	path, err := config.Path()
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(path); err != nil {
+		return fmt.Errorf("%w (run asanamate setup first)", err)
+	}
+	// Like git: $VISUAL, then $EDITOR, then vi. The value may carry
+	// arguments ("code --wait"), so the shell splits it.
+	editor := cmp.Or(os.Getenv("VISUAL"), os.Getenv("EDITOR"), "vi")
+	cmd := exec.Command("sh", "-c", editor+` "$1"`, "sh", path)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("editor %q: %w", editor, err)
+	}
+	_, err = config.Load(path)
+	return err
 }
 
 func runTUI(args []string) error {

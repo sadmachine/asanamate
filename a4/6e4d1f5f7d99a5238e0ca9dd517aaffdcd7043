@@ -1,0 +1,20 @@
+AGENTS.md
+  s_441dde81c39dff::t_f3e495de68ac9b 1-15
+  s_441dde81c39dff::t_15eae4fd32d48e 16-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a46e4d1f5f7d99a5238e0ca9dd517aaffdcd7043",
+  "prompts": {},
+  "sessions": {
+    "s_441dde81c39dff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70434a60-1c82-4c5a-802a-f47925f44229",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

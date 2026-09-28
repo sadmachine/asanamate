@@ -28,6 +28,9 @@ import (
 
 const narrowWidth = 100
 
+// minPaneW is the narrowest a fitted list or its reader gets.
+const minPaneW = 30
+
 // Deps are the services the TUI uses.
 type Deps struct {
 	Config   config.Config
@@ -54,6 +57,7 @@ type Model struct {
 	visible     []asana.Task
 	groups      []string       // group label per visible task; nil when ungrouped
 	groupBy     string         // list field the list is grouped by; "" for none
+	listW       int            // fitted list pane width; 0 for the default split
 	accentStyle lipgloss.Style // reader headings
 	headerStyle lipgloss.Style // group headers
 	markerStyle lipgloss.Style // selected ticket marker
@@ -144,6 +148,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.tasks = msg.tasks
 		m.applyFilter()
+		m.fitList()
 		m.reselectGID = ""
 		return m, m.selectionChanged()
 	case detailTickMsg:
@@ -301,6 +306,9 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "b":
 		m.openGroupPicker()
 		return nil
+	case "=":
+		m.fitList()
+		return nil
 	case "v":
 		if m.deps.NoPreview {
 			return nil
@@ -388,6 +396,7 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
 		m.filtering = false
 		m.filterInput.Blur()
 		m.saveView()
+		m.fitList()
 		return nil
 	}
 	var cmd tea.Cmd
@@ -596,6 +605,9 @@ func (m *Model) paneWidths() (listW, readerW int, split bool) {
 		return m.width, m.width, false
 	}
 	listW = m.width * 2 / 5
+	if m.listW > 0 {
+		listW = min(max(m.listW, minPaneW), m.width-1-minPaneW)
+	}
 	return listW, m.width - listW - 1, true
 }
 
@@ -654,7 +666,7 @@ func (m *Model) header() string {
 func (m *Model) footer() string {
 	s := m.status
 	if s == "" {
-		hints := "j/k move · enter actions · tab focus · / filter · b group · p projects · f files · v view · o open · r reload · q quit"
+		hints := "j/k move · enter actions · tab focus · / filter · b group · = fit · p projects · f files · v view · o open · r reload · q quit"
 		if m.deps.NoPreview {
 			hints = strings.NewReplacer(" · tab focus", "", " · v view", "").Replace(hints)
 		}
@@ -744,9 +756,8 @@ func (m *Model) listView(width, height int) string {
 	case len(m.visible) == 0:
 		return dimStyle.Render("No tasks match the filter.")
 	}
-	multi := m.deps.Config.List.Layout == config.LayoutMulti
 	itemH, sepH := 1, 0
-	if multi {
+	if m.deps.Config.List.Layout == config.LayoutMulti {
 		itemH = 2
 	}
 	if m.deps.Config.List.Separator {
@@ -803,27 +814,7 @@ func (m *Model) listView(width, height int) string {
 		case sepH > 0:
 			lines = append(lines, sep)
 		}
-		t := m.visible[i]
-		mark := m.sym.open
-		if t.Completed {
-			mark = m.sym.done
-		}
-		title := mark + " " + ticket.OneLine(t.Name)
-		linked := m.viewAgents(t)
-		badge := m.sym.badge(linked, m.frame, i == m.cursor && m.selectionBar())
-		if len(linked) > 0 && linked[0].State == agents.Waiting && i != m.cursor {
-			title = stateStyles[agents.Waiting].Render(title)
-		}
-		details := strings.Join(rowFields(t, m.deps.Config.List.Fields, m.rowContext()), " · ")
-		row := []string{title}
-		switch {
-		case multi && details != "":
-			row = append(row, dimStyle.Render("  "+details))
-		case multi:
-			row = append(row, "")
-		case details != "":
-			row[0] += "  " + dimStyle.Render(details)
-		}
+		row, badge := m.listRow(i)
 		for j, line := range row {
 			tail := ""
 			if j == 0 && badge != "" {
@@ -840,4 +831,61 @@ func (m *Model) listView(width, height int) string {
 		lines = append(lines, sep)
 	}
 	return strings.Join(lines, "\n")
+}
+
+// listRow returns the lines of visible ticket i's row and the badge
+// right-aligned on its first line.
+func (m *Model) listRow(i int) (row []string, badge string) {
+	t := m.visible[i]
+	mark := m.sym.open
+	if t.Completed {
+		mark = m.sym.done
+	}
+	title := mark + " " + ticket.OneLine(t.Name)
+	linked := m.viewAgents(t)
+	badge = m.sym.badge(linked, m.frame, i == m.cursor && m.selectionBar())
+	if len(linked) > 0 && linked[0].State == agents.Waiting && i != m.cursor {
+		title = stateStyles[agents.Waiting].Render(title)
+	}
+	details := strings.Join(rowFields(t, m.deps.Config.List.Fields, m.rowContext()), " · ")
+	row = []string{title}
+	switch {
+	case m.deps.Config.List.Layout == config.LayoutMulti && details != "":
+		row = append(row, dimStyle.Render("  "+details))
+	case m.deps.Config.List.Layout == config.LayoutMulti:
+		row = append(row, "")
+	case details != "":
+		row[0] += "  " + dimStyle.Render(details)
+	}
+	return row, badge
+}
+
+// fitList sizes the list pane to its widest row or group header, leaving the
+// reader at least minPaneW columns.
+func (m *Model) fitList() {
+	gutter := 0
+	if m.deps.Config.List.SelectionStyle == config.StyleMarker {
+		gutter = ansi.StringWidth(m.sym.cursor + " ")
+	}
+	counts := map[string]int{}
+	for _, g := range m.groups {
+		counts[g]++
+	}
+	w := 0
+	for label, n := range counts {
+		// Wide enough that the header shows in full, rule or bar.
+		w = max(w, ansi.StringWidth(fmt.Sprintf("── %s (%d) ─", label, n)))
+	}
+	for i := range m.visible {
+		row, badge := m.listRow(i)
+		for j, line := range row {
+			lineW := gutter + ansi.StringWidth(line)
+			if j == 0 && badge != "" {
+				lineW += 1 + ansi.StringWidth(badge)
+			}
+			w = max(w, lineW)
+		}
+	}
+	m.listW = w + 1 // the gap before the divider
+	m.layout()
 }

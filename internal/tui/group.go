@@ -127,6 +127,7 @@ func (m *Model) pickedGroup(by string) tea.Cmd {
 	m.groupBy = by
 	m.saveView()
 	m.applyFilter()
+	m.fitList()
 	return m.selectionChanged()
 }
 

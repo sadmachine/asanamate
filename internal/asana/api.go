@@ -98,6 +98,11 @@ func (c *Client) Attachment(ctx context.Context, gid string) (Attachment, error)
 	return getOne[Attachment](ctx, c, "/attachments/"+gid, fields(attachmentFields))
 }
 
+// WorkspaceUsers returns the users in a workspace.
+func (c *Client) WorkspaceUsers(ctx context.Context, workspace string) ([]Ref, error) {
+	return getAll[Ref](ctx, c, "/workspaces/"+workspace+"/users", fields("name"))
+}
+
 // Sections returns a project's sections.
 func (c *Client) Sections(ctx context.Context, projectGID string) ([]Ref, error) {
 	return getAll[Ref](ctx, c, "/projects/"+projectGID+"/sections", fields("name"))
@@ -132,4 +137,13 @@ func (c *Client) AddToSection(ctx context.Context, sectionGID, taskGID string) e
 func (c *Client) SetCustomField(ctx context.Context, taskGID, fieldGID string, value any) error {
 	body := map[string]any{"custom_fields": map[string]any{fieldGID: value}}
 	return c.do(ctx, http.MethodPut, "/tasks/"+taskGID, nil, body, nil)
+}
+
+// SetAssignee assigns a task to a user; an empty userGID unassigns it.
+func (c *Client) SetAssignee(ctx context.Context, taskGID, userGID string) error {
+	var assignee any
+	if userGID != "" {
+		assignee = userGID
+	}
+	return c.do(ctx, http.MethodPut, "/tasks/"+taskGID, nil, map[string]any{"assignee": assignee}, nil)
 }

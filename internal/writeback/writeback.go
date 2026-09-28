@@ -144,7 +144,7 @@ func (s Service) SetField(ctx context.Context, gid, fieldName, value, projectGID
 	if err != nil {
 		return err
 	}
-	v, err := fieldValue(f, value)
+	v, err := FieldValue(f, value)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,9 @@ func (s Service) resolveField(ctx context.Context, t asana.Task, name, projectGI
 	return asana.CustomField{}, fmt.Errorf("none of the fields named %q is on project %s", name, projectGID)
 }
 
-func fieldValue(f asana.CustomField, value string) (any, error) {
+// FieldValue converts typed text to the API value for a text, number, or enum
+// field. Empty text is nil, which clears the field.
+func FieldValue(f asana.CustomField, value string) (any, error) {
 	name := ticket.Clean(strings.TrimSpace(f.Name))
 	if value == "" {
 		return nil, nil

@@ -344,6 +344,12 @@ Each command asks on the terminal before writing unless `--yes` is given,
 terminal available (for example, a background action), a write that needs
 confirmation is refused.
 
+In a comment (from the CLI or the `e` menu), `@Full Name` mentions a
+workspace user and notifies them, the same as in Asana. Matching ignores case
+and picks the longest name that fits, so `@victoria andersen` tags Victoria
+Andersen even if a Victoria also exists. An `@` inside a word, or one that
+matches no one or two people with the same name, stays as plain text.
+
 ## tmux
 
 ```tmux

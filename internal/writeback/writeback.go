@@ -55,6 +55,10 @@ func TTYConfirm(question string) (bool, error) {
 type Service struct {
 	Client  *asana.Client
 	Confirm Confirmer
+	// Workspace is where Comment looks up @mentioned users when Users is nil.
+	Workspace string
+	// Users are the people a comment can @mention; nil loads them on demand.
+	Users []asana.Ref
 }
 
 func (s Service) confirm(question string) error {
@@ -71,18 +75,40 @@ func (s Service) confirm(question string) error {
 	return nil
 }
 
-// Comment posts text as a comment on the task.
+// Comment posts text as a comment on the task. Each @Name matching a
+// workspace user becomes a mention that notifies them.
 func (s Service) Comment(ctx context.Context, gid, text string) error {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		return errors.New("comment text is empty")
 	}
-	t, err := s.Client.Task(ctx, gid)
-	if err != nil {
-		return err
+	users := s.Users
+	if users == nil && s.Workspace != "" && strings.Contains(text, "@") {
+		var err error
+		if users, err = s.Client.WorkspaceUsers(ctx, s.Workspace); err != nil {
+			return fmt.Errorf("loading people to mention: %w", err)
+		}
 	}
-	if err := s.confirm(fmt.Sprintf("Comment on %q?\n%s\n", t.Name, text)); err != nil {
-		return err
+	html, mentioned := CommentHTML(text, users)
+	if s.Confirm != nil {
+		t, err := s.Client.Task(ctx, gid)
+		if err != nil {
+			return err
+		}
+		question := fmt.Sprintf("Comment on %q?\n%s\n", t.Name, text)
+		if len(mentioned) > 0 {
+			names := make([]string, len(mentioned))
+			for i, u := range mentioned {
+				names[i] = ticket.Clean(u.Name)
+			}
+			question += "Mentions: " + strings.Join(names, ", ") + "\n"
+		}
+		if err := s.confirm(question); err != nil {
+			return err
+		}
+	}
+	if len(mentioned) > 0 {
+		return s.Client.AddCommentHTML(ctx, gid, html)
 	}
 	return s.Client.AddComment(ctx, gid, text)
 }

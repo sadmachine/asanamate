@@ -225,3 +225,50 @@ func TestSetFieldSameNameNeedsProject(t *testing.T) {
 		t.Fatalf("err = %v, puts = %v", err, puts)
 	}
 }
+
+func TestCommentHTML(t *testing.T) {
+	users := []asana.Ref{
+		{GID: "10", Name: "Victoria"},
+		{GID: "11", Name: "Victoria Andersen"},
+		{GID: "12", Name: "Sam Lee"},
+		{GID: "13", Name: "Sam Lee"},
+		{GID: "x<", Name: "Bad Gid"},
+	}
+	cases := []struct {
+		text, html string
+		gids       []string
+	}{
+		{"hi @victoria andersen, see <this> & that", `<body>hi <a data-asana-gid="11"/>, see &lt;this&gt; &amp; that</body>`, []string{"11"}},
+		{"@Victoria said\n@VICTORIA ANDERSEN", "<body><a data-asana-gid=\"10\"/> said\n<a data-asana-gid=\"11\"/></body>", []string{"10", "11"}},
+		{"@Victoria Andersenx", `<body><a data-asana-gid="10"/> Andersenx</body>`, []string{"10"}},
+		{"mail me@victoria or @nobody", "<body>mail me@victoria or @nobody</body>", nil},
+		{"ask @Sam Lee or @Bad Gid", "<body>ask @Sam Lee or @Bad Gid</body>", nil},
+	}
+	for _, c := range cases {
+		html, mentioned := CommentHTML(c.text, users)
+		var gids []string
+		for _, u := range mentioned {
+			gids = append(gids, u.GID)
+		}
+		if html != c.html || !reflect.DeepEqual(gids, c.gids) {
+			t.Errorf("CommentHTML(%q) = %q, %v; want %q, %v", c.text, html, gids, c.html, c.gids)
+		}
+	}
+}
+
+func TestCommentMentionsPostHTML(t *testing.T) {
+	c, writes := fake(t)
+	var asked string
+	svc := Service{Client: c, Users: []asana.Ref{{GID: "11", Name: "Victoria Andersen"}},
+		Confirm: func(p string) (bool, error) { asked = p; return true, nil }}
+	if err := svc.Comment(ctx, "1", "thanks @victoria andersen"); err != nil {
+		t.Fatal(err)
+	}
+	want := `<body>thanks <a data-asana-gid="11"/></body>`
+	if len(*writes) != 1 || (*writes)[0].body["html_text"] != want || (*writes)[0].body["text"] != nil {
+		t.Fatalf("writes = %+v", *writes)
+	}
+	if !strings.Contains(asked, "Mentions: Victoria Andersen") {
+		t.Fatalf("prompt = %q", asked)
+	}
+}

@@ -134,6 +134,11 @@ func (c *Client) AddComment(ctx context.Context, taskGID, text string) error {
 	return c.do(ctx, http.MethodPost, "/tasks/"+taskGID+"/stories", nil, map[string]any{"text": text}, nil)
 }
 
+// AddCommentHTML posts a rich-text comment, such as one with @mentions.
+func (c *Client) AddCommentHTML(ctx context.Context, taskGID, html string) error {
+	return c.do(ctx, http.MethodPost, "/tasks/"+taskGID+"/stories", nil, map[string]any{"html_text": html}, nil)
+}
+
 // AddToSection moves a task into a section.
 func (c *Client) AddToSection(ctx context.Context, sectionGID, taskGID string) error {
 	return c.do(ctx, http.MethodPost, "/sections/"+sectionGID+"/addTask", nil, map[string]any{"task": taskGID}, nil)

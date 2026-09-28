@@ -172,6 +172,11 @@ fields = ["section"]
 # Frame each ticket with lines above and below (neighbours share one).
 separator = false
 
+[reader]
+# Starting view for the reading pane; press v to switch. "cards": sections
+# and boxed comments. "markdown": the rendered ticket Markdown.
+view = "cards"
+
 # Optional: show running coding agents next to their tickets. Off unless a
 # preset or command is set. A ticket matches agents on its branch (see
 # branch_field) in one of its linked repos. See the README for agent actions.

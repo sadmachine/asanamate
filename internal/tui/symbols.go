@@ -14,18 +14,19 @@ import (
 type symbolSet struct {
 	open, done string
 	states     map[agents.State]string
-	spinner    []string // frames shown for working agents; nil means static
+	spinner    []string        // frames shown for working agents; nil means static
+	border     lipgloss.Border // reading pane cards and section rules
 }
 
 var braille = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 var symbolSets = map[string]symbolSet{
-	config.SymbolsUnicode: {open: "□", done: "✓", spinner: braille, states: map[agents.State]string{
+	config.SymbolsUnicode: {open: "□", done: "✓", spinner: braille, border: lipgloss.RoundedBorder(), states: map[agents.State]string{
 		agents.Waiting: "⚠", agents.Working: "◐", agents.Completed: "●", agents.Idle: "○", agents.Unknown: "?"}},
 	// Nerd Font (Font Awesome) glyphs; needs a Nerd Font.
 	config.SymbolsNerd: {open: "", done: "", spinner: braille, states: map[agents.State]string{
 		agents.Waiting: "", agents.Working: "", agents.Completed: "", agents.Idle: "", agents.Unknown: ""}},
-	config.SymbolsASCII: {open: "[ ]", done: "[x]", states: map[agents.State]string{
+	config.SymbolsASCII: {open: "[ ]", done: "[x]", border: lipgloss.ASCIIBorder(), states: map[agents.State]string{
 		agents.Waiting: "(!)", agents.Working: "(~)", agents.Completed: "(+)", agents.Idle: "(-)", agents.Unknown: "(?)"}},
 }
 

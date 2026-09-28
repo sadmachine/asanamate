@@ -11,6 +11,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/glamour/v2"
+	"charm.land/glamour/v2/styles"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
@@ -55,13 +56,13 @@ type Model struct {
 	filterInput textinput.Model
 	filtering   bool
 
-	focusReader   bool
-	reader        viewport.Model
-	renderer      *glamour.TermRenderer
-	rendererWidth int
-	details       map[string]ticket.Ticket
-	shownGID      string
-	shownAgents   string // agents section rendered for shownGID
+	focusReader bool
+	reader      viewport.Model
+	readerView  string // config.ViewCards or config.ViewMarkdown
+	renderers   map[rendererKey]*glamour.TermRenderer
+	details     map[string]ticket.Ticket
+	shownGID    string
+	shownAgents string // agents section rendered for shownGID
 
 	projects      []asana.Project
 	projectFields map[string]map[string]bool // project gid -> its custom field gids
@@ -86,6 +87,8 @@ func New(d Deps) *Model {
 		deps:          d,
 		filterInput:   in,
 		reader:        viewport.New(),
+		readerView:    d.Config.Reader.View,
+		renderers:     map[rendererKey]*glamour.TermRenderer{},
 		details:       map[string]ticket.Ticket{},
 		projectFields: map[string]map[string]bool{},
 		sym:           newSymbols(d.Symbols, d.Config.Agents.Symbols, d.ReducedMotion),
@@ -273,6 +276,17 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "f":
 		m.openAttachments()
 		return nil
+	case "v":
+		if m.deps.NoPreview {
+			return nil
+		}
+		if m.readerView == config.ViewCards {
+			m.readerView = config.ViewMarkdown
+		} else {
+			m.readerView = config.ViewCards
+		}
+		m.renderDetail(false)
+		return nil
 	}
 	if m.focusReader {
 		var cmd tea.Cmd
@@ -427,7 +441,12 @@ func (m *Model) renderDetail(keepScroll bool) {
 	_, readerW, _ := m.paneWidths()
 	section := m.agentsSection(t.Task)
 	offset := m.reader.YOffset()
-	m.reader.SetContent(m.renderMarkdown(t.MarkdownWith(section), max(readerW-2, 20)))
+	width := max(readerW-2, 20)
+	if m.readerView == config.ViewMarkdown {
+		m.reader.SetContent(m.glamour(t.MarkdownWith(section), width, false))
+	} else {
+		m.reader.SetContent(lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width)))
+	}
 	if keepScroll {
 		m.reader.SetYOffset(offset)
 	} else {
@@ -436,15 +455,29 @@ func (m *Model) renderDetail(keepScroll bool) {
 	m.shownGID, m.shownAgents = t.GID, section
 }
 
-func (m *Model) renderMarkdown(md string, width int) string {
-	if m.renderer == nil || m.rendererWidth != width {
-		r, err := glamour.NewTermRenderer(glamour.WithStandardStyle(m.deps.Config.Theme), glamour.WithWordWrap(width))
-		if err != nil {
+// rendererKey identifies a cached Markdown renderer. Bare renderers drop the
+// document margins, for Markdown set inside cards and sections.
+type rendererKey struct {
+	width int
+	bare  bool
+}
+
+func (m *Model) glamour(md string, width int, bare bool) string {
+	key := rendererKey{width, bare}
+	r := m.renderers[key]
+	if r == nil {
+		style := *styles.DefaultStyles[m.deps.Config.Theme]
+		if bare {
+			style.Document.Margin = new(uint)
+			style.Document.BlockPrefix, style.Document.BlockSuffix = "", ""
+		}
+		var err error
+		if r, err = glamour.NewTermRenderer(glamour.WithStyles(style), glamour.WithWordWrap(width)); err != nil {
 			return md
 		}
-		m.renderer, m.rendererWidth = r, width
+		m.renderers[key] = r
 	}
-	out, err := m.renderer.Render(md)
+	out, err := r.Render(md)
 	if err != nil {
 		return md
 	}
@@ -501,6 +534,9 @@ func (m *Model) bodyHeight() int { return max(m.height-2, 1) }
 
 func (m *Model) layout() {
 	_, readerW, _ := m.paneWidths()
+	if readerW != m.reader.Width() {
+		m.renderers = map[rendererKey]*glamour.TermRenderer{}
+	}
 	m.reader.SetWidth(readerW)
 	m.reader.SetHeight(m.bodyHeight())
 	m.filterInput.SetWidth(max(m.width/3, 10))
@@ -546,9 +582,9 @@ func (m *Model) header() string {
 func (m *Model) footer() string {
 	s := m.status
 	if s == "" {
-		hints := "j/k move · enter actions · tab focus · / filter · p projects · f files · o open · r reload · q quit"
+		hints := "j/k move · enter actions · tab focus · / filter · p projects · f files · v view · o open · r reload · q quit"
 		if m.deps.NoPreview {
-			hints = strings.Replace(hints, " · tab focus", "", 1)
+			hints = strings.NewReplacer(" · tab focus", "", " · v view", "").Replace(hints)
 		}
 		s = dimStyle.Render(hints)
 	}

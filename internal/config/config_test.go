@@ -108,7 +108,7 @@ func TestToken(t *testing.T) {
 
 func TestListConfig(t *testing.T) {
 	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
-	if err != nil || cfg.List.Layout != LayoutSingle || !slices.Equal(cfg.List.Fields, []string{"section"}) {
+	if err != nil || cfg.List.Layout != LayoutSingle || !slices.Equal(cfg.List.Fields, []string{"section"}) || cfg.Reader.View != ViewCards {
 		t.Fatalf("defaults: %+v, err = %v", cfg.List, err)
 	}
 	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[list]\nlayout = \"multi\"\nfields = [\"status\", \"Branch Name\", \"due\"]\n"))
@@ -117,6 +117,7 @@ func TestListConfig(t *testing.T) {
 	}
 	for name, body := range map[string]string{
 		"bad layout":  "[list]\nlayout = \"grid\"\n",
+		"bad view":    "[reader]\nview = \"grid\"\n",
 		"title field": "[list]\nfields = [\"Title\"]\n",
 		"empty field": "[list]\nfields = [\" \"]\n",
 	} {

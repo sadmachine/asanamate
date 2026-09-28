@@ -3,7 +3,11 @@ package tui
 import (
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
+
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
@@ -101,5 +105,27 @@ func TestPickingProjectRecordsRecent(t *testing.T) {
 	again, _ := state.Load(st.Path())
 	if len(again.RecentProjects) == 0 || again.RecentProjects[0] != "b" {
 		t.Fatalf("recent = %v", again.RecentProjects)
+	}
+}
+
+func TestReaderViewSwitch(t *testing.T) {
+	m, _ := testModel(t, config.Config{Reader: config.Reader{View: config.ViewCards}})
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask,
+		Comments: []asana.Story{{CreatedBy: &asana.Ref{Name: "Sam"}, CreatedAt: "2026-09-20T10:00:00Z", HTMLText: "<body>Looks good</body>"}}}})
+	cards := ansi.Strip(m.reader.GetContent())
+	for _, want := range []string{"Details", "Comments 1", "Sam · 2026-09-20", "Looks good"} {
+		if !strings.Contains(cards, want) {
+			t.Errorf("cards view missing %q:\n%s", want, cards)
+		}
+	}
+	m.Update(key("v"))
+	if md := ansi.Strip(m.reader.GetContent()); m.readerView != config.ViewMarkdown || strings.Contains(md, "Details") || !strings.Contains(md, "Sam · 2026-09-20") {
+		t.Fatalf("view = %q, content:\n%s", m.readerView, md)
+	}
+	m.Update(key("v"))
+	if m.readerView != config.ViewCards {
+		t.Fatalf("view = %q, want cards", m.readerView)
 	}
 }

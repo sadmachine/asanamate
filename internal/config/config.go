@@ -27,6 +27,12 @@ const (
 	LayoutMulti  = "multi"
 )
 
+// Reading pane views.
+const (
+	ViewCards    = "cards"
+	ViewMarkdown = "markdown"
+)
+
 // ErrNotConfigured means the config file does not exist yet.
 var ErrNotConfigured = errors.New("asanamate is not configured; run `asanamate setup`")
 
@@ -43,6 +49,7 @@ type Config struct {
 	RepoSource    RepoSource `toml:"repo_source"`
 	Agents        Agents     `toml:"agents"`
 	List          List       `toml:"list"`
+	Reader        Reader     `toml:"reader"`
 	Actions       []Action   `toml:"actions"`
 }
 
@@ -96,6 +103,12 @@ type List struct {
 	Separator bool     `toml:"separator"`
 }
 
+// Reader configures the reading pane. View is its starting view: cards
+// (sections and boxed comments) or markdown (the rendered ticket Markdown).
+type Reader struct {
+	View string `toml:"view"`
+}
+
 // RepoSource configures where repo picker candidates come from.
 type RepoSource struct {
 	Command string `toml:"command"`
@@ -116,7 +129,8 @@ type Action struct {
 func Default() Config {
 	return Config{
 		Theme: "dark", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true,
-		List: List{Layout: LayoutSingle, Fields: []string{"section"}},
+		List:   List{Layout: LayoutSingle, Fields: []string{"section"}},
+		Reader: Reader{View: ViewCards},
 	}
 }
 
@@ -158,6 +172,9 @@ func (c Config) validate() error {
 	}
 	if c.List.Layout != LayoutSingle && c.List.Layout != LayoutMulti {
 		return fmt.Errorf("list.layout must be %q or %q, got %q", LayoutSingle, LayoutMulti, c.List.Layout)
+	}
+	if c.Reader.View != ViewCards && c.Reader.View != ViewMarkdown {
+		return fmt.Errorf("reader.view must be %q or %q, got %q", ViewCards, ViewMarkdown, c.Reader.View)
 	}
 	for _, f := range c.List.Fields {
 		switch name := strings.TrimSpace(f); {

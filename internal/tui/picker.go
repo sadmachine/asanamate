@@ -25,6 +25,8 @@ const (
 	pickField
 	pickEnumOption
 	pickUser
+	pickMultiEnum
+	pickPeople
 )
 
 type pickItem struct {
@@ -38,11 +40,13 @@ type pickResult struct {
 	done      bool
 	cancelled bool
 	item      *pickItem
+	items     []pickItem // checked items, in list order, for a multi picker
 	free      string
 }
 
 // picker is a modal list. It filters by typed words, or with keySelect it
 // selects by each item's Key. With allowFree, typed text can be returned as is.
+// With multi, enter toggles items and ctrl+s returns the checked ones.
 type picker struct {
 	kind      pickKind
 	title     string
@@ -52,6 +56,8 @@ type picker struct {
 	input     textinput.Model
 	keySelect bool
 	allowFree bool
+	multi     bool
+	checked   map[int]bool
 	err       string
 }
 
@@ -61,6 +67,14 @@ func newPicker(kind pickKind, title string, items []pickItem) *picker {
 	in.Focus()
 	p := &picker{kind: kind, title: title, items: items, input: in}
 	p.refilter()
+	return p
+}
+
+// newMultiPicker is a picker for checking several items; checked holds the
+// indexes of items checked at the start.
+func newMultiPicker(kind pickKind, title string, items []pickItem, checked map[int]bool) *picker {
+	p := newPicker(kind, title, items)
+	p.multi, p.checked = true, checked
 	return p
 }
 
@@ -108,6 +122,13 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 		p.cursor = max(min(p.cursor+1, len(p.matches)-1), 0)
 		return pickResult{}, nil
 	case "enter":
+		if p.multi {
+			if len(p.matches) > 0 {
+				i := p.matches[p.cursor]
+				p.checked[i] = !p.checked[i]
+			}
+			return pickResult{}, nil
+		}
 		if len(p.matches) > 0 {
 			return p.choose(p.matches[p.cursor]), nil
 		}
@@ -115,6 +136,17 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 		return res, nil
 	case "tab":
 		res, _ := p.freeText()
+		return res, nil
+	case "ctrl+s":
+		if !p.multi {
+			return pickResult{}, nil
+		}
+		res := pickResult{done: true, items: []pickItem{}}
+		for i, it := range p.items {
+			if p.checked[i] {
+				res.items = append(res.items, it)
+			}
+		}
 		return res, nil
 	}
 	if p.keySelect {
@@ -146,8 +178,13 @@ func (p *picker) view(width, height int) string {
 	for i := start; i < len(p.matches) && i < start+rows; i++ {
 		it := p.items[p.matches[i]]
 		line := it.Label
-		if p.keySelect {
+		switch {
+		case p.keySelect:
 			line = "[" + it.Key + "] " + line
+		case p.multi && p.checked[p.matches[i]]:
+			line = "[x] " + line
+		case p.multi:
+			line = "[ ] " + line
 		}
 		if it.Hint != "" {
 			line += "  " + dimStyle.Render(it.Hint)
@@ -164,6 +201,9 @@ func (p *picker) view(width, height int) string {
 		b.WriteString(errorStyle.Render(p.err) + "\n")
 	}
 	hint := "enter select · esc cancel"
+	if p.multi {
+		hint = "enter toggle · ctrl+s save · esc cancel"
+	}
 	if p.allowFree {
 		hint += " · tab use typed path"
 	}

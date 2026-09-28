@@ -89,3 +89,17 @@ func TestPickerEscCancels(t *testing.T) {
 		t.Fatalf("res = %+v", res)
 	}
 }
+
+func TestPickerMultiTogglesAndSaves(t *testing.T) {
+	p := newMultiPicker(pickMultiEnum, "Scope", items("A", "B", "C"), map[int]bool{0: true})
+	p.update(key("down"))
+	if res, _ := p.update(key("enter")); res.done {
+		t.Fatal("enter must toggle, not save")
+	}
+	p.update(key("up"))
+	p.update(key("enter"))
+	res, _ := p.update(tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl})
+	if !res.done || len(res.items) != 1 || res.items[0].Label != "B" {
+		t.Fatalf("res = %+v", res)
+	}
+}

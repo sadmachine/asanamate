@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -141,6 +142,34 @@ func TestWritesWrapBodyInData(t *testing.T) {
 	}
 	if got["data"]["text"] != "hi" {
 		t.Fatalf("body = %v", got)
+	}
+}
+
+func TestTaskUpdatesSendFields(t *testing.T) {
+	var got map[string]map[string]any
+	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut || r.URL.Path != "/tasks/1" {
+			t.Errorf("%s %s", r.Method, r.URL.Path)
+		}
+		got = nil
+		json.NewDecoder(r.Body).Decode(&got)
+		io.WriteString(w, `{"data":{}}`)
+	})
+	cases := []struct {
+		write func() error
+		want  map[string]any
+	}{
+		{func() error { return c.SetAssignee(ctx, "1", "u1") }, map[string]any{"assignee": "u1"}},
+		{func() error { return c.SetAssignee(ctx, "1", "") }, map[string]any{"assignee": nil}},
+		{func() error { return c.SetMyTasksSection(ctx, "1", "s1") }, map[string]any{"assignee_section": "s1"}},
+	}
+	for i, tc := range cases {
+		if err := tc.write(); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got["data"], tc.want) {
+			t.Errorf("case %d: body = %v, want %v", i, got["data"], tc.want)
+		}
 	}
 }
 

@@ -424,6 +424,8 @@ func (m *Model) handlePick(kind pickKind, res pickResult) tea.Cmd {
 		return m.setField(res.item.Value.(string))
 	case pickUser:
 		return m.pickedUser(res.item.Value.(asana.Ref))
+	case pickMultiEnum, pickPeople:
+		return m.pickedValues(res.items)
 	}
 	return nil
 }

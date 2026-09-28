@@ -224,9 +224,10 @@ func (m *Model) typedEdit(text string) tea.Cmd {
 		m.edit, m.status = nil, "comment is empty; nothing posted"
 		return nil
 	}
-	c, gid := m.deps.Client, m.edit.ticket.GID
+	svc := writeback.Service{Client: m.deps.Client, Workspace: m.deps.Config.Workspace, Users: m.users}
+	gid := m.edit.ticket.GID
 	return m.saveEdit("comment", func(ctx context.Context) error {
-		return c.AddComment(ctx, gid, text)
+		return svc.Comment(ctx, gid, text)
 	})
 }
 

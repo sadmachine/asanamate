@@ -1,0 +1,69 @@
+package writeback
+
+import (
+	"strings"
+	"unicode"
+	"unicode/utf8"
+
+	"github.com/sadmachine/asanamate/internal/asana"
+)
+
+var escapeHTML = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;")
+
+// CommentHTML renders text as Asana rich text, turning each @Name that
+// matches a user's full name (case-insensitively, longest name first) into a
+// mention. An @ inside a word, like an email address, or one that matches no
+// user or two users with the same name stays as typed. mentioned lists the
+// users tagged, in order; when it is empty, post text as plain text instead.
+func CommentHTML(text string, users []asana.Ref) (html string, mentioned []asana.Ref) {
+	var b strings.Builder
+	b.WriteString("<body>")
+	plain := 0
+	for i := 0; i < len(text); i++ {
+		if text[i] != '@' || wordRuneBefore(text, i) {
+			continue
+		}
+		u, n, ok := matchUser(text[i+1:], users)
+		if !ok {
+			continue
+		}
+		b.WriteString(escapeHTML.Replace(text[plain:i]))
+		b.WriteString(`<a data-asana-gid="` + u.GID + `"/>`)
+		mentioned = append(mentioned, u)
+		plain = i + 1 + n
+		i = plain - 1
+	}
+	b.WriteString(escapeHTML.Replace(text[plain:]))
+	b.WriteString("</body>")
+	return b.String(), mentioned
+}
+
+// matchUser finds the user whose longest name starts rest and ends on a word
+// boundary, returning the name's length in rest. A tie is ambiguous.
+func matchUser(rest string, users []asana.Ref) (user asana.Ref, n int, ok bool) {
+	for _, u := range users {
+		name := strings.TrimSpace(u.Name)
+		l := len(name)
+		if l == 0 || !asana.ValidGID(u.GID) || l < n || l > len(rest) || !strings.EqualFold(rest[:l], name) || wordRuneAt(rest, l) {
+			continue
+		}
+		if l == n {
+			ok = ok && user.GID == u.GID
+			continue
+		}
+		user, n, ok = u, l, true
+	}
+	return user, n, ok
+}
+
+func wordRuneBefore(s string, i int) bool {
+	r, _ := utf8.DecodeLastRuneInString(s[:i])
+	return i > 0 && isWord(r)
+}
+
+func wordRuneAt(s string, i int) bool {
+	r, _ := utf8.DecodeRuneInString(s[i:])
+	return i < len(s) && isWord(r)
+}
+
+func isWord(r rune) bool { return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' }

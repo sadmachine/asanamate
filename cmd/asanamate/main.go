@@ -148,7 +148,7 @@ func writeCommand(name string, args []string) error {
 	if err != nil {
 		return err
 	}
-	svc := writeback.Service{Client: client}
+	svc := writeback.Service{Client: client, Workspace: cfg.Workspace}
 	if writeback.NeedsConfirm(*yes, os.Getenv("ASANAMATE_CONFIRM_WRITES"), cfg.ConfirmWrites) {
 		svc.Confirm = writeback.TTYConfirm
 	}

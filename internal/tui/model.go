@@ -669,10 +669,7 @@ func (m *Model) body() string {
 
 func (m *Model) panes(h int) string {
 	listW, _, split := m.paneWidths()
-	contentW := listW
-	if split {
-		contentW = max(listW-1, 1) // keep a gap before the divider
-	}
+	contentW := max(listW-1, 1) // keep a gap before the divider or screen edge
 	list := lipgloss.NewStyle().Width(listW).Height(h).Render(m.listView(contentW, h))
 	switch {
 	case split:

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
+
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/repo"
@@ -138,5 +140,59 @@ func TestRepoLinkInsideParentRepoReprompts(t *testing.T) {
 	cmd := m.pickedAction(0)
 	if m.ExitCommand() != nil || cmd == nil || !strings.Contains(m.status, "no longer a git repository") {
 		t.Fatalf("ran in parent repo: exit = %+v, status = %q", m.ExitCommand(), m.status)
+	}
+}
+
+func inputModel(t *testing.T) *Model {
+	t.Helper()
+	m, _ := testModel(t, config.Config{Actions: []config.Action{{Name: "Go", Key: "x", Mode: config.ModeExit, Input: "Extra context", Command: "true"}}})
+	tk := ticket.Ticket{Task: asana.Task{GID: "1", Name: "Fix"}}
+	m.tasks, m.visible = []asana.Task{tk.Task}, []asana.Task{tk.Task}
+	m.details["1"] = tk
+	m.openActionMenu()
+	m.Update(key("x"))
+	if m.input == nil || m.ExitCommand() != nil {
+		t.Fatalf("want the input box before running; input = %v, exit = %v", m.input, m.ExitCommand())
+	}
+	return m
+}
+
+func inputFile(t *testing.T, cmd *exec.Cmd) string {
+	t.Helper()
+	for _, kv := range cmd.Env {
+		if path, ok := strings.CutPrefix(kv, "ASANAMATE_INPUT_FILE="); ok {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return string(data)
+		}
+	}
+	t.Fatal("ASANAMATE_INPUT_FILE not set")
+	return ""
+}
+
+func TestInputActionPassesTypedText(t *testing.T) {
+	m := inputModel(t)
+	m.input.area.SetValue("  tested on UAT\nnot local  ")
+	m.Update(key("enter"))
+	if m.ExitCommand() != nil {
+		t.Fatal("enter must insert a newline, not run the action")
+	}
+	m.Update(tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl})
+	cmd := m.ExitCommand()
+	if m.input != nil || cmd == nil {
+		t.Fatalf("input = %v, exit = %v", m.input, cmd)
+	}
+	if got := inputFile(t, cmd); got != "tested on UAT\nnot local" {
+		t.Fatalf("input file = %q", got)
+	}
+}
+
+func TestInputActionCancels(t *testing.T) {
+	m := inputModel(t)
+	m.Update(key("esc"))
+	if m.input != nil || m.run != nil || m.ExitCommand() != nil {
+		t.Fatalf("input = %v, run = %v, exit = %v", m.input, m.run, m.ExitCommand())
 	}
 }

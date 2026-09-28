@@ -22,9 +22,11 @@ type pendingRun struct {
 	ticket         ticket.Ticket
 	project        *asana.Ref
 	projectChosen  bool
-	repo           string // resolved repo, kept while project fields load
+	repo           string // resolved repo, kept while input or project fields are pending
 	awaitingFields bool
 	agent          *agents.Agent // chosen agent for agent = true actions
+	input          string        // text typed for an input action
+	inputDone      bool
 }
 
 // sharesFieldNames reports whether two of the task's custom fields share a
@@ -186,8 +188,19 @@ func (m *Model) pickedRepo(path string) tea.Cmd {
 	return m.execute(resolved)
 }
 
+func (m *Model) typedInput(text string) tea.Cmd {
+	m.input = nil
+	m.run.input, m.run.inputDone = text, true
+	return m.execute(m.run.repo)
+}
+
 func (m *Model) execute(repoPath string) tea.Cmd {
 	r := m.run
+	if r.action.Input != "" && !r.inputDone {
+		r.repo = repoPath
+		m.input = newInputBox(r.action.Input)
+		return nil
+	}
 	if p := r.project; p != nil && sharesFieldNames(r.ticket.Task) {
 		if _, ok := m.projectFields[p.GID]; !ok {
 			r.repo, r.awaitingFields = repoPath, true
@@ -206,6 +219,12 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 	if err != nil {
 		m.status = "writing ticket files: " + err.Error()
 		return nil
+	}
+	if r.inputDone {
+		if err := files.WriteInput(r.input); err != nil {
+			m.status = "writing input: " + err.Error()
+			return nil
+		}
 	}
 	cmd := action.Command(r.action, action.Context{
 		Ticket:        r.ticket,

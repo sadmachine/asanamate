@@ -29,6 +29,7 @@ const envPrefix = "ASANAMATE_"
 type Files struct {
 	JSON     string
 	Markdown string
+	Input    string // text typed for an input action; "" when the action has none
 }
 
 // Context is everything an action run knows about.
@@ -99,6 +100,13 @@ func WriteFiles(stateDir string, t ticket.Ticket) (Files, error) {
 	return f, nil
 }
 
+// WriteInput saves text typed for the action next to the ticket files. The
+// path is per ticket, so the next input action on the ticket overwrites it.
+func (f *Files) WriteInput(text string) error {
+	f.Input = filepath.Join(filepath.Dir(f.Markdown), "input.md")
+	return os.WriteFile(f.Input, []byte(ticket.Clean(text)), 0o600)
+}
+
 // Env returns the ASANAMATE_* variables for an action run, sorted.
 func Env(c Context) []string {
 	t := c.Ticket
@@ -111,6 +119,7 @@ func Env(c Context) []string {
 		"REPO":           c.Repo,
 		"TICKET_JSON":    c.Files.JSON,
 		"TICKET_MD":      c.Files.Markdown,
+		"INPUT_FILE":     c.Files.Input,
 		"CONFIRM_WRITES": "0",
 		"ASSIGNEE":       "",
 		"DUE":            "",

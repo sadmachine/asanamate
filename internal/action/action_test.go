@@ -88,6 +88,12 @@ func TestWriteFiles(t *testing.T) {
 	if err := json.Unmarshal(data, &decoded); err != nil || decoded["gid"] != "9" {
 		t.Fatalf("json = %s, err = %v", data, err)
 	}
+	if err := files.WriteInput("uat\x1b[31m"); err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(files.Input); filepath.Dir(files.Input) != filepath.Dir(files.Markdown) || string(data) != "uat[31m" {
+		t.Fatalf("input %s = %q", files.Input, data)
+	}
 	if _, err := WriteFiles(dir, ticket.Ticket{Task: asana.Task{GID: "../x"}}); err == nil {
 		t.Fatal("expected rejection of a non-numeric gid")
 	}

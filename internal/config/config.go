@@ -134,12 +134,15 @@ type RepoSource struct {
 
 // Action is a user-defined command run against the selected ticket.
 type Action struct {
-	Name          string `toml:"name"`
-	Key           string `toml:"key"`
-	Mode          string `toml:"mode"`
-	Repo          bool   `toml:"repo"`
-	Agent         bool   `toml:"agent"`
-	Command       string `toml:"command"`
+	Name    string `toml:"name"`
+	Key     string `toml:"key"`
+	Mode    string `toml:"mode"`
+	Repo    bool   `toml:"repo"`
+	Agent   bool   `toml:"agent"`
+	Command string `toml:"command"`
+	// Input, when set, is the title of a text box shown before the action
+	// runs; the typed text reaches the command as $ASANAMATE_INPUT_FILE.
+	Input         string `toml:"input"`
 	ConfirmWrites *bool  `toml:"confirm_writes"`
 }
 

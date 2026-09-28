@@ -80,6 +80,7 @@ type Model struct {
 	frame         int  // spinner frame
 	spinning      bool // a spinner tick is scheduled
 	modal         *picker
+	input         *inputBox // free-text modal for input actions
 	run           *pendingRun
 	menuFor       string // gid whose action menu opens once its details arrive
 	status        string
@@ -255,6 +256,9 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	if k == "ctrl+c" {
 		return tea.Quit
 	}
+	if m.input != nil {
+		return m.updateInput(msg)
+	}
 	if m.modal != nil {
 		return m.updateModal(msg)
 	}
@@ -337,6 +341,17 @@ func (m *Model) updateModal(msg tea.KeyPressMsg) tea.Cmd {
 		m.modal, m.run = nil, nil
 	case res.done:
 		return tea.Batch(cmd, m.handlePick(p.kind, res))
+	}
+	return cmd
+}
+
+func (m *Model) updateInput(msg tea.KeyPressMsg) tea.Cmd {
+	res, cmd := m.input.update(msg)
+	switch {
+	case res.cancelled:
+		m.input, m.run = nil, nil
+	case res.done:
+		return tea.Batch(cmd, m.typedInput(res.free))
 	}
 	return cmd
 }
@@ -628,11 +643,18 @@ func (m *Model) footer() string {
 func (m *Model) body() string {
 	h := m.bodyHeight()
 	panes := m.panes(h)
-	if m.modal == nil {
+	w, mh := max(min(m.width-4, 80), 10), max(h-2, 3)
+	var content string
+	switch {
+	case m.input != nil:
+		content = m.input.view(w, mh)
+	case m.modal != nil:
+		content = m.modal.view(w, mh)
+	default:
 		return panes
 	}
 	// Float the modal over the panes, faded so the modal stands out.
-	box := modalStyle.Render(m.modal.view(max(min(m.width-4, 80), 10), max(h-2, 3)))
+	box := modalStyle.Render(content)
 	x := max((m.width-lipgloss.Width(box))/2, 0)
 	y := max((h-lipgloss.Height(box))/2, 0)
 	canvas := lipgloss.NewCanvas(m.width, h).Compose(lipgloss.NewCompositor(

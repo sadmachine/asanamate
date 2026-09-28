@@ -166,6 +166,7 @@ paste ticket text into the command, because ticket content is untrusted.
 | `ASANAMATE_AGENT_STATE`, `ASANAMATE_AGENT_STATUS`, `ASANAMATE_AGENT_PATH`, `ASANAMATE_AGENT_TARGET`, `ASANAMATE_AGENT_TITLE` | the agent the action is about (the chosen one for `agent = true`, else the most urgent): normalized state, raw status, directory, jump id, title. Empty without agents |
 | `ASANAMATE_AGENT_TARGETS` | every linked agent, one `target<TAB>state<TAB>path<TAB>title` line each |
 | `ASANAMATE_TICKET_JSON`, `ASANAMATE_TICKET_MD` | full ticket as JSON / Markdown |
+| `ASANAMATE_INPUT_FILE` | text typed into the `input` box, possibly empty. Empty path for actions without `input` |
 | `ASANAMATE_FIELD_<NAME>` | custom field display values, e.g. `ASANAMATE_FIELD_BRANCH_NAME` |
 | `ASANAMATE_CONFIRM_WRITES` | `1`/`0`, read by the write-back subcommands |
 
@@ -174,6 +175,25 @@ Modes:
 - `foreground`: suspends the TUI, runs in the same terminal, and resumes.
 - `background`: runs detached. Output goes to `~/.local/state/asanamate/actions.log`.
 - `exit`: quits asanamate, then runs the command. Best for popups.
+
+Input: set `input` to a title, and asanamate asks for free-form text right
+before running the action. Enter adds a newline, ctrl+s runs, and esc cancels.
+Leaving it empty is fine. Each ticket has one input file, so an action that
+starts on the same ticket overwrites the text from the one before. For example, to put notes above the ticket in
+Claude's first prompt:
+
+```toml
+[[actions]]
+name = "Start Claude with notes"
+key = "C"
+mode = "background"
+repo = true
+input = "Notes for Claude"
+command = '''git switch "$ASANAMATE_BRANCH" 2>/dev/null || git switch -c "$ASANAMATE_BRANCH" &&
+p="$ASANAMATE_INPUT_FILE.prompt" &&
+{ [ -s "$ASANAMATE_INPUT_FILE" ] && { cat "$ASANAMATE_INPUT_FILE"; printf '\n\nTicket information below.\n\n'; }; cat "$ASANAMATE_TICKET_MD"; } > "$p" &&
+tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "P=$p" -e "ASANAMATE_GID=$ASANAMATE_GID" 'claude "$(cat "$P")"' '''
+```
 
 **tmux note:** `tmux new-window` and `split-window` run their command in the
 tmux server's environment, so `ASANAMATE_*` variables do not reach them. Pass

@@ -27,6 +27,14 @@ type CustomField struct {
 	ResourceSubtype string       `json:"resource_subtype"`
 	DisplayValue    *string      `json:"display_value"`
 	EnumOptions     []EnumOption `json:"enum_options,omitempty"`
+	MultiEnumValues []EnumOption `json:"multi_enum_values,omitempty"`
+	PeopleValue     []Ref        `json:"people_value,omitempty"`
+	DateValue       *DateValue   `json:"date_value,omitempty"`
+}
+
+// DateValue is a date custom field's value.
+type DateValue struct {
+	Date string `json:"date"` // YYYY-MM-DD
 }
 
 // Task is an Asana task. List endpoints fill a subset of the fields.

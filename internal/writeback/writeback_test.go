@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -136,6 +137,7 @@ func TestSetFieldValues(t *testing.T) {
 		{"Points", "3.5", 3.5},
 		{"stage", "review", "o1"},
 		{"Points", "", nil},
+		{"When", "2026-01-01", map[string]any{"date": "2026-01-01"}},
 	}
 	for _, tc := range cases {
 		c, writes := fake(t)
@@ -144,7 +146,7 @@ func TestSetFieldValues(t *testing.T) {
 		}
 		fields := (*writes)[0].body["custom_fields"].(map[string]any)
 		for _, got := range fields {
-			if got != tc.want {
+			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("%s=%q: sent %v, want %v", tc.field, tc.value, got, tc.want)
 			}
 		}
@@ -154,7 +156,7 @@ func TestSetFieldValues(t *testing.T) {
 func TestSetFieldRejectsBadInput(t *testing.T) {
 	c, writes := fake(t)
 	svc := Service{Client: c}
-	for _, args := range [][2]string{{"Points", "many"}, {"Stage", "Shipped"}, {"When", "2026-01-01"}, {"Nope", "x"}} {
+	for _, args := range [][2]string{{"Points", "many"}, {"Stage", "Shipped"}, {"When", "tomorrow"}, {"Nope", "x"}} {
 		if err := svc.SetField(ctx, "1", args[0], args[1], ""); err == nil {
 			t.Errorf("SetField(%q, %q) succeeded", args[0], args[1])
 		}

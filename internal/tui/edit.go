@@ -72,12 +72,7 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 	case editField:
 		m.openFieldPicker()
 	case editAssignee:
-		if m.users != nil {
-			m.openUserPicker(nil)
-			return nil
-		}
-		m.status = "loading people…"
-		return loadUsers(m.deps.Client, m.deps.Config.Workspace)
+		return m.requestUsers()
 	}
 	return nil
 }
@@ -104,6 +99,16 @@ func (m *Model) pickedEditProject(project asana.Ref) tea.Cmd {
 	m.edit.myTasks = project.GID == ""
 	m.status = "loading sections…"
 	return loadSections(m.deps.Client, m.deps.Config.Workspace, project)
+}
+
+// requestUsers opens the user picker, first loading the workspace users.
+func (m *Model) requestUsers() tea.Cmd {
+	if m.users != nil {
+		m.openUserPicker(nil)
+		return nil
+	}
+	m.status = "loading people…"
+	return loadUsers(m.deps.Client, m.deps.Config.Workspace)
 }
 
 func (m *Model) openSectionPicker(msg sectionsMsg) {
@@ -140,17 +145,17 @@ func (m *Model) pickedSection(sec asana.Ref) tea.Cmd {
 	})
 }
 
-// openFieldPicker lists the custom fields writeback can set.
+// openFieldPicker lists the custom fields the edit menu can set.
 func (m *Model) openFieldPicker() {
 	var items []pickItem
 	for _, f := range m.edit.ticket.CustomFields {
 		switch f.ResourceSubtype {
-		case "text", "number", "enum":
+		case "text", "number", "enum", "multi_enum", "date", "people":
 			items = append(items, pickItem{Label: fieldName(f), Hint: ticket.OneLine(f.Value()), Value: f})
 		}
 	}
 	if len(items) == 0 {
-		m.edit, m.status = nil, "ticket has no text, number, or enum fields"
+		m.edit, m.status = nil, "ticket has no editable custom fields"
 		return
 	}
 	m.modal = newPicker(pickField, "Set which field?", items)
@@ -159,7 +164,26 @@ func (m *Model) openFieldPicker() {
 func (m *Model) pickedField(f asana.CustomField) tea.Cmd {
 	m.modal = nil
 	m.edit.field = &f
-	if f.ResourceSubtype != "enum" {
+	switch f.ResourceSubtype {
+	case "enum":
+	case "multi_enum":
+		items := make([]pickItem, len(f.EnumOptions))
+		checked := map[int]bool{}
+		for i, o := range f.EnumOptions {
+			items[i] = pickItem{Label: ticket.Clean(o.Name), Value: o.GID}
+			checked[i] = slices.ContainsFunc(f.MultiEnumValues, func(v asana.EnumOption) bool { return v.GID == o.GID })
+		}
+		m.modal = newMultiPicker(pickMultiEnum, fieldName(f), items, checked)
+		return nil
+	case "people":
+		return m.requestUsers()
+	case "date":
+		m.input = newInputBox(fieldName(f), "YYYY-MM-DD; empty clears the field")
+		if f.DateValue != nil {
+			m.input.area.SetValue(f.DateValue.Date)
+		}
+		return nil
+	default:
 		m.input = newInputBox(fieldName(f), "empty clears the field")
 		m.input.area.SetValue(f.Value())
 		return nil
@@ -206,7 +230,23 @@ func (m *Model) typedEdit(text string) tea.Cmd {
 	})
 }
 
-// openUserPicker lists the workspace users once they have loaded.
+// pickedValues sets a multi_enum or people field to the checked option or
+// user gids; none checked clears it.
+func (m *Model) pickedValues(items []pickItem) tea.Cmd {
+	m.modal = nil
+	f := *m.edit.field
+	gids := make([]string, len(items))
+	for i, it := range items {
+		gids[i] = it.Value.(string)
+	}
+	c, gid := m.deps.Client, m.edit.ticket.GID
+	return m.saveEdit("set "+fieldName(f), func(ctx context.Context) error {
+		return c.SetCustomField(ctx, gid, f.GID, gids)
+	})
+}
+
+// openUserPicker lists the workspace users once they have loaded: to fill a
+// people field when one is being set, otherwise to assign the ticket.
 func (m *Model) openUserPicker(err error) {
 	if m.edit == nil {
 		return
@@ -220,6 +260,16 @@ func (m *Model) openUserPicker(err error) {
 	slices.SortFunc(users, func(a, b asana.Ref) int {
 		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
 	})
+	if f := m.edit.field; f != nil {
+		items := make([]pickItem, len(users))
+		checked := map[int]bool{}
+		for i, u := range users {
+			items[i] = pickItem{Label: ticket.Clean(u.Name), Value: u.GID}
+			checked[i] = slices.ContainsFunc(f.PeopleValue, func(v asana.Ref) bool { return v.GID == u.GID })
+		}
+		m.modal = newMultiPicker(pickPeople, fieldName(*f), items, checked)
+		return
+	}
 	items := []pickItem{{Label: "(unassigned)", Value: asana.Ref{}}}
 	for _, u := range users {
 		items = append(items, pickItem{Label: ticket.Clean(u.Name), Value: u})

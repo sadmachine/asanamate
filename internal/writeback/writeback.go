@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/prompt"
@@ -183,8 +184,8 @@ func (s Service) resolveField(ctx context.Context, t asana.Task, name, projectGI
 	return asana.CustomField{}, fmt.Errorf("none of the fields named %q is on project %s", name, projectGID)
 }
 
-// FieldValue converts typed text to the API value for a text, number, or enum
-// field. Empty text is nil, which clears the field.
+// FieldValue converts typed text to the API value for a text, number, enum, or
+// date (YYYY-MM-DD) field. Empty text is nil, which clears the field.
 func FieldValue(f asana.CustomField, value string) (any, error) {
 	name := ticket.Clean(strings.TrimSpace(f.Name))
 	if value == "" {
@@ -208,6 +209,11 @@ func FieldValue(f asana.CustomField, value string) (any, error) {
 			options = append(options, ticket.Clean(o.Name))
 		}
 		return nil, fmt.Errorf("%s has no option %q; options: %s", name, value, strings.Join(options, ", "))
+	case "date":
+		if _, err := time.Parse(time.DateOnly, value); err != nil {
+			return nil, fmt.Errorf("%s needs a date as YYYY-MM-DD, got %q", name, value)
+		}
+		return map[string]any{"date": value}, nil
 	}
 	return nil, fmt.Errorf("%s: custom field type %q is not supported", name, f.ResourceSubtype)
 }

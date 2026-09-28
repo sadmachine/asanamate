@@ -45,7 +45,7 @@ file is saved as `config.toml.bak`; copy any comments of your own back from it.
 | `/` | edit the filter (Enter or Esc to finish) |
 | `p` | switch project (recent first) |
 | `enter`, `a` | run an action on the selected ticket |
-| `e` | edit the selected ticket: add a comment, move it to a section, set a text/number/enum custom field, or assign it |
+| `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), set a custom field (text, number, date, single- or multi-select, people), or assign it |
 | `f` | attachments: view images inline or open in the browser |
 | `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) |
 | `=` | fit the list pane to its content (also on project, grouping, and filter changes) |

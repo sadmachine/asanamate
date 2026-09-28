@@ -482,12 +482,12 @@ func (m *Model) listView(width, height int) string {
 	if m.deps.Config.List.Separator {
 		sepH = 1
 	}
-	// n items take n*itemH + (n-1)*sepH lines.
-	rows := max((height+sepH)/(itemH+sepH), 1)
+	// Each item is preceded by a separator when enabled: n*(itemH+sepH) lines.
+	rows := max(height/(itemH+sepH), 1)
 	start := max(m.cursor-rows+1, 0)
 	var lines []string
 	for i := start; i < len(m.visible) && i < start+rows; i++ {
-		if sepH > 0 && i > start {
+		if sepH > 0 {
 			lines = append(lines, dimStyle.Render(strings.Repeat("─", width)))
 		}
 		t := m.visible[i]

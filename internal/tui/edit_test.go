@@ -59,13 +59,13 @@ func editModel(t *testing.T) (*Model, *[]string) {
 			{GID: "f5", Name: "Formula", ResourceSubtype: "formula"},
 		},
 	}}
-	m.tasks, m.visible = []asana.Task{tk.Task}, []asana.Task{tk.Task}
+	m.tasks, m.visible, m.loading = []asana.Task{tk.Task}, []asana.Task{tk.Task}, false
 	m.details["1"] = tk
 	return m, &writes
 }
 
 // send delivers msg and then the messages its commands produce, stopping at
-// the list reload a finished write starts.
+// the list reload a finished write starts and its loading spinner.
 func send(m *Model, msg tea.Msg) {
 	_, cmd := m.Update(msg)
 	drain(m, cmd)
@@ -76,7 +76,7 @@ func drain(m *Model, cmd tea.Cmd) {
 		return
 	}
 	switch msg := cmd().(type) {
-	case nil, tasksMsg:
+	case nil, tasksMsg, spinnerTickMsg:
 	case tea.BatchMsg:
 		for _, c := range msg {
 			drain(m, c)

@@ -62,8 +62,7 @@ type Model struct {
 	headerStyle lipgloss.Style // group headers
 	markerStyle lipgloss.Style // selected ticket marker
 	cursor      int
-	reselectGID string // ticket to reselect once a reload lands
-	loading     bool
+	loading     bool // tasks are loading; the stale view stays frozen under a modal
 
 	filterInput textinput.Model
 	filtering   bool
@@ -149,10 +148,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.fields != nil {
 			m.projectFields[msg.project.GID] = msg.fields
 		}
+		prev, _ := m.selected()
 		m.tasks = msg.tasks
 		m.applyFilter()
+		// A reload that drops the selected ticket starts from the top.
+		if t, _ := m.selected(); t.GID != prev.GID {
+			m.cursor = 0
+		}
 		m.fitList()
-		m.reselectGID = ""
 		return m, m.selectionChanged()
 	case detailTickMsg:
 		if t, ok := m.selected(); ok && t.GID == msg.gid {
@@ -203,14 +206,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.renderDetail(true)
 			}
 		}
-		cmds := []tea.Cmd{scheduleAgents()}
-		if !m.spinning && m.sym.spinner != nil && m.anyWorking() {
-			m.spinning = true
-			cmds = append(cmds, scheduleSpinner())
-		}
-		return m, tea.Batch(cmds...)
+		return m, tea.Batch(scheduleAgents(), m.startSpinner())
 	case spinnerTickMsg:
-		if !m.anyWorking() {
+		if !m.animating() {
 			m.spinning = false
 			return m, nil
 		}
@@ -287,6 +285,12 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.modal != nil {
 		return m.updateModal(msg)
+	}
+	if m.loading {
+		if k == "q" {
+			return tea.Quit
+		}
+		return nil
 	}
 	m.status = ""
 	if m.filtering {
@@ -445,20 +449,16 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
 	return tea.Batch(cmd, m.selectionChanged())
 }
 
+// reload refetches the tasks, keeping the current view until they land.
 func (m *Model) reload() tea.Cmd {
 	m.loading = true
-	if t, ok := m.selected(); ok {
-		m.reselectGID = t.GID
-	}
-	m.tasks, m.visible, m.groups, m.cursor = nil, nil, nil, 0
-	return loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject)
+	return tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject), m.startSpinner())
 }
 
 // applyFilter recomputes the visible tasks and their groups, keeping the
-// selected ticket selected when it is still visible. After a reload it reselects the ticket
-// selected before the reload.
+// selected ticket selected when it is still visible.
 func (m *Model) applyFilter() {
-	prevGID := m.reselectGID
+	var prevGID string
 	if prev, ok := m.selected(); ok {
 		prevGID = prev.GID
 	}
@@ -473,6 +473,18 @@ func (m *Model) applyFilter() {
 		}
 	}
 	m.moveTo(m.cursor)
+}
+
+// animating reports whether anything shown uses the spinner.
+func (m *Model) animating() bool { return m.loading || m.anyWorking() }
+
+// startSpinner schedules a spinner tick unless one is scheduled or nothing animates.
+func (m *Model) startSpinner() tea.Cmd {
+	if m.spinning || m.sym.spinner == nil || !m.animating() {
+		return nil
+	}
+	m.spinning = true
+	return scheduleSpinner()
 }
 
 func (m *Model) anyWorking() bool {
@@ -725,6 +737,11 @@ func (m *Model) body() string {
 		content = m.input.view(w, mh)
 	case m.modal != nil:
 		content = m.modal.view(w, mh)
+	case m.loading:
+		content = "Loading tasks…"
+		if m.sym.spinner != nil {
+			content = m.sym.spinner[m.frame%len(m.sym.spinner)] + " " + content
+		}
 	default:
 		return panes
 	}
@@ -791,8 +808,8 @@ func (m *Model) renderRowLine(line, tail string, width int, selected bool) strin
 
 func (m *Model) listView(width, height int) string {
 	switch {
-	case m.loading:
-		return dimStyle.Render("Loading tasks…")
+	case m.loading && m.tasks == nil:
+		return ""
 	case len(m.visible) == 0:
 		return dimStyle.Render("No tasks match the filter.")
 	}

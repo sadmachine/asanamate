@@ -258,7 +258,7 @@ func titled(state agents.State, target, title string) agents.Agent {
 func TestPickerShowsTitles(t *testing.T) {
 	m := jumpModel(t, titled(agents.Waiting, "a1", "Fix license headings"), onBranch(agents.Idle, "a2"))
 	m.pickedAction(0)
-	if m.modal == nil || m.modal.items[0].Label != "⚠ waiting · Fix license headings" || m.modal.items[0].Hint != "/code/web/wt" {
+	if m.modal == nil || m.modal.items[0].Label != "⚠ waiting · Fix license headings" || m.modal.items[0].Hint != "wt" {
 		t.Fatalf("items = %+v", m.modal.items)
 	}
 	if m.modal.items[1].Label != "○ idle" {

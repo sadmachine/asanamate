@@ -109,7 +109,7 @@ func (m *Model) continueRun() tea.Cmd {
 		default:
 			items := make([]pickItem, len(list))
 			for i, a := range list {
-				items[i] = pickItem{Label: m.agentLabel(a), Hint: ticket.OneLine(a.Path), Value: a}
+				items[i] = pickItem{Label: m.agentLabel(a), Hint: ticket.OneLine(filepath.Base(a.Path)), Value: a}
 			}
 			m.modal = newPicker(pickAgent, "Which agent?", items)
 			return nil
@@ -252,7 +252,7 @@ func (m *Model) agentsSection(t asana.Task) string {
 	var b strings.Builder
 	b.WriteString("\n## Agents\n\n")
 	for _, a := range linked {
-		fmt.Fprintf(&b, "- %s — `%s`\n", m.agentLabel(a), ticket.OneLine(a.Path))
+		fmt.Fprintf(&b, "- %s — `%s`\n", m.agentLabel(a), ticket.OneLine(filepath.Base(a.Path)))
 	}
 	return b.String()
 }

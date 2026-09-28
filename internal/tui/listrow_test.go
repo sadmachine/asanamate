@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/asana"
@@ -194,5 +195,39 @@ func TestGroupPicker(t *testing.T) {
 	m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if sel, _ := m.selected(); m.modal != nil || m.groupBy != "" || m.groups != nil || sel.GID != "2" {
 		t.Fatalf("groupBy = %q, groups = %q, selected = %q", m.groupBy, m.groups, sel.GID)
+	}
+}
+
+func TestSelectionMarker(t *testing.T) {
+	m, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, SelectionStyle: config.StyleMarker}})
+	m.Update(tasksMsg{tasks: []asana.Task{{GID: "1", Name: "A"}, {GID: "2", Name: "B"}}})
+	got := strings.Split(m.listView(10, 2), "\n")
+	if want := m.markerStyle.Render("▌ ") + titleStyle.Render("□ A"); got[0] != want {
+		t.Fatalf("selected = %q, want %q", got[0], want)
+	}
+	if got[1] != "  □ B" {
+		t.Fatalf("unselected rows keep the gutter: %q", got[1])
+	}
+	m.focusReader = true
+	if got := strings.Split(m.listView(10, 2), "\n")[0]; !strings.HasPrefix(got, dimStyle.Render("▌ ")) {
+		t.Fatalf("reader focus dims the marker: %q", got)
+	}
+}
+
+func TestHeaderStyles(t *testing.T) {
+	tasks := []asana.Task{{GID: "1", Name: "A", AssigneeSection: &asana.Ref{Name: "Doing"}}}
+	rule, _ := testModel(t, config.Config{List: config.List{GroupBy: "section", HeaderStyle: config.StyleRule, HeaderColor: "5"}})
+	rule.Update(tasksMsg{tasks: tasks})
+	if got := listLines(rule, 20, 2)[0]; got != "── Doing (1) ───────" {
+		t.Fatalf("rule header = %q", got)
+	}
+	bar, _ := testModel(t, config.Config{AccentColor: "2", List: config.List{GroupBy: "section", HeaderColor: "#ff0000"}})
+	bar.Update(tasksMsg{tasks: tasks})
+	want := colorStyle("#ff0000").Reverse(true).Render(" Doing (1)" + strings.Repeat(" ", 10))
+	if got := strings.Split(bar.listView(20, 2), "\n")[0]; got != want {
+		t.Fatalf("bar header = %q, want %q", got, want)
+	}
+	if bar.markerStyle.GetForeground() != lipgloss.Color("2") || bar.accentStyle.GetForeground() != lipgloss.Color("2") {
+		t.Fatal("marker and reader fall back to accent_color")
 	}
 }

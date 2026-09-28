@@ -2,6 +2,7 @@
 package tui
 
 import (
+	"cmp"
 	"fmt"
 	"os/exec"
 	"sort"
@@ -51,8 +52,11 @@ type Model struct {
 	viewProject *asana.Ref
 	tasks       []asana.Task
 	visible     []asana.Task
-	groups      []string // group label per visible task; nil when ungrouped
-	groupBy     string   // list field the list is grouped by; "" for none
+	groups      []string       // group label per visible task; nil when ungrouped
+	groupBy     string         // list field the list is grouped by; "" for none
+	accentStyle lipgloss.Style // reader headings
+	headerStyle lipgloss.Style // group headers
+	markerStyle lipgloss.Style // selected ticket marker
 	cursor      int
 	reselectGID string // ticket to reselect once a reload lands
 	loading     bool
@@ -93,12 +97,20 @@ func New(d Deps) *Model {
 		reader:        viewport.New(),
 		readerView:    d.Config.Reader.View,
 		groupBy:       strings.TrimSpace(d.Config.List.GroupBy),
+		accentStyle:   colorStyle(d.Config.AccentColor),
+		headerStyle:   colorStyle(cmp.Or(d.Config.List.HeaderColor, d.Config.AccentColor)),
+		markerStyle:   colorStyle(cmp.Or(d.Config.List.MarkerColor, d.Config.AccentColor)),
 		renderers:     map[rendererKey]*glamour.TermRenderer{},
 		details:       map[string]ticket.Ticket{},
 		projectFields: map[string]map[string]bool{},
 		sym:           newSymbols(d.Symbols, d.Config.Agents.Symbols, d.ReducedMotion),
 		loading:       true,
 	}
+}
+
+// colorStyle is bold text in a configured color.
+func colorStyle(color string) lipgloss.Style {
+	return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(color))
 }
 
 // ExitCommand is the command an exit-mode action left to run after the TUI quits.
@@ -649,8 +661,15 @@ func (m *Model) panes(h int) string {
 	}
 }
 
-// renderRowLine fits line into width with tail right-aligned. A selected
-// line is highlighted across the row up to the tail, which styles itself.
+// selectionBar reports whether the selected ticket is drawn as a reversed bar
+// (the list has focus and selection_style is bar).
+func (m *Model) selectionBar() bool {
+	return m.deps.Config.List.SelectionStyle == config.StyleBar && !m.focusReader
+}
+
+// renderRowLine fits line into width with tail right-aligned. A selected line
+// is bold, or with selectionBar highlighted across the row up to the tail,
+// which styles itself.
 func (m *Model) renderRowLine(line, tail string, width int, selected bool) string {
 	tailW := ansi.StringWidth(tail)
 	if tail != "" && width-tailW-1 < 8 {
@@ -661,13 +680,11 @@ func (m *Model) renderRowLine(line, tail string, width int, selected bool) strin
 		room = width - tailW - 1
 	}
 	line = ansi.Truncate(line, room, "…")
-	if selected {
-		style := selectedStyle
-		if m.focusReader {
-			style = titleStyle
-		}
-		line = style.Render(ansi.Strip(line) + strings.Repeat(" ", max(width-tailW-ansi.StringWidth(line), 0)))
-		return line + tail
+	switch {
+	case selected && m.selectionBar():
+		return selectedStyle.Render(ansi.Strip(line)+strings.Repeat(" ", max(width-tailW-ansi.StringWidth(line), 0))) + tail
+	case selected:
+		line = titleStyle.Render(ansi.Strip(line))
 	}
 	if tail == "" {
 		return line
@@ -721,11 +738,23 @@ func (m *Model) listView(width, height int) string {
 		counts[g]++
 	}
 	sep := dimStyle.Render(strings.Repeat("─", width))
+	// The marker style keeps a gutter on every row so text doesn't shift.
+	var cursor, gutter string
+	if m.deps.Config.List.SelectionStyle == config.StyleMarker {
+		cursor = m.sym.cursor + " "
+		gutter = strings.Repeat(" ", ansi.StringWidth(cursor))
+		cursorStyle := m.markerStyle
+		if m.focusReader {
+			cursorStyle = dimStyle
+		}
+		cursor = cursorStyle.Render(cursor)
+	}
+	rowW := max(width-ansi.StringWidth(gutter), 1)
 	var lines []string
 	for i := start; i < end; i++ {
 		switch {
 		case header(i, start):
-			lines = append(lines, groupHeader(m.groups[i], counts[m.groups[i]], width))
+			lines = append(lines, m.groupHeader(m.groups[i], counts[m.groups[i]], width))
 		case sepH > 0:
 			lines = append(lines, sep)
 		}
@@ -736,7 +765,7 @@ func (m *Model) listView(width, height int) string {
 		}
 		title := mark + " " + ticket.OneLine(t.Name)
 		linked := m.viewAgents(t)
-		badge := m.sym.badge(linked, m.frame, i == m.cursor && !m.focusReader)
+		badge := m.sym.badge(linked, m.frame, i == m.cursor && m.selectionBar())
 		if len(linked) > 0 && linked[0].State == agents.Waiting && i != m.cursor {
 			title = stateStyles[agents.Waiting].Render(title)
 		}
@@ -755,7 +784,11 @@ func (m *Model) listView(width, height int) string {
 			if j == 0 && badge != "" {
 				tail = badge
 			}
-			lines = append(lines, m.renderRowLine(line, tail, width, i == m.cursor))
+			lead := gutter
+			if i == m.cursor {
+				lead = cursor
+			}
+			lines = append(lines, lead+m.renderRowLine(line, tail, rowW, i == m.cursor))
 		}
 	}
 	if sepH > 0 {

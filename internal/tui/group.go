@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -128,9 +129,15 @@ func (m *Model) pickedGroup(by string) tea.Cmd {
 	return m.selectionChanged()
 }
 
-// groupHeader renders " Label (n)" as a reversed accent bar across width, so
-// it stands apart from ticket rows and dim separators.
-func groupHeader(label string, n, width int) string {
-	head := ansi.Truncate(" "+label+" ("+strconv.Itoa(n)+")", width, "…")
-	return accentStyle.Reverse(true).Render(head + strings.Repeat(" ", max(width-ansi.StringWidth(head), 0)))
+// groupHeader renders a group's header across width in the header color: a
+// reversed " Label (n)" bar, or a "── Label (n) ───" rule.
+func (m *Model) groupHeader(label string, n, width int) string {
+	count := " (" + strconv.Itoa(n) + ")"
+	if m.deps.Config.List.HeaderStyle == config.StyleRule {
+		rule := m.headerStyle.UnsetBold()
+		head := rule.Render("── ") + m.headerStyle.Render(label) + rule.Render(count+" ")
+		return ansi.Truncate(head+rule.Render(strings.Repeat("─", max(width-ansi.StringWidth(head), 0))), width, "…")
+	}
+	head := ansi.Truncate(" "+label+count, width, "…")
+	return m.headerStyle.Reverse(true).Render(head + strings.Repeat(" ", max(width-ansi.StringWidth(head), 0)))
 }

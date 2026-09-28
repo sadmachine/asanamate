@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	accentStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4"))
 	borderColor = lipgloss.Color("8")
 	openStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 	doneStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
@@ -118,7 +117,7 @@ func (m *Model) rule(title string, width int) string {
 	title = ansi.Truncate(title, max(width-ansi.StringWidth(lead)-2, 1), "…")
 	fill := max(width-ansi.StringWidth(lead)-ansi.StringWidth(title)-1, 0)
 	ruleStyle := lipgloss.NewStyle().Foreground(borderColor)
-	return ruleStyle.Render(lead) + accentStyle.Render(title) + " " + ruleStyle.Render(strings.Repeat(line, fill))
+	return ruleStyle.Render(lead) + m.accentStyle.Render(title) + " " + ruleStyle.Render(strings.Repeat(line, fill))
 }
 
 // card boxes body in a border with title set into the top edge. body must

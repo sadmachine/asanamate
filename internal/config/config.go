@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -27,6 +28,13 @@ const (
 	LayoutMulti  = "multi"
 )
 
+// List header and selection styles.
+const (
+	StyleBar    = "bar"
+	StyleRule   = "rule"
+	StyleMarker = "marker"
+)
+
 // Reading pane views.
 const (
 	ViewCards    = "cards"
@@ -40,6 +48,7 @@ var ErrNotConfigured = errors.New("asanamate is not configured; run `asanamate s
 type Config struct {
 	Workspace     string     `toml:"workspace"`
 	Theme         string     `toml:"theme"`
+	AccentColor   string     `toml:"accent_color"`
 	Images        string     `toml:"images"`
 	DefaultFilter string     `toml:"default_filter"`
 	ConfirmWrites bool       `toml:"confirm_writes"`
@@ -98,11 +107,18 @@ func (c Config) SymbolSet(getenv func(string) string) string {
 // Fields are extra values: section, due, assignee, project, tags, completed,
 // or any custom field name. Separator frames each ticket with lines; neighbours share one.
 // GroupBy groups tickets under a header per value of one such field; "" is ungrouped.
+// HeaderStyle draws group headers as a reversed bar or a rule. SelectionStyle
+// marks the selected ticket with a bold title and a left marker, or a reversed
+// bar. HeaderColor and MarkerColor override the accent color when set.
 type List struct {
-	Layout    string   `toml:"layout"`
-	Fields    []string `toml:"fields"`
-	Separator bool     `toml:"separator"`
-	GroupBy   string   `toml:"group_by"`
+	Layout         string   `toml:"layout"`
+	Fields         []string `toml:"fields"`
+	Separator      bool     `toml:"separator"`
+	GroupBy        string   `toml:"group_by"`
+	HeaderStyle    string   `toml:"header_style"`
+	HeaderColor    string   `toml:"header_color"`
+	SelectionStyle string   `toml:"selection_style"`
+	MarkerColor    string   `toml:"marker_color"`
 }
 
 // Reader configures the reading pane. View is its starting view: cards
@@ -130,8 +146,11 @@ type Action struct {
 // Default returns the values used for keys the config file omits.
 func Default() Config {
 	return Config{
-		Theme: "dark", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true,
-		List:   List{Layout: LayoutSingle, Fields: []string{"section"}},
+		Theme: "dark", AccentColor: "4", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true,
+		List: List{
+			Layout: LayoutSingle, Fields: []string{"section"},
+			HeaderStyle: StyleBar, SelectionStyle: StyleMarker,
+		},
 		Reader: Reader{View: ViewCards},
 	}
 }
@@ -186,6 +205,17 @@ func (c Config) validate() error {
 			return errors.New("the title is always shown; remove it from list.fields")
 		}
 	}
+	if c.List.HeaderStyle != StyleBar && c.List.HeaderStyle != StyleRule {
+		return fmt.Errorf("list.header_style must be %q or %q, got %q", StyleBar, StyleRule, c.List.HeaderStyle)
+	}
+	for key, color := range map[string]string{"accent_color": c.AccentColor, "list.header_color": c.List.HeaderColor, "list.marker_color": c.List.MarkerColor} {
+		if (key == "accent_color" || color != "") && !validColor(color) {
+			return fmt.Errorf("%s must be an ANSI color number (0-255) or #rrggbb, got %q", key, color)
+		}
+	}
+	if c.List.SelectionStyle != StyleMarker && c.List.SelectionStyle != StyleBar {
+		return fmt.Errorf("list.selection_style must be %q or %q, got %q", StyleMarker, StyleBar, c.List.SelectionStyle)
+	}
 	if strings.EqualFold(strings.TrimSpace(c.List.GroupBy), "title") {
 		return errors.New("list.group_by can't be the title; use a field such as section or due")
 	}
@@ -216,6 +246,19 @@ func (c Config) validate() error {
 		keys[a.Key] = a.Name
 	}
 	return nil
+}
+
+// validColor reports whether s is an ANSI color number or a #rgb/#rrggbb hex color.
+func validColor(s string) bool {
+	if n, err := strconv.Atoi(s); err == nil {
+		return n >= 0 && n <= 255
+	}
+	hex, ok := strings.CutPrefix(s, "#")
+	if !ok || (len(hex) != 3 && len(hex) != 6) {
+		return false
+	}
+	_, err := strconv.ParseUint(hex, 16, 32)
+	return err == nil
 }
 
 var agentStates = map[string]bool{"working": true, "waiting": true, "completed": true, "idle": true}

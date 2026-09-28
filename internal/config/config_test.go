@@ -111,16 +111,31 @@ func TestListConfig(t *testing.T) {
 	if err != nil || cfg.List.Layout != LayoutSingle || !slices.Equal(cfg.List.Fields, []string{"section"}) || cfg.Reader.View != ViewCards {
 		t.Fatalf("defaults: %+v, err = %v", cfg.List, err)
 	}
+	if cfg.AccentColor != "4" || cfg.List.HeaderStyle != StyleBar || cfg.List.HeaderColor != "" || cfg.List.SelectionStyle != StyleMarker || cfg.List.MarkerColor != "" {
+		t.Fatalf("style defaults: %+v", cfg.List)
+	}
+	for _, color := range []string{"0", "255", "#abc", "#A1b2C3"} {
+		if _, err := Load(writeFile(t, "workspace = \"1\"\n[list]\nheader_color = \""+color+"\"\n")); err != nil {
+			t.Errorf("header_color %q: %v", color, err)
+		}
+	}
 	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[list]\nlayout = \"multi\"\nfields = [\"status\", \"Branch Name\", \"due\"]\n"))
 	if err != nil || cfg.List.Layout != LayoutMulti || len(cfg.List.Fields) != 3 {
 		t.Fatalf("custom: %+v, err = %v", cfg.List, err)
 	}
 	for name, body := range map[string]string{
-		"bad layout":  "[list]\nlayout = \"grid\"\n",
-		"bad view":    "[reader]\nview = \"grid\"\n",
-		"title field": "[list]\nfields = [\"Title\"]\n",
-		"empty field": "[list]\nfields = [\" \"]\n",
-		"title group": "[list]\ngroup_by = \"title\"\n",
+		"bad layout":    "[list]\nlayout = \"grid\"\n",
+		"bad view":      "[reader]\nview = \"grid\"\n",
+		"title field":   "[list]\nfields = [\"Title\"]\n",
+		"empty field":   "[list]\nfields = [\" \"]\n",
+		"title group":   "[list]\ngroup_by = \"title\"\n",
+		"bad header":    "[list]\nheader_style = \"box\"\n",
+		"bad color":     "[list]\nheader_color = \"blue\"\n",
+		"color range":   "[list]\nheader_color = \"256\"\n",
+		"bad hex":       "[list]\nheader_color = \"#12345g\"\n",
+		"bad selection": "[list]\nselection_style = \"rule\"\n",
+		"bad marker":    "[list]\nmarker_color = \"red\"\n",
+		"empty accent":  "accent_color = \"\"\n",
 	} {
 		if _, err := Load(writeFile(t, "workspace = \"1\"\n"+body)); err == nil {
 			t.Errorf("%s: expected an error", name)

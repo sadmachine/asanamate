@@ -141,6 +141,10 @@ workspace = %q
 # Markdown style for the reading pane: "dark" or "light".
 theme = "dark"
 
+# Accent for reader headings, group headers, and the selection marker: an ANSI
+# color number (0-255) or "#rrggbb".
+accent_color = "4"
+
 # Images: "auto" detects kitty-protocol terminals, "kitty" forces on, "off" disables.
 images = "auto"
 
@@ -171,6 +175,16 @@ layout = "single"
 fields = ["section"]
 # Frame each ticket with lines above and below (neighbours share one).
 separator = false
+# Group tickets under a header per value of one field, such as "section" or
+# "due"; press b to pick another. Empty: ungrouped.
+group_by = ""
+# Group headers: "bar" (reversed bar) or "rule" (── Label (n) ───).
+header_style = "bar"
+# Selected ticket: "marker" (bold title with a left marker) or "bar" (reversed row).
+selection_style = "marker"
+# Colors for headers and the marker; unset uses accent_color.
+# header_color = "4"
+# marker_color = "4"
 
 [reader]
 # Starting view for the reading pane; press v to switch. "cards": sections

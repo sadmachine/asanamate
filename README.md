@@ -91,6 +91,7 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 |---|---|---|
 | `workspace` | set by setup | Asana workspace gid |
 | `theme` | `"dark"` | reading pane style: `dark` or `light` |
+| `accent_color` | `"4"` | accent for reader card headings, group headers, and the selection marker: an ANSI color number (`0`–`255`) or `#rrggbb` |
 | `images` | `"auto"` | `auto`, `kitty` (force on), or `off` |
 | `default_filter` | `"is:open"` | filter applied at startup |
 | `confirm_writes` | `true` | write-back subcommands ask before writing |
@@ -102,6 +103,10 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `reduced_motion` | OS setting | `true` shows static agent symbols instead of the spinner |
 | `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one |
 | `list.group_by` | `""` (ungrouped) | starting grouping: any `list.fields` name; `b` picks another |
+| `list.header_style` | `"bar"` | group headers: `bar` (reversed bar) or `rule` (`── Label (n) ───`) |
+| `list.header_color` | `accent_color` | group header color, same format as `accent_color` |
+| `list.selection_style` | `"marker"` | selected ticket: `marker` (bold title with a left `▌`) or `bar` (reversed row; agent badges swap colors) |
+| `list.marker_color` | `accent_color` | selection marker color, same format as `accent_color` |
 | `reader.view` | `"cards"` | reader's starting view: `cards` (details card, titled sections, one box per comment) or `markdown` (the rendered ticket Markdown); `v` switches |
 | `repo_source.command` | lists repos in your setup directory | prints one repo path per line |
 
@@ -109,8 +114,8 @@ The title is always shown. `list.fields` accepts the built-ins `section`,
 `due`, `assignee`, `project`, `tags`, and `completed` (open/done). Any other
 name is matched to a custom field, ignoring case and surrounding spaces.
 
-`list.group_by` takes the same names and puts a `── Value (count) ───` header
-above each group. Groups keep Asana's order (first seen), with tickets missing
+`list.group_by` takes the same names and puts a `Value (count)` header above
+each group. Groups keep Asana's order (first seen), with tickets missing
 the value last. `due` groups into Overdue, Today, Tomorrow, Next 7 days, Later,
 and No due date.
 

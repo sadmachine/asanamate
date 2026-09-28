@@ -1,0 +1,21 @@
+internal/tui/agents_test.go
+  s_c039b43dfc0ee5::t_175db1b68c7de2 261
+internal/tui/flow.go
+  s_c039b43dfc0ee5::t_3f1c377961a6bd 112,255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4a5c6178e9b5f322781aaa0375299a7f8ab02e68",
+  "prompts": {},
+  "sessions": {
+    "s_c039b43dfc0ee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "121ad4b1-ee50-491a-98e8-f8d585471f34",
+        "model": "unknown"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

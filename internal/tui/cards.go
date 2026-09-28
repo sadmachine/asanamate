@@ -19,15 +19,19 @@ var (
 )
 
 // renderCards renders t as the reading pane's cards view: a details card,
-// titled sections, and one card per comment, all width columns wide.
+// titled sections, and one card per comment, all width columns wide. It
+// records the line of each editable row in m.fieldLines.
 func (m *Model) renderCards(t ticket.Ticket, width int) string {
+	name := lipgloss.NewStyle().Bold(true).Width(width).Render(ticket.Clean(t.Name))
+	m.fieldLines = map[string]int{}
 	blocks := []string{
-		lipgloss.NewStyle().Bold(true).Width(width).Render(ticket.Clean(t.Name)),
-		m.card("Details", m.detailsBody(t, width-4), width),
+		name,
+		// Rows start below the name, a blank line, and the card's top edge.
+		m.card("Details", m.detailsBody(t, width-4, lipgloss.Height(name)+2), width),
 	}
 	add := func(title, body string) {
 		if body != "" {
-			blocks = append(blocks, m.rule(title, width)+"\n"+body)
+			blocks = append(blocks, m.rule(title, width, false)+"\n"+body)
 		}
 	}
 
@@ -64,27 +68,33 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	}
 	add("Attachments", strings.Join(attachments, "\n"))
 
+	// The Comments heading always shows: tabbing to it adds a comment.
+	comments := []string{dimStyle.Render("none")}
 	if len(t.Comments) > 0 {
 		// Cards hug the capped text: its width plus border and padding.
 		cardW := m.textWidth(width-4) + 4
-		comments := make([]string, len(t.Comments))
+		comments = make([]string, len(t.Comments))
 		for i, c := range t.Comments {
 			title := ticket.Author(c) + dimStyle.Render(" · "+ticket.Day(c.CreatedAt))
 			comments[i] = m.card(title, m.renderBody(ticket.HTMLToMarkdown(c.HTMLText), cardW-4), cardW)
 		}
-		add(fmt.Sprintf("Comments %d", len(t.Comments)), strings.Join(comments, "\n\n"))
 	}
+	m.fieldLines[commentKey] = lipgloss.Height(strings.Join(blocks, "\n\n")) + 1
+	heading := m.rule(fmt.Sprintf("Comments %d", len(t.Comments)), width, m.fieldKey == commentKey)
+	blocks = append(blocks, heading+"\n"+strings.Join(comments, "\n\n"))
 	return strings.Join(blocks, "\n\n")
 }
 
 // detailsBody lists the built-in fields, then any custom fields below a rule.
-func (m *Model) detailsBody(t ticket.Ticket, width int) string {
+// top is the reader line of its first row, for m.fieldLines.
+func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
 	meta, custom := t.Meta(), t.FieldValues()
 	labelW := 0
 	for _, f := range append(meta, custom...) {
 		labelW = max(labelW, ansi.StringWidth(f.Label))
 	}
 	labelW = min(labelW, width/3)
+	line := top
 	rows := func(fields []ticket.Field) []string {
 		out := make([]string, len(fields))
 		for i, f := range fields {
@@ -92,14 +102,23 @@ func (m *Model) detailsBody(t ticket.Ticket, width int) string {
 			if f.Label == "Status" {
 				value = m.statusBadge(t.Completed)
 			}
-			label := lipgloss.NewStyle().Width(labelW + 2).Render(dimStyle.Render(ansi.Truncate(f.Label, labelW, "…")))
+			labelStyle := dimStyle
+			if f.Key != "" {
+				m.fieldLines[f.Key] = line
+				if f.Key == m.fieldKey {
+					labelStyle = m.fieldStyle()
+				}
+			}
+			label := lipgloss.NewStyle().Width(labelW + 2).Render(labelStyle.Render(ansi.Truncate(f.Label, labelW, "…")))
 			out[i] = lipgloss.JoinHorizontal(lipgloss.Top, label, lipgloss.NewStyle().Width(max(width-labelW-2, 1)).Render(value))
+			line += lipgloss.Height(out[i])
 		}
 		return out
 	}
 	lines := rows(meta)
 	if len(custom) > 0 {
 		lines = append(lines, lipgloss.NewStyle().Foreground(borderColor).Render(strings.Repeat(m.sym.border.Top, width)))
+		line++
 		lines = append(lines, rows(custom)...)
 	}
 	return strings.Join(lines, "\n")
@@ -112,14 +131,22 @@ func (m *Model) statusBadge(completed bool) string {
 	return openStyle.Render(m.sym.open + " open")
 }
 
-// rule is a section heading drawn as a full-width line with the title in it.
-func (m *Model) rule(title string, width int) string {
+// fieldStyle marks the row the cards view has tabbed to.
+func (m *Model) fieldStyle() lipgloss.Style { return m.markerStyle.Reverse(true) }
+
+// rule is a section heading drawn as a full-width line with the title in it,
+// marked when it is the tabbed-to row.
+func (m *Model) rule(title string, width int, selected bool) string {
 	line := m.sym.border.Top
 	lead := line + line + " "
 	title = ansi.Truncate(title, max(width-ansi.StringWidth(lead)-2, 1), "…")
 	fill := max(width-ansi.StringWidth(lead)-ansi.StringWidth(title)-1, 0)
 	ruleStyle := lipgloss.NewStyle().Foreground(borderColor)
-	return ruleStyle.Render(lead) + m.accentStyle.Render(title) + " " + ruleStyle.Render(strings.Repeat(line, fill))
+	headStyle := m.accentStyle
+	if selected {
+		headStyle = m.fieldStyle()
+	}
+	return ruleStyle.Render(lead) + headStyle.Render(title) + " " + ruleStyle.Render(strings.Repeat(line, fill))
 }
 
 // card boxes body in a border with title set into the top edge. body must

@@ -41,7 +41,10 @@ file is saved as `config.toml.bak`; copy any comments of your own back from it.
 |---|---|
 | `j`/`k`, arrows | move (list) or scroll (reader) |
 | `g`/`G` | first/last ticket |
-| `tab` | switch focus between the list and the reader |
+| `tab` | switch focus between the list and the reader; in the cards view, move into the reader and select its first editable row |
+| `tab` / `shift+tab` (reader, cards view) | move between editable rows: assignee, project and My Tasks sections, settable custom fields, and Comments |
+| `enter` (reader, row selected) | edit the selected row, skipping the `e` menu |
+| `esc` (reader) | return focus to the list |
 | `/` | edit the filter (Enter or Esc to finish) |
 | `p` | switch project (recent first) |
 | `enter`, `a` | run an action on the selected ticket |

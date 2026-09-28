@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"fmt"
 	"os/exec"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -73,7 +74,9 @@ type Model struct {
 	renderers   map[rendererKey]*glamour.TermRenderer
 	details     map[string]ticket.Ticket
 	shownGID    string
-	shownAgents string // agents section rendered for shownGID
+	shownAgents string         // agents section rendered for shownGID
+	fieldKey    string         // cards view row tabbed to; "" for none
+	fieldLines  map[string]int // reader line of each cards view row, by key
 
 	projects      []asana.Project
 	projectFields map[string]map[string]bool // project gid -> its custom field gids
@@ -296,12 +299,31 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	if m.filtering {
 		return m.updateFilter(msg)
 	}
+	if k == "enter" && m.focusReader && m.fieldKey != "" {
+		return m.openField(m.fieldKey)
+	}
 	switch k {
 	case "q":
 		return tea.Quit
-	case "tab":
-		if !m.deps.NoPreview {
-			m.focusReader = !m.focusReader
+	case "tab", "shift+tab":
+		if m.deps.NoPreview {
+			return nil
+		}
+		dir := 1
+		if k == "shift+tab" {
+			dir = -1
+		}
+		if !m.focusReader {
+			m.focusReader = true
+			m.stepField(dir)
+		} else if !m.stepField(dir) {
+			m.focusReader = false
+		}
+		return nil
+	case "esc":
+		if m.focusReader {
+			m.focusReader = false
+			m.clearField()
 		}
 		return nil
 	case "/":
@@ -345,6 +367,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		} else {
 			m.readerView = config.ViewCards
 		}
+		m.fieldKey = ""
 		m.renderDetail(false)
 		return nil
 	}
@@ -526,6 +549,7 @@ func (m *Model) selectionChanged() tea.Cmd {
 	if t.GID == m.shownGID {
 		return nil
 	}
+	m.fieldKey = ""
 	if _, cached := m.details[t.GID]; cached {
 		m.showDetail()
 		return nil
@@ -563,6 +587,43 @@ func (m *Model) renderDetail(keepScroll bool) {
 		m.reader.GotoTop()
 	}
 	m.shownGID, m.shownAgents = t.GID, section
+}
+
+// stepField moves the cards view's tabbed-to row by dir, wrapping, and
+// scrolls it into view. It reports false when there is no row to move to.
+func (m *Model) stepField(dir int) bool {
+	t, ok := m.selectedDetail()
+	if !ok || m.readerView == config.ViewMarkdown {
+		return false
+	}
+	keys := fieldTargets(t)
+	i := slices.Index(keys, m.fieldKey)
+	switch {
+	case i < 0 && dir < 0:
+		i = len(keys) - 1
+	case i < 0:
+		i = 0
+	default:
+		i = (i + dir + len(keys)) % len(keys)
+	}
+	m.fieldKey = keys[i]
+	m.renderDetail(true)
+	line, top, h := m.fieldLines[m.fieldKey], m.reader.YOffset(), m.reader.Height()
+	switch {
+	case line < top:
+		m.reader.SetYOffset(line)
+	case line >= top+h:
+		m.reader.SetYOffset(line - h + 1)
+	}
+	return true
+}
+
+// clearField drops the cards view's tabbed-to row.
+func (m *Model) clearField() {
+	if m.fieldKey != "" {
+		m.fieldKey = ""
+		m.renderDetail(true)
+	}
 }
 
 // rendererKey identifies a cached Markdown renderer. Bare renderers drop the
@@ -721,6 +782,9 @@ func (m *Model) footer() string {
 		hints := "j/k move · enter actions · e edit · tab focus · / filter · b group · = fit · p projects · f files · v view · o open · r reload · q quit"
 		if m.deps.NoPreview {
 			hints = strings.NewReplacer(" · tab focus", "", " · v view", "").Replace(hints)
+		}
+		if m.focusReader && m.fieldKey != "" {
+			hints = "tab/shift+tab field · enter edit field · esc list · e edit · v view · q quit"
 		}
 		s = dimStyle.Render(hints)
 	}

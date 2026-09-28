@@ -149,8 +149,7 @@ func (m *Model) pickedSection(sec asana.Ref) tea.Cmd {
 func (m *Model) openFieldPicker() {
 	var items []pickItem
 	for _, f := range m.edit.ticket.CustomFields {
-		switch f.ResourceSubtype {
-		case "text", "number", "enum", "multi_enum", "date", "people":
+		if editable(f) {
 			items = append(items, pickItem{Label: fieldName(f), Hint: ticket.OneLine(f.Value()), Value: f})
 		}
 	}
@@ -159,6 +158,71 @@ func (m *Model) openFieldPicker() {
 		return
 	}
 	m.modal = newPicker(pickField, "Set which field?", items)
+}
+
+// editable reports whether the edit flow can set custom field f.
+func editable(f asana.CustomField) bool {
+	switch f.ResourceSubtype {
+	case "text", "number", "enum", "multi_enum", "date", "people":
+		return true
+	}
+	return false
+}
+
+// commentKey is the field key of the cards view's Comments heading, which
+// adds a comment.
+const commentKey = "comment"
+
+// fieldTargets are the keys of the rows the cards view can tab to, in the
+// order they render: editable details rows, then the Comments heading.
+func fieldTargets(t ticket.Ticket) []string {
+	var keys []string
+	for _, f := range append(t.Meta(), t.FieldValues()...) {
+		if f.Key == "" {
+			continue
+		}
+		if gid, ok := strings.CutPrefix(f.Key, "field:"); ok {
+			i := slices.IndexFunc(t.CustomFields, func(c asana.CustomField) bool { return c.GID == gid })
+			if i < 0 || !editable(t.CustomFields[i]) {
+				continue
+			}
+		}
+		keys = append(keys, f.Key)
+	}
+	return append(keys, commentKey)
+}
+
+// openField starts editing the row with key on the selected ticket, skipping
+// the edit menu.
+func (m *Model) openField(key string) tea.Cmd {
+	t, ok := m.selectedDetail()
+	if !ok {
+		return nil
+	}
+	m.edit, m.run = &pendingEdit{ticket: t}, nil
+	kind, gid, _ := strings.Cut(key, ":")
+	switch kind {
+	case "assignee":
+		return m.pickedEdit(editAssignee)
+	case commentKey:
+		return m.pickedEdit(editComment)
+	case "my_tasks":
+		return m.pickedEditProject(myTasks)
+	case "project":
+		for _, mb := range t.Memberships {
+			if mb.Project.GID == gid {
+				return m.pickedEditProject(mb.Project)
+			}
+		}
+	case "field":
+		for _, f := range t.CustomFields {
+			if f.GID == gid {
+				return m.pickedField(f)
+			}
+		}
+	}
+	m.edit = nil
+	return nil
 }
 
 func (m *Model) pickedField(f asana.CustomField) tea.Cmd {

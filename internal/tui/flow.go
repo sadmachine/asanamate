@@ -23,6 +23,7 @@ type pendingRun struct {
 	projectChosen  bool
 	repo           string // resolved repo, kept while project fields load
 	awaitingFields bool
+	agent          *agents.Agent // chosen agent for agent = true actions
 }
 
 // sharesFieldNames reports whether two of the task's custom fields share a
@@ -80,6 +81,12 @@ func (m *Model) pickedAction(i int) tea.Cmd {
 	return m.continueRun()
 }
 
+func (m *Model) pickedAgent(a agents.Agent) tea.Cmd {
+	m.modal = nil
+	m.run.agent = &a
+	return m.continueRun()
+}
+
 func (m *Model) pickedTicketProject(ref asana.Ref) tea.Cmd {
 	m.modal = nil
 	m.run.project, m.run.projectChosen = &ref, true
@@ -90,6 +97,24 @@ func (m *Model) pickedTicketProject(ref asana.Ref) tea.Cmd {
 // still valid, otherwise load candidates for the repo picker.
 func (m *Model) continueRun() tea.Cmd {
 	r := m.run
+	if r.action.Agent && r.agent == nil {
+		list := m.viewAgents(r.ticket.Task)
+		switch len(list) {
+		case 0:
+			m.run, m.status = nil, "no running agent for this ticket"
+			return nil
+		case 1:
+			r.agent = &list[0]
+		default:
+			items := make([]pickItem, len(list))
+			for i, a := range list {
+				label := m.sym.agent(a.State, 0) + " " + string(a.State) + "  " + ticket.OneLine(a.Path)
+				items[i] = pickItem{Label: label, Hint: ticket.OneLine(a.Target), Value: a}
+			}
+			m.modal = newPicker(pickAgent, "Which agent?", items)
+			return nil
+		}
+	}
 	if !r.action.Repo {
 		r.project = action.DefaultProject(r.ticket.Task, gidOf(m.viewProject))
 		return m.execute("")
@@ -172,6 +197,11 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 	}
 	m.run = nil
 	preferred := m.projectFields[gidOf(r.project)]
+	linked := m.ticketAgents(r.ticket.Task, preferred)
+	agent := r.agent
+	if agent == nil {
+		agent = firstAgent(linked)
+	}
 	files, err := action.WriteFiles(m.deps.StateDir, r.ticket)
 	if err != nil {
 		m.status = "writing ticket files: " + err.Error()
@@ -185,7 +215,8 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		Files:         files,
 		Preferred:     preferred,
 		BranchField:   m.deps.Config.BranchField,
-		Agent:         firstAgent(m.ticketAgents(r.ticket.Task, preferred)),
+		Agent:         agent,
+		Agents:        linked,
 	})
 	name := r.action.Name
 	switch r.action.Mode {

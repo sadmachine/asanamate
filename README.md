@@ -50,6 +50,7 @@ Space-separated terms, all of which must match:
 - words match the title
 - `section:`, `project:`, `assignee:`, `tag:` match names
 - `is:open`, `is:done`
+- `agent:any`, `agent:none`, `agent:<state>` match linked [agents](#agents-optional)
 - `-term` negates a term; `"double quotes"` group words
 
 Example: `is:open section:"in progress" -tag:blocked`. Set the startup filter
@@ -89,14 +90,15 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `list.layout` | `"single"` | `single` (one line per ticket) or `multi` (title, then fields on a second line) |
 | `list.fields` | `["section"]` | values shown with the title |
 | `branch_field` | `""` | custom field holding the ticket's git branch (`$ASANAMATE_BRANCH`); empty uses the title slug |
-| `agents.command` | unset (off) | opt-in agent tracking; see [Agents](#agents-optional) |
+| `agents.preset` / `agents.command` | unset (off) | opt-in agent tracking; see [Agents](#agents-optional) |
+| `symbols` | `unicode` on UTF-8, else `ascii` | `unicode`, `nerd`, or `ascii` for ticket markers and agent states |
+| `reduced_motion` | OS setting | `true` shows static agent symbols instead of the spinner |
 | `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one |
 | `repo_source.command` | lists repos in your setup directory | prints one repo path per line |
 
 The title is always shown. `list.fields` accepts the built-ins `section`,
-`due`, `assignee`, `project`, `tags`, `completed` (open/done), and `agent`
-(when [agents](#agents-optional) are on). Any other name is matched to a custom
-field, ignoring case and surrounding spaces.
+`due`, `assignee`, `project`, `tags`, and `completed` (open/done). Any other
+name is matched to a custom field, ignoring case and surrounding spaces.
 
 Custom fields are separate Asana objects, so two can share a name (for example
 one per project). When that happens, asanamate uses the one attached to the
@@ -141,7 +143,8 @@ paste ticket text into the command, because ticket content is untrusted.
 | `ASANAMATE_PROJECT`, `ASANAMATE_PROJECT_GID`, `ASANAMATE_SECTION` | active project and the ticket's section in it |
 | `ASANAMATE_REPO` | resolved repo (`repo = true` actions) |
 | `ASANAMATE_BRANCH` | the ticket's branch: `branch_field`'s value, or the title slug |
-| `ASANAMATE_AGENT_STATUS`, `ASANAMATE_AGENT_PATH`, `ASANAMATE_AGENT_TARGET` | the linked running agent, when [agents](#agents-optional) are on (empty otherwise) |
+| `ASANAMATE_AGENT_STATE`, `ASANAMATE_AGENT_STATUS`, `ASANAMATE_AGENT_PATH`, `ASANAMATE_AGENT_TARGET` | the agent the action is about (the chosen one for `agent = true`, else the most urgent): normalized state, raw status, directory, jump id. Empty without agents |
+| `ASANAMATE_AGENT_TARGETS` | every linked agent, one `target<TAB>state<TAB>path` line each |
 | `ASANAMATE_TICKET_JSON`, `ASANAMATE_TICKET_MD` | full ticket as JSON / Markdown |
 | `ASANAMATE_FIELD_<NAME>` | custom field display values, e.g. `ASANAMATE_FIELD_BRANCH_NAME` |
 | `ASANAMATE_CONFIRM_WRITES` | `1`/`0`, read by the write-back subcommands |
@@ -184,27 +187,63 @@ command = 'sesh connect "$ASANAMATE_REPO"'
 
 ## Agents (optional)
 
-asanamate can link tickets to coding agents that another tool is running, such
-as [ccmux](https://github.com/motherskitchenblr2/ccmux), agent-deck, or dmux. It
-is off until you set a command:
+asanamate can show coding agents that another tool is running, such as
+[ccmux](https://github.com/motherskitchenblr2/ccmux), next to their tickets.
+It is off until you pick a source:
 
 ```toml
 branch_field = "Branch Name"
 
 [agents]
-# Prints "<path>\t<status>[\t<target>]" per running agent.
-command = '''ccmux show --json | jq -r '.[] | "\(.cwd)\t\(.status)\t\(.id)"' '''
+preset = "ccmux"   # reads `ccmux show --json` directly
 ```
 
-For ccmux (checked against 1.4.1), `status` is `working`, `waiting`, or
-`idle`, and `id` is what `ccmux switch` takes. For other tools, only the line
-format matters. The command runs every 5 seconds.
+Or use any tool with a command that prints `<path>\t<status>[\t<target>]` per
+agent, plus a mapping from its statuses to asanamate's states:
 
-The link is the git branch: a ticket matches an agent whose working directory
-has `$ASANAMATE_BRANCH` checked out, in a repo linked to one of the ticket's
-projects (worktrees count as their repo). Linked tickets get the `agent` list
-field and the `ASANAMATE_AGENT_*` variables, so actions can start and jump to
-agents:
+```toml
+[agents]
+command = '''my-agents --tsv'''
+
+[agents.states]        # a status equal to a state name maps to it already
+working   = ["running", "busy"]
+waiting   = ["permission", "input"]
+completed = ["done", "finished"]
+idle      = ["sleeping"]   # anything unmapped is "unknown"
+```
+
+The sources run every 5 seconds. With the ccmux preset, a session that finished
+a turn you have not looked at yet counts as `completed`.
+
+**Linking.** A ticket matches every agent whose working directory has
+`$ASANAMATE_BRANCH` checked out, in a repo linked to one of the ticket's
+projects (worktrees count as their repo).
+
+**Display.** Linked agents appear right-aligned on the ticket's title line,
+most urgent first; more than four show as grouped counts (`⚠1 ◐3 ●2`). The
+header sums them up, and tickets with a waiting agent get a yellow title.
+
+| State | unicode | ascii | Meaning |
+|---|---|---|---|
+| waiting | `⚠` | `(!)` | needs you (question or permission prompt) |
+| working | spinner (`◐` with reduced motion) | `(~)` | busy |
+| completed | `●` | `(+)` | finished, not yet looked at |
+| idle | `○` | `(-)` | nothing happening |
+| unknown | `?` | `(?)` | status not in the mapping |
+
+`symbols = "unicode"` (default on UTF-8 locales), `"nerd"` (needs a Nerd Font),
+or `"ascii"` (default otherwise) also sets the ticket markers (`□`/`✓`,
+`[ ]`/`[x]`). Override single states with `[agents.symbols]`, e.g.
+`waiting = "!"`. `reduced_motion = true` stops the spinner; unset, asanamate
+follows the OS setting (macOS Reduce Motion, GNOME animations).
+
+**Filtering.** `agent:any`, `agent:none`, and `agent:<state>`, for example
+`agent:waiting` for "what needs me".
+
+**Actions.** Every action gets the most urgent linked agent in
+`ASANAMATE_AGENT_*` and all of them in `$ASANAMATE_AGENT_TARGETS`. An action
+with `agent = true` needs one: it runs directly for a single agent, asks which
+one when there are several, and refuses when there are none.
 
 ```toml
 [[actions]]
@@ -219,7 +258,8 @@ asanamate field --yes "$ASANAMATE_GID" "Branch Name" "$ASANAMATE_BRANCH"'''
 name = "Jump to agent"
 key = "j"
 mode = "exit"
-command = '[ -n "$ASANAMATE_AGENT_TARGET" ] && ccmux switch "$ASANAMATE_AGENT_TARGET"'
+agent = true
+command = 'ccmux switch "$ASANAMATE_AGENT_TARGET"'
 ```
 
 Ticket text becomes the agent's prompt, so anyone who can edit a ticket can

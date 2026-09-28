@@ -245,17 +245,33 @@ Only actions with `repo = true` resolve a repo.
   field sets come from `GET /projects/{gid}/custom_field_settings` and are
   cached per session. Writes (`asanamate field`) never guess: with several
   same-named fields they need `--project` (default `$ASANAMATE_PROJECT_GID`).
-- `[agents] command` turns on agent tracking; unset means off (default), with
-  no polling and empty agent values. The command prints
-  `<path>\t<status>[\t<target>]` per agent and runs every 5 s. Each path's
-  branch and repository come from `git rev-parse` (worktrees resolve to their
-  main repo). A ticket matches the first agent whose branch equals the
-  ticket's branch in one of the repos linked to the ticket's projects (any repo
-  if none are linked).
-- Linked tickets expose the `agent` list field and
-  `ASANAMATE_AGENT_STATUS`/`_PATH`/`_TARGET` to actions, so actions can start
-  agents (for example `ccmux spawn --worktree "$ASANAMATE_BRANCH"`) and jump
-  to them (`ccmux switch "$ASANAMATE_AGENT_TARGET"`).
+- `[agents]` turns on agent tracking with `preset = "ccmux"` (reads
+  `ccmux show --json` itself; idle + unread counts as completed) or a
+  `command` printing `<path>\t<status>[\t<target>]` per agent. Unset means
+  off (default): no polling and empty agent values. Sources run every 5 s.
+  Each path's branch and repository come from the tool or `git rev-parse`
+  (worktrees resolve to their main repo).
+- Raw statuses map to states `waiting`, `working`, `completed`, `idle`: a
+  status equal to a state name maps to it, `[agents.states]` adds more;
+  the rest are `unknown`. Most urgent first: waiting, working, completed,
+  idle, unknown.
+- A ticket matches every agent on its branch in a repo linked to one of its
+  projects (any repo if none are linked).
+- Display: linked agents right-aligned on the ticket's title line, one symbol
+  each, grouped counts (`⚠1 ◐3 ●2`) past four; a header summary; a yellow
+  title when an agent is waiting. Filter terms `agent:any|none|<state>`.
+- Symbols: `symbols = unicode|nerd|ascii` (unset: unicode on UTF-8 locales,
+  else ascii) covers ticket markers (`□`/`✓`, `[ ]`/`[x]`) and agent states
+  (`⚠` waiting, braille spinner working, `●` completed, `○` idle, `?`
+  unknown; ascii `(!) (~) (+) (-) (?)`), overridable per state with
+  `[agents.symbols]`. The spinner becomes static `◐` with
+  `reduced_motion = true` or, when unset, the OS setting (macOS Reduce Motion,
+  GNOME animations), or when the working symbol is overridden.
+- Actions get the most urgent linked agent in `ASANAMATE_AGENT_STATE`,
+  `_STATUS` (raw), `_PATH`, `_TARGET`, and all linked agents in
+  `ASANAMATE_AGENT_TARGETS` (`target\tstate\tpath` lines). An action with
+  `agent = true` needs an agent: it runs directly with one, opens a picker
+  with several, and refuses with none.
 
 ## Write-back subcommands
 

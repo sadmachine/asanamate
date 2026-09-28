@@ -169,3 +169,47 @@ var errBoom = errorString("boom")
 type errorString string
 
 func (e errorString) Error() string { return string(e) }
+
+var jumpAction = config.Action{Name: "Jump", Key: "j", Mode: config.ModeExit, Agent: true, Command: "true"}
+
+func jumpModel(t *testing.T, list ...agents.Agent) *Model {
+	t.Helper()
+	m := agentModel(t, config.SymbolsUnicode, true)
+	m.deps.Config.Actions = []config.Action{jumpAction}
+	m.Update(agentsMsg{list: list})
+	m.details["1"] = ticket.Ticket{Task: agentTask("feat/x")}
+	m.openActionMenu()
+	return m
+}
+
+func TestAgentActionNeedsAnAgent(t *testing.T) {
+	m := jumpModel(t)
+	m.pickedAction(0)
+	if m.ExitCommand() != nil || !strings.Contains(m.status, "no running agent") {
+		t.Fatalf("status = %q, exit = %v", m.status, m.ExitCommand())
+	}
+}
+
+func TestAgentActionWithOneAgentRunsDirectly(t *testing.T) {
+	m := jumpModel(t, onBranch(agents.Idle, "only"))
+	m.pickedAction(0)
+	if cmd := m.ExitCommand(); cmd == nil || !slices.Contains(cmd.Env, "ASANAMATE_AGENT_TARGET=only") {
+		t.Fatalf("exit = %+v", cmd)
+	}
+}
+
+func TestAgentActionPicksAmongSeveral(t *testing.T) {
+	m := jumpModel(t, onBranch(agents.Idle, "a1"), onBranch(agents.Waiting, "a2"))
+	m.pickedAction(0)
+	if m.modal == nil || m.modal.kind != pickAgent || len(m.modal.items) != 2 {
+		t.Fatalf("modal = %+v", m.modal)
+	}
+	if !strings.Contains(m.modal.items[0].Label, "waiting") {
+		t.Fatalf("most urgent first: %q", m.modal.items[0].Label)
+	}
+	m.Update(key("down"))
+	m.Update(key("enter"))
+	if cmd := m.ExitCommand(); cmd == nil || !slices.Contains(cmd.Env, "ASANAMATE_AGENT_TARGET=a1") {
+		t.Fatalf("exit = %+v", cmd)
+	}
+}

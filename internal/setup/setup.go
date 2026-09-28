@@ -156,6 +156,12 @@ confirm_writes = true
 # $ASANAMATE_BRANCH. Empty uses the title slug. Example: "Branch Name".
 branch_field = ""
 
+# Symbols for ticket markers and agent states: "unicode", "nerd" (needs a Nerd
+# Font), or "ascii". Unset: unicode on UTF-8 locales, else ascii.
+# symbols = "unicode"
+# Static agent symbols instead of the spinner. Unset: follow the OS setting.
+# reduced_motion = true
+
 [list]
 # "single": one line per ticket. "multi": title on line one, fields on line two.
 layout = "single"
@@ -166,13 +172,13 @@ fields = ["section"]
 # Frame each ticket with lines above and below (neighbours share one).
 separator = false
 
-# Optional: link tickets to running coding agents. Off unless command is set.
-# The command prints "<path>\t<status>[\t<target>]" per agent. A ticket matches
-# an agent whose git branch equals its branch (see branch_field) in one of the
-# ticket's linked repos. Adds the "agent" list field and the
-# $ASANAMATE_AGENT_STATUS, $ASANAMATE_AGENT_PATH, $ASANAMATE_AGENT_TARGET variables.
+# Optional: show running coding agents next to their tickets. Off unless a
+# preset or command is set. A ticket matches agents on its branch (see
+# branch_field) in one of its linked repos. See the README for states, symbols,
+# and agent actions.
 # [agents]
-# command = '''ccmux show --json | jq -r '.[] | "\(.cwd)\t\(.status)\t\(.id)"' '''
+# preset = "ccmux"
+
 
 [repo_source]
 # Prints one git repository path per line for the repo picker.

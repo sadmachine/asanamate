@@ -318,6 +318,8 @@ func (m *Model) handlePick(kind pickKind, res pickResult) tea.Cmd {
 		return m.pickedRepo(path)
 	case pickAttachment:
 		return m.pickedAttachment(res.item.Value.(asana.Attachment))
+	case pickAgent:
+		return m.pickedAgent(res.item.Value.(agents.Agent))
 	}
 	return nil
 }

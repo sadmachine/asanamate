@@ -107,6 +107,7 @@ type Action struct {
 	Key           string `toml:"key"`
 	Mode          string `toml:"mode"`
 	Repo          bool   `toml:"repo"`
+	Agent         bool   `toml:"agent"`
 	Command       string `toml:"command"`
 	ConfirmWrites *bool  `toml:"confirm_writes"`
 }

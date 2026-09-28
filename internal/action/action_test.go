@@ -196,3 +196,13 @@ func TestEnvResolvesSameNamedFieldsAndBranch(t *testing.T) {
 		}
 	}
 }
+
+func TestEnvListsAllAgentTargets(t *testing.T) {
+	list := []agents.Agent{{Target: "t1", State: agents.Waiting, Path: "/p1"}, {Target: "t2", State: agents.Idle, Path: "/p2"}}
+	env := Env(Context{Ticket: ticket.Ticket{Task: asana.Task{GID: "1"}}, Agent: &list[1], Agents: list})
+	for _, want := range []string{"ASANAMATE_AGENT_TARGETS=t1\twaiting\t/p1\nt2\tidle\t/p2", "ASANAMATE_AGENT_TARGET=t2"} {
+		if !slices.Contains(env, want) {
+			t.Errorf("env missing %q", want)
+		}
+	}
+}

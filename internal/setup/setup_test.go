@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -84,5 +85,26 @@ func TestOutputStripsControlCharacters(t *testing.T) {
 	}
 	if strings.ContainsAny(out.String(), "\x1b\x07") {
 		t.Fatalf("control characters printed: %q", out.String())
+	}
+}
+
+func TestTemplateOptionsStayTopLevel(t *testing.T) {
+	// Uncomment every commented setting and table, but not prose.
+	setting := regexp.MustCompile(`^# (\[|[a-z_]+ = )`)
+	var body strings.Builder
+	for _, line := range strings.Split(Render(asana.Ref{GID: "1", Name: "W"}, "/code"), "\n") {
+		if setting.MatchString(line) {
+			line = strings.TrimPrefix(line, "# ")
+		}
+		body.WriteString(line + "\n")
+	}
+	path := filepath.Join(t.TempDir(), "config.toml")
+	os.WriteFile(path, []byte(body.String()), 0o600)
+	cfg, err := config.Load(path)
+	if err != nil {
+		t.Fatalf("config with every commented option enabled does not load: %v", err)
+	}
+	if cfg.Symbols != "unicode" || cfg.ReducedMotion == nil || cfg.Agents.Preset != "ccmux" {
+		t.Fatalf("cfg = %+v", cfg)
 	}
 }

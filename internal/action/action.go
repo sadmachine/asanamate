@@ -43,8 +43,10 @@ type Context struct {
 	Preferred map[string]bool
 	// BranchField names the custom field holding the ticket's git branch.
 	BranchField string
-	// Agent is the running agent linked to the ticket, if any.
+	// Agent is the running agent the action is about, if any.
 	Agent *agents.Agent
+	// Agents are all running agents linked to the ticket, most urgent first.
+	Agents []agents.Agent
 }
 
 // Branch returns the ticket's git branch: the value of branchField when set,
@@ -104,6 +106,7 @@ func Env(c Context) []string {
 		"BRANCH":         Branch(t.Task, c.BranchField, c.Preferred),
 		"AGENT_STATUS":   "",
 		"AGENT_STATE":    "",
+		"AGENT_TARGETS":  agentTargets(c.Agents),
 		"AGENT_PATH":     "",
 		"AGENT_TARGET":   "",
 	}
@@ -148,6 +151,15 @@ func Env(c Context) []string {
 	}
 	sort.Strings(env)
 	return env
+}
+
+// agentTargets lists agents one per line as "target\tstate\tpath".
+func agentTargets(list []agents.Agent) string {
+	lines := make([]string, len(list))
+	for i, a := range list {
+		lines[i] = a.Target + "\t" + string(a.State) + "\t" + a.Path
+	}
+	return strings.Join(lines, "\n")
 }
 
 // Slug turns a title into a lowercase, dash-separated string of at most 50 characters.

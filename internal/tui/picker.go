@@ -16,6 +16,7 @@ const (
 	pickTicketProject
 	pickRepo
 	pickAttachment
+	pickAgent
 )
 
 type pickItem struct {

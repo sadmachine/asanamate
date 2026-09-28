@@ -1,0 +1,22 @@
+README.md
+  s_ced47172cec784::t_b404540b938294 31-33
+cmd/asanamate/main.go
+  s_ced47172cec784::t_b404540b938294 6,43,63-64,191-213
+  s_ced47172cec784::t_790b01f8b58c60 214-215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "08f7b6e574bc0621a4209e40f74ebb6bbdeedafe",
+  "prompts": {},
+  "sessions": {
+    "s_ced47172cec784": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "293dae60-6feb-43a9-9bee-6f8f1561b3c3",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

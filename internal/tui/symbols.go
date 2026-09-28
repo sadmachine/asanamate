@@ -14,6 +14,7 @@ import (
 type symbolSet struct {
 	open, done string
 	cursor     string // left marker of the selected ticket
+	robot      string // leads a list row's agent badge
 	states     map[agents.State]string
 	spinner    []string        // frames shown for working agents; nil means static
 	border     lipgloss.Border // reading pane cards and section rules
@@ -22,12 +23,12 @@ type symbolSet struct {
 var braille = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 var symbolSets = map[string]symbolSet{
-	config.SymbolsUnicode: {open: "□", done: "✓", cursor: "▌", spinner: braille, border: lipgloss.RoundedBorder(), states: map[agents.State]string{
+	config.SymbolsUnicode: {open: "□", done: "✓", cursor: "▌", robot: "🤖", spinner: braille, border: lipgloss.RoundedBorder(), states: map[agents.State]string{
 		agents.Waiting: "⚠", agents.Working: "◐", agents.Completed: "●", agents.Idle: "○", agents.Unknown: "?"}},
 	// Nerd Font (Font Awesome) glyphs; needs a Nerd Font.
-	config.SymbolsNerd: {open: "", done: "", spinner: braille, states: map[agents.State]string{
+	config.SymbolsNerd: {open: "", done: "", robot: "󰚩", spinner: braille, states: map[agents.State]string{
 		agents.Waiting: "", agents.Working: "", agents.Completed: "", agents.Idle: "", agents.Unknown: ""}},
-	config.SymbolsASCII: {open: "[ ]", done: "[x]", cursor: ">", border: lipgloss.ASCIIBorder(), states: map[agents.State]string{
+	config.SymbolsASCII: {open: "[ ]", done: "[x]", cursor: ">", robot: "@", border: lipgloss.ASCIIBorder(), states: map[agents.State]string{
 		agents.Waiting: "(!)", agents.Working: "(~)", agents.Completed: "(+)", agents.Idle: "(-)", agents.Unknown: "(?)"}},
 }
 
@@ -68,15 +69,16 @@ func (s symbolSet) agent(state agents.State, frame int) string {
 	return s.states[state]
 }
 
-// badge renders agents (already in urgency order) as one symbol each, or as
-// grouped counts when there are more than four. Reversed badges swap each
-// state's colors, to sit inside a selection highlight.
+// badge renders agents (already in urgency order) in bold after the robot
+// symbol, as one symbol each, or as grouped counts when there are more than
+// four. Reversed badges swap each state's colors, to sit inside a selection
+// highlight.
 func (s symbolSet) badge(list []agents.Agent, frame int, reversed bool) string {
 	if len(list) == 0 {
 		return ""
 	}
-	style := func(st agents.State) lipgloss.Style { return stateStyles[st].Reverse(reversed) }
-	var parts []string
+	style := func(st agents.State) lipgloss.Style { return stateStyles[st].Bold(true).Reverse(reversed) }
+	parts := []string{lipgloss.NewStyle().Bold(true).Reverse(reversed).Render(s.robot)}
 	if len(list) <= 4 {
 		for _, a := range list {
 			parts = append(parts, style(a.State).Render(s.agent(a.State, frame)))

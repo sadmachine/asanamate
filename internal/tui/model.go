@@ -732,6 +732,7 @@ func (m *Model) body() string {
 	panes := m.panes(h)
 	w, mh := max(min(m.width-4, 80), 10), max(h-2, 3)
 	var content string
+	style := modalStyle
 	switch {
 	case m.input != nil:
 		content = m.input.view(w, mh)
@@ -742,11 +743,12 @@ func (m *Model) body() string {
 		if m.sym.spinner != nil {
 			content = m.sym.spinner[m.frame%len(m.sym.spinner)] + " " + content
 		}
+		style = loadingStyle
 	default:
 		return panes
 	}
 	// Float the modal over the panes, faded so the modal stands out.
-	box := modalStyle.Render(content)
+	box := style.Render(content)
 	x := max((m.width-lipgloss.Width(box))/2, 0)
 	y := max((h-lipgloss.Height(box))/2, 0)
 	canvas := lipgloss.NewCanvas(m.width, h).Compose(lipgloss.NewCompositor(

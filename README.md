@@ -143,8 +143,8 @@ paste ticket text into the command, because ticket content is untrusted.
 | `ASANAMATE_PROJECT`, `ASANAMATE_PROJECT_GID`, `ASANAMATE_SECTION` | active project and the ticket's section in it |
 | `ASANAMATE_REPO` | resolved repo (`repo = true` actions) |
 | `ASANAMATE_BRANCH` | the ticket's branch: `branch_field`'s value, or the title slug |
-| `ASANAMATE_AGENT_STATE`, `ASANAMATE_AGENT_STATUS`, `ASANAMATE_AGENT_PATH`, `ASANAMATE_AGENT_TARGET` | the agent the action is about (the chosen one for `agent = true`, else the most urgent): normalized state, raw status, directory, jump id. Empty without agents |
-| `ASANAMATE_AGENT_TARGETS` | every linked agent, one `target<TAB>state<TAB>path` line each |
+| `ASANAMATE_AGENT_STATE`, `ASANAMATE_AGENT_STATUS`, `ASANAMATE_AGENT_PATH`, `ASANAMATE_AGENT_TARGET`, `ASANAMATE_AGENT_TITLE` | the agent the action is about (the chosen one for `agent = true`, else the most urgent): normalized state, raw status, directory, jump id, title. Empty without agents |
+| `ASANAMATE_AGENT_TARGETS` | every linked agent, one `target<TAB>state<TAB>path<TAB>title` line each |
 | `ASANAMATE_TICKET_JSON`, `ASANAMATE_TICKET_MD` | full ticket as JSON / Markdown |
 | `ASANAMATE_FIELD_<NAME>` | custom field display values, e.g. `ASANAMATE_FIELD_BRANCH_NAME` |
 | `ASANAMATE_CONFIRM_WRITES` | `1`/`0`, read by the write-back subcommands |
@@ -198,8 +198,8 @@ branch_field = "Branch Name"
 preset = "ccmux"   # reads `ccmux show --json` directly
 ```
 
-Or use any tool with a command that prints `<path>\t<status>[\t<target>]` per
-agent, plus a mapping from its statuses to asanamate's states:
+Or use any tool with a command that prints `<path>\t<status>[\t<target>[\t<title>]]`
+per agent, plus a mapping from its statuses to asanamate's states:
 
 ```toml
 [agents]
@@ -213,7 +213,9 @@ idle      = ["sleeping"]   # anything unmapped is "unknown"
 ```
 
 The sources run every 5 seconds. With the ccmux preset, a session that finished
-a turn you have not looked at yet counts as `completed`.
+a turn you have not looked at yet counts as `completed`, and an agent's title is
+ccmux's session summary, else its first prompt (one line, cut to 60
+characters), else its pane title.
 
 **Linking.** A ticket matches every agent whose working directory has
 `$ASANAMATE_BRANCH` checked out, in a repo linked to one of the ticket's
@@ -221,7 +223,8 @@ projects (worktrees count as their repo).
 
 **Display.** Linked agents appear right-aligned on the ticket's title line,
 most urgent first; more than four show as grouped counts (`⚠1 ◐3 ●2`). The
-header sums them up, and tickets with a waiting agent get a yellow title.
+header sums them up, and tickets with a waiting agent get a yellow title. The
+reading pane lists the ticket's agents with their titles and directories.
 
 | State | unicode | ascii | Meaning |
 |---|---|---|---|
@@ -243,7 +246,7 @@ follows the OS setting (macOS Reduce Motion, GNOME animations).
 **Actions.** Every action gets the most urgent linked agent in
 `ASANAMATE_AGENT_*` and all of them in `$ASANAMATE_AGENT_TARGETS`. An action
 with `agent = true` needs one: it runs directly for a single agent, asks which
-one when there are several, and refuses when there are none.
+one (by title) when there are several, and refuses when there are none.
 
 ```toml
 [[actions]]

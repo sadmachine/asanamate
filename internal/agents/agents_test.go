@@ -4,6 +4,7 @@ import (
 	"context"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -31,7 +32,7 @@ func TestListResolvesBranchAndRepo(t *testing.T) {
 	git(t, "-C", repo, "worktree", "add", "-q", "-b", "fix-login", wt)
 	plain := realpath(t, t.TempDir())
 
-	cmd := "printf '%s\\trunning\\ts1\\n%s\\tidle\\n%s\\twaiting\\n' '" + wt + "' '" + repo + "' '" + plain + "'; echo 'no tab here'"
+	cmd := "printf '%s\\trunning\\ts1\\tFix  login\\n%s\\tidle\\n%s\\twaiting\\n' '" + wt + "' '" + repo + "' '" + plain + "'; echo 'no tab here'"
 	got, err := List(context.Background(), cmd)
 	if err != nil {
 		t.Fatal(err)
@@ -40,7 +41,7 @@ func TestListResolvesBranchAndRepo(t *testing.T) {
 		t.Fatalf("got %+v", got)
 	}
 	want := []Agent{
-		{Path: wt, Status: "running", Target: "s1", Branch: "fix-login", Repo: repo},
+		{Path: wt, Status: "running", Target: "s1", Branch: "fix-login", Repo: repo, Title: "Fix login"},
 		{Path: repo, Status: "idle", Branch: "main", Repo: repo},
 		{Path: plain, Status: "waiting"},
 	}
@@ -92,9 +93,12 @@ func TestClassify(t *testing.T) {
 // Trimmed from real `ccmux show --json` output (ccmux 1.4.1).
 const ccmuxJSON = `[
  {"id":"d48f","cwd":"/r/.claude/worktrees/wicpa","status":"idle","attentionState":"unread",
-  "gitBranch":"update/3068","mainRepoRoot":"/r","isWorktree":true,"tmuxTarget":"amagent:1.0"},
- {"id":"e19a","cwd":"/nowhere","status":"working","attentionState":null,"gitBranch":"main","mainRepoRoot":null},
- {"id":"f2c0","cwd":"/r","status":"idle","attentionState":"seen","gitBranch":"main","mainRepoRoot":"/r"}
+  "gitBranch":"update/3068","mainRepoRoot":"/r","isWorktree":true,"tmuxTarget":"amagent:1.0",
+  "summary":"Fix license headings","prompts":["first prompt"],"paneTitle":"claude"},
+ {"id":"e19a","cwd":"/nowhere","status":"working","attentionState":null,"gitBranch":"main","mainRepoRoot":null,
+  "summary":null,"prompts":["  Fix the queue\ntimeout  "],"paneTitle":"claude"},
+ {"id":"f2c0","cwd":"/r","status":"idle","attentionState":"seen","gitBranch":"main","mainRepoRoot":"/r",
+  "prompts":[],"paneTitle":"✳ Claude Code"}
 ]`
 
 func TestParseCCMux(t *testing.T) {
@@ -103,9 +107,9 @@ func TestParseCCMux(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []Agent{
-		{Path: "/r/.claude/worktrees/wicpa", Status: "completed", Target: "d48f", Branch: "update/3068", Repo: "/r"},
-		{Path: "/nowhere", Status: "working", Target: "e19a", Branch: "main"},
-		{Path: "/r", Status: "idle", Target: "f2c0", Branch: "main", Repo: "/r"},
+		{Path: "/r/.claude/worktrees/wicpa", Status: "completed", Target: "d48f", Branch: "update/3068", Repo: "/r", Title: "Fix license headings"},
+		{Path: "/nowhere", Status: "working", Target: "e19a", Branch: "main", Title: "Fix the queue timeout"},
+		{Path: "/r", Status: "idle", Target: "f2c0", Branch: "main", Repo: "/r", Title: "✳ Claude Code"},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("got %+v", got)
@@ -117,5 +121,14 @@ func TestParseCCMux(t *testing.T) {
 	}
 	if _, err := parseCCMux(context.Background(), []byte("not json")); err == nil {
 		t.Fatal("want a parse error")
+	}
+}
+
+func TestTitleIsOneShortLine(t *testing.T) {
+	if got := title(strings.Repeat("a", 100)); got != strings.Repeat("a", maxTitle-1)+"…" {
+		t.Fatalf("got %q", got)
+	}
+	if got := title(" a\tb\n\nc \x1b[31m"); got != "a b c [31m" {
+		t.Fatalf("got %q", got)
 	}
 }

@@ -247,7 +247,9 @@ Only actions with `repo = true` resolve a repo.
   same-named fields they need `--project` (default `$ASANAMATE_PROJECT_GID`).
 - `[agents]` turns on agent tracking with `preset = "ccmux"` (reads
   `ccmux show --json` itself; idle + unread counts as completed) or a
-  `command` printing `<path>\t<status>[\t<target>]` per agent. Unset means
+  `command` printing `<path>\t<status>[\t<target>[\t<title>]]` per agent.
+  Titles are one line, at most 60 characters; the ccmux preset uses the
+  session summary, else the first prompt, else the pane title. Unset means
   off (default): no polling and empty agent values. Sources run every 5 s.
   Each path's branch and repository come from the tool or `git rev-parse`
   (worktrees resolve to their main repo).
@@ -269,9 +271,11 @@ Only actions with `repo = true` resolve a repo.
   GNOME animations), or when the working symbol is overridden.
 - Actions get the most urgent linked agent in `ASANAMATE_AGENT_STATE`,
   `_STATUS` (raw), `_PATH`, `_TARGET`, and all linked agents in
-  `ASANAMATE_AGENT_TARGETS` (`target\tstate\tpath` lines). An action with
-  `agent = true` needs an agent: it runs directly with one, opens a picker
-  with several, and refuses with none.
+  `ASANAMATE_AGENT_TARGETS` (`target\tstate\tpath\ttitle` lines), plus
+  `ASANAMATE_AGENT_TITLE`. An action with `agent = true` needs an agent: it
+  runs directly with one, opens a picker (symbol, state, title; path as hint)
+  with several, and refuses with none. The reading pane lists the ticket's
+  agents; refreshes update that list without moving the scroll position.
 
 ## Write-back subcommands
 

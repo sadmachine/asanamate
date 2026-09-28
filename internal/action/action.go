@@ -106,13 +106,14 @@ func Env(c Context) []string {
 		"BRANCH":         Branch(t.Task, c.BranchField, c.Preferred),
 		"AGENT_STATUS":   "",
 		"AGENT_STATE":    "",
+		"AGENT_TITLE":    "",
 		"AGENT_TARGETS":  agentTargets(c.Agents),
 		"AGENT_PATH":     "",
 		"AGENT_TARGET":   "",
 	}
 	if c.Agent != nil {
 		vars["AGENT_STATUS"], vars["AGENT_PATH"], vars["AGENT_TARGET"] = c.Agent.Status, c.Agent.Path, c.Agent.Target
-		vars["AGENT_STATE"] = string(c.Agent.State)
+		vars["AGENT_STATE"], vars["AGENT_TITLE"] = string(c.Agent.State), c.Agent.Title
 	}
 	if c.ConfirmWrites {
 		vars["CONFIRM_WRITES"] = "1"
@@ -153,11 +154,11 @@ func Env(c Context) []string {
 	return env
 }
 
-// agentTargets lists agents one per line as "target\tstate\tpath".
+// agentTargets lists agents one per line as "target\tstate\tpath\ttitle".
 func agentTargets(list []agents.Agent) string {
 	lines := make([]string, len(list))
 	for i, a := range list {
-		lines[i] = a.Target + "\t" + string(a.State) + "\t" + a.Path
+		lines[i] = a.Target + "\t" + string(a.State) + "\t" + a.Path + "\t" + a.Title
 	}
 	return strings.Join(lines, "\n")
 }

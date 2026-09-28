@@ -248,3 +248,38 @@ func TestListKeepsGapBeforeDivider(t *testing.T) {
 		t.Fatalf("badge touches the divider: %q", line)
 	}
 }
+
+func titled(state agents.State, target, title string) agents.Agent {
+	a := onBranch(state, target)
+	a.Title = title
+	return a
+}
+
+func TestPickerShowsTitles(t *testing.T) {
+	m := jumpModel(t, titled(agents.Waiting, "a1", "Fix license headings"), onBranch(agents.Idle, "a2"))
+	m.pickedAction(0)
+	if m.modal == nil || m.modal.items[0].Label != "⚠ waiting · Fix license headings" || m.modal.items[0].Hint != "/code/web/wt" {
+		t.Fatalf("items = %+v", m.modal.items)
+	}
+	if m.modal.items[1].Label != "○ idle" {
+		t.Fatalf("untitled label = %q", m.modal.items[1].Label)
+	}
+}
+
+func TestReaderListsAgentsAndKeepsScroll(t *testing.T) {
+	m := agentModel(t, config.SymbolsUnicode, true)
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 12})
+	long := agentTask("feat/x")
+	long.HTMLNotes = "<body>" + strings.Repeat("<p>line</p>", 40) + "</body>"
+	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: long}})
+	m.Update(agentsMsg{list: []agents.Agent{titled(agents.Working, "w1", "Refactor the queue")}})
+	content := ansi.Strip(m.reader.GetContent())
+	if !strings.Contains(content, "Agents") || !strings.Contains(content, "◐ working · Refactor the queue") {
+		t.Fatalf("reader missing agents section:\n%s", content)
+	}
+	m.reader.SetYOffset(5)
+	m.Update(agentsMsg{list: []agents.Agent{titled(agents.Idle, "w1", "Refactor the queue")}})
+	if !strings.Contains(ansi.Strip(m.reader.GetContent()), "○ idle") || m.reader.YOffset() != 5 {
+		t.Fatalf("refresh must update the section and keep scroll (offset %d)", m.reader.YOffset())
+	}
+}

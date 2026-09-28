@@ -61,6 +61,7 @@ type Model struct {
 	rendererWidth int
 	details       map[string]ticket.Ticket
 	shownGID      string
+	shownAgents   string // agents section rendered for shownGID
 
 	projects      []asana.Project
 	projectFields map[string]map[string]bool // project gid -> its custom field gids
@@ -168,6 +169,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.agents, m.agentsErr = msg.list, ""
 			m.applyFilter()
+			if t, ok := m.selectedDetail(); ok && t.GID == m.shownGID && m.agentsSection(t.Task) != m.shownAgents {
+				m.renderDetail(true)
+			}
 		}
 		cmds := []tea.Cmd{scheduleAgents()}
 		if !m.spinning && m.sym.spinner != nil && m.anyWorking() {
@@ -407,7 +411,11 @@ func (m *Model) selectionChanged() tea.Cmd {
 	return scheduleDetail(t.GID)
 }
 
-func (m *Model) showDetail() {
+func (m *Model) showDetail() { m.renderDetail(false) }
+
+// renderDetail renders the selected ticket in the reader, from the top or at
+// the current scroll position.
+func (m *Model) renderDetail(keepScroll bool) {
 	t, ok := m.selectedDetail()
 	if !ok {
 		return
@@ -417,9 +425,15 @@ func (m *Model) showDetail() {
 		return
 	}
 	_, readerW, _ := m.paneWidths()
-	m.reader.SetContent(m.renderMarkdown(t.Markdown(), max(readerW-2, 20)))
-	m.reader.GotoTop()
-	m.shownGID = t.GID
+	section := m.agentsSection(t.Task)
+	offset := m.reader.YOffset()
+	m.reader.SetContent(m.renderMarkdown(t.Markdown()+section, max(readerW-2, 20)))
+	if keepScroll {
+		m.reader.SetYOffset(offset)
+	} else {
+		m.reader.GotoTop()
+	}
+	m.shownGID, m.shownAgents = t.GID, section
 }
 
 func (m *Model) renderMarkdown(md string, width int) string {

@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -108,8 +109,7 @@ func (m *Model) continueRun() tea.Cmd {
 		default:
 			items := make([]pickItem, len(list))
 			for i, a := range list {
-				label := m.sym.states[a.State] + " " + string(a.State) + "  " + ticket.OneLine(a.Path)
-				items[i] = pickItem{Label: label, Hint: ticket.OneLine(a.Target), Value: a}
+				items[i] = pickItem{Label: m.agentLabel(a), Hint: ticket.OneLine(a.Path), Value: a}
 			}
 			m.modal = newPicker(pickAgent, "Which agent?", items)
 			return nil
@@ -232,6 +232,29 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		m.exitCmd = cmd
 		return tea.Quit
 	}
+}
+
+// agentLabel is an agent's static symbol, state, and title.
+func (m *Model) agentLabel(a agents.Agent) string {
+	label := m.sym.states[a.State] + " " + string(a.State)
+	if a.Title != "" {
+		label += " · " + a.Title
+	}
+	return label
+}
+
+// agentsSection is the reading pane's Markdown list of t's agents.
+func (m *Model) agentsSection(t asana.Task) string {
+	linked := m.viewAgents(t)
+	if len(linked) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("\n## Agents\n\n")
+	for _, a := range linked {
+		fmt.Fprintf(&b, "- %s — `%s`\n", m.agentLabel(a), ticket.OneLine(a.Path))
+	}
+	return b.String()
 }
 
 func firstAgent(list []agents.Agent) *agents.Agent {

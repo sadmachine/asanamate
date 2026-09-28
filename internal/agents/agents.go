@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"unicode"
 )
 
 // State is asanamate's normalized view of an agent's status.
@@ -35,6 +36,24 @@ type Agent struct {
 	Branch string // git branch checked out at Path, "" if not a repo
 	Repo   string // main repository of Path (worktrees resolve to their repo)
 	State  State  // Status mapped to a State by Classify
+	Title  string // short description: the tool's title, else its first prompt
+}
+
+const maxTitle = 60
+
+// title turns text into a short single-line title.
+func title(s string) string {
+	s = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return ' '
+		}
+		return r
+	}, s)
+	s = strings.Join(strings.Fields(s), " ")
+	if r := []rune(s); len(r) > maxTitle {
+		s = string(r[:maxTitle-1]) + "…"
+	}
+	return s
 }
 
 // Fetch lists agents from the ccmux preset or from command, then classifies
@@ -92,19 +111,28 @@ func CCMux(ctx context.Context) ([]Agent, error) {
 
 func parseCCMux(ctx context.Context, data []byte) ([]Agent, error) {
 	var sessions []struct {
-		ID             string  `json:"id"`
-		Cwd            string  `json:"cwd"`
-		Status         string  `json:"status"`
-		AttentionState *string `json:"attentionState"`
-		GitBranch      *string `json:"gitBranch"`
-		MainRepoRoot   *string `json:"mainRepoRoot"`
+		ID             string   `json:"id"`
+		Cwd            string   `json:"cwd"`
+		Status         string   `json:"status"`
+		AttentionState *string  `json:"attentionState"`
+		GitBranch      *string  `json:"gitBranch"`
+		MainRepoRoot   *string  `json:"mainRepoRoot"`
+		Summary        *string  `json:"summary"`
+		Prompts        []string `json:"prompts"`
+		PaneTitle      string   `json:"paneTitle"`
 	}
 	if err := json.Unmarshal(data, &sessions); err != nil {
 		return nil, fmt.Errorf("parsing ccmux output: %w", err)
 	}
 	list := make([]Agent, 0, len(sessions))
 	for _, s := range sessions {
-		a := Agent{Path: s.Cwd, Status: s.Status, Target: s.ID}
+		a := Agent{Path: s.Cwd, Status: s.Status, Target: s.ID, Title: title(s.PaneTitle)}
+		if len(s.Prompts) > 0 && title(s.Prompts[0]) != "" {
+			a.Title = title(s.Prompts[0])
+		}
+		if s.Summary != nil && title(*s.Summary) != "" {
+			a.Title = title(*s.Summary)
+		}
 		if s.Status == "idle" && s.AttentionState != nil && *s.AttentionState == "unread" {
 			a.Status = string(Completed)
 		}
@@ -121,8 +149,8 @@ func parseCCMux(ctx context.Context, data []byte) ([]Agent, error) {
 	return list, nil
 }
 
-// List runs command with /bin/sh and parses "<path>\t<status>[\t<target>]"
-// lines. Lines without a tab are skipped. Each path's branch and repository
+// List runs command with /bin/sh and parses
+// "<path>\t<status>[\t<target>[\t<title>]]" lines. Lines without a tab are skipped. Each path's branch and repository
 // come from git, so worktrees resolve to the repository they belong to.
 func List(ctx context.Context, command string) ([]Agent, error) {
 	out, err := exec.CommandContext(ctx, "/bin/sh", "-c", command).Output()
@@ -138,6 +166,9 @@ func List(ctx context.Context, command string) ([]Agent, error) {
 		a := Agent{Path: strings.TrimSpace(cols[0]), Status: strings.TrimSpace(cols[1])}
 		if len(cols) > 2 {
 			a.Target = strings.TrimSpace(cols[2])
+		}
+		if len(cols) > 3 {
+			a.Title = title(cols[3])
 		}
 		a.Branch, a.Repo = gitInfo(ctx, a.Path)
 		agents = append(agents, a)

@@ -19,6 +19,12 @@ const (
 	pickAgent
 	pickGroup
 	pickBranchFallback
+	pickEdit
+	pickEditProject
+	pickSection
+	pickField
+	pickEnumOption
+	pickUser
 )
 
 type pickItem struct {

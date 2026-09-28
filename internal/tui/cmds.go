@@ -73,6 +73,23 @@ type actionDoneMsg struct {
 	err  error
 }
 
+type sectionsMsg struct {
+	project  asana.Ref
+	sections []asana.Ref
+	err      error
+}
+
+type usersMsg struct {
+	users []asana.Ref
+	err   error
+}
+
+type editDoneMsg struct {
+	gid  string
+	what string
+	err  error
+}
+
 type imageMsg struct {
 	payload string
 	url     string
@@ -149,6 +166,33 @@ func loadCandidates(command string) tea.Cmd {
 		defer cancel()
 		paths, err := repo.Candidates(ctx, command)
 		return candidatesMsg{paths: paths, err: err}
+	}
+}
+
+func loadSections(c *asana.Client, project asana.Ref) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+		defer cancel()
+		sections, err := c.Sections(ctx, project.GID)
+		return sectionsMsg{project: project, sections: sections, err: err}
+	}
+}
+
+func loadUsers(c *asana.Client, workspace string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+		defer cancel()
+		users, err := c.WorkspaceUsers(ctx, workspace)
+		return usersMsg{users: users, err: err}
+	}
+}
+
+// saveEdit runs one write to ticket gid; what names it in the status line.
+func saveEdit(gid, what string, write func(context.Context) error) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+		defer cancel()
+		return editDoneMsg{gid: gid, what: what, err: write(ctx)}
 	}
 }
 

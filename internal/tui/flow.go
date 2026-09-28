@@ -61,21 +61,21 @@ func (m *Model) openActionMenu() {
 	p := newPicker(pickAction, "Run on: "+ticket.Clean(t.Name), items)
 	p.keySelect = true
 	m.modal = p
-	m.run = &pendingRun{ticket: t}
+	m.run, m.edit = &pendingRun{ticket: t}, nil
 }
 
-// requestActionMenu opens the action menu, first fetching the ticket's
-// details if they have not arrived yet.
-func (m *Model) requestActionMenu() tea.Cmd {
+// requestMenu runs open, first fetching the selected ticket's details if
+// they have not arrived yet.
+func (m *Model) requestMenu(open func()) tea.Cmd {
 	t, ok := m.selected()
 	if !ok {
 		return nil
 	}
 	if _, cached := m.details[t.GID]; cached {
-		m.openActionMenu()
+		open()
 		return nil
 	}
-	m.menuFor = t.GID
+	m.menuFor, m.menuOpen = t.GID, open
 	m.status = "loading ticket…"
 	return loadDetail(m.deps.Client, t.GID)
 }
@@ -210,7 +210,7 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 	r := m.run
 	if r.action.Input != "" && !r.inputDone {
 		r.repo = repoPath
-		m.input = newInputBox(r.action.Input)
+		m.input = newInputBox(r.action.Input, "optional; leave empty to skip")
 		return nil
 	}
 	if p := r.project; p != nil && sharesFieldNames(r.ticket.Task) {

@@ -86,7 +86,10 @@ type Model struct {
 	modal         *picker
 	input         *inputBox // free-text modal for input actions
 	run           *pendingRun
-	menuFor       string // gid whose action menu opens once its details arrive
+	edit          *pendingEdit
+	users         []asana.Ref // workspace users, loaded on first assign
+	menuFor       string      // gid whose menu opens once its details arrive
+	menuOpen      func()      // opens that menu
 	status        string
 	exitCmd       *exec.Cmd
 }
@@ -174,7 +177,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showDetail()
 			if m.menuFor == msg.gid {
 				m.menuFor = ""
-				m.openActionMenu()
+				m.menuOpen()
 			}
 		}
 	case projectsMsg:
@@ -228,6 +231,24 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.openRepoPicker(msg)
 	case actionDoneMsg:
 		m.status = actionStatus(msg)
+	case sectionsMsg:
+		m.openSectionPicker(msg)
+	case usersMsg:
+		if msg.err == nil {
+			m.users = msg.users
+		}
+		m.openUserPicker(msg.err)
+	case editDoneMsg:
+		if msg.err != nil {
+			m.status = msg.what + " failed: " + msg.err.Error()
+			return m, nil
+		}
+		m.status = msg.what + ": done"
+		delete(m.details, msg.gid)
+		if m.shownGID == msg.gid {
+			m.shownGID = ""
+		}
+		return m, m.reload()
 	case imageMsg:
 		if msg.err != nil {
 			m.status = "image: " + msg.err.Error() + "; opening in browser"
@@ -299,7 +320,9 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		}
 		return nil
 	case "a", "enter":
-		return m.requestActionMenu()
+		return m.requestMenu(m.openActionMenu)
+	case "e":
+		return m.requestMenu(m.openEditMenu)
 	case "f":
 		m.openAttachments()
 		return nil
@@ -346,7 +369,7 @@ func (m *Model) updateModal(msg tea.KeyPressMsg) tea.Cmd {
 	res, cmd := p.update(msg)
 	switch {
 	case res.cancelled:
-		m.modal, m.run = nil, nil
+		m.modal, m.run, m.edit = nil, nil, nil
 	case res.done:
 		return tea.Batch(cmd, m.handlePick(p.kind, res))
 	}
@@ -357,8 +380,11 @@ func (m *Model) updateInput(msg tea.KeyPressMsg) tea.Cmd {
 	res, cmd := m.input.update(msg)
 	switch {
 	case res.cancelled:
-		m.input, m.run = nil, nil
+		m.input, m.run, m.edit = nil, nil, nil
 	case res.done:
+		if m.run == nil {
+			return tea.Batch(cmd, m.typedEdit(res.free))
+		}
 		return tea.Batch(cmd, m.typedInput(res.free))
 	}
 	return cmd
@@ -386,6 +412,18 @@ func (m *Model) handlePick(kind pickKind, res pickResult) tea.Cmd {
 		return m.pickedGroup(res.item.Value.(string))
 	case pickBranchFallback:
 		return m.pickedBranchFallback(res.item.Value.(bool))
+	case pickEdit:
+		return m.pickedEdit(res.item.Value.(editOp))
+	case pickEditProject:
+		return m.pickedEditProject(res.item.Value.(asana.Ref))
+	case pickSection:
+		return m.pickedSection(res.item.Value.(asana.Ref))
+	case pickField:
+		return m.pickedField(res.item.Value.(asana.CustomField))
+	case pickEnumOption:
+		return m.setField(res.item.Value.(string))
+	case pickUser:
+		return m.pickedUser(res.item.Value.(asana.Ref))
 	}
 	return nil
 }
@@ -666,7 +704,7 @@ func (m *Model) header() string {
 func (m *Model) footer() string {
 	s := m.status
 	if s == "" {
-		hints := "j/k move · enter actions · tab focus · / filter · b group · = fit · p projects · f files · v view · o open · r reload · q quit"
+		hints := "j/k move · enter actions · e edit · tab focus · / filter · b group · = fit · p projects · f files · v view · o open · r reload · q quit"
 		if m.deps.NoPreview {
 			hints = strings.NewReplacer(" · tab focus", "", " · v view", "").Replace(hints)
 		}

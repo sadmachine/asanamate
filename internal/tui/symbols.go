@@ -89,16 +89,16 @@ func (s symbolSet) agent(state agents.State, frame int) string {
 	return s.states[state]
 }
 
-// badge renders agents (already in urgency order) in bold after the robot
-// symbol, as one symbol each, or as grouped counts when there are more than
-// four. Reversed badges swap each state's colors, to sit inside a selection
-// highlight.
+// badge renders agents (already in urgency order) in bold after a "robot:"
+// label, as one symbol each, or as grouped counts when there are more than
+// four, padded by one trailing cell. Reversed badges swap each state's
+// colors, to sit inside a selection highlight.
 func (s symbolSet) badge(list []agents.Agent, frame int, reversed bool) string {
 	if len(list) == 0 {
 		return ""
 	}
 	style := func(st agents.State) lipgloss.Style { return stateStyles[st].Bold(true).Reverse(reversed) }
-	parts := []string{lipgloss.NewStyle().Bold(true).Reverse(reversed).Render(s.robot)}
+	parts := []string{lipgloss.NewStyle().Bold(true).Reverse(reversed).Render(s.robot + ":")}
 	if len(list) <= 4 {
 		for _, a := range list {
 			parts = append(parts, style(a.State).Render(s.agent(a.State, frame)))
@@ -114,7 +114,8 @@ func (s symbolSet) badge(list []agents.Agent, frame int, reversed bool) string {
 	if reversed {
 		sep = selectedStyle.Render(sep)
 	}
-	return strings.Join(parts, sep)
+	// Trailing sep pads the badge off the pane's right edge.
+	return strings.Join(parts, sep) + sep
 }
 
 // summary renders grouped counts, for the header.

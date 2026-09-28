@@ -45,7 +45,7 @@ func TestAgentColumnOrdersByUrgency(t *testing.T) {
 	other.Repo = "/other"
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1"), other, onBranch(agents.Waiting, "q1")}})
 	first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]
-	if first != "□ Fix login"+strings.Repeat(" ", 13)+"🤖 ⚠ ◐" {
+	if first != "□ Fix login"+strings.Repeat(" ", 11)+"🤖: ⚠ ◐ " {
 		t.Fatalf("row = %q", first)
 	}
 	m.width = 120
@@ -64,11 +64,11 @@ func TestSelectedBadgeReversesItsColors(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, true)
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1")}})
 	working := stateStyles[agents.Working].Bold(true)
-	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Reverse(true).Render("◐")) || !strings.HasPrefix(row, selectedStyle.Render("□ Fix login     ")) {
+	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Reverse(true).Render("◐")+selectedStyle.Render(" ")) || !strings.HasPrefix(row, selectedStyle.Render("□ Fix login   ")) {
 		t.Fatalf("selected row = %q", row)
 	}
 	m.moveTo(1)
-	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Render("◐")) {
+	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Render("◐")+" ") {
 		t.Fatalf("unselected row = %q", row)
 	}
 }
@@ -80,7 +80,7 @@ func TestAgentColumnGroupsManyAgents(t *testing.T) {
 		list = append(list, onBranch(s, ""))
 	}
 	m.Update(agentsMsg{list: list})
-	if first := strings.Split(ansi.Strip(m.listView(40, 4)), "\n")[0]; !strings.HasSuffix(first, "⚠1 ◐3 ●2") {
+	if first := strings.Split(ansi.Strip(m.listView(40, 4)), "\n")[0]; !strings.HasSuffix(first, "⚠1 ◐3 ●2 ") {
 		t.Fatalf("row = %q", first)
 	}
 }
@@ -88,11 +88,11 @@ func TestAgentColumnGroupsManyAgents(t *testing.T) {
 func TestSpinnerAnimatesWorkingAgents(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, false)
 	_, cmd := m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "")}})
-	if cmd == nil || !m.spinning || !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⠋") {
+	if cmd == nil || !m.spinning || !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⠋ ") {
 		t.Fatalf("spinning = %v, row = %q", m.spinning, ansi.Strip(m.listView(30, 4)))
 	}
 	m.Update(spinnerTickMsg{})
-	if !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⠙") {
+	if !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⠙ ") {
 		t.Fatal("spinner did not advance")
 	}
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Idle, "")}})
@@ -104,12 +104,12 @@ func TestSpinnerAnimatesWorkingAgents(t *testing.T) {
 func TestReducedMotionAndASCII(t *testing.T) {
 	m := agentModel(t, config.SymbolsASCII, false)
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, ""), onBranch(agents.Idle, "")}})
-	if first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]; !strings.HasPrefix(first, "[ ] Fix login") || !strings.HasSuffix(first, "(~) (-)") || m.spinning {
+	if first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]; !strings.HasPrefix(first, "[ ] Fix login") || !strings.HasSuffix(first, "(~) (-) ") || m.spinning {
 		t.Fatalf("ascii row = %q, spinning = %v", first, m.spinning)
 	}
 	r := agentModel(t, config.SymbolsUnicode, true)
 	r.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "")}})
-	if first := strings.Split(ansi.Strip(r.listView(30, 4)), "\n")[0]; !strings.HasSuffix(first, "◐") || r.spinning {
+	if first := strings.Split(ansi.Strip(r.listView(30, 4)), "\n")[0]; !strings.HasSuffix(first, "◐ ") || r.spinning {
 		t.Fatalf("reduced motion row = %q, spinning = %v", first, r.spinning)
 	}
 }
@@ -257,7 +257,7 @@ func TestListKeepsGapBeforeDivider(t *testing.T) {
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 10})
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Waiting, "")}})
 	line := strings.Split(ansi.Strip(m.body()), "\n")[0]
-	if !strings.Contains(line, "⚠ │") {
+	if !strings.Contains(line, "⚠  │") {
 		t.Fatalf("badge touches the divider: %q", line)
 	}
 }

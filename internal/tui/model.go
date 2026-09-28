@@ -376,6 +376,8 @@ func (m *Model) handlePick(kind pickKind, res pickResult) tea.Cmd {
 		return m.pickedAgent(res.item.Value.(agents.Agent))
 	case pickGroup:
 		return m.pickedGroup(res.item.Value.(string))
+	case pickBranchFallback:
+		return m.pickedBranchFallback(res.item.Value.(bool))
 	}
 	return nil
 }

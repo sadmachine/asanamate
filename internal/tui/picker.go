@@ -18,6 +18,7 @@ const (
 	pickAttachment
 	pickAgent
 	pickGroup
+	pickBranchFallback
 )
 
 type pickItem struct {

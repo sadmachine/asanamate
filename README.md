@@ -264,8 +264,9 @@ projects (worktrees count as their repo).
 Agents missing from a ticket usually come down to one of these:
 
 - `branch_field` is unset, or empty for the ticket, so the branch is the title
-  slug rather than the branch you work on. The reading pane warns when a set
-  `branch_field` is empty.
+  slug rather than the branch you work on. When a set `branch_field` is
+  empty, the reading pane warns, and actions whose command uses
+  `$ASANAMATE_BRANCH` ask before running.
 - The repo is on another branch or a detached HEAD. When a ticket has no
   agents, the reading pane lists the agents in its repos and the branch each
   one is on. Start agents with an action that switches to `$ASANAMATE_BRANCH`

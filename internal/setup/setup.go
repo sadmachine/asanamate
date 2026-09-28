@@ -175,13 +175,18 @@ separator = false
 # Group tickets under a header per value of one field, such as "section" or
 # "due"; press b to pick another. Empty: ungrouped.
 group_by = ""
+
+[list.header]
 # Group headers: "bar" (reversed bar) or "rule" (── Label (n) ───).
-header_style = "bar"
+style = "bar"
+# Header color; unset uses accent_color.
+# color = "4"
+
+[list.selection]
 # Selected ticket: "marker" (bold title with a left marker) or "bar" (reversed row).
-selection_style = "marker"
-# Colors for headers and the marker; unset uses accent_color.
-# header_color = "4"
-# marker_color = "4"
+style = "marker"
+# Marker color; unset uses accent_color.
+# color = "4"
 
 [reader]
 # Starting view for the reading pane; press v to switch. "cards": sections

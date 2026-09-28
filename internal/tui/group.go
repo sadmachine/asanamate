@@ -135,7 +135,7 @@ func (m *Model) pickedGroup(by string) tea.Cmd {
 // reversed " Label (n)" bar, or a "── Label (n) ───" rule.
 func (m *Model) groupHeader(label string, n, width int) string {
 	count := " (" + strconv.Itoa(n) + ")"
-	if m.deps.Config.List.HeaderStyle == config.StyleRule {
+	if m.deps.Config.List.Header.Style == config.StyleRule {
 		rule := m.headerStyle.UnsetBold()
 		head := rule.Render("── ") + m.headerStyle.Render(label) + rule.Render(count+" ")
 		return ansi.Truncate(head+rule.Render(strings.Repeat("─", max(width-ansi.StringWidth(head), 0))), width, "…")

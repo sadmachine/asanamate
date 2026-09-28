@@ -107,18 +107,28 @@ func (c Config) SymbolSet(getenv func(string) string) string {
 // Fields are extra values: section, due, assignee, project, tags, completed,
 // or any custom field name. Separator frames each ticket with lines; neighbours share one.
 // GroupBy groups tickets under a header per value of one such field; "" is ungrouped.
-// HeaderStyle draws group headers as a reversed bar or a rule. SelectionStyle
-// marks the selected ticket with a bold title and a left marker, or a reversed
-// bar. HeaderColor and MarkerColor override the accent color when set.
 type List struct {
-	Layout         string   `toml:"layout"`
-	Fields         []string `toml:"fields"`
-	Separator      bool     `toml:"separator"`
-	GroupBy        string   `toml:"group_by"`
-	HeaderStyle    string   `toml:"header_style"`
-	HeaderColor    string   `toml:"header_color"`
-	SelectionStyle string   `toml:"selection_style"`
-	MarkerColor    string   `toml:"marker_color"`
+	Layout    string    `toml:"layout"`
+	Fields    []string  `toml:"fields"`
+	Separator bool      `toml:"separator"`
+	GroupBy   string    `toml:"group_by"`
+	Header    Header    `toml:"header"`
+	Selection Selection `toml:"selection"`
+}
+
+// Header configures group headers. Style draws them as a reversed bar or a
+// rule. Color overrides the accent color when set.
+type Header struct {
+	Style string `toml:"style"`
+	Color string `toml:"color"`
+}
+
+// Selection configures the selected ticket. Style marks it with a bold title
+// and a left marker, or a reversed bar. Color overrides the accent color for
+// the marker when set.
+type Selection struct {
+	Style string `toml:"style"`
+	Color string `toml:"color"`
 }
 
 // Reader configures the reading pane. View is its starting view: cards
@@ -155,7 +165,7 @@ func Default() Config {
 		Theme: "dark", AccentColor: "4", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true,
 		List: List{
 			Layout: LayoutSingle, Fields: []string{"section"},
-			HeaderStyle: StyleBar, SelectionStyle: StyleMarker,
+			Header: Header{Style: StyleBar}, Selection: Selection{Style: StyleMarker},
 		},
 		Reader: Reader{View: ViewCards},
 	}
@@ -214,16 +224,16 @@ func (c Config) validate() error {
 			return errors.New("the title is always shown; remove it from list.fields")
 		}
 	}
-	if c.List.HeaderStyle != StyleBar && c.List.HeaderStyle != StyleRule {
-		return fmt.Errorf("list.header_style must be %q or %q, got %q", StyleBar, StyleRule, c.List.HeaderStyle)
+	if c.List.Header.Style != StyleBar && c.List.Header.Style != StyleRule {
+		return fmt.Errorf("list.header.style must be %q or %q, got %q", StyleBar, StyleRule, c.List.Header.Style)
 	}
-	for key, color := range map[string]string{"accent_color": c.AccentColor, "list.header_color": c.List.HeaderColor, "list.marker_color": c.List.MarkerColor} {
+	for key, color := range map[string]string{"accent_color": c.AccentColor, "list.header.color": c.List.Header.Color, "list.selection.color": c.List.Selection.Color} {
 		if (key == "accent_color" || color != "") && !validColor(color) {
 			return fmt.Errorf("%s must be an ANSI color number (0-255) or #rrggbb, got %q", key, color)
 		}
 	}
-	if c.List.SelectionStyle != StyleMarker && c.List.SelectionStyle != StyleBar {
-		return fmt.Errorf("list.selection_style must be %q or %q, got %q", StyleMarker, StyleBar, c.List.SelectionStyle)
+	if c.List.Selection.Style != StyleMarker && c.List.Selection.Style != StyleBar {
+		return fmt.Errorf("list.selection.style must be %q or %q, got %q", StyleMarker, StyleBar, c.List.Selection.Style)
 	}
 	if strings.EqualFold(strings.TrimSpace(c.List.GroupBy), "title") {
 		return errors.New("list.group_by can't be the title; use a field such as section or due")

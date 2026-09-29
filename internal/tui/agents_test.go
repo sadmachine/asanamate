@@ -45,7 +45,7 @@ func TestAgentColumnOrdersByUrgency(t *testing.T) {
 	other.Repo = "/other"
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1"), other, onBranch(agents.Waiting, "q1")}})
 	first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]
-	if first != "□ Fix login"+strings.Repeat(" ", 10)+"🤖 : ⚠ ◐ " {
+	if first != "□ Fix login"+strings.Repeat(" ", 12)+"🤖 ⚠ ◐ " {
 		t.Fatalf("row = %q", first)
 	}
 	m.width = 120
@@ -64,7 +64,7 @@ func TestSelectedBadgeReversesItsColors(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, true)
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1")}})
 	working := stateStyles[agents.Working].Bold(true)
-	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Reverse(true).Render("◐")+selectedStyle.Render(" ")) || !strings.HasPrefix(row, selectedStyle.Render("□ Fix login  ")) {
+	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Reverse(true).Render("◐")+selectedStyle.Render(" ")) || !strings.HasPrefix(row, selectedStyle.Render("□ Fix login    ")) {
 		t.Fatalf("selected row = %q", row)
 	}
 	m.moveTo(1)

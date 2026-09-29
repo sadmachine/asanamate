@@ -1,0 +1,77 @@
+:root {
+  --bg: #1a1b26; --panel: #1f2335; --fg: #c0caf5; --dim: #565f89; --border: #3b4261;
+  --accent: #7aa2f7; --warn: #e0af68; --err: #f7768e; --ok: #9ece6a; --mag: #bb9af7;
+  --cyan: #7dcfff; --sel: #292e42; --pill-fg: #1a1b26;
+}
+body.light {
+  --bg: #e1e2e7; --panel: #e9e9ed; --fg: #3760bf; --dim: #8990b3; --border: #a8aecb;
+  --accent: #2e7de9; --warn: #8c6c3e; --err: #f52a65; --ok: #587539; --mag: #9854f1;
+  --cyan: #007197; --sel: #c4c8da; --pill-fg: #e1e2e7;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 14px/1.4 "JetBrainsMono Nerd Font Mono", "JetBrainsMono NF", monospace;
+  white-space: nowrap;
+}
+.term { height: 100vh; padding: 12px 8px 4px; display: flex; flex-direction: column; gap: 4px; }
+.panes { flex: 1; min-height: 0; display: flex; gap: 6px; }
+.panel { position: relative; border: 1px solid var(--border); border-radius: 8px; padding: 10px 10px 6px; min-width: 0; }
+.panel.focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.panel > .title { position: absolute; top: -10px; left: 10px; right: 10px; display: flex; justify-content: space-between; }
+.panel > .title > span { background: var(--bg); padding: 0 6px; }
+.panel.focus > .title .name { color: var(--accent); font-weight: bold; }
+.num { color: var(--dim); }
+.panel.focus .num { color: var(--accent); }
+.dim { color: var(--dim); } .warn { color: var(--warn); } .err { color: var(--err); }
+.ok { color: var(--ok); } .mag { color: var(--mag); } .cyan { color: var(--cyan); } .acc { color: var(--accent); }
+b { font-weight: bold; }
+s { text-decoration: line-through; }
+
+/* rule with a title: ── Title (n) ─────── */
+.rule { display: flex; align-items: center; gap: 1ch; color: var(--accent); margin: 6px 0 2px; }
+.rule::before { content: ""; width: 2ch; border-top: 1px solid var(--border); }
+.rule::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+.rule .n { color: var(--dim); }
+
+/* ticket rows */
+.row { display: grid; column-gap: 1ch; grid-template-columns: 1.5ch 2.5ch minmax(0,1fr) 13ch 8ch 4ch 5ch; align-items: center; height: 1.4em; padding-right: 4px; border-radius: 3px; }
+.row.sel { background: var(--sel); }
+.row.sel .t { font-weight: bold; }
+.row .mk { color: var(--accent); }
+.row .t { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.av { display: inline-block; width: 3ch; text-align: center; border-radius: 6px; font-size: 11px; line-height: 1.5; color: var(--pill-fg); }
+.av.AF { background: var(--accent); } .av.JD { background: var(--mag); } .av.MK { background: var(--cyan); }
+
+/* cards inside the reader */
+.card { position: relative; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px 6px; margin-top: 10px; }
+.card > .ct { position: absolute; top: -10px; left: 8px; background: var(--bg); padding: 0 5px; font-weight: bold; }
+.kv { display: grid; grid-template-columns: 11ch 1fr; }
+.kv .k { color: var(--dim); }
+.hr { border-top: 1px solid var(--border); margin: 4px 0; }
+.bar { letter-spacing: -1px; }
+
+/* comment timeline */
+.cm { border-left: 2px solid var(--border); margin-left: 5px; padding: 0 0 6px 12px; white-space: normal; }
+.cm .who { margin-left: -19px; white-space: nowrap; }
+
+/* statusline */
+.status { display: flex; align-items: center; height: 1.6em; gap: 0; }
+.pill { padding: 0 1ch; color: var(--pill-fg); font-weight: bold; border-radius: 3px 0 0 3px; }
+.seg { padding: 0 1ch; background: var(--sel); }
+.seg + .seg { border-left: 1px solid var(--bg); }
+.grow { flex: 1; }
+.key { color: var(--accent); font-weight: bold; }
+.hint { padding: 0 1ch; }
+.hint .d { color: var(--dim); }
+
+/* modal */
+.overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+.modal { background: var(--bg); border: 1px solid var(--accent); border-radius: 8px; padding: 14px 18px; position: relative; box-shadow: 0 8px 40px #0008; }
+.modal > .ct { position: absolute; top: -10px; left: 12px; background: var(--bg); padding: 0 6px; color: var(--accent); font-weight: bold; }
+.faded { opacity: .25; filter: grayscale(1); }
+
+/* annotation labels for explainer mocks */
+.label { font: 13px/1.4 -apple-system, sans-serif; color: var(--dim); white-space: normal; }
+.h { font: bold 15px/1.4 -apple-system, sans-serif; color: var(--fg); margin: 8px 0 4px; }
+.sk { color: var(--border); }

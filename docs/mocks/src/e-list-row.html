@@ -1,0 +1,34 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="mock.css">
+<style>
+  body { padding: 14px 18px; }
+  .box { width: 110ch; }
+  .old { height: 1.4em; white-space: pre; }
+  .notes { display: grid; grid-template-columns: 1.5ch 2.5ch 1fr 13ch 8ch 4ch 5ch; margin-top: 2px; }
+  .notes span { font: 12px/1.3 -apple-system, sans-serif; color: var(--dim); white-space: normal; padding-right: 1ch; border-top: 2px solid var(--border); padding-top: 3px; }
+</style></head>
+<body><div class="box">
+  <div class="h">Now — fields run together after the title, due is an ISO date</div>
+  <div class="old"><span class="acc">▌ </span><b>□ Fix login redirect loop</b>  <span class="dim">In Progress · 2026-09-26</span>                     <span class="ok">🤖 ◐</span></div>
+  <div class="old">  □ Billing webhook retries  <span class="dim">Todo · 2026-09-27</span></div>
+  <div class="old">  <span class="warn">□ Update README badges</span>  <span class="dim">Review · 2026-09-28</span>                      <span class="warn">🤖 ⚠</span></div>
+  <div class="old">  □ Dark mode design tokens  <span class="dim">Todo · 2026-10-01</span></div>
+  <div class="old">  <span class="dim">✓ Ship v0.3 release</span>  <span class="dim">Done · 2026-09-20</span></div>
+
+  <div class="h" style="margin-top:22px">New — aligned columns, colored sections, relative due dates, assignee chips, done rows struck out</div>
+  <div id="rows"></div>
+  <div class="row"><span></span><span class="ok">${ICON.check}</span><span class="t dim"><s>Ship v0.3 release</s></span><span class="dim">Done</span><span class="dim">Sep 20</span><span><span class="av AF" style="opacity:.5">AF</span></span><span></span></div>
+  <div class="notes"><span></span><span></span><span>title: flexes, truncates with …</span><span>section color: in progress / review / blocked</span><span>due: red overdue, yellow today, dim later</span><span>who</span><span>agents</span></div>
+
+  <div class="h" style="margin-top:22px">Multi-line layout (list.layout = "multi") gets the same treatment</div>
+  <div class="row sel" style="height:auto"><span class="mk">▌</span><span class="dim">${ICON.box}</span><span class="t">Fix login redirect loop</span><span></span><span></span><span></span><span id="badge"></span></div>
+  <div class="row sel" style="margin-top:-3px"><span class="mk">▌</span><span></span><span class="t dim"><span class="cyan">In Progress</span> · <span class="err">2d overdue</span> · <span class="av AF">AF</span> Austin F. · ${ICON.branch} fix-login-loop</span></div>
+</div>
+<script src="mock.js"></script>
+<script>
+  expandIcons(); fill("badge", agentBadge.working);
+  const keep = [0, 1, 2, 5];
+  tickets.splice(0, tickets.length, ...keep.map((i) => ({ ...tickets[i], g: "x" })));
+  fill("rows", ticketRows(0).replace(/<div class="rule">.*?<\/div>/, ""));
+</script>
+</body></html>

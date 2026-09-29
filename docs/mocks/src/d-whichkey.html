@@ -1,0 +1,39 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="mock.css">
+<style>
+  .list { flex: 1; } .reader { flex: 1; }
+  .keys { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 5ch; }
+  .keys .g { color: var(--mag); font-weight: bold; margin-bottom: 2px; }
+  .keys .k { display: inline-block; min-width: 6ch; color: var(--accent); font-weight: bold; }
+</style></head>
+<body><div class="term">
+  <div class="panes faded">
+    <div class="panel list"><div class="title"><span>[1] Tickets · My Tasks</span></div><div id="rows"></div></div>
+    <div class="panel reader"><div class="title"><span>[2] Ticket</span></div></div>
+  </div>
+  <div id="status"></div>
+</div>
+<div class="overlay"><div class="modal"><span class="ct">${ICON.list} Keys</span>
+  <div class="keys">
+    <div><div class="g">Move</div>
+      <div><span class="k">j/k</span> up / down</div><div><span class="k">g/G</span> top / end</div>
+      <div><span class="k">1-3</span> jump to panel</div><div><span class="k">tab</span> next panel</div>
+      <div><span class="k">/</span> filter</div><div><span class="k">p</span> projects</div></div>
+    <div><div class="g">Ticket</div>
+      <div><span class="k">enter</span> run action</div><div><span class="k">e</span> edit</div>
+      <div><span class="k">f</span> attachments</div><div><span class="k">o</span> open in browser</div>
+      <div><span class="k">r</span> reload</div></div>
+    <div><div class="g">View</div>
+      <div><span class="k">v</span> cards / markdown</div><div><span class="k">b</span> group by</div>
+      <div><span class="k">=</span> fit list</div><div><span class="k">?</span> this help</div>
+      <div><span class="k">q</span> quit</div></div>
+  </div>
+  <div class="dim" style="margin-top:10px">type to search keys · esc close</div>
+</div></div>
+<script src="mock.js"></script>
+<script>
+  expandIcons();
+  fill("rows", ticketRows(0, 9));
+  fill("status", statusline("NORMAL", "var(--accent)", [["esc", "close"]]));
+</script>
+</body></html>

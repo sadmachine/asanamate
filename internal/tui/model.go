@@ -351,8 +351,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "e":
 		return m.requestMenu(m.openEditMenu)
 	case "f":
-		m.openAttachments()
-		return nil
+		return m.requestMenu(m.openAttachments)
 	case "b":
 		m.openGroupPicker()
 		return nil

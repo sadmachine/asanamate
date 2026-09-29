@@ -12,6 +12,8 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // State is asanamate's normalized view of an agent's status.
@@ -147,14 +149,19 @@ func parseCCMux(ctx context.Context, data []byte) ([]Agent, error) {
 		}
 		if s.GitBranch != nil && s.MainRepoRoot != nil {
 			a.Branch, a.Repo = *s.GitBranch, *s.MainRepoRoot
-		} else {
-			a.Branch, a.Repo = gitInfo(ctx, s.Cwd)
-			if a.Branch == "" && s.GitBranch != nil {
-				a.Branch = *s.GitBranch
-			}
 		}
 		list = append(list, a)
 	}
+	inParallel(len(list), func(i int) {
+		s, a := sessions[i], &list[i]
+		if s.GitBranch != nil && s.MainRepoRoot != nil {
+			return
+		}
+		a.Branch, a.Repo = gitInfo(ctx, s.Cwd)
+		if a.Branch == "" && s.GitBranch != nil {
+			a.Branch = *s.GitBranch
+		}
+	})
 	return list, nil
 }
 
@@ -179,10 +186,23 @@ func List(ctx context.Context, command string) ([]Agent, error) {
 		if len(cols) > 3 {
 			a.Title = title(cols[3])
 		}
-		a.Branch, a.Repo = gitInfo(ctx, a.Path)
 		agents = append(agents, a)
 	}
+	inParallel(len(agents), func(i int) { agents[i].Branch, agents[i].Repo = gitInfo(ctx, agents[i].Path) })
 	return agents, nil
+}
+
+// maxGit caps the git processes run at once while resolving agents.
+const maxGit = 8
+
+// inParallel calls fn for 0..n-1, at most maxGit at a time, and waits.
+func inParallel(n int, fn func(i int)) {
+	var g errgroup.Group
+	g.SetLimit(maxGit)
+	for i := range n {
+		g.Go(func() error { fn(i); return nil })
+	}
+	_ = g.Wait()
 }
 
 func gitInfo(ctx context.Context, path string) (branch, repo string) {

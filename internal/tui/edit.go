@@ -19,6 +19,8 @@ const (
 	editSection
 	editField
 	editAssignee
+	editAddProject
+	editRemoveProject
 )
 
 // myTasks stands for the My Tasks list among a ticket's projects.
@@ -43,6 +45,8 @@ func (m *Model) openEditMenu() {
 		{Label: "Move to section", Key: "s", Value: editSection},
 		{Label: "Set custom field", Key: "f", Value: editField},
 		{Label: "Assign", Key: "a", Value: editAssignee},
+		{Label: "Add to project", Key: "p", Value: editAddProject},
+		{Label: "Remove from project", Key: "r", Value: editRemoveProject},
 	})
 	p.keySelect = true
 	m.modal = p
@@ -73,8 +77,61 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 		m.openFieldPicker()
 	case editAssignee:
 		return m.requestUsers()
+	case editAddProject:
+		return m.requestProjects(func() tea.Cmd { m.openAddProjectPicker(); return nil })
+	case editRemoveProject:
+		m.openRemoveProjectPicker()
 	}
 	return nil
+}
+
+func (m *Model) openAddProjectPicker() {
+	if m.edit == nil {
+		return
+	}
+	memberOf := make(map[string]bool, len(m.edit.ticket.Memberships))
+	for _, mb := range m.edit.ticket.Memberships {
+		memberOf[mb.Project.GID] = true
+	}
+	var items []pickItem
+	for _, p := range m.projects {
+		if !memberOf[p.GID] {
+			items = append(items, pickItem{Label: ticket.Clean(p.Name), Value: asana.Ref{GID: p.GID, Name: p.Name}})
+		}
+	}
+	if len(items) == 0 {
+		m.edit, m.status = nil, "no other member projects available"
+		return
+	}
+	m.modal = newPicker(pickValue(m.addToProject), "Add to which project?", items)
+}
+
+func (m *Model) openRemoveProjectPicker() {
+	if len(m.edit.ticket.Memberships) == 0 {
+		m.edit, m.status = nil, "ticket is not in any project"
+		return
+	}
+	items := make([]pickItem, len(m.edit.ticket.Memberships))
+	for i, mb := range m.edit.ticket.Memberships {
+		items[i] = pickItem{Label: ticket.Clean(mb.Project.Name), Value: mb.Project}
+	}
+	m.modal = newPicker(pickValue(m.removeFromProject), "Remove from which project?", items)
+}
+
+func (m *Model) addToProject(project asana.Ref) tea.Cmd {
+	m.modal = nil
+	c, gid := m.deps.Client, m.edit.ticket.GID
+	return m.saveEdit("add to "+ticket.Clean(project.Name), func(ctx context.Context) error {
+		return c.AddToProject(ctx, gid, project.GID)
+	})
+}
+
+func (m *Model) removeFromProject(project asana.Ref) tea.Cmd {
+	m.modal = nil
+	c, gid := m.deps.Client, m.edit.ticket.GID
+	return m.saveEdit("remove from "+ticket.Clean(project.Name), func(ctx context.Context) error {
+		return c.RemoveFromProject(ctx, gid, project.GID)
+	})
 }
 
 // sectionTargets are the ticket's projects plus My Tasks when the ticket is

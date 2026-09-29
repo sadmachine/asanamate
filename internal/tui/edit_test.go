@@ -25,6 +25,10 @@ func editModel(t *testing.T) (*Model, *[]string) {
 	var writes []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/users/me":
+			io.WriteString(w, `{"data":{"gid":"u1"}}`)
+		case r.URL.Path == "/projects":
+			io.WriteString(w, `{"data":[{"gid":"p1","name":"Web","members":[{"gid":"u1"}]},{"gid":"p2","name":"API","members":[{"gid":"u1"}]}]}`)
 		case r.URL.Path == "/workspaces/w/users":
 			io.WriteString(w, `{"data":[{"gid":"u2","name":"zed"},{"gid":"u1","name":"Amy"}]}`)
 		case r.URL.Path == "/users/me/user_task_list":
@@ -112,6 +116,12 @@ func TestEditWrites(t *testing.T) {
 		{"my tasks section", func(m *Model) {
 			press(m, "e", "s", "enter", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee_section":"m2"}}`},
+		{"add to project", func(m *Model) {
+			press(m, "e", "p", "enter")
+		}, `POST /tasks/1/addProject {"data":{"project":"p2"}}`},
+		{"remove from project", func(m *Model) {
+			press(m, "e", "r", "enter")
+		}, `POST /tasks/1/removeProject {"data":{"project":"p1"}}`},
 		{"text field", func(m *Model) {
 			press(m, "e", "f", "enter")
 			if got := m.input.area.Value(); got != "old" {
@@ -151,6 +161,14 @@ func TestEditWrites(t *testing.T) {
 				t.Errorf("status = %q", m.status)
 			}
 		})
+	}
+}
+
+func TestAddProjectExcludesExistingMemberships(t *testing.T) {
+	m, _ := editModel(t)
+	press(m, "e", "p")
+	if m.modal == nil || len(m.modal.items) != 1 || m.modal.items[0].Value.(asana.Ref).GID != "p2" {
+		t.Fatalf("add project choices = %v", m.modal)
 	}
 }
 

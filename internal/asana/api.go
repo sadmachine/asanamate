@@ -154,6 +154,16 @@ func (c *Client) AddToSection(ctx context.Context, sectionGID, taskGID string) e
 	return c.do(ctx, http.MethodPost, "/sections/"+sectionGID+"/addTask", nil, map[string]any{"task": taskGID}, nil)
 }
 
+// AddToProject adds a task to a project without changing its other memberships.
+func (c *Client) AddToProject(ctx context.Context, taskGID, projectGID string) error {
+	return c.do(ctx, http.MethodPost, "/tasks/"+taskGID+"/addProject", nil, map[string]any{"project": projectGID}, nil)
+}
+
+// RemoveFromProject removes a task from one project.
+func (c *Client) RemoveFromProject(ctx context.Context, taskGID, projectGID string) error {
+	return c.do(ctx, http.MethodPost, "/tasks/"+taskGID+"/removeProject", nil, map[string]any{"project": projectGID}, nil)
+}
+
 // SetCustomField sets one custom field on a task; a nil value clears it.
 func (c *Client) SetCustomField(ctx context.Context, taskGID, fieldGID string, value any) error {
 	return c.updateTask(ctx, taskGID, map[string]any{"custom_fields": map[string]any{fieldGID: value}})

@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/sadmachine/asanamate/internal/agents"
 )
 
 // TokenEnv names the environment variable that holds the Asana personal access token.
@@ -201,19 +204,22 @@ func (c Config) validate() error {
 	if c.Workspace == "" {
 		return errors.New("workspace is required; run `asanamate setup`")
 	}
-	if c.Theme != "dark" && c.Theme != "light" {
-		return fmt.Errorf("theme must be \"dark\" or \"light\", got %q", c.Theme)
+	for _, e := range []error{
+		oneOf("theme", c.Theme, "dark", "light"),
+		oneOf("images", c.Images, "auto", "kitty", "off"),
+		oneOf("list.layout", c.List.Layout, LayoutSingle, LayoutMulti),
+		oneOf("reader.view", c.Reader.View, ViewCards, ViewMarkdown),
+		oneOf("list.header.style", c.List.Header.Style, StyleBar, StyleRule),
+		oneOf("list.selection.style", c.List.Selection.Style, StyleMarker, StyleBar),
+	} {
+		if e != nil {
+			return e
+		}
 	}
-	switch c.Images {
-	case "auto", "kitty", "off":
-	default:
-		return fmt.Errorf("images must be \"auto\", \"kitty\", or \"off\", got %q", c.Images)
-	}
-	if c.List.Layout != LayoutSingle && c.List.Layout != LayoutMulti {
-		return fmt.Errorf("list.layout must be %q or %q, got %q", LayoutSingle, LayoutMulti, c.List.Layout)
-	}
-	if c.Reader.View != ViewCards && c.Reader.View != ViewMarkdown {
-		return fmt.Errorf("reader.view must be %q or %q, got %q", ViewCards, ViewMarkdown, c.Reader.View)
+	if c.Symbols != "" {
+		if err := oneOf("symbols", c.Symbols, SymbolsUnicode, SymbolsNerd, SymbolsASCII); err != nil {
+			return err
+		}
 	}
 	if c.Reader.MaxTextWidth < 0 {
 		return fmt.Errorf("reader.max_text_width must be 0 (no limit) or more, got %d", c.Reader.MaxTextWidth)
@@ -226,9 +232,6 @@ func (c Config) validate() error {
 			return errors.New("the title is always shown; remove it from list.fields")
 		}
 	}
-	if c.List.Header.Style != StyleBar && c.List.Header.Style != StyleRule {
-		return fmt.Errorf("list.header.style must be %q or %q, got %q", StyleBar, StyleRule, c.List.Header.Style)
-	}
 	if c.List.Header.Spacing < 0 {
 		return fmt.Errorf("list.header.spacing must be 0 or more, got %d", c.List.Header.Spacing)
 	}
@@ -237,16 +240,8 @@ func (c Config) validate() error {
 			return fmt.Errorf("%s must be an ANSI color number (0-255) or #rrggbb, got %q", key, color)
 		}
 	}
-	if c.List.Selection.Style != StyleMarker && c.List.Selection.Style != StyleBar {
-		return fmt.Errorf("list.selection.style must be %q or %q, got %q", StyleMarker, StyleBar, c.List.Selection.Style)
-	}
 	if strings.EqualFold(strings.TrimSpace(c.List.GroupBy), "title") {
 		return errors.New("list.group_by can't be the title; use a field such as section or due")
-	}
-	switch c.Symbols {
-	case "", SymbolsUnicode, SymbolsNerd, SymbolsASCII:
-	default:
-		return fmt.Errorf("symbols must be %q, %q, or %q, got %q", SymbolsUnicode, SymbolsNerd, SymbolsASCII, c.Symbols)
 	}
 	if err := c.Agents.validate(); err != nil {
 		return err
@@ -285,23 +280,48 @@ func validColor(s string) bool {
 	return err == nil
 }
 
-var agentStates = map[string]bool{"working": true, "waiting": true, "completed": true, "idle": true}
+// oneOf errors unless got is one of allowed, naming the dotted key.
+func oneOf(key, got string, allowed ...string) error {
+	if slices.Contains(allowed, got) {
+		return nil
+	}
+	quoted := make([]string, len(allowed))
+	for i, a := range allowed {
+		quoted[i] = strconv.Quote(a)
+	}
+	list := quoted[0]
+	switch n := len(quoted); {
+	case n == 2:
+		list = quoted[0] + " or " + quoted[1]
+	case n > 2:
+		list = strings.Join(quoted[:n-1], ", ") + ", or " + quoted[n-1]
+	}
+	return fmt.Errorf("%s must be %s, got %q", key, list, got)
+}
 
 func (a Agents) validate() error {
-	switch {
-	case a.Preset != "" && a.Preset != "ccmux":
-		return fmt.Errorf("agents.preset must be \"ccmux\", got %q", a.Preset)
-	case a.Preset != "" && strings.TrimSpace(a.Command) != "":
-		return errors.New("set agents.preset or agents.command, not both")
+	if a.Preset != "" {
+		if err := oneOf("agents.preset", a.Preset, agents.Presets()...); err != nil {
+			return err
+		}
+		if strings.TrimSpace(a.Command) != "" {
+			return errors.New("set agents.preset or agents.command, not both")
+		}
 	}
+	// agents.states maps onto the known states; agents.symbols also covers unknown.
+	var known []string
+	for _, s := range agents.States {
+		known = append(known, string(s))
+	}
+	mappable := slices.DeleteFunc(slices.Clone(known), func(s string) bool { return s == string(agents.Unknown) })
 	for state := range a.States {
-		if !agentStates[state] {
-			return fmt.Errorf("agents.states: unknown state %q (use working, waiting, completed, idle)", state)
+		if !slices.Contains(mappable, state) {
+			return fmt.Errorf("agents.states: unknown state %q (use %s)", state, strings.Join(mappable, ", "))
 		}
 	}
 	for state := range a.Symbols {
-		if !agentStates[state] && state != "unknown" {
-			return fmt.Errorf("agents.symbols: unknown state %q (use working, waiting, completed, idle, unknown)", state)
+		if !slices.Contains(known, state) {
+			return fmt.Errorf("agents.symbols: unknown state %q (use %s)", state, strings.Join(known, ", "))
 		}
 	}
 	return nil

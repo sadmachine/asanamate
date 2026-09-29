@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os/exec"
 	"path/filepath"
 	"slices"
@@ -56,13 +57,21 @@ func title(s string) string {
 	return s
 }
 
-// Fetch lists agents from the ccmux preset or from command, then classifies
+// presets are the built-in agent sources, by agents.preset name.
+var presets = map[string]func(context.Context) ([]Agent, error){
+	"ccmux": CCMux,
+}
+
+// Presets returns the built-in agent source names, sorted.
+func Presets() []string { return slices.Sorted(maps.Keys(presets)) }
+
+// Fetch lists agents from preset when set, else from command, then classifies
 // their statuses with states (state name -> raw statuses).
 func Fetch(ctx context.Context, preset, command string, states map[string][]string) ([]Agent, error) {
 	var list []Agent
 	var err error
-	if preset == "ccmux" {
-		list, err = CCMux(ctx)
+	if source, ok := presets[preset]; ok {
+		list, err = source(ctx)
 	} else {
 		list, err = List(ctx, command)
 	}

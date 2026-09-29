@@ -1,0 +1,19 @@
+internal/tui/cmds.go
+  s_b389977e6a97ce::t_20e5506a630aff 101-102,106-125,128,145,148,156,159,163,170,174,177,183,194,198,201,206,208,222,236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "44bd486649862fee78c6cbc4f9453dc575b4f3df",
+  "prompts": {},
+  "sessions": {
+    "s_b389977e6a97ce": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4cc56239-c061-4abc-b551-5c231c73d5e7",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

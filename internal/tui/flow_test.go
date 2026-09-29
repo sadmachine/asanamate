@@ -1,6 +1,9 @@
 package tui
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -209,9 +212,24 @@ func linksModel(t *testing.T) (*Model, *state.State) {
 
 func TestRepoLinksListLinkedFirstFromViewedProject(t *testing.T) {
 	m, st := linksModel(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/projects/shared" {
+			io.WriteString(w, `{"data":{"gid":"shared","name":"Shared"}}`)
+			return
+		}
+		http.Error(w, `{"errors":[{"message":"Not Found"}]}`, http.StatusNotFound)
+	}))
+	t.Cleanup(srv.Close)
+	m.deps.Client = asana.New("tok")
+	m.deps.Client.BaseURL = srv.URL
 	st.LinkRepo("p2", "/code/api")
+	st.LinkRepo("shared", "/code/shared")
 	st.LinkRepo("gone", "/code/old")
-	m.Update(key("L"))
+	_, cmd := m.Update(key("L"))
+	if cmd == nil {
+		t.Fatal("want the names of linked projects outside the member projects to load")
+	}
+	m.Update(cmd())
 	if m.modal == nil || m.modal.title != "Repo links" {
 		t.Fatalf("modal = %+v", m.modal)
 	}
@@ -219,7 +237,7 @@ func TestRepoLinksListLinkedFirstFromViewedProject(t *testing.T) {
 	for _, it := range m.modal.items {
 		got = append(got, it.Label+"="+it.Hint)
 	}
-	want := []string{"API=/code/api", "gone=/code/old", "Web=not linked", "Zed=not linked"}
+	want := []string{"API=/code/api", "Shared=/code/shared", "unavailable project=/code/old", "Web=not linked", "Zed=not linked"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("items = %q, want %q", got, want)
 	}

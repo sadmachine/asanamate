@@ -62,6 +62,10 @@ type projectsMsg struct {
 	err      error
 }
 
+// linkNamesMsg carries names for linked projects outside m.projects; a
+// project that failed to load maps to "".
+type linkNamesMsg struct{ names map[string]string }
+
 type candidatesMsg struct {
 	paths []string
 	err   error
@@ -168,6 +172,17 @@ func loadProjects(c *asana.Client, workspace string) tea.Cmd {
 		}
 		projects, err := c.MemberProjects(ctx, workspace, me.GID)
 		return projectsMsg{projects: projects, err: err}
+	})
+}
+
+func loadLinkNames(c *asana.Client, gids []string) tea.Cmd {
+	return request(func(ctx context.Context) tea.Msg {
+		names := make(map[string]string, len(gids))
+		for _, gid := range gids {
+			p, _ := c.Project(ctx, gid)
+			names[gid] = p.Name
+		}
+		return linkNamesMsg{names: names}
 	})
 }
 

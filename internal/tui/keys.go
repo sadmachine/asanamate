@@ -60,7 +60,7 @@ func keyBindings() []binding {
 			m.filtering = true
 			return m.filterInput.Focus()
 		}},
-		{keys: []string{"p"}, desc: "projects", hint: "proj", group: "Move", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestProjects(m.openProjectPicker) }},
+		{keys: []string{"p"}, desc: "projects", hint: "proj", group: "Move", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestProjects(func() tea.Cmd { m.openProjectPicker(); return nil }) }},
 		{keys: []string{"enter", "a"}, desc: "run action", hint: "act", group: "Ticket", run: menu(func(m *Model) func() { return m.openActionMenu })},
 		{keys: []string{"e"}, desc: "edit", hint: "edit", group: "Ticket", run: menu(func(m *Model) func() { return m.openEditMenu })},
 		{keys: []string{"f"}, desc: "attachments", group: "Ticket", run: menu(func(m *Model) func() { return m.openAttachments })},
@@ -171,10 +171,9 @@ func (m *Model) toggleReaderView() {
 
 // requestProjects runs open, loading the projects first when they have not
 // loaded yet.
-func (m *Model) requestProjects(open func()) tea.Cmd {
+func (m *Model) requestProjects(open func() tea.Cmd) tea.Cmd {
 	if m.projects != nil {
-		open()
-		return nil
+		return open()
 	}
 	m.afterProjects = open
 	m.status = "loading projects…"

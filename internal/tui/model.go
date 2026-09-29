@@ -4,6 +4,7 @@ package tui
 import (
 	"cmp"
 	"fmt"
+	"maps"
 	"os/exec"
 	"slices"
 	"sort"
@@ -102,11 +103,12 @@ type Model struct {
 	input           *inputBox // free-text modal for input actions
 	run             *pendingRun
 	edit            *pendingEdit
-	users           []asana.Ref // workspace users, loaded on first assign
-	afterProjects   func()      // runs once projects load
-	loadingProjects bool        // projects are loading
-	menuFor         string      // gid whose menu opens once its details arrive
-	menuOpen        func()      // opens that menu
+	users           []asana.Ref       // workspace users, loaded on first assign
+	afterProjects   func() tea.Cmd    // runs once projects load
+	linkNames       map[string]string // names of linked projects outside projects
+	loadingProjects bool              // projects are loading
+	menuFor         string            // gid whose menu opens once its details arrive
+	menuOpen        func()            // opens that menu
 	status          string
 	exitCmd         *exec.Cmd
 }
@@ -217,8 +219,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.projects = msg.projects
 		if open := m.afterProjects; open != nil {
 			m.afterProjects = nil
-			open()
+			return m, open()
 		}
+	case linkNamesMsg:
+		m.status = ""
+		if m.linkNames == nil {
+			m.linkNames = map[string]string{}
+		}
+		maps.Copy(m.linkNames, msg.names)
+		return m, m.openLinks()
 	case agentsMsg:
 		if !m.deps.Config.AgentsEnabled() {
 			return m, nil

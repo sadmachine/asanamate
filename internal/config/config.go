@@ -169,8 +169,8 @@ func Default() Config {
 	return Config{
 		Theme: "dark", AccentColor: "4", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true,
 		List: List{
-			Layout: LayoutSingle, Fields: []string{"section"},
-			Header: Header{Style: StyleBar, Spacing: 1}, Selection: Selection{Style: StyleMarker},
+			Layout: LayoutSingle, Fields: []string{"section", "due"},
+			Header: Header{Style: StyleRule}, Selection: Selection{Style: StyleMarker},
 		},
 		Reader: Reader{View: ViewCards},
 	}

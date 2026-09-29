@@ -108,10 +108,10 @@ func TestToken(t *testing.T) {
 
 func TestListConfig(t *testing.T) {
 	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
-	if err != nil || cfg.List.Layout != LayoutSingle || !slices.Equal(cfg.List.Fields, []string{"section"}) || cfg.Reader.View != ViewCards {
+	if err != nil || cfg.List.Layout != LayoutSingle || !slices.Equal(cfg.List.Fields, []string{"section", "due"}) || cfg.Reader.View != ViewCards {
 		t.Fatalf("defaults: %+v, err = %v", cfg.List, err)
 	}
-	if cfg.AccentColor != "4" || cfg.List.Header != (Header{Style: StyleBar, Spacing: 1}) || cfg.List.Selection != (Selection{Style: StyleMarker}) {
+	if cfg.AccentColor != "4" || cfg.List.Header != (Header{Style: StyleRule}) || cfg.List.Selection != (Selection{Style: StyleMarker}) {
 		t.Fatalf("style defaults: %+v", cfg.List)
 	}
 	for _, color := range []string{"0", "255", "#abc", "#A1b2C3"} {

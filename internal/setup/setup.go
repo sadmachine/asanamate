@@ -169,7 +169,7 @@ layout = "single"
 # Values shown with the title (the title is always shown). Built-ins: section,
 # due, assignee, project, tags, completed. Any other name is matched to a
 # custom field, for example "Status" or "Branch Name".
-fields = ["section"]
+fields = ["section", "due"]
 # Frame each ticket with lines above and below (neighbours share one).
 separator = false
 # Group tickets under a header per value of one field, such as "section" or
@@ -177,10 +177,10 @@ separator = false
 group_by = ""
 
 [list.header]
-# Group headers: "bar" (reversed bar) or "rule" (── Label (n) ───).
-style = "bar"
+# Group headers: "rule" (── Label (n) ───) or "bar" (reversed bar).
+style = "rule"
 # Blank lines above and below each group header.
-spacing = 1
+spacing = 0
 # Header color; unset uses accent_color.
 # color = "4"
 

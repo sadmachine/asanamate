@@ -1,0 +1,49 @@
+internal/tui/edit_test.go
+  s_ee9d1ea11db681::t_633672e851b46c 278-281
+  s_ee9d1ea11db681::t_1b8424afde5a12 300-302
+  s_ee9d1ea11db681::t_0e9dafdd7d0fae 271,277,282,290
+internal/tui/model.go
+  s_ee9d1ea11db681::t_0a944b6552b8b2 93-95,543-548,550-567,569-572
+  s_ee9d1ea11db681::t_a35acf4f3a40de 351-354
+  s_ee9d1ea11db681::t_1aec1a59d7d280 549
+  s_ee9d1ea11db681::t_6b8609d68acc2f 568
+internal/tui/keys_test.go
+  s_ee9d1ea11db681::t_48b0e980e4c133 8,10-12,53-117
+README.md
+  s_ee9d1ea11db681::t_ca115250ddabb6 60-61
+  s_ee9d1ea11db681::t_6db17565b5a7ff 56-57
+internal/tui/cards.go
+  s_ee9d1ea11db681::t_4e1d95caa22776 111,115
+  s_ee9d1ea11db681::t_cc1d8cf6c43b6d 106
+  s_ee9d1ea11db681::t_2e48e4df604b7b 32-33,46,48-50,74,77-79,81-82,89,99-102,104-105,176,184-186
+  s_ee9d1ea11db681::t_1aec1a59d7d280 57,59-64,67-70,72,76,291,295-299
+  s_ee9d1ea11db681::t_9930db0aa9fc6b 188-192
+  s_ee9d1ea11db681::t_693835205d796c 93,103
+  s_ee9d1ea11db681::t_ca115250ddabb6 91-92,97,109-110,112-114,116
+internal/tui/keys.go
+  s_ee9d1ea11db681::t_59c14f3cd17945 34,44-46,48-56,64-67
+  s_ee9d1ea11db681::t_6b8609d68acc2f 47
+internal/tui/edit.go
+  s_ee9d1ea11db681::t_ca115250ddabb6 239,243
+internal/tui/statusline.go
+  s_ee9d1ea11db681::t_6b8609d68acc2f 37
+  s_ee9d1ea11db681::t_ca115250ddabb6 32-33
+  s_ee9d1ea11db681::t_47aa1d2f3a3058 12
+  s_ee9d1ea11db681::t_fc661d40460ba2 34-35,38-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0bd97034bba48e7cea27baf56420453e4d7004e8",
+  "prompts": {},
+  "sessions": {
+    "s_ee9d1ea11db681": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0ee7e-bb84-70a3-a15b-34a0b3a9f11d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

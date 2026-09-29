@@ -51,7 +51,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		rightW := width - leftW - 1
 		var side []string
 		if len(agentLines) > 0 {
-			side = append(side, m.card(m.sym.robot+" Agents", wrap(strings.Join(agentLines, "\n"), rightW-4), rightW))
+			side = append(side, m.card(m.sym.robot+"  Agents", wrap(strings.Join(agentLines, "\n"), rightW-4), rightW))
 		}
 		if subtasks != "" {
 			side = append(side, m.card(subtaskTitle, wrap(subtasks, rightW-4), rightW))

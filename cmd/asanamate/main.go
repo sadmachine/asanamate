@@ -25,6 +25,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/filter"
 	"github.com/sadmachine/asanamate/internal/kitty"
 	"github.com/sadmachine/asanamate/internal/listing"
+	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/setup"
 	"github.com/sadmachine/asanamate/internal/state"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -422,6 +423,9 @@ func runDoctor(args []string) error {
 		fmt.Fprintln(w, "repos   none linked: agents in any repo can match (run a repo = true action to link one)")
 	} else {
 		fmt.Fprintf(w, "repos   %s\n", strings.Join(repos, ", "))
+		for _, r := range repos {
+			fmt.Fprintf(w, "  %s  worktree %s\n", r, orNone(repo.Worktree(r, branch)))
+		}
 	}
 	if !cfg.AgentsEnabled() {
 		return nil

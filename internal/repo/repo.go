@@ -59,3 +59,24 @@ func Resolve(path string) (string, error) {
 	}
 	return strings.TrimSpace(string(out)), nil
 }
+
+// Worktree returns the working tree of the repository at repoPath that has
+// branch checked out, the main one included, or "" when none does.
+func Worktree(repoPath, branch string) string {
+	if branch == "" {
+		return ""
+	}
+	out, err := exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain").Output()
+	if err != nil {
+		return ""
+	}
+	var path string
+	for _, line := range strings.Split(string(out), "\n") {
+		if p, ok := strings.CutPrefix(line, "worktree "); ok {
+			path = p
+		} else if line == "branch refs/heads/"+branch {
+			return path
+		}
+	}
+	return ""
+}

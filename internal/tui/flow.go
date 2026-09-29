@@ -259,10 +259,15 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 			return nil
 		}
 	}
+	var worktree string
+	if repoPath != "" {
+		worktree = repo.Worktree(repoPath, action.Branch(r.ticket.Task, m.deps.Config.BranchField, preferred))
+	}
 	cmd := action.Command(r.action, action.Context{
 		Ticket:        r.ticket,
 		Project:       r.project,
 		Repo:          repoPath,
+		Worktree:      worktree,
 		ConfirmWrites: m.deps.Config.ConfirmWritesFor(r.action),
 		Files:         files,
 		Preferred:     preferred,

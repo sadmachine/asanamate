@@ -104,27 +104,31 @@ func Download(ctx context.Context, rawURL string) ([]byte, error) {
 // Encode converts an image to kitty graphics escape sequences sized to fit
 // cols x rows cells, assuming cells are about twice as tall as wide.
 func Encode(data []byte, cols, rows int, inTmux bool) (string, error) {
-	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("decode image: %w", err)
 	}
 	if cfg.Width*cfg.Height > maxPixels {
 		return "", fmt.Errorf("image is too large to display (%dx%d)", cfg.Width, cfg.Height)
 	}
+	// Decoding catches corrupt files the terminal would silently drop. PNG is
+	// sent as is; other formats are converted to it.
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("decode image: %w", err)
 	}
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, img); err != nil {
-		return "", err
+	if format != "png" {
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, img); err != nil {
+			return "", err
+		}
+		data = buf.Bytes()
 	}
-	b := img.Bounds()
 	size := fmt.Sprintf("r=%d", max(rows, 1))
-	if b.Dx()*2*rows > cols*b.Dy() {
+	if cfg.Width*2*rows > cols*cfg.Height {
 		size = fmt.Sprintf("c=%d", max(cols, 1))
 	}
-	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+	encoded := base64.StdEncoding.EncodeToString(data)
 	var out strings.Builder
 	for i := 0; i < len(encoded); i += chunkSize {
 		end := min(i+chunkSize, len(encoded))

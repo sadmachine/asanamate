@@ -35,7 +35,7 @@ func (m *Model) mode() (name string, pill color.Color, hints [][2]string) {
 	case m.focusNav:
 		return "VIEWS", m.accentStyle.GetForeground(), [][2]string{{"j/k", "move"}, {"enter", "open"}, {"esc", "list"}, {"?", "keys"}}
 	}
-	return "NORMAL", m.accentStyle.GetForeground(), m.keyHints("enter", "e", "/", "p", "?")
+	return "NORMAL", m.accentStyle.GetForeground(), m.keyHints("enter", "e", "c", "/", "p", "?")
 }
 
 // statusline is the bottom bar: a mode pill, where the list is and what it

@@ -70,6 +70,17 @@ func keyBindings() []binding {
 			}
 			return nil
 		}},
+		{keys: []string{"c"}, desc: "copy link", hint: "copy link", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			if t, ok := m.selected(); ok {
+				if t.PermalinkURL == "" {
+					m.status = "ticket has no link"
+					return nil
+				}
+				m.status = "link sent to clipboard"
+				return tea.SetClipboard(t.PermalinkURL)
+			}
+			return nil
+		}},
 		{keys: []string{"r"}, desc: "reload", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			m.details = map[string]ticket.Ticket{}
 			m.shownGID = ""

@@ -72,6 +72,7 @@ key press.
 | `s` | show or hide the lines between tickets |
 | `S` | add or remove the blank lines around group headers |
 | `o` | open the ticket in the browser |
+| `c` | copy the selected ticket's link to the clipboard (requires terminal OSC 52 support) |
 | `r` | reload |
 | `?` | show every key |
 | `q` | quit |

@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="mock.css">
+<style>
+  .panel { flex: 1; }
+  .empty { height: 100%; display: flex; align-items: center; justify-content: center; }
+  .emptybox { text-align: center; line-height: 1.8; }
+  .big { font-size: 34px; color: var(--ok); }
+  .sk div { height: 1.4em; display: grid; grid-template-columns: 2.5ch 1fr 13ch 8ch 4ch; gap: 0 1ch; align-items: center; }
+  .sk i { display: block; height: 10px; border-radius: 3px; background: var(--sel); }
+  .sk .shine { background: linear-gradient(90deg, var(--sel), var(--border), var(--sel)); }
+</style></head>
+<body><div class="term">
+  <div class="panes">
+    <div class="panel focus"><div class="title"><span><span class="num">[1]</span> <span class="name">Tickets · My Tasks</span></span><span class="dim">is:open 0/40</span></div>
+      <div class="empty"><div class="emptybox">
+        <div class="big">${ICON.check}</div>
+        <div><b>Inbox zero.</b></div>
+        <div class="dim">Nothing matches <span class="warn">is:open tag:urgent</span></div>
+        <div><span class="key">/</span> <span class="dim">change filter</span> &nbsp; <span class="key">p</span> <span class="dim">switch project</span> &nbsp; <span class="key">r</span> <span class="dim">reload</span></div>
+      </div></div>
+    </div>
+    <div class="panel"><div class="title"><span><span class="num">[2]</span> <span class="name">Tickets · Website Redesign</span></span><span class="ok">⠹ loading</span></div>
+      <div class="sk" id="sk"></div>
+    </div>
+  </div>
+  <div id="status"></div>
+</div>
+<script src="mock.js"></script>
+<script>
+  expandIcons();
+  const widths = [70, 55, 82, 64, 48, 76, 60, 88, 52, 68, 58, 74];
+  fill("sk", widths.map((w, i) => `<div><i style="width:1.5ch"></i><i class="${i === 3 ? "shine" : ""}" style="width:${w}%"></i><i style="width:80%"></i><i style="width:70%"></i><i style="width:100%"></i></div>`).join(""));
+  fill("status", statusline());
+</script>
+</body></html>

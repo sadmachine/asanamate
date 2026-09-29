@@ -1,0 +1,33 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="mock.css">
+<style>
+  body { padding: 14px 16px; }
+  .ex { margin-bottom: 16px; }
+  .toast { border: 1px solid var(--ok); border-radius: 6px; padding: 2px 1ch; color: var(--ok); margin-left: 1ch; }
+  .cursor { background: var(--fg); color: var(--bg); }
+</style></head>
+<body>
+  <div class="ex"><div class="h">Normal — where you are, what's filtered, agents at a glance</div><div id="normal"></div></div>
+  <div class="ex"><div class="h">Filter — pill turns yellow, hints switch to the filter's keys</div>
+    <div class="status"><span class="pill" style="background:var(--warn)">FILTER</span>
+      <span class="seg">${ICON.filter} is:open section:"in prog<span class="cursor"> </span></span>
+      <span class="seg dim">3 match</span><span class="grow"></span>
+      <span class="hint"><span class="key">enter</span> <span class="d">apply</span></span><span class="hint"><span class="key">esc</span> <span class="d">cancel</span></span>
+      <span class="hint"><span class="key">tab</span> <span class="d">complete</span></span></div></div>
+  <div class="ex"><div class="h">Edit — pill turns magenta while a reader field is selected</div>
+    <div class="status"><span class="pill" style="background:var(--mag)">EDIT</span>
+      <span class="seg">Fix login redirect loop › <b>Assignee</b></span><span class="grow"></span>
+      <span class="hint"><span class="key">tab</span> <span class="d">next field</span></span><span class="hint"><span class="key">enter</span> <span class="d">set</span></span>
+      <span class="hint"><span class="key">esc</span> <span class="d">back</span></span></div></div>
+  <div class="ex"><div class="h">Toast — write-back results show briefly on the right, hints stay visible</div>
+    <div class="status"><span class="pill" style="background:var(--accent)">NORMAL</span>
+      <span class="seg">${ICON.inbox} My Tasks</span><span class="seg">${ICON.filter} is:open</span><span class="grow"></span>
+      <span class="hint"><span class="key">enter</span> <span class="d">act</span></span><span class="hint"><span class="key">?</span> <span class="d">keys</span></span>
+      <span class="toast">${ICON.check} Moved to “Review”</span></div></div>
+  <div class="ex"><div class="h">Error toast</div>
+    <div class="status"><span class="pill" style="background:var(--accent)">NORMAL</span>
+      <span class="seg">${ICON.inbox} My Tasks</span><span class="grow"></span>
+      <span class="toast" style="color:var(--err);border-color:var(--err)">${ICON.warn} Asana: 429 rate limited — retrying in 5s</span></div></div>
+<script src="mock.js"></script>
+<script>expandIcons(); fill("normal", statusline());</script>
+</body></html>

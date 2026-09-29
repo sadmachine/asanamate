@@ -45,12 +45,12 @@ func TestAgentColumnOrdersByUrgency(t *testing.T) {
 	other.Repo = "/other"
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1"), other, onBranch(agents.Waiting, "q1")}})
 	first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]
-	if first != "□ Fix login"+strings.Repeat(" ", 10)+"🤖 : ⚠ ◐ " {
+	if first != "□ Fix login"+strings.Repeat(" ", 12)+"🤖 ⚠ ◐ " {
 		t.Fatalf("row = %q", first)
 	}
 	m.width = 120
-	if !strings.Contains(ansi.Strip(m.header()), "agents ⚠1 ◐1") {
-		t.Fatalf("header = %q", ansi.Strip(m.header()))
+	if !strings.Contains(ansi.Strip(m.statusline()), "│ ⚠1 ◐1") {
+		t.Fatalf("statusline = %q", ansi.Strip(m.statusline()))
 	}
 	m.details["1"] = ticket.Ticket{Task: agentTask("feat/x")}
 	m.openActionMenu()
@@ -64,7 +64,7 @@ func TestSelectedBadgeReversesItsColors(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, true)
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1")}})
 	working := stateStyles[agents.Working].Bold(true)
-	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Reverse(true).Render("◐")+selectedStyle.Render(" ")) || !strings.HasPrefix(row, selectedStyle.Render("□ Fix login  ")) {
+	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Reverse(true).Render("◐")+selectedStyle.Render(" ")) || !strings.HasPrefix(row, selectedStyle.Render("□ Fix login    ")) {
 		t.Fatalf("selected row = %q", row)
 	}
 	m.moveTo(1)
@@ -228,15 +228,15 @@ func TestAgentActionPicksAmongSeveral(t *testing.T) {
 	}
 }
 
-func TestHeaderCountsSharedAgentsOnce(t *testing.T) {
+func TestStatuslineCountsSharedAgentsOnce(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, true)
 	twin := agentTask("feat/x")
 	twin.GID = "3"
 	m.Update(tasksMsg{tasks: []asana.Task{agentTask("feat/x"), twin}})
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1")}})
 	m.width = 120
-	if h := ansi.Strip(m.header()); !strings.HasSuffix(h, "agents ◐1") {
-		t.Fatalf("header = %q", h)
+	if s := ansi.Strip(m.statusline()); !strings.Contains(s, "│ ◐1 ") {
+		t.Fatalf("statusline = %q", s)
 	}
 }
 
@@ -252,13 +252,13 @@ func TestPickerUsesStaticWorkingSymbol(t *testing.T) {
 	}
 }
 
-func TestListKeepsGapBeforeDivider(t *testing.T) {
+func TestListKeepsGapBeforeBorder(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, true)
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 10})
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Waiting, "")}})
-	line := strings.Split(ansi.Strip(m.body()), "\n")[0]
-	if !strings.Contains(line, "⚠  │") {
-		t.Fatalf("badge touches the divider: %q", line)
+	line := strings.Split(ansi.Strip(m.body()), "\n")[1] // below the panel's top edge
+	if !strings.Contains(line, "⚠ │") {
+		t.Fatalf("badge touches the border: %q", line)
 	}
 }
 

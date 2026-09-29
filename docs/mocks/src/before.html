@@ -1,0 +1,57 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="mock.css">
+<style>
+  .term { padding: 6px 8px; }
+  .panes { gap: 0; }
+  .list { width: 40%; padding-right: 8px; }
+  .div { border-left: 1px solid var(--border); }
+  .reader { flex: 1; padding-left: 10px; }
+  .gbar { background: var(--accent); color: var(--pill-fg); font-weight: bold; padding: 0 1ch; margin: 1.4em 0; }
+  .gbar:first-child { margin-top: 0; }
+  .r { height: 1.4em; white-space: pre; }
+  .r.sel { font-weight: bold; }
+  .desc { white-space: normal; max-width: none; }
+</style></head>
+<body><div class="term">
+  <div><b>asanamate · My Tasks</b>  <span class="dim">filter: is:open  12/40  group: due  agents</span> <span class="ok">◐2</span> <span class="warn">⚠1</span> <span class="ok">●4</span></div>
+  <div class="panes">
+    <div class="list" id="rows"></div>
+    <div class="div"></div>
+    <div class="reader">
+      <div><b>Fix login redirect loop</b></div><br>
+      <div class="card" style="margin-top:0"><span class="ct">Details</span>
+        <div class="kv"><span class="k">Status</span><span class="warn">□ open</span></div>
+        <div class="kv"><span class="k">Assignee</span><span>Austin Fishbaugh</span></div>
+        <div class="kv"><span class="k">Due</span><span>2026-09-26</span></div>
+        <div class="kv"><span class="k">Section</span><span>In Progress</span></div>
+        <div class="kv"><span class="k">Project</span><span>Website Redesign</span></div>
+        <div class="hr"></div>
+        <div class="kv"><span class="k">Priority</span><span>High</span></div>
+        <div class="kv"><span class="k">Branch</span><span>fix-login-loop</span></div>
+      </div><br>
+      <div class="rule">Agents</div>
+      <div><span class="ok">◐</span> claude <span class="dim">— app</span></div>
+      <div><span class="warn">⚠</span> codex <span class="dim">— app-2</span></div><br>
+      <div class="rule">Description</div>
+      <div class="desc">Users with an expired session who hit /login get bounced between /login and /dashboard forever. Looks like the auth middleware runs before the session refresh, so the refreshed cookie never lands.</div><br>
+      <div class="rule">Subtasks 3/5</div>
+      <div class="dim">✓ Repro locally</div><div class="dim">✓ Add failing test</div><div class="dim">✓ Find middleware ordering bug</div>
+      <div>□ Patch session middleware</div><div>□ Verify on Safari</div><br>
+      <div class="rule">Comments 3</div>
+    </div>
+  </div>
+  <div class="dim">j/k move · enter actions · e edit · tab focus · / filter · b group · = fit · p projects · f files · v view · o open · r reload · q quit</div>
+</div>
+<script src="mock.js"></script>
+<script>
+  let html = "", last = "";
+  tickets.forEach((t, i) => {
+    if (t.g !== last) html += `<div class="gbar">${t.g} (${tickets.filter((x) => x.g === t.g).length})</div>`;
+    last = t.g;
+    const badge = { working: ' <span class="ok">🤖 ◐</span>', waiting: ' <span class="warn">🤖 ⚠</span>', done: ' <span class="ok">🤖 ●</span>' }[t.ag] || "";
+    const title = t.ag === "waiting" && i ? `<span class="warn">□ ${t.t}</span>` : `□ ${t.t}`;
+    html += `<div class="r${i ? "" : " sel"}"><span class="acc">${i ? "  " : "▌ "}</span>${title}  <span class="dim">${t.s}</span>${badge}</div>`;
+  });
+  fill("rows", html);
+</script>
+</body></html>

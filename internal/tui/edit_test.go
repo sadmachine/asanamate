@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -206,6 +207,23 @@ func TestFieldLinesMatchRows(t *testing.T) {
 		if l := lines[m.fieldLines[key]]; !strings.Contains(l, labels[key]) {
 			t.Errorf("%s line %d = %q", key, m.fieldLines[key], l)
 		}
+	}
+}
+
+func TestWideCardsPutSubtasksBesideDetails(t *testing.T) {
+	m, _ := editModel(t)
+	tk := m.details["1"]
+	tk.Subtasks = []asana.Task{{Name: "Repro", Completed: true}, {Name: "Patch"}}
+	lines := strings.Split(ansi.Strip(m.renderCards(tk, 120)), "\n")
+	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Comments"}
+	for _, key := range fieldTargets(tk) {
+		if l := lines[m.fieldLines[key]]; !strings.Contains(l, labels[key]) {
+			t.Errorf("%s line %d = %q", key, m.fieldLines[key], l)
+		}
+	}
+	edge := slices.IndexFunc(lines, func(l string) bool { return strings.Contains(l, "Details") })
+	if edge < 0 || !strings.Contains(lines[edge], "Subtasks ▰▰▱▱▱ 1/2") || !strings.Contains(lines[edge+1], "✓ Repro") {
+		t.Fatalf("subtasks not beside details:\n%s", strings.Join(lines, "\n"))
 	}
 }
 

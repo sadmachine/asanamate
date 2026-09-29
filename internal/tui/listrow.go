@@ -1,7 +1,11 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
+	"time"
+
+	"charm.land/lipgloss/v2"
 
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/agents"
@@ -80,8 +84,13 @@ func (m *Model) agentStates(t asana.Task) []string {
 }
 
 // builtinFields are the list field names fieldValue resolves itself, in the
-// group picker's order; any other name is a custom field.
+// group picker's order; any other name, except initialsField, is a custom
+// field.
 var builtinFields = []string{"section", "due", "assignee", "project", "tags", "completed"}
+
+// initialsField shows the assignee's initials as a colored badge. It is left
+// out of builtinFields since grouping by it would repeat assignee.
+const initialsField = "initials"
 
 // rowFields returns the non-empty display values of the configured list
 // fields, in order.
@@ -93,6 +102,43 @@ func rowFields(t asana.Task, names []string, rc rowContext) []string {
 		}
 	}
 	return out
+}
+
+// cellValue is a list field's value as a row shows it, with the style to show
+// it in: due dates are relative and colored by urgency, and other values
+// have no style of their own.
+func cellValue(t asana.Task, name string, rc rowContext, today time.Time) (string, lipgloss.Style) {
+	name = strings.TrimSpace(name)
+	switch {
+	case isDue(name):
+		return dueLabel(t.DueOn, today)
+	case strings.EqualFold(name, initialsField) && t.Assignee != nil:
+		// One space each side keeps the badge readable.
+		return " " + initials(t.Assignee.Name) + " ", authorStyle(t.Assignee.Name).Reverse(true).Bold(true)
+	}
+	return ticket.OneLine(fieldValue(t, name, rc)), lipgloss.Style{}
+}
+
+// dueLabel shows a due date relative to today: "3d ago" in red, "today" in
+// yellow, "tomorrow" and the weekday within a week, then a faint date.
+func dueLabel(dueOn *string, today time.Time) (string, lipgloss.Style) {
+	due, days, ok := dueDays(dueOn, today)
+	switch {
+	case !ok:
+		return "", lipgloss.Style{}
+	case days < 0:
+		return fmt.Sprintf("%dd ago", -days), errorStyle
+	case days == 0:
+		return "today", warnStyle
+	case days == 1:
+		return "tomorrow", lipgloss.Style{}
+	case days < 7:
+		return due.Format("Mon"), lipgloss.Style{}
+	case due.Year() == today.Year():
+		return due.Format("Jan 2"), dimStyle
+	default:
+		return due.Format("Jan 2 2006"), dimStyle
+	}
 }
 
 // fieldValue resolves a built-in field name, falling back to the custom field
@@ -113,6 +159,11 @@ func fieldValue(t asana.Task, name string, rc rowContext) string {
 			return t.Assignee.Name
 		}
 		return ""
+	case initialsField:
+		if t.Assignee != nil {
+			return initials(t.Assignee.Name)
+		}
+		return ""
 	case "project":
 		var names []string
 		for _, m := range t.Memberships {
@@ -126,4 +177,19 @@ func fieldValue(t asana.Task, name string, rc rowContext) string {
 		return f.Value()
 	}
 	return ""
+}
+
+// initials returns the first letters of a name's first and last words, or
+// the first two letters of a one-word name, in upper case.
+func initials(name string) string {
+	words := strings.Fields(ticket.OneLine(name))
+	switch len(words) {
+	case 0:
+		return ""
+	case 1:
+		r := []rune(words[0])
+		return strings.ToUpper(string(r[:min(2, len(r))]))
+	}
+	first, last := []rune(words[0]), []rune(words[len(words)-1])
+	return strings.ToUpper(string(first[0]) + string(last[0]))
 }

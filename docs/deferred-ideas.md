@@ -6,24 +6,27 @@ own design pass. They are recorded here so they can be picked up later.
 
 ## Configurable key bindings
 
-**Now:** `Model.handleKey` in `internal/tui/model.go` hardcodes every
-key. `Model.footer` builds its hint text as a separate string, so a new or
-changed binding can leave the footer out of date.
+**Now:** `keyBindings` in `internal/tui/keys.go` is the one table of list and
+reader keys: `handleKey` dispatches from it, and the `?` help and the NORMAL
+mode hints render from it. Modals, the filter, the views panel, and the
+cards view's selected row still handle their own keys first, and the hints
+for those modes are written out in `Model.mode`.
 
-**Idea:** Define one table of bindings with `bubbles/key` and render the footer
-from it with `bubbles/help`. The same table could later accept overrides from
-the config, for example a `[keys]` table.
+**Idea:** Let a `[keys]` config table rebind entries of `keyBindings`.
 
 **Watch out for:** Adding config keys is a public contract (see `AGENTS.md`).
 Action keys are only read inside the action menu, so they do not collide with
-list keys today. An override system must keep that true.
+list keys today. An override system must keep that true, and
+`TestKeyBindingsAreUniqueAndDocumented` should check the merged table.
 
 ## Theme-aware colors
 
 **Now:** `theme = "light"` only changes the glamour Markdown style. The TUI's
-own colors are fixed ANSI numbers: `errorStyle` in `styles.go`, `borderColor`,
-`openStyle`, and `doneStyle` in `cards.go`, and `stateStyles` in `symbols.go`.
-Borders and agent state colors therefore stay tuned for dark terminals.
+own colors are fixed ANSI numbers, all defined at the top of `styles.go`
+(`borderColor`, `okStyle`, `warnStyle`, `errorStyle`). ANSI numbers follow the
+terminal's color scheme; a render with Tokyo Night Day
+(`docs/mocks/actual-wide-light.png`) reads well, but faint text and color 8
+borders depend on how pale the scheme draws them.
 
 **Idea:** Add a small palette struct with a dark and a light variant, chosen
 by `theme`, and build the styles from it.

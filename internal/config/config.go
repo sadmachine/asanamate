@@ -107,8 +107,8 @@ func (c Config) SymbolSet(getenv func(string) string) string {
 }
 
 // List configures how tickets appear in the list. The title is always shown;
-// Fields are extra values: section, due, assignee, project, tags, completed,
-// or any custom field name. Separator frames each ticket with lines; neighbours share one.
+// Fields are extra values: section, due, assignee, initials, project, tags,
+// completed, or any custom field name. Separator frames each ticket with lines; neighbours share one.
 // GroupBy groups tickets under a header per value of one such field; "" is ungrouped.
 type List struct {
 	Layout    string    `toml:"layout"`
@@ -169,8 +169,8 @@ func Default() Config {
 	return Config{
 		Theme: "dark", AccentColor: "4", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true,
 		List: List{
-			Layout: LayoutSingle, Fields: []string{"section"},
-			Header: Header{Style: StyleBar, Spacing: 1}, Selection: Selection{Style: StyleMarker},
+			Layout: LayoutSingle, Fields: []string{"section", "due"},
+			Header: Header{Style: StyleRule}, Selection: Selection{Style: StyleMarker},
 		},
 		Reader: Reader{View: ViewCards},
 	}

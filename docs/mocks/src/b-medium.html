@@ -1,0 +1,40 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="mock.css">
+<style>
+  .list { flex: 1; }
+  .reader { flex: 1; }
+  .row { grid-template-columns: 1.5ch 2.5ch minmax(0,1fr) 12ch 7ch 4ch 5ch; }
+</style></head>
+<body><div class="term">
+  <div class="panes">
+    <div class="panel list focus">
+      <div class="title"><span><span class="num">[1]</span> <span class="name">Tickets · My Tasks</span></span><span class="dim">is:open 12/40</span></div>
+      <div id="rows"></div>
+    </div>
+    <div class="panel reader">
+      <div class="title"><span><span class="num">[2]</span> <span class="name">Ticket</span></span><span class="dim">cards</span></div>
+      <div style="font-size:16px;font-weight:bold;margin-top:4px">Fix login redirect loop</div>
+      <div class="dim">${ICON.folder} Website Redesign › <span class="cyan">In Progress</span>  <span class="err">${ICON.cal} 2d overdue</span></div>
+      <div class="card"><span class="ct">Details</span>
+        <div class="kv"><span class="k">Status</span><span class="warn">${ICON.box} open</span></div>
+        <div class="kv"><span class="k">Assignee</span><span><span class="av AF">AF</span> Austin F.</span></div>
+        <div class="kv"><span class="k">Due</span><span class="err">Sep 26 (2d ago)</span></div>
+        <div class="kv"><span class="k">Branch</span><span>fix-login-loop</span></div>
+      </div>
+      <div class="rule" style="margin-top:10px">Agents</div>
+      <div><span class="ok">⠹</span> <b>claude</b> <span class="ok">working</span> <span class="dim">· 4m · ~/src/app</span></div>
+      <div><span class="warn">${ICON.warn}</span> <b>codex</b> <span class="warn">waiting</span> <span class="dim">· 12m · ~/src/app-2</span></div>
+      <div class="rule">Subtasks <span class="ok bar">▰▰▰</span><span class="dim bar">▱▱</span> <span class="n">3/5</span></div>
+      <div class="dim"><span class="ok">${ICON.check}</span> <s>Repro locally</s></div>
+      <div><span class="dim">${ICON.box}</span> Patch session middleware</div>
+    </div>
+  </div>
+  <div id="status"></div>
+</div>
+<script src="mock.js"></script>
+<script>
+  expandIcons();
+  fill("rows", ticketRows(0, 9));
+  fill("status", statusline("NORMAL", "var(--accent)", [["enter", "act"], ["e", "edit"], ["?", "keys"]]));
+</script>
+</body></html>

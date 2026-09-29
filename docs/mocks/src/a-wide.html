@@ -1,0 +1,91 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="mock.css">
+<style>
+  .nav { width: 25ch; flex: none; }
+  .list { flex: 1.1; }
+  .reader { flex: 1.4; }
+  .navrow { display: flex; justify-content: space-between; height: 1.4em; padding: 0 4px; border-radius: 3px; }
+  .navrow.on { background: var(--sel); font-weight: bold; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .desc { white-space: normal; line-height: 1.5; max-width: 76ch; }
+  .chips span { margin-right: 1.5ch; }
+</style></head>
+<body><div class="term">
+  <div class="panes">
+    <div class="panel nav">
+      <div class="title"><span><span class="num">[1]</span> <span class="name">Views</span></span></div>
+      <div class="navrow on"><span><span class="acc">${ICON.inbox}</span> My Tasks</span><span class="dim">12</span></div>
+      <div class="rule">Projects</div>
+      <div class="navrow"><span><span class="dim">${ICON.folder}</span> Website Redesign</span><span class="dim">8</span></div>
+      <div class="navrow"><span><span class="dim">${ICON.folder}</span> Mobile App</span><span class="dim">4</span></div>
+      <div class="navrow"><span><span class="dim">${ICON.folder}</span> Infra</span><span class="dim">1</span></div>
+      <div class="navrow"><span><span class="dim">${ICON.folder}</span> Marketing Site</span><span class="dim">6</span></div>
+      <div class="rule">Group by</div>
+      <div class="navrow"><span><span class="acc">${ICON.dot}</span> due</span></div>
+      <div class="navrow"><span><span class="dim">${ICON.ring}</span> section</span></div>
+      <div class="navrow"><span><span class="dim">${ICON.ring}</span> assignee</span></div>
+      <div class="navrow"><span><span class="dim">${ICON.ring}</span> none</span></div>
+      <div class="rule">Agents</div>
+      <div class="navrow"><span><span class="ok">⠹</span> working</span><span>2</span></div>
+      <div class="navrow"><span><span class="warn">${ICON.warn}</span> waiting</span><span class="warn">1</span></div>
+      <div class="navrow"><span><span class="ok">${ICON.dot}</span> done</span><span>4</span></div>
+      <div class="navrow"><span><span class="dim">${ICON.ring}</span> idle</span><span class="dim">0</span></div>
+    </div>
+    <div class="panel list focus">
+      <div class="title"><span><span class="num">[2]</span> <span class="name">Tickets · My Tasks</span></span><span class="dim">${ICON.filter} is:open  12/40</span></div>
+      <div id="rows"></div>
+    </div>
+    <div class="panel reader">
+      <div class="title"><span><span class="num">[3]</span> <span class="name">Ticket</span></span><span class="dim">cards · v</span></div>
+      <div style="font-size:16px;font-weight:bold;margin-top:4px">Fix login redirect loop</div>
+      <div class="chips dim" style="margin:2px 0 4px">
+        <span>${ICON.folder} Website Redesign › <span class="cyan">In Progress</span></span>
+        <span class="err">${ICON.cal} Sep 26 · 2d overdue</span><span>${ICON.branch} fix-login-loop</span>
+      </div>
+      <div class="cols">
+        <div class="card"><span class="ct">Details</span>
+          <div class="kv"><span class="k">Status</span><span class="warn">${ICON.box} open</span></div>
+          <div class="kv"><span class="k">Assignee</span><span><span class="av AF">AF</span> Austin F.</span></div>
+          <div class="kv"><span class="k">Due</span><span class="err">Sep 26 (2d ago)</span></div>
+          <div class="kv"><span class="k">Section</span><span class="cyan">In Progress</span></div>
+          <div class="kv"><span class="k">Project</span><span>Website Redesign</span></div>
+          <div class="hr"></div>
+          <div class="kv"><span class="k">Priority</span><span class="err">${ICON.dot} High</span></div>
+          <div class="kv"><span class="k">Estimate</span><span>3 pts</span></div>
+          <div class="kv"><span class="k">Branch</span><span>fix-login-loop</span></div>
+        </div>
+        <div>
+          <div class="card"><span class="ct">${ICON.robot} Agents</span>
+            <div><span class="ok">⠹</span> <b>claude</b> <span class="ok">working</span> <span class="dim">· 4m</span></div>
+            <div class="dim">  ~/src/app · fix-login-loop</div>
+            <div><span class="warn">${ICON.warn}</span> <b>codex</b> <span class="warn">waiting for input</span> <span class="dim">· 12m</span></div>
+            <div class="dim">  ~/src/app-2 · fix-login-loop</div>
+          </div>
+          <div class="card"><span class="ct">Subtasks <span class="ok bar">▰▰▰</span><span class="dim bar">▱▱</span> <span class="dim">3/5</span></span>
+            <div class="dim"><span class="ok">${ICON.check}</span> <s>Repro locally</s></div>
+            <div class="dim"><span class="ok">${ICON.check}</span> <s>Add failing test</s></div>
+            <div class="dim"><span class="ok">${ICON.check}</span> <s>Find middleware ordering bug</s></div>
+            <div><span class="dim">${ICON.box}</span> Patch session middleware</div>
+            <div><span class="dim">${ICON.box}</span> Verify on Safari</div>
+          </div>
+        </div>
+      </div>
+      <div class="rule" style="margin-top:12px">Description</div>
+      <div class="desc">Users with an expired session who hit <span class="cyan">/login</span> get bounced between <span class="cyan">/login</span> and <span class="cyan">/dashboard</span> forever. Looks like the auth middleware runs before the session refresh, so the refreshed cookie never lands.<br><br><b>Acceptance</b><br>• Expired session → login page, once<br>• No redirect loops in Safari or Chrome</div>
+      <div class="rule">Attachments <span class="n">2</span></div>
+      <div><span class="dim">${ICON.clip}</span> redirect-loop.har   <span class="dim">${ICON.clip}</span> safari-network.png</div>
+      <div class="rule">Comments <span class="n">3</span></div>
+      <div class="cm"><div class="who"><span class="mag">${ICON.dot}</span> <b>Jane D.</b> <span class="dim">· Sep 25</span></div>Reproduced on Safari only. Chrome keeps the old cookie.</div>
+      <div class="cm"><div class="who"><span class="acc">${ICON.dot}</span> <b>Austin F.</b> <span class="dim">· Sep 26</span></div>Agent traced it to middleware order — PR incoming.</div>
+      <div class="cm"><div class="who"><span class="cyan">${ICON.dot}</span> <b>asanamate</b> <span class="dim">· Sep 27</span></div>claude opened branch <span class="cyan">fix-login-loop</span>.</div>
+    </div>
+  </div>
+  <div id="status"></div>
+</div>
+<script src="mock.js"></script>
+<script>
+  expandIcons();
+  fill("rows", ticketRows(0));
+  fill("status", statusline());
+</script>
+</body></html>

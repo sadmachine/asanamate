@@ -53,11 +53,12 @@ key press.
 
 | Key | Action |
 |---|---|
-| `j`/`k`, arrows | move (list) or scroll (reader) |
+| `j`/`k` | move in the list; in cards view, select the next or previous field, section, or comment; in markdown view, scroll |
+| up/down arrows | move in the list or scroll the reader |
 | `g`/`G` | first/last ticket |
 | `tab` | switch focus between the list and the reader; in the cards view, move into the reader and select its first editable row |
-| `tab` / `shift+tab` (reader, cards view) | move between editable rows: assignee, project and My Tasks sections, settable custom fields, and Comments |
-| `enter` (reader, row selected) | edit the selected row, skipping the `e` menu |
+| `tab` / `shift+tab` (reader, cards view) | move between editable rows: assignee, project and My Tasks sections, settable custom fields, and Add comment |
+| `enter` (reader, editable row selected) | edit the selected row, skipping the `e` menu; Add comment opens the comment editor |
 | `esc` (reader) | return focus to the list |
 | `0` / `1` / `2` | focus the views panel (wide screens) / the list / the reader |
 | `/` | edit the filter (Enter or Esc to finish) |

@@ -236,12 +236,11 @@ func editable(f asana.CustomField) bool {
 	return false
 }
 
-// commentKey is the field key of the cards view's Comments heading, which
-// adds a comment.
+// commentKey is the field key of the cards view's Add comment row.
 const commentKey = "comment"
 
 // fieldTargets are the keys of the rows the cards view can tab to, in the
-// order they render: editable details rows, then the Comments heading.
+// order they render: editable details rows, then the Add comment row.
 func fieldTargets(t ticket.Ticket) []string {
 	var keys []string
 	for _, f := range append(t.Meta(), t.FieldValues()...) {

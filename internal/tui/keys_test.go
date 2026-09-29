@@ -5,7 +5,11 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/config"
 )
 
 func TestKeyBindingsAreUniqueAndDocumented(t *testing.T) {
@@ -44,5 +48,70 @@ func TestReaderScrollsWithMoveKeys(t *testing.T) {
 	m.Update(key("j"))
 	if m.cursor != 0 {
 		t.Fatalf("j in the reader moved the list to %d", m.cursor)
+	}
+}
+
+func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
+	m, _ := editModel(t)
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})
+	tk := m.details["1"]
+	tk.HTMLNotes = "<p>Description text</p>"
+	tk.Comments = []asana.Story{
+		{GID: "c1", CreatedBy: &asana.Ref{Name: "Amy"}, HTMLText: "<p>First</p>"},
+		{GID: "c2", CreatedBy: &asana.Ref{Name: "Zed"}, HTMLText: "<p>Second</p>"},
+	}
+	m.details["1"] = tk
+	press(m, "2")
+	want := []string{"assignee", "project:p1", "my_tasks", "field:f1", "section:description", commentKey, "comment:c1", "comment:c2"}
+	for i, key := range want {
+		if m.fieldKey != key {
+			t.Fatalf("target %d = %q, want %q", i, m.fieldKey, key)
+		}
+		if i < len(want)-1 {
+			press(m, "j")
+		}
+	}
+	lines := strings.Split(ansi.Strip(m.renderCards(tk, 60)), "\n")
+	if line := lines[m.fieldLines["comment:c2"]]; !strings.Contains(line, "Zed") {
+		t.Fatalf("comment line = %q", line)
+	}
+	if line := m.fieldLines["comment:c2"]; line < m.reader.YOffset() || line >= m.reader.YOffset()+m.reader.Height() {
+		t.Fatalf("comment line %d outside reader at %d, height %d", line, m.reader.YOffset(), m.reader.Height())
+	}
+	if name, _, _ := m.mode(); name != "READ" {
+		t.Fatalf("comment mode = %q", name)
+	}
+	press(m, "enter")
+	if m.modal != nil || m.input != nil {
+		t.Fatal("comment selection opened an editor")
+	}
+	press(m, "j")
+	if m.fieldKey != "assignee" {
+		t.Fatalf("wrapped target = %q", m.fieldKey)
+	}
+	press(m, "k")
+	if m.fieldKey != "comment:c2" {
+		t.Fatalf("reverse target = %q", m.fieldKey)
+	}
+	offset := m.reader.YOffset()
+	press(m, "up")
+	if m.fieldKey != "comment:c2" || m.reader.YOffset() >= offset {
+		t.Fatalf("up changed target %q or did not scroll from %d to %d", m.fieldKey, offset, m.reader.YOffset())
+	}
+	press(m, "tab")
+	if m.fieldKey != "assignee" {
+		t.Fatalf("tab from comment = %q", m.fieldKey)
+	}
+}
+
+func TestMarkdownKeepsJScroll(t *testing.T) {
+	m, _ := editModel(t)
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})
+	m.readerView = config.ViewMarkdown
+	m.focusReader = true
+	m.reader.SetContent(strings.Repeat("line\n", 100))
+	press(m, "j")
+	if m.reader.YOffset() == 0 || m.fieldKey != "" {
+		t.Fatalf("markdown scroll = %d, target = %q", m.reader.YOffset(), m.fieldKey)
 	}
 }

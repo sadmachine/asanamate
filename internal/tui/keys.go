@@ -31,10 +31,23 @@ var helpGroups = []string{"Move", "Ticket", "View"}
 // handle their own keys first. A function, not a variable, because the
 // bindings reach code that reads them.
 func keyBindings() []binding {
-	// Moves scroll the reader when it has focus.
+	// Arrow keys scroll the reader when it has focus.
 	move := func(to func(m *Model) int) func(*Model, tea.KeyPressMsg) tea.Cmd {
 		return func(m *Model, msg tea.KeyPressMsg) tea.Cmd {
 			if m.focusReader {
+				return m.scrollReader(msg)
+			}
+			m.moveTo(to(m))
+			return m.selectionChanged()
+		}
+	}
+	cardMove := func(dir int, to func(m *Model) int) func(*Model, tea.KeyPressMsg) tea.Cmd {
+		return func(m *Model, msg tea.KeyPressMsg) tea.Cmd {
+			if m.focusReader {
+				if m.readerView != config.ViewMarkdown {
+					m.stepCardTarget(dir)
+					return nil
+				}
 				return m.scrollReader(msg)
 			}
 			m.moveTo(to(m))
@@ -48,8 +61,10 @@ func keyBindings() []binding {
 		return func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestMenu(open(m)) }
 	}
 	return []binding{
-		{keys: []string{"j", "down"}, desc: "down", group: "Move", run: move(func(m *Model) int { return m.cursor + 1 })},
-		{keys: []string{"k", "up"}, desc: "up", group: "Move", run: move(func(m *Model) int { return m.cursor - 1 })},
+		{keys: []string{"j"}, desc: "down / next card target", group: "Move", run: cardMove(1, func(m *Model) int { return m.cursor + 1 })},
+		{keys: []string{"k"}, desc: "up / previous card target", group: "Move", run: cardMove(-1, func(m *Model) int { return m.cursor - 1 })},
+		{keys: []string{"down"}, desc: "down / scroll reader", group: "Move", run: move(func(m *Model) int { return m.cursor + 1 })},
+		{keys: []string{"up"}, desc: "up / scroll reader", group: "Move", run: move(func(m *Model) int { return m.cursor - 1 })},
 		{keys: []string{"g", "home"}, desc: "top", group: "Move", run: move(func(m *Model) int { return 0 })},
 		{keys: []string{"G", "end"}, desc: "end", group: "Move", run: move(func(m *Model) int { return len(m.visible) - 1 })},
 		{keys: []string{"0"}, desc: "views panel", group: "Move", splitOnly: true, run: do((*Model).focusViews)},

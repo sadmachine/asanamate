@@ -90,8 +90,9 @@ type Model struct {
 	details     map[string]ticket.Ticket
 	shownGID    string
 	shownAgents string         // agents section rendered for shownGID
-	fieldKey    string         // cards view row tabbed to; "" for none
-	fieldLines  map[string]int // reader line of each cards view row, by key
+	fieldKey    string         // selected cards view target; "" for none
+	fieldLines  map[string]int // reader line of each cards view target, by key
+	cardTargets []string       // cards view targets in reading order
 
 	projects        []asana.Project
 	projectFields   map[string]map[string]bool // project gid -> its custom field gids
@@ -347,7 +348,10 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return m.updateFilter(msg)
 	}
 	if k == "enter" && m.focusReader && m.fieldKey != "" {
-		return m.openField(m.fieldKey)
+		if m.editableTarget() {
+			return m.openField(m.fieldKey)
+		}
+		return nil
 	}
 	if m.focusNav && slices.Contains(navKeys, k) {
 		return m.updateNav(k)
@@ -536,6 +540,36 @@ func (m *Model) stepField(dir int) bool {
 		i = (i + dir + len(keys)) % len(keys)
 	}
 	m.fieldKey = keys[i]
+	m.showTarget()
+	return true
+}
+
+// stepCardTarget moves through fields, section headings, and comments.
+func (m *Model) stepCardTarget(dir int) bool {
+	if _, ok := m.selectedDetail(); !ok || m.readerView == config.ViewMarkdown || len(m.cardTargets) == 0 {
+		return false
+	}
+	i := slices.Index(m.cardTargets, m.fieldKey)
+	switch {
+	case i < 0 && dir < 0:
+		i = len(m.cardTargets) - 1
+	case i < 0:
+		i = 0
+	default:
+		i = (i + dir + len(m.cardTargets)) % len(m.cardTargets)
+	}
+	m.fieldKey = m.cardTargets[i]
+	m.showTarget()
+	return true
+}
+
+func (m *Model) editableTarget() bool {
+	t, ok := m.selectedDetail()
+	return ok && m.readerView != config.ViewMarkdown && slices.Contains(fieldTargets(t), m.fieldKey)
+}
+
+// showTarget redraws the highlight and brings its first line into view.
+func (m *Model) showTarget() {
 	m.renderDetail(true)
 	line, top, h := m.fieldLines[m.fieldKey], m.reader.YOffset(), m.reader.Height()
 	switch {
@@ -544,7 +578,6 @@ func (m *Model) stepField(dir int) bool {
 	case line >= top+h:
 		m.reader.SetYOffset(line - h + 1)
 	}
-	return true
 }
 
 // clearField drops the cards view's tabbed-to row.

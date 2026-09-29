@@ -29,6 +29,8 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		head += "\n" + chips
 	}
 	m.fieldLines = map[string]int{}
+	fields := fieldTargets(t)
+	m.cardTargets = append(m.cardTargets[:0], fields[:len(fields)-1]...)
 	var agentLines []string
 	for _, a := range m.viewAgents(t.Task) {
 		agentLines = append(agentLines, m.agentLabel(a, stateStyles[a.State])+dimStyle.Render(" — "+ticket.OneLine(filepath.Base(a.Path))))
@@ -41,51 +43,77 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	// Rows start below the head, a blank line, and the card's top edge.
 	top := lipgloss.Height(head) + 2
 	var blocks []string
-	add := func(title, body string) {
+	add := func(key, title, body string) {
 		if body != "" {
-			blocks = append(blocks, m.rule(title, width, false)+"\n"+body)
+			m.fieldLines[key] = lipgloss.Height(strings.Join(blocks, "\n\n")) + 1
+			m.cardTargets = append(m.cardTargets, key)
+			blocks = append(blocks, m.rule(title, width, m.fieldKey == key)+"\n"+body)
 		}
 	}
 	if width >= sideBySideW && (len(agentLines) > 0 || subtasks != "") {
 		leftW := (width - 1) / 2
 		rightW := width - leftW - 1
 		var side []string
+		sideLine := lipgloss.Height(head) + 1
 		if len(agentLines) > 0 {
-			side = append(side, m.card(m.sym.robot+"  Agents", wrap(strings.Join(agentLines, "\n"), rightW-4), rightW))
+			key := "section:agents"
+			m.fieldLines[key] = sideLine
+			m.cardTargets = append(m.cardTargets, key)
+			card := m.card(m.sym.robot+"  Agents", wrap(strings.Join(agentLines, "\n"), rightW-4), rightW, m.fieldKey == key)
+			side = append(side, card)
+			sideLine += lipgloss.Height(card) + 1
 		}
 		if subtasks != "" {
-			side = append(side, m.card(subtaskTitle, wrap(subtasks, rightW-4), rightW))
+			key := "section:subtasks"
+			m.fieldLines[key] = sideLine
+			m.cardTargets = append(m.cardTargets, key)
+			side = append(side, m.card(subtaskTitle, wrap(subtasks, rightW-4), rightW, m.fieldKey == key))
 		}
-		details := m.card("Details", m.detailsBody(t, leftW-4, top), leftW)
+		details := m.card("Details", m.detailsBody(t, leftW-4, top), leftW, false)
 		blocks = []string{head, lipgloss.JoinHorizontal(lipgloss.Top, details, " ", strings.Join(side, "\n"))}
-		add("Description", m.renderBody(t.Description(), width))
+		add("section:description", "Description", m.renderBody(t.Description(), width))
 	} else {
-		blocks = []string{head, m.card("Details", m.detailsBody(t, width-4, top), width)}
-		add("Agents", wrap(strings.Join(agentLines, "\n"), width))
-		add("Description", m.renderBody(t.Description(), width))
-		add(subtaskTitle, wrap(subtasks, width))
+		blocks = []string{head, m.card("Details", m.detailsBody(t, width-4, top), width, false)}
+		add("section:agents", "Agents", wrap(strings.Join(agentLines, "\n"), width))
+		add("section:description", "Description", m.renderBody(t.Description(), width))
+		add("section:subtasks", subtaskTitle, wrap(subtasks, width))
 	}
-	add("Blocked by", wrap(refLines(t.Dependencies), width))
-	add("Blocking", wrap(refLines(t.Dependents), width))
+	add("section:blocked-by", "Blocked by", wrap(refLines(t.Dependencies), width))
+	add("section:blocking", "Blocking", wrap(refLines(t.Dependents), width))
 
 	var attachments []string
 	for i, a := range t.Attachments {
 		attachments = append(attachments, fmt.Sprintf("%d. %s%s\n   %s", i+1, m.sym.icon(iconClip), ticket.OneLine(a.Name),
 			dimStyle.Render(ansi.Truncate(ticket.OneLine(ticket.AttachmentURL(a)), width-3, "…"))))
 	}
-	add(fmt.Sprintf("Attachments %d", len(t.Attachments)), strings.Join(attachments, "\n"))
+	add("section:attachments", fmt.Sprintf("Attachments %d", len(t.Attachments)), strings.Join(attachments, "\n"))
 
-	// The Comments heading always shows: tabbing to it adds a comment.
+	// The add row stays visible above the comment timeline.
+	m.fieldLines[commentKey] = lipgloss.Height(strings.Join(blocks, "\n\n")) + 2
+	m.cardTargets = append(m.cardTargets, commentKey)
 	comments := []string{dimStyle.Render("none")}
 	if len(t.Comments) > 0 {
 		comments = make([]string, len(t.Comments))
+		line := m.fieldLines[commentKey] + 2
 		for i, c := range t.Comments {
-			comments[i] = m.comment(c, width)
+			key := "comment:" + c.GID
+			if c.GID == "" {
+				key = fmt.Sprintf("comment:index:%d", i)
+			}
+			m.fieldLines[key] = line
+			m.cardTargets = append(m.cardTargets, key)
+			comments[i] = m.comment(c, width, m.fieldKey == key)
+			line += lipgloss.Height(comments[i]) + 1
 		}
 	}
-	m.fieldLines[commentKey] = lipgloss.Height(strings.Join(blocks, "\n\n")) + 1
-	heading := m.rule(fmt.Sprintf("Comments %d", len(t.Comments)), width, m.fieldKey == commentKey)
-	blocks = append(blocks, heading+"\n"+strings.Join(comments, "\n\n"))
+	heading := m.rule(fmt.Sprintf("Comments %d", len(t.Comments)), width, false)
+	addComment := "+ Add comment"
+	if m.fieldKey == commentKey {
+		addComment = m.fieldStyle().Render(addComment)
+	} else {
+		addComment = m.accentStyle.Render(addComment)
+	}
+	blocks = append(blocks, heading+"\n"+addComment+"\n\n"+strings.Join(comments, "\n\n"))
 	return strings.Join(blocks, "\n\n")
 }
 
@@ -145,7 +173,7 @@ func (m *Model) progress(done, total int) string {
 
 // comment renders one comment of the timeline: a colored dot, the author, and
 // the day, over the body behind a faint gutter.
-func (m *Model) comment(c asana.Story, width int) string {
+func (m *Model) comment(c asana.Story, width int, selected bool) string {
 	author := ticket.Author(c)
 	day, err := time.Parse(time.DateOnly, ticket.Day(c.CreatedAt))
 	when := ticket.Day(c.CreatedAt)
@@ -153,8 +181,15 @@ func (m *Model) comment(c asana.Story, width int) string {
 		when = shortDate(day, m.now())
 	}
 	head := authorStyle(author).Render("●") + " " + titleStyle.Render(author) + dimStyle.Render(" · "+when)
+	if selected {
+		head = m.fieldStyle().Render(ansi.Strip(head))
+	}
 	body := m.renderBody(ticket.HTMLToMarkdown(c.HTMLText), width-2)
-	gutter := lipgloss.NewStyle().Foreground(borderColor).Render("│") + " "
+	gutterStyle := lipgloss.NewStyle().Foreground(borderColor)
+	if selected {
+		gutterStyle = m.markerStyle
+	}
+	gutter := gutterStyle.Render("│") + " "
 	lines := strings.Split(body, "\n")
 	for i, l := range lines {
 		lines[i] = gutter + l
@@ -253,11 +288,15 @@ func (m *Model) rule(title string, width int, selected bool) string {
 
 // card boxes body in a border with title set into the top edge. body must
 // already fit width-4 columns (border and padding take the rest).
-func (m *Model) card(title, body string, width int) string {
+func (m *Model) card(title, body string, width int, selected bool) string {
 	box := lipgloss.NewStyle().Border(m.sym.border).BorderTop(false).BorderForeground(borderColor).
 		Padding(0, 1).Width(width).Render(body)
 	edge := lipgloss.NewStyle().Foreground(borderColor)
-	return m.topEdge(titleStyle.Render(title), "", lipgloss.Width(box), edge) + "\n" + box
+	head := titleStyle
+	if selected {
+		head = m.fieldStyle()
+	}
+	return m.topEdge(head.Render(title), "", lipgloss.Width(box), edge) + "\n" + box
 }
 
 // panel boxes a pane's body, width by height cells in all, with title and

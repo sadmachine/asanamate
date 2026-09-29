@@ -268,11 +268,17 @@ func TestFieldLinesMatchRows(t *testing.T) {
 	m, _ := editModel(t)
 	tk := m.details["1"]
 	lines := strings.Split(ansi.Strip(m.renderCards(tk, 60)), "\n")
-	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Comments"}
+	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Add comment"}
 	for _, key := range fieldTargets(tk) {
 		if l := lines[m.fieldLines[key]]; !strings.Contains(l, labels[key]) {
 			t.Errorf("%s line %d = %q", key, m.fieldLines[key], l)
 		}
+	}
+	m.fieldKey = commentKey
+	selected := strings.Split(ansi.Strip(m.renderCards(tk, 60)), "\n")
+	line := m.fieldLines[commentKey]
+	if !strings.Contains(selected[line-1], "Comments 0") || !strings.Contains(selected[line], "+ Add comment") {
+		t.Fatalf("heading = %q, add row = %q", selected[line-1], selected[line])
 	}
 }
 
@@ -281,7 +287,7 @@ func TestWideCardsPutSubtasksBesideDetails(t *testing.T) {
 	tk := m.details["1"]
 	tk.Subtasks = []asana.Task{{Name: "Repro", Completed: true}, {Name: "Patch"}}
 	lines := strings.Split(ansi.Strip(m.renderCards(tk, 120)), "\n")
-	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Comments"}
+	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Add comment"}
 	for _, key := range fieldTargets(tk) {
 		if l := lines[m.fieldLines[key]]; !strings.Contains(l, labels[key]) {
 			t.Errorf("%s line %d = %q", key, m.fieldLines[key], l)
@@ -290,6 +296,9 @@ func TestWideCardsPutSubtasksBesideDetails(t *testing.T) {
 	edge := slices.IndexFunc(lines, func(l string) bool { return strings.Contains(l, "Details") })
 	if edge < 0 || !strings.Contains(lines[edge], "Subtasks ▰▰▱▱▱ 1/2") || !strings.Contains(lines[edge+1], "✓ Repro") {
 		t.Fatalf("subtasks not beside details:\n%s", strings.Join(lines, "\n"))
+	}
+	if !slices.Contains(m.cardTargets, "section:subtasks") || !strings.Contains(lines[m.fieldLines["section:subtasks"]], "Subtasks") {
+		t.Fatal("side-by-side subtasks heading is not selectable")
 	}
 }
 

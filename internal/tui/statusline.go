@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/agents"
+	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -28,10 +29,15 @@ func (m *Model) mode() (name string, pill color.Color, hints [][2]string) {
 		return "NORMAL", m.accentStyle.GetForeground(), [][2]string{{"q", "quit"}}
 	case m.filtering:
 		return "FILTER", filterColor, [][2]string{{"enter", "apply"}, {"esc", "done"}}
-	case m.focusReader && m.fieldKey != "":
-		return "EDIT", editColor, [][2]string{{"tab", "next field"}, {"enter", "edit"}, {"esc", "list"}}
+	case m.focusReader && m.fieldKey == commentKey:
+		return "EDIT", editColor, [][2]string{{"j/k", "targets"}, {"enter", "add comment"}, {"↑/↓", "scroll"}, {"esc", "list"}}
+	case m.focusReader && m.editableTarget():
+		return "EDIT", editColor, [][2]string{{"j/k", "targets"}, {"enter", "edit"}, {"↑/↓", "scroll"}, {"esc", "list"}}
 	case m.focusReader:
-		return "READ", readColor, [][2]string{{"j/k", "scroll"}, {"tab", "fields"}, {"esc", "list"}, {"?", "keys"}}
+		if m.readerView != config.ViewMarkdown {
+			return "READ", readColor, [][2]string{{"j/k", "targets"}, {"↑/↓", "scroll"}, {"tab", "fields"}, {"esc", "list"}}
+		}
+		return "READ", readColor, [][2]string{{"j/k", "scroll"}, {"tab", "fields"}, {"esc", "list"}}
 	case m.focusNav:
 		return "VIEWS", m.accentStyle.GetForeground(), [][2]string{{"j/k", "move"}, {"enter", "open"}, {"esc", "list"}, {"?", "keys"}}
 	}

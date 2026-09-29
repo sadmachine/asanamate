@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -86,6 +87,24 @@ func TestOutputStripsControlCharacters(t *testing.T) {
 	}
 	if strings.ContainsAny(out.String(), "\x1b\x07") {
 		t.Fatalf("control characters printed: %q", out.String())
+	}
+}
+
+// The template documents the defaults, so its values must equal Default().
+// Only the values setup fills in or adds as examples may differ.
+func TestTemplateMatchesDefaults(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte(Render(asana.Ref{GID: "1", Name: "W"}, "/code")), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := config.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := config.Default()
+	want.Workspace, want.RepoSource, want.Actions = got.Workspace, got.RepoSource, got.Actions
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("template values differ from config.Default():\ngot  %+v\nwant %+v", got, want)
 	}
 }
 

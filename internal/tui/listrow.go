@@ -1,7 +1,11 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
+	"time"
+
+	"charm.land/lipgloss/v2"
 
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/agents"
@@ -93,6 +97,39 @@ func rowFields(t asana.Task, names []string, rc rowContext) []string {
 		}
 	}
 	return out
+}
+
+// cellValue is a list field's value as a row shows it, with the style to show
+// it in: due dates are relative and colored by urgency, and other values
+// have no style of their own.
+func cellValue(t asana.Task, name string, rc rowContext, today time.Time) (string, lipgloss.Style) {
+	name = strings.TrimSpace(name)
+	if isDue(name) {
+		return dueLabel(t.DueOn, today)
+	}
+	return ticket.OneLine(fieldValue(t, name, rc)), lipgloss.Style{}
+}
+
+// dueLabel shows a due date relative to today: "3d ago" in red, "today" in
+// yellow, "tomorrow" and the weekday within a week, then a faint date.
+func dueLabel(dueOn *string, today time.Time) (string, lipgloss.Style) {
+	due, days, ok := dueDays(dueOn, today)
+	switch {
+	case !ok:
+		return "", lipgloss.Style{}
+	case days < 0:
+		return fmt.Sprintf("%dd ago", -days), errorStyle
+	case days == 0:
+		return "today", warnStyle
+	case days == 1:
+		return "tomorrow", lipgloss.Style{}
+	case days < 7:
+		return due.Format("Mon"), lipgloss.Style{}
+	case due.Year() == today.Year():
+		return due.Format("Jan 2"), dimStyle
+	default:
+		return due.Format("Jan 2 2006"), dimStyle
+	}
 }
 
 // fieldValue resolves a built-in field name, falling back to the custom field

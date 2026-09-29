@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -28,8 +29,13 @@ func testModel(t *testing.T, cfg config.Config) (*Model, *state.State) {
 	if cfg.List.Selection.Style == "" {
 		cfg.List.Selection.Style = config.StyleBar
 	}
-	return New(Deps{Config: cfg, State: st, StateDir: t.TempDir()}), st
+	m := New(Deps{Config: cfg, State: st, StateDir: t.TempDir()})
+	m.now = func() time.Time { return testToday }
+	return m, st
 }
+
+// testToday is a Monday.
+var testToday = time.Date(2026, 9, 28, 12, 0, 0, 0, time.Local)
 
 var (
 	openTask = asana.Task{GID: "1", Name: "Fix login"}
@@ -136,7 +142,7 @@ func TestReaderViewSwitch(t *testing.T) {
 	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask,
 		Comments: []asana.Story{{CreatedBy: &asana.Ref{Name: "Sam"}, CreatedAt: "2026-09-20T10:00:00Z", HTMLText: "<body>Looks good</body>"}}}})
 	cards := ansi.Strip(m.reader.GetContent())
-	for _, want := range []string{"Details", "Comments 1", "Sam · 2026-09-20", "Looks good"} {
+	for _, want := range []string{"Details", "Comments 1", "Sam · Sep 20", "Looks good"} {
 		if !strings.Contains(cards, want) {
 			t.Errorf("cards view missing %q:\n%s", want, cards)
 		}

@@ -68,14 +68,14 @@ func TestListViewLayouts(t *testing.T) {
 	other := asana.Task{GID: "2", Name: "Fix footer"}
 	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Fields: []string{"section", "due"}}})
 	single.Update(tasksMsg{tasks: []asana.Task{fieldTask, other}})
-	if got := listLines(single, 80, 5); len(got) != 2 || got[0] != "□ Fix login  Today · due 2026-10-01" {
+	if got := listLines(single, 80, 5); len(got) != 2 || got[0] != "□ Fix login"+strings.Repeat(" ", 59)+"Today  Thu" {
 		t.Fatalf("single = %q", got)
 	}
 
 	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Fields: []string{"section", "due"}}})
 	multi.Update(tasksMsg{tasks: []asana.Task{fieldTask, other}})
 	got := listLines(multi, 80, 4)
-	if want := []string{"□ Fix login", "  Today · due 2026-10-01", "□ Fix footer", ""}; !slices.Equal(got, want) {
+	if want := []string{"□ Fix login", "  Today · Thu", "□ Fix footer", ""}; !slices.Equal(got, want) {
 		t.Fatalf("multi = %q, want %q", got, want)
 	}
 	multi.moveTo(1)
@@ -240,5 +240,54 @@ func TestHeaderStyles(t *testing.T) {
 	}
 	if bar.markerStyle.GetForeground() != lipgloss.Color("2") || bar.accentStyle.GetForeground() != lipgloss.Color("2") {
 		t.Fatal("marker and reader fall back to accent_color")
+	}
+}
+
+func TestDueLabel(t *testing.T) {
+	for _, tc := range []struct {
+		due, want string
+		style     lipgloss.Style
+	}{
+		{"2026-09-25", "3d ago", errorStyle},
+		{"2026-09-28", "today", warnStyle},
+		{"2026-09-29", "tomorrow", lipgloss.Style{}},
+		{"2026-10-02", "Fri", lipgloss.Style{}},
+		{"2026-10-20", "Oct 20", dimStyle},
+		{"2027-01-04", "Jan 4 2027", dimStyle},
+		{"soon", "", lipgloss.Style{}},
+	} {
+		got, style := dueLabel(strp(tc.due), testToday)
+		if got != tc.want || style.Render("x") != tc.style.Render("x") {
+			t.Errorf("%s: got %q %q, want %q %q", tc.due, got, style.Render("x"), tc.want, tc.style.Render("x"))
+		}
+	}
+	if got, _ := dueLabel(nil, testToday); got != "" {
+		t.Errorf("no due date: %q", got)
+	}
+}
+
+func TestColumnsAlignAcrossRows(t *testing.T) {
+	m, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Fields: []string{"section", "due"}}})
+	long := fieldTask
+	long.GID, long.Name, long.AssigneeSection, long.DueOn = "2", "Ship", &asana.Ref{Name: "In Progress"}, strp("2026-09-27")
+	plain := asana.Task{GID: "3", Name: "Tidy"}
+	m.Update(tasksMsg{tasks: []asana.Task{fieldTask, long, plain}})
+	got := listLines(m, 40, 3)
+	want := []string{
+		"□ Fix login          Today        Thu",
+		"□ Ship               In Progress  1d ago",
+		"□ Tidy",
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("got  %q\nwant %q", got, want)
+	}
+}
+
+func TestDoneRowsAreStruckThrough(t *testing.T) {
+	m, _ := testModel(t, config.Config{List: config.List{Selection: config.Selection{Style: config.StyleMarker}}})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask}})
+	row, _ := m.listRow(1)
+	if !strings.Contains(row[0], "\x1b[2;9m") && !strings.Contains(row[0], "\x1b[9;2m") {
+		t.Fatalf("done row = %q", row[0])
 	}
 }

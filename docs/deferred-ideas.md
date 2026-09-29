@@ -7,11 +7,13 @@ own design pass. They are recorded here so they can be picked up later.
 ## Configurable key bindings
 
 **Now:** `Model.handleKey` in `internal/tui/model.go` hardcodes every
-key. `Model.footer` builds its hint text as a separate string, so a new or
-changed binding can leave the footer out of date.
+key. The `?` help renders from the `bindings` table in
+`internal/tui/statusline.go`, but the statusline's hints (`Model.mode`) and
+`handleKey` are separate, so a new or changed binding must be updated in
+all three.
 
-**Idea:** Define one table of bindings with `bubbles/key` and render the footer
-from it with `bubbles/help`. The same table could later accept overrides from
+**Idea:** Grow `bindings` into the one table `handleKey` dispatches from, with
+`bubbles/key` if it helps. The same table could later accept overrides from
 the config, for example a `[keys]` table.
 
 **Watch out for:** Adding config keys is a public contract (see `AGENTS.md`).
@@ -21,9 +23,10 @@ list keys today. An override system must keep that true.
 ## Theme-aware colors
 
 **Now:** `theme = "light"` only changes the glamour Markdown style. The TUI's
-own colors are fixed ANSI numbers: `errorStyle` in `styles.go`, `borderColor`,
-`openStyle`, and `doneStyle` in `cards.go`, and `stateStyles` in `symbols.go`.
-Borders and agent state colors therefore stay tuned for dark terminals.
+own colors are fixed ANSI numbers, all defined at the top of `styles.go`
+(`borderColor`, `okStyle`, `warnStyle`, `errorStyle`). ANSI numbers follow the
+terminal's color scheme, but faint text and color 8 borders can be hard to see
+on some light schemes.
 
 **Idea:** Add a small palette struct with a dark and a light variant, chosen
 by `theme`, and build the styles from it.

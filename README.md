@@ -35,6 +35,20 @@ back to `vi`) and reports any errors in it after you save.
 picks up new settings and comments, keeping every value you set. The previous
 file is saved as `config.toml.bak`; copy any comments of your own back from it.
 
+## Layout
+
+At 100 columns and wider, the ticket list and the reader sit side by side in
+bordered panels; the focused one has an accent-colored border. At 160 columns
+and wider, a views panel on the left lists My Tasks, recent projects, the
+groupings, and running agents: press `0`, move with `j`/`k`, and open one
+with `enter`. In a reader at least 90 columns wide, the cards view puts the
+agents and subtasks beside the details card.
+
+The bottom bar shows the mode (`NORMAL`, `READ`, `EDIT`, `FILTER`, or
+`VIEWS`), the view, filter, grouping, ticket count, and agents, with the keys
+for what has focus on the right. Messages take the keys' place until the next
+key press.
+
 ## Keys
 
 | Key | Action |
@@ -45,6 +59,7 @@ file is saved as `config.toml.bak`; copy any comments of your own back from it.
 | `tab` / `shift+tab` (reader, cards view) | move between editable rows: assignee, project and My Tasks sections, settable custom fields, and Comments |
 | `enter` (reader, row selected) | edit the selected row, skipping the `e` menu |
 | `esc` (reader) | return focus to the list |
+| `0` / `1` / `2` | focus the views panel (wide screens) / the list / the reader |
 | `/` | edit the filter (Enter or Esc to finish) |
 | `p` | switch project (recent first) |
 | `enter`, `a` | run an action on the selected ticket |
@@ -55,6 +70,7 @@ file is saved as `config.toml.bak`; copy any comments of your own back from it.
 | `v` | switch the reader between the cards and markdown views |
 | `o` | open the ticket in the browser |
 | `r` | reload |
+| `?` | show every key |
 | `q` | quit |
 
 ## Filtering
@@ -105,15 +121,15 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `default_filter` | `"is:open"` | filter applied at startup |
 | `confirm_writes` | `true` | write-back subcommands ask before writing |
 | `list.layout` | `"single"` | `single` (one line per ticket) or `multi` (title, then fields on a second line) |
-| `list.fields` | `["section"]` | values shown with the title |
+| `list.fields` | `["section", "due"]` | values shown with the title, in aligned columns (`single` layout); due dates show relative to today and are colored by urgency |
 | `branch_field` | `""` | custom field holding the ticket's git branch (`$ASANAMATE_BRANCH`); empty uses the title slug |
 | `agents.preset` / `agents.command` | unset (off) | opt-in agent tracking; see [Agents](#agents-optional) |
 | `symbols` | `unicode` on UTF-8, else `ascii` | `unicode`, `nerd`, or `ascii` for ticket markers and agent states |
 | `reduced_motion` | OS setting | `true` shows static agent symbols instead of the spinner |
 | `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one |
 | `list.group_by` | `""` (ungrouped) | starting grouping: any `list.fields` name; `b` picks another |
-| `list.header.style` | `"bar"` | group headers: `bar` (reversed bar) or `rule` (`── Label (n) ───`) |
-| `list.header.spacing` | `1` | blank lines above and below each group header |
+| `list.header.style` | `"rule"` | group headers: `rule` (`── Label (n) ───`) or `bar` (reversed bar) |
+| `list.header.spacing` | `0` | blank lines above and below each group header |
 | `list.header.color` | `accent_color` | group header color, same format as `accent_color` |
 | `list.selection.style` | `"marker"` | selected ticket: `marker` (bold title with a left `▌`) or `bar` (reversed row; agent badges swap colors) |
 | `list.selection.color` | `accent_color` | selection marker color, same format as `accent_color` |

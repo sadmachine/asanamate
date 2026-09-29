@@ -120,11 +120,11 @@ type List struct {
 }
 
 // Header configures group headers. Style draws them as a reversed bar or a
-// rule; Spacing adds that many blank lines above and below each. Color overrides the
+// rule; Spacing adds a blank line above and below each. Color overrides the
 // accent color when set.
 type Header struct {
 	Style   string `toml:"style"`
-	Spacing int    `toml:"spacing"`
+	Spacing bool   `toml:"spacing"`
 	Color   string `toml:"color"`
 }
 
@@ -231,9 +231,6 @@ func (c Config) validate() error {
 		case strings.EqualFold(name, "title"):
 			return errors.New("the title is always shown; remove it from list.fields")
 		}
-	}
-	if c.List.Header.Spacing < 0 {
-		return fmt.Errorf("list.header.spacing must be 0 or more, got %d", c.List.Header.Spacing)
 	}
 	for key, color := range map[string]string{"accent_color": c.AccentColor, "list.header.color": c.List.Header.Color, "list.selection.color": c.List.Selection.Color} {
 		if (key == "accent_color" || color != "") && !validColor(color) {

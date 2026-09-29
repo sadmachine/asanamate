@@ -79,6 +79,10 @@ func (m *Model) agentStates(t asana.Task) []string {
 	return out
 }
 
+// builtinFields are the list field names fieldValue resolves itself, in the
+// group picker's order; any other name is a custom field.
+var builtinFields = []string{"section", "due", "assignee", "project", "tags", "completed"}
+
 // rowFields returns the non-empty display values of the configured list
 // fields, in order.
 func rowFields(t asana.Task, names []string, rc rowContext) []string {

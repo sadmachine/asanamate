@@ -552,15 +552,13 @@ func (m *Model) selectionChanged() tea.Cmd {
 	}
 	m.fieldKey = ""
 	if _, cached := m.details[t.GID]; cached {
-		m.showDetail()
+		m.renderDetail(false)
 		return nil
 	}
 	m.shownGID = ""
 	m.reader.SetContent(dimStyle.Render("Loading " + ticket.Clean(t.Name) + "…"))
 	return scheduleDetail(t.GID)
 }
-
-func (m *Model) showDetail() { m.renderDetail(false) }
 
 // renderDetail renders the selected ticket in the reader, from the top or at
 // the current scroll position.
@@ -736,7 +734,7 @@ func (m *Model) layout() {
 	m.reader.SetHeight(m.bodyHeight())
 	m.filterInput.SetWidth(max(m.width/3, 10))
 	if m.shownGID != "" {
-		m.showDetail()
+		m.renderDetail(false)
 	}
 }
 
@@ -921,15 +919,12 @@ func (m *Model) listView(width, height int) string {
 		used += rowH(end, start)
 		end++
 	}
-	counts := map[string]int{}
-	for _, g := range m.groups {
-		counts[g]++
-	}
+	counts := m.groupCounts()
 	sep := dimStyle.Render(strings.Repeat("─", width))
 	// The marker style keeps a gutter on every row so text doesn't shift.
-	var cursor, gutter string
-	if m.deps.Config.List.Selection.Style == config.StyleMarker {
-		cursor = m.sym.cursor + " "
+	var gutter string
+	cursor := m.marker()
+	if cursor != "" {
 		gutter = strings.Repeat(" ", ansi.StringWidth(cursor))
 		cursorStyle := m.markerStyle
 		if m.focusReader {
@@ -971,6 +966,24 @@ func (m *Model) listView(width, height int) string {
 	return strings.Join(lines, "\n")
 }
 
+// groupCounts returns the number of visible tickets per group label.
+func (m *Model) groupCounts() map[string]int {
+	counts := map[string]int{}
+	for _, g := range m.groups {
+		counts[g]++
+	}
+	return counts
+}
+
+// marker is the selected row's left marker with its gap, or "" unless
+// selection.style is marker.
+func (m *Model) marker() string {
+	if m.deps.Config.List.Selection.Style != config.StyleMarker {
+		return ""
+	}
+	return m.sym.cursor + " "
+}
+
 // listRow returns the lines of visible ticket i's row and the badge
 // right-aligned on its first line.
 func (m *Model) listRow(i int) (row []string, badge string) {
@@ -1001,18 +1014,10 @@ func (m *Model) listRow(i int) (row []string, badge string) {
 // fitList sizes the list pane to its widest row or group header, leaving the
 // reader at least minPaneW columns.
 func (m *Model) fitList() {
-	gutter := 0
-	if m.deps.Config.List.Selection.Style == config.StyleMarker {
-		gutter = ansi.StringWidth(m.sym.cursor + " ")
-	}
-	counts := map[string]int{}
-	for _, g := range m.groups {
-		counts[g]++
-	}
+	gutter := ansi.StringWidth(m.marker())
 	w := 0
-	for label, n := range counts {
-		// Wide enough that the header shows in full, rule or bar.
-		w = max(w, ansi.StringWidth(fmt.Sprintf("── %s (%d) ─", label, n)))
+	for label, n := range m.groupCounts() {
+		w = max(w, groupHeaderWidth(label, n))
 	}
 	for i := range m.visible {
 		row, badge := m.listRow(i)

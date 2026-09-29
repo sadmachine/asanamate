@@ -79,3 +79,14 @@ func TestViewsPanelPicksGroupingAndProject(t *testing.T) {
 		t.Fatal("esc returns to the list")
 	}
 }
+
+func TestViewsPanelCursorSurvivesShrinkingRows(t *testing.T) {
+	m := wideModel(t, 200)
+	m.groupBy = "Priority"
+	keys(m, "0", "G")
+	m.groupBy = "" // Priority's row is gone
+	keys(m, "enter")
+	if m.groupBy != "due" {
+		t.Fatalf("groupBy = %q, want the last row, due", m.groupBy)
+	}
+}

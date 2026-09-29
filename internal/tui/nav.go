@@ -192,6 +192,9 @@ func (m *Model) updateNav(k string) tea.Cmd {
 			selectable = append(selectable, it)
 		}
 	}
+	// The rows can shrink under the cursor, such as when a grouping by a
+	// custom field is dropped.
+	m.navCursor = min(m.navCursor, len(selectable)-1)
 	switch k {
 	case "j", "down":
 		m.navCursor = min(m.navCursor+1, len(selectable)-1)

@@ -175,7 +175,7 @@ func (s Service) SetField(ctx context.Context, gid, fieldName, value, projectGID
 	if err != nil {
 		return err
 	}
-	if err := s.confirm(fmt.Sprintf("Set %q on %q to %q?", ticket.Clean(strings.TrimSpace(f.Name)), t.Name, value)); err != nil {
+	if err := s.confirm(fmt.Sprintf("Set %q on %q to %q?", ticket.FieldName(f), t.Name, value)); err != nil {
 		return err
 	}
 	return s.Client.SetCustomField(ctx, gid, f.GID, v)
@@ -184,12 +184,7 @@ func (s Service) SetField(ctx context.Context, gid, fieldName, value, projectGID
 // resolveField finds the one field to write. Writes never guess between
 // same-named fields: they need the project that owns the intended one.
 func (s Service) resolveField(ctx context.Context, t asana.Task, name, projectGID string) (asana.CustomField, error) {
-	var matches []asana.CustomField
-	for _, f := range t.CustomFields {
-		if asana.SameFieldName(f.Name, name) {
-			matches = append(matches, f)
-		}
-	}
+	matches := t.FieldsNamed(name)
 	switch {
 	case len(matches) == 0:
 		return asana.CustomField{}, fmt.Errorf("task has no custom field %q", name)
@@ -213,20 +208,20 @@ func (s Service) resolveField(ctx context.Context, t asana.Task, name, projectGI
 // FieldValue converts typed text to the API value for a text, number, enum, or
 // date (YYYY-MM-DD) field. Empty text is nil, which clears the field.
 func FieldValue(f asana.CustomField, value string) (any, error) {
-	name := ticket.Clean(strings.TrimSpace(f.Name))
+	name := ticket.FieldName(f)
 	if value == "" {
 		return nil, nil
 	}
 	switch f.ResourceSubtype {
-	case "text":
+	case asana.FieldText:
 		return value, nil
-	case "number":
+	case asana.FieldNumber:
 		n, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return nil, fmt.Errorf("%s needs a number, got %q", name, value)
 		}
 		return n, nil
-	case "enum":
+	case asana.FieldEnum:
 		var options []string
 		for _, o := range f.EnumOptions {
 			if strings.EqualFold(o.Name, value) {
@@ -235,7 +230,7 @@ func FieldValue(f asana.CustomField, value string) (any, error) {
 			options = append(options, ticket.Clean(o.Name))
 		}
 		return nil, fmt.Errorf("%s has no option %q; options: %s", name, value, strings.Join(options, ", "))
-	case "date":
+	case asana.FieldDate:
 		if _, err := time.Parse(time.DateOnly, value); err != nil {
 			return nil, fmt.Errorf("%s needs a date as YYYY-MM-DD, got %q", name, value)
 		}

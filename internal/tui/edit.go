@@ -150,7 +150,7 @@ func (m *Model) openFieldPicker() {
 	var items []pickItem
 	for _, f := range m.edit.ticket.CustomFields {
 		if editable(f) {
-			items = append(items, pickItem{Label: fieldName(f), Hint: ticket.OneLine(f.Value()), Value: f})
+			items = append(items, pickItem{Label: ticket.FieldName(f), Hint: ticket.OneLine(f.Value()), Value: f})
 		}
 	}
 	if len(items) == 0 {
@@ -163,7 +163,7 @@ func (m *Model) openFieldPicker() {
 // editable reports whether the edit flow can set custom field f.
 func editable(f asana.CustomField) bool {
 	switch f.ResourceSubtype {
-	case "text", "number", "enum", "multi_enum", "date", "people":
+	case asana.FieldText, asana.FieldNumber, asana.FieldEnum, asana.FieldMultiEnum, asana.FieldDate, asana.FieldPeople:
 		return true
 	}
 	return false
@@ -181,7 +181,7 @@ func fieldTargets(t ticket.Ticket) []string {
 		if f.Key == "" {
 			continue
 		}
-		if gid, ok := strings.CutPrefix(f.Key, "field:"); ok {
+		if gid, ok := strings.CutPrefix(f.Key, ticket.FieldKey("")); ok {
 			i := slices.IndexFunc(t.CustomFields, func(c asana.CustomField) bool { return c.GID == gid })
 			if i < 0 || !editable(t.CustomFields[i]) {
 				continue
@@ -202,19 +202,19 @@ func (m *Model) openField(key string) tea.Cmd {
 	m.edit, m.run = &pendingEdit{ticket: t}, nil
 	kind, gid, _ := strings.Cut(key, ":")
 	switch kind {
-	case "assignee":
+	case ticket.KeyAssignee:
 		return m.pickedEdit(editAssignee)
 	case commentKey:
 		return m.pickedEdit(editComment)
-	case "my_tasks":
+	case ticket.KeyMyTasks:
 		return m.pickedEditProject(myTasks)
-	case "project":
+	case ticket.KeyProject:
 		for _, mb := range t.Memberships {
 			if mb.Project.GID == gid {
 				return m.pickedEditProject(mb.Project)
 			}
 		}
-	case "field":
+	case ticket.KeyField:
 		for _, f := range t.CustomFields {
 			if f.GID == gid {
 				return m.pickedField(f)
@@ -229,26 +229,26 @@ func (m *Model) pickedField(f asana.CustomField) tea.Cmd {
 	m.modal = nil
 	m.edit.field = &f
 	switch f.ResourceSubtype {
-	case "enum":
-	case "multi_enum":
+	case asana.FieldEnum:
+	case asana.FieldMultiEnum:
 		items := make([]pickItem, len(f.EnumOptions))
 		checked := map[int]bool{}
 		for i, o := range f.EnumOptions {
 			items[i] = pickItem{Label: ticket.Clean(o.Name), Value: o.GID}
 			checked[i] = slices.ContainsFunc(f.MultiEnumValues, func(v asana.EnumOption) bool { return v.GID == o.GID })
 		}
-		m.modal = newMultiPicker(pickMultiEnum, fieldName(f), items, checked)
+		m.modal = newMultiPicker(pickMultiEnum, ticket.FieldName(f), items, checked)
 		return nil
-	case "people":
+	case asana.FieldPeople:
 		return m.requestUsers()
-	case "date":
-		m.input = newInputBox(fieldName(f), "YYYY-MM-DD; empty clears the field")
+	case asana.FieldDate:
+		m.input = newInputBox(ticket.FieldName(f), "YYYY-MM-DD; empty clears the field")
 		if f.DateValue != nil {
 			m.input.area.SetValue(f.DateValue.Date)
 		}
 		return nil
 	default:
-		m.input = newInputBox(fieldName(f), "empty clears the field")
+		m.input = newInputBox(ticket.FieldName(f), "empty clears the field")
 		m.input.area.SetValue(f.Value())
 		return nil
 	}
@@ -260,7 +260,7 @@ func (m *Model) pickedField(f asana.CustomField) tea.Cmd {
 		}
 		items = append(items, it)
 	}
-	m.modal = newPicker(pickEnumOption, fieldName(f), items)
+	m.modal = newPicker(pickEnumOption, ticket.FieldName(f), items)
 	return nil
 }
 
@@ -273,7 +273,7 @@ func (m *Model) setField(value string) tea.Cmd {
 		return nil
 	}
 	c, gid := m.deps.Client, m.edit.ticket.GID
-	return m.saveEdit("set "+fieldName(f), func(ctx context.Context) error {
+	return m.saveEdit("set "+ticket.FieldName(f), func(ctx context.Context) error {
 		return c.SetCustomField(ctx, gid, f.GID, v)
 	})
 }
@@ -305,7 +305,7 @@ func (m *Model) pickedValues(items []pickItem) tea.Cmd {
 		gids[i] = it.Value.(string)
 	}
 	c, gid := m.deps.Client, m.edit.ticket.GID
-	return m.saveEdit("set "+fieldName(f), func(ctx context.Context) error {
+	return m.saveEdit("set "+ticket.FieldName(f), func(ctx context.Context) error {
 		return c.SetCustomField(ctx, gid, f.GID, gids)
 	})
 }
@@ -332,7 +332,7 @@ func (m *Model) openUserPicker(err error) {
 			items[i] = pickItem{Label: ticket.Clean(u.Name), Value: u.GID}
 			checked[i] = slices.ContainsFunc(f.PeopleValue, func(v asana.Ref) bool { return v.GID == u.GID })
 		}
-		m.modal = newMultiPicker(pickPeople, fieldName(*f), items, checked)
+		m.modal = newMultiPicker(pickPeople, ticket.FieldName(*f), items, checked)
 		return
 	}
 	items := []pickItem{{Label: "(unassigned)", Value: asana.Ref{}}}
@@ -367,8 +367,4 @@ func (m *Model) saveEdit(what string, write func(context.Context) error) tea.Cmd
 	gid := m.edit.ticket.GID
 	m.edit, m.status = nil, what+"…"
 	return saveEdit(gid, what, write)
-}
-
-func fieldName(f asana.CustomField) string {
-	return ticket.Clean(strings.TrimSpace(f.Name))
 }

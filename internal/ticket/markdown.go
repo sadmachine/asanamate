@@ -10,17 +10,26 @@ import (
 )
 
 // Field is a cleaned label and value shown for a ticket. Key names the
-// ticket property behind an editable field: "assignee", "my_tasks",
-// "project:<gid>", or "field:<custom field gid>"; it is "" otherwise.
+// ticket property behind an editable field: KeyAssignee, KeyMyTasks,
+// ProjectKey(gid), or FieldKey(custom field gid); it is "" otherwise.
 type Field struct{ Label, Value, Key string }
 
-// Status is "done" for completed tickets, else "open".
-func (t Ticket) Status() string {
-	if t.Completed {
-		return "done"
-	}
-	return "open"
-}
+// Field keys. Project and custom field keys are "<kind>:<gid>".
+const (
+	KeyAssignee = "assignee"
+	KeyMyTasks  = "my_tasks"
+	KeyProject  = "project"
+	KeyField    = "field"
+)
+
+// ProjectKey is the field key of the ticket's section in a project.
+func ProjectKey(gid string) string { return KeyProject + ":" + gid }
+
+// FieldKey is the field key of a custom field.
+func FieldKey(gid string) string { return KeyField + ":" + gid }
+
+// FieldName returns a custom field's cleaned, trimmed name.
+func FieldName(f asana.CustomField) string { return Clean(strings.TrimSpace(f.Name)) }
 
 // Meta returns the ticket's built-in fields, omitting empty ones.
 func (t Ticket) Meta() []Field {
@@ -33,7 +42,7 @@ func (t Ticket) Meta() []Field {
 	add("Status", t.Status(), "")
 	add("URL", t.PermalinkURL, "")
 	if t.Assignee != nil {
-		add("Assignee", t.Assignee.Name, "assignee")
+		add("Assignee", t.Assignee.Name, KeyAssignee)
 	}
 	if t.DueOn != nil {
 		add("Due", *t.DueOn, "")
@@ -43,12 +52,12 @@ func (t Ticket) Meta() []Field {
 		if m.Section != nil {
 			value += " / " + m.Section.Name
 		}
-		add("Project", value, "project:"+m.Project.GID)
+		add("Project", value, ProjectKey(m.Project.GID))
 	}
 	if t.AssigneeSection != nil {
-		add("My Tasks section", t.AssigneeSection.Name, "my_tasks")
+		add("My Tasks section", t.AssigneeSection.Name, KeyMyTasks)
 	}
-	add("Tags", joinNames(t.Tags, ", "), "")
+	add("Tags", strings.Join(asana.Names(t.Tags), ", "), "")
 	if t.Parent != nil {
 		add("Parent", t.Parent.Name, "")
 	}
@@ -60,7 +69,7 @@ func (t Ticket) FieldValues() []Field {
 	var fields []Field
 	for _, f := range t.CustomFields {
 		if f.DisplayValue != nil && *f.DisplayValue != "" {
-			fields = append(fields, Field{Clean(strings.TrimSpace(f.Name)), Clean(*f.DisplayValue), "field:" + f.GID})
+			fields = append(fields, Field{FieldName(f), Clean(*f.DisplayValue), FieldKey(f.GID)})
 		}
 	}
 	return fields
@@ -140,14 +149,6 @@ func bulletFields(fields []Field) string {
 		fmt.Fprintf(&b, "- **%s:** %s", f.Label, f.Value)
 	}
 	return b.String()
-}
-
-func joinNames(refs []asana.Ref, sep string) string {
-	names := make([]string, len(refs))
-	for i, r := range refs {
-		names[i] = r.Name
-	}
-	return strings.Join(names, sep)
 }
 
 func bulletNames(refs []asana.Ref) string {

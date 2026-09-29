@@ -85,10 +85,7 @@ func fieldValue(t asana.Task, name string, rc rowContext) string {
 	case "section":
 		return t.SectionFor(rc.projectGID)
 	case "completed":
-		if t.Completed {
-			return "done"
-		}
-		return "open"
+		return t.Status()
 	case "due":
 		if t.DueOn != nil && *t.DueOn != "" {
 			return "due " + *t.DueOn
@@ -106,11 +103,7 @@ func fieldValue(t asana.Task, name string, rc rowContext) string {
 		}
 		return strings.Join(names, ", ")
 	case "tags":
-		var names []string
-		for _, tag := range t.Tags {
-			names = append(names, tag.Name)
-		}
-		return strings.Join(names, ", ")
+		return strings.Join(asana.Names(t.Tags), ", ")
 	}
 	if f, ok := t.Field(name, rc.preferred); ok {
 		return f.Value()

@@ -156,11 +156,7 @@ func Env(c Context) []string {
 		vars["PROJECT_GID"] = c.Project.GID
 		vars["SECTION"] = t.SectionIn(c.Project.GID)
 	}
-	tags := make([]string, len(t.Tags))
-	for i, tag := range t.Tags {
-		tags[i] = tag.Name
-	}
-	vars["TAGS"] = strings.Join(tags, ",")
+	vars["TAGS"] = strings.Join(asana.Names(t.Tags), ",")
 	byName := map[string][]asana.CustomField{}
 	for _, f := range t.CustomFields {
 		if name := envName(f.Name); name != "" {

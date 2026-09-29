@@ -888,14 +888,21 @@ func (m *Model) listView(width, height int) string {
 	}
 	// Separators frame every item and neighbours share one; a group header
 	// takes the place of the separator above its item. The first row shown
-	// always has its group header, followed by header.spacing blank lines.
+	// always has its group header. Headers get header.spacing blank lines
+	// below, and above too unless they top the view.
 	spacing := m.deps.Config.List.Header.Spacing
 	header := func(i, start int) bool {
 		return m.groups != nil && (i == start || m.groups[i] != m.groups[i-1])
 	}
+	above := func(i, start int) int {
+		if i == start {
+			return 0
+		}
+		return spacing
+	}
 	rowH := func(i, start int) int {
 		if header(i, start) {
-			return itemH + 1 + spacing
+			return above(i, start) + itemH + 1 + spacing
 		}
 		return itemH + sepH
 	}
@@ -934,6 +941,9 @@ func (m *Model) listView(width, height int) string {
 	for i := start; i < end; i++ {
 		switch {
 		case header(i, start):
+			for range above(i, start) {
+				lines = append(lines, "")
+			}
 			lines = append(lines, m.groupHeader(m.groups[i], counts[m.groups[i]], width))
 			for range spacing {
 				lines = append(lines, "")

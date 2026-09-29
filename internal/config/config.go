@@ -117,7 +117,7 @@ type List struct {
 }
 
 // Header configures group headers. Style draws them as a reversed bar or a
-// rule; Spacing adds that many blank lines below each. Color overrides the
+// rule; Spacing adds that many blank lines above and below each. Color overrides the
 // accent color when set.
 type Header struct {
 	Style   string `toml:"style"`

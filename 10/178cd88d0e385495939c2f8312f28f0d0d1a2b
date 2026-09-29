@@ -1,0 +1,25 @@
+internal/tui/model.go
+  s_4105249809a039::t_116a5818f61f47 696,699,701,704
+internal/tui/picker.go
+  s_4105249809a039::t_116a5818f61f47 8,153,155,157-160,173,175,202
+  s_4105249809a039::t_7f859a2884c9a3 182,184-185,194,196-197,200
+internal/tui/inputbox.go
+  s_4105249809a039::t_116a5818f61f47 8,38,41
+  s_4105249809a039::t_7f859a2884c9a3 42-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "10178cd88d0e385495939c2f8312f28f0d0d1a2b",
+  "prompts": {},
+  "sessions": {
+    "s_4105249809a039": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0ee55-2651-78e2-a57a-d38df77e445e",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

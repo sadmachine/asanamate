@@ -131,12 +131,16 @@ func (c *Client) ProjectFieldGIDs(ctx context.Context, projectGID string) (map[s
 
 // AddComment posts a plain-text comment on a task.
 func (c *Client) AddComment(ctx context.Context, taskGID, text string) error {
-	return c.do(ctx, http.MethodPost, "/tasks/"+taskGID+"/stories", nil, map[string]any{"text": text}, nil)
+	return c.addStory(ctx, taskGID, map[string]any{"text": text})
 }
 
 // AddCommentHTML posts a rich-text comment, such as one with @mentions.
 func (c *Client) AddCommentHTML(ctx context.Context, taskGID, html string) error {
-	return c.do(ctx, http.MethodPost, "/tasks/"+taskGID+"/stories", nil, map[string]any{"html_text": html}, nil)
+	return c.addStory(ctx, taskGID, map[string]any{"html_text": html})
+}
+
+func (c *Client) addStory(ctx context.Context, taskGID string, body map[string]any) error {
+	return c.do(ctx, http.MethodPost, "/tasks/"+taskGID+"/stories", nil, body, nil)
 }
 
 // AddToSection moves a task into a section.
@@ -146,8 +150,7 @@ func (c *Client) AddToSection(ctx context.Context, sectionGID, taskGID string) e
 
 // SetCustomField sets one custom field on a task; a nil value clears it.
 func (c *Client) SetCustomField(ctx context.Context, taskGID, fieldGID string, value any) error {
-	body := map[string]any{"custom_fields": map[string]any{fieldGID: value}}
-	return c.do(ctx, http.MethodPut, "/tasks/"+taskGID, nil, body, nil)
+	return c.updateTask(ctx, taskGID, map[string]any{"custom_fields": map[string]any{fieldGID: value}})
 }
 
 // SetAssignee assigns a task to a user; an empty userGID unassigns it.
@@ -156,11 +159,15 @@ func (c *Client) SetAssignee(ctx context.Context, taskGID, userGID string) error
 	if userGID != "" {
 		assignee = userGID
 	}
-	return c.do(ctx, http.MethodPut, "/tasks/"+taskGID, nil, map[string]any{"assignee": assignee}, nil)
+	return c.updateTask(ctx, taskGID, map[string]any{"assignee": assignee})
 }
 
 // SetMyTasksSection moves a task into a section of its assignee's My Tasks.
 // Only the assignee can do this.
 func (c *Client) SetMyTasksSection(ctx context.Context, taskGID, sectionGID string) error {
-	return c.do(ctx, http.MethodPut, "/tasks/"+taskGID, nil, map[string]any{"assignee_section": sectionGID}, nil)
+	return c.updateTask(ctx, taskGID, map[string]any{"assignee_section": sectionGID})
+}
+
+func (c *Client) updateTask(ctx context.Context, taskGID string, body map[string]any) error {
+	return c.do(ctx, http.MethodPut, "/tasks/"+taskGID, nil, body, nil)
 }

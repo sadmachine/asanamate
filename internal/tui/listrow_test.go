@@ -165,6 +165,17 @@ func TestListViewGroups(t *testing.T) {
 	if got := listLines(m, 24, 4); got[0] != " Doing (2)" || got[1] != "□ C" {
 		t.Fatalf("first row shown mid-group gets its header: %q", got)
 	}
+	m.deps.Config.List.Header.Spacing = 1
+	m.moveTo(0)
+	got = listLines(m, 24, 10)
+	want = []string{" Doing (2)", "", "□ A", strings.Repeat("─", 24), "□ C", "", " Next (1)", "", "□ B", strings.Repeat("─", 24)}
+	if !slices.Equal(got, want) {
+		t.Fatalf("spaced =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	m.moveTo(2)
+	if got := listLines(m, 24, 4); got[0] != " Next (1)" || got[1] != "" || got[2] != "□ B" {
+		t.Fatalf("header topping the view gets no spacing above: %q", got)
+	}
 }
 
 func TestGroupPicker(t *testing.T) {

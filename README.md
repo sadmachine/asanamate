@@ -113,7 +113,7 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one |
 | `list.group_by` | `""` (ungrouped) | starting grouping: any `list.fields` name; `b` picks another |
 | `list.header.style` | `"bar"` | group headers: `bar` (reversed bar) or `rule` (`── Label (n) ───`) |
-| `list.header.spacing` | `1` | blank lines below each group header |
+| `list.header.spacing` | `1` | blank lines above and below each group header |
 | `list.header.color` | `accent_color` | group header color, same format as `accent_color` |
 | `list.selection.style` | `"marker"` | selected ticket: `marker` (bold title with a left `▌`) or `bar` (reversed row; agent badges swap colors) |
 | `list.selection.color` | `accent_color` | selection marker color, same format as `accent_color` |

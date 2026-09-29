@@ -149,54 +149,86 @@ func (m *Model) continueRun() tea.Cmd {
 			m.status = fmt.Sprintf("linked repo %s is no longer a git repository; pick again", path)
 		}
 	}
-	return loadCandidates(m.deps.Config.RepoSource.Command)
+	return loadCandidates(m.deps.Config.RepoSource.Command, nil)
 }
 
 func (m *Model) openRepoPicker(msg candidatesMsg) {
+	if msg.link != nil {
+		m.openLinkRepoPicker(msg)
+		return
+	}
 	if m.run == nil {
 		return
 	}
-	items := make([]pickItem, len(msg.paths))
-	for i, p := range msg.paths {
-		items[i] = pickItem{Label: p, Value: p}
+	m.modal = repoPicker(msg, m.run.project, pickPath(m.pickedRepo))
+}
+
+// repoPicker lists msg's candidate repos for project, after any lead items,
+// and accepts a typed path.
+func repoPicker(msg candidatesMsg, project *asana.Ref, onPick func(pickResult) tea.Cmd, lead ...pickItem) *picker {
+	items := lead
+	for _, p := range msg.paths {
+		items = append(items, pickItem{Label: p, Value: p})
 	}
 	title := "Repo for this ticket"
-	if m.run.project != nil {
-		title = "Repo for " + ticket.Clean(m.run.project.Name)
+	if project != nil {
+		title = "Repo for " + ticket.Clean(project.Name)
 	}
-	p := newPicker(m.pickedRepoResult, title, items)
+	p := newPicker(onPick, title, items)
 	p.allowFree = true
 	if msg.err != nil {
 		p.err = msg.err.Error()
 	}
-	m.modal = p
+	return p
 }
 
-// pickedRepoResult takes the repo picker's choice: a listed path or typed text.
-func (m *Model) pickedRepoResult(res pickResult) tea.Cmd {
-	if res.item != nil {
-		return m.pickedRepo(res.item.Value.(string))
+// pickPath adapts fn to the repo picker's choice: a listed path or typed text.
+func pickPath(fn func(string) tea.Cmd) func(pickResult) tea.Cmd {
+	return func(res pickResult) tea.Cmd {
+		if res.item != nil {
+			return fn(res.item.Value.(string))
+		}
+		return fn(res.free)
 	}
-	return m.pickedRepo(res.free)
 }
 
 func (m *Model) pickedRepo(path string) tea.Cmd {
+	resolved, ok := m.resolvePicked(path)
+	if !ok {
+		return nil
+	}
+	if p := m.run.project; p != nil {
+		m.saveLink(p.GID, resolved)
+	}
+	return m.execute(resolved)
+}
+
+// resolvePicked resolves a path chosen in the repo picker, closing it, or
+// keeps it open with the error.
+func (m *Model) resolvePicked(path string) (string, bool) {
 	resolved, err := repo.Resolve(path)
 	if err != nil {
 		if m.modal != nil {
 			m.modal.err = err.Error()
 		}
-		return nil
+		return "", false
 	}
 	m.modal = nil
-	if p := m.run.project; p != nil {
-		m.deps.State.LinkRepo(p.GID, resolved)
-		m.linked = nil
-		if err := m.deps.State.Save(); err != nil {
-			m.status = "saving repo link: " + err.Error()
-		}
+	return resolved, true
+}
+
+// saveLink links the project to path, or unlinks it when path is empty, and
+// saves the state.
+func (m *Model) saveLink(projectGID, path string) {
+	if path == "" {
+		m.deps.State.UnlinkRepo(projectGID)
+	} else {
+		m.deps.State.LinkRepo(projectGID, path)
 	}
-	return m.execute(resolved)
+	m.linked = nil
+	if err := m.deps.State.Save(); err != nil {
+		m.status = "saving repo link: " + err.Error()
+	}
 }
 
 func (m *Model) pickedBranchFallback(run bool) tea.Cmd {

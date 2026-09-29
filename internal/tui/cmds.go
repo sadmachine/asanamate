@@ -65,6 +65,7 @@ type projectsMsg struct {
 type candidatesMsg struct {
 	paths []string
 	err   error
+	link  *asana.Ref // project whose link is being edited, outside a run
 }
 
 type actionDoneMsg struct {
@@ -170,10 +171,12 @@ func loadProjects(c *asana.Client, workspace string) tea.Cmd {
 	})
 }
 
-func loadCandidates(command string) tea.Cmd {
+// loadCandidates loads the repo picker's paths; link is set when editing a
+// project's link from the repo links picker.
+func loadCandidates(command string, link *asana.Ref) tea.Cmd {
 	return request(func(ctx context.Context) tea.Msg {
 		paths, err := repo.Candidates(ctx, command)
-		return candidatesMsg{paths: paths, err: err}
+		return candidatesMsg{paths: paths, err: err, link: link}
 	})
 }
 

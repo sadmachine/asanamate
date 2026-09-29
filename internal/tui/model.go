@@ -103,7 +103,7 @@ type Model struct {
 	run             *pendingRun
 	edit            *pendingEdit
 	users           []asana.Ref // workspace users, loaded on first assign
-	pickProjects    bool        // open the project picker once projects load
+	afterProjects   func()      // runs once projects load
 	loadingProjects bool        // projects are loading
 	menuFor         string      // gid whose menu opens once its details arrive
 	menuOpen        func()      // opens that menu
@@ -215,9 +215,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.status = ""
 		m.projects = msg.projects
-		if m.pickProjects {
-			m.pickProjects = false
-			m.openProjectPicker()
+		if open := m.afterProjects; open != nil {
+			m.afterProjects = nil
+			open()
 		}
 	case agentsMsg:
 		if !m.deps.Config.AgentsEnabled() {

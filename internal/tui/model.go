@@ -947,16 +947,17 @@ func (m *Model) listRow(i int) (row []string, tail string) {
 	if t.Completed {
 		mark = m.sym.done
 	}
-	title := mark + " " + ticket.OneLine(t.Name)
+	name := ticket.OneLine(t.Name)
 	linked := m.viewAgents(t)
 	bar := i == m.cursor && m.selectionBar()
 	badge := m.sym.badge(linked, m.frame, bar)
 	switch {
 	case len(linked) > 0 && linked[0].State == agents.Waiting && i != m.cursor:
-		title = stateStyles[agents.Waiting].Render(title)
+		name = stateStyles[agents.Waiting].Render(name)
 	case t.Completed:
-		title = dimStyle.Strikethrough(true).Render(title)
+		name = dimStyle.Strikethrough(true).Render(name)
 	}
+	title := dimStyle.Render(mark) + "  " + name
 	rc, today := m.rowContext(), m.now()
 	if m.deps.Config.List.Layout == config.LayoutMulti {
 		var parts []string
@@ -972,7 +973,7 @@ func (m *Model) listRow(i int) (row []string, tail string) {
 		}
 		details := ""
 		if len(parts) > 0 {
-			details = "  " + strings.Join(parts, dimStyle.Render(" · "))
+			details = "   " + strings.Join(parts, dimStyle.Render(" · "))
 		}
 		return []string{title, details}, badge
 	}

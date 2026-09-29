@@ -44,10 +44,10 @@ func TestSelectedRowFillsWidth(t *testing.T) {
 	m, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle}})
 	m.Update(tasksMsg{tasks: []asana.Task{{GID: "1", Name: "A"}, {GID: "2", Name: "B"}}})
 	got := strings.Split(m.listView(10, 2), "\n")
-	if want := selectedStyle.Render("□ A       "); got[0] != want {
+	if want := selectedStyle.Render("□  A      "); got[0] != want {
 		t.Fatalf("selected = %q, want %q", got[0], want)
 	}
-	if ansi.Strip(got[1]) != "□ B" {
+	if ansi.Strip(got[1]) != "□  B" {
 		t.Fatalf("unselected rows are not padded: %q", got[1])
 	}
 }
@@ -68,18 +68,18 @@ func TestListViewLayouts(t *testing.T) {
 	other := asana.Task{GID: "2", Name: "Fix footer"}
 	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Fields: []string{"section", "due"}}})
 	single.Update(tasksMsg{tasks: []asana.Task{fieldTask, other}})
-	if got := listLines(single, 80, 5); len(got) != 2 || got[0] != "□ Fix login"+strings.Repeat(" ", 59)+"Today  Thu" {
+	if got := listLines(single, 80, 5); len(got) != 2 || got[0] != "□  Fix login"+strings.Repeat(" ", 58)+"Today  Thu" {
 		t.Fatalf("single = %q", got)
 	}
 
 	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Fields: []string{"section", "due"}}})
 	multi.Update(tasksMsg{tasks: []asana.Task{fieldTask, other}})
 	got := listLines(multi, 80, 4)
-	if want := []string{"□ Fix login", "  Today · Thu", "□ Fix footer", ""}; !slices.Equal(got, want) {
+	if want := []string{"□  Fix login", "   Today · Thu", "□  Fix footer", ""}; !slices.Equal(got, want) {
 		t.Fatalf("multi = %q, want %q", got, want)
 	}
 	multi.moveTo(1)
-	if got := listLines(multi, 80, 3); got[0] != "□ Fix footer" {
+	if got := listLines(multi, 80, 3); got[0] != "□  Fix footer" {
 		t.Fatalf("multi scroll keeps the cursor's whole row visible: %q", got)
 	}
 }
@@ -88,17 +88,17 @@ func TestListViewSeparator(t *testing.T) {
 	a, b, c := asana.Task{GID: "1", Name: "A"}, asana.Task{GID: "2", Name: "B"}, asana.Task{GID: "3", Name: "C"}
 	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Separator: true}})
 	single.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
-	if got := listLines(single, 4, 5); !slices.Equal(got, []string{"────", "□ A", "────", "□ B", "────"}) {
+	if got := listLines(single, 4, 5); !slices.Equal(got, []string{"────", "□  A", "────", "□  B", "────"}) {
 		t.Fatalf("single = %q", got)
 	}
 	single.Update(key("s"))
-	if got := listLines(single, 4, 3); !slices.Equal(got, []string{"□ A", "□ B", "□ C"}) {
+	if got := listLines(single, 4, 3); !slices.Equal(got, []string{"□  A", "□  B", "□  C"}) {
 		t.Fatalf("single toggled off = %q", got)
 	}
 	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Separator: true}})
 	multi.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
 	multi.moveTo(2)
-	if got := listLines(multi, 3, 7); !slices.Equal(got, []string{"───", "□ B", "", "───", "□ C", "", "───"}) {
+	if got := listLines(multi, 4, 7); !slices.Equal(got, []string{"────", "□  B", "", "────", "□  C", "", "────"}) {
 		t.Fatalf("multi scrolled = %q", got)
 	}
 }
@@ -151,33 +151,33 @@ func TestListViewGroups(t *testing.T) {
 	got := listLines(m, 24, 10)
 	want := []string{
 		" Doing (2)",
-		"□ A",
+		"□  A",
 		strings.Repeat("─", 24),
-		"□ C",
+		"□  C",
 		" Next (1)",
-		"□ B",
+		"□  B",
 		strings.Repeat("─", 24),
 	}
 	if !slices.Equal(got, want) {
 		t.Fatalf("grouped =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 	m.moveTo(2)
-	if got := listLines(m, 24, 3); got[0] != " Next (1)" || got[1] != "□ B" {
+	if got := listLines(m, 24, 3); got[0] != " Next (1)" || got[1] != "□  B" {
 		t.Fatalf("scrolled view keeps the cursor's group header: %q", got)
 	}
 	m.moveTo(1)
-	if got := listLines(m, 24, 4); got[0] != " Doing (2)" || got[1] != "□ C" {
+	if got := listLines(m, 24, 4); got[0] != " Doing (2)" || got[1] != "□  C" {
 		t.Fatalf("first row shown mid-group gets its header: %q", got)
 	}
 	m.Update(key("S"))
 	m.moveTo(0)
 	got = listLines(m, 24, 10)
-	want = []string{" Doing (2)", "", "□ A", strings.Repeat("─", 24), "□ C", "", " Next (1)", "", "□ B", strings.Repeat("─", 24)}
+	want = []string{" Doing (2)", "", "□  A", strings.Repeat("─", 24), "□  C", "", " Next (1)", "", "□  B", strings.Repeat("─", 24)}
 	if !slices.Equal(got, want) {
 		t.Fatalf("spaced =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 	m.moveTo(2)
-	if got := listLines(m, 24, 4); got[0] != " Next (1)" || got[1] != "" || got[2] != "□ B" {
+	if got := listLines(m, 24, 4); got[0] != " Next (1)" || got[1] != "" || got[2] != "□  B" {
 		t.Fatalf("header topping the view gets no spacing above: %q", got)
 	}
 }
@@ -217,10 +217,10 @@ func TestSelectionMarker(t *testing.T) {
 	m, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Selection: config.Selection{Style: config.StyleMarker}}})
 	m.Update(tasksMsg{tasks: []asana.Task{{GID: "1", Name: "A"}, {GID: "2", Name: "B"}}})
 	got := strings.Split(m.listView(10, 2), "\n")
-	if want := m.markerStyle.Render("▌ ") + titleStyle.Render("□ A"); got[0] != want {
+	if want := m.markerStyle.Render("▌ ") + titleStyle.Render("□  A"); got[0] != want {
 		t.Fatalf("selected = %q, want %q", got[0], want)
 	}
-	if got[1] != "  □ B" {
+	if ansi.Strip(got[1]) != "  □  B" {
 		t.Fatalf("unselected rows keep the gutter: %q", got[1])
 	}
 	m.focusReader = true
@@ -278,9 +278,9 @@ func TestColumnsAlignAcrossRows(t *testing.T) {
 	m.Update(tasksMsg{tasks: []asana.Task{fieldTask, long, plain}})
 	got := listLines(m, 40, 3)
 	want := []string{
-		"□ Fix login          Today        Thu",
-		"□ Ship               In Progress  1d ago",
-		"□ Tidy",
+		"□  Fix login         Today        Thu",
+		"□  Ship              In Progress  1d ago",
+		"□  Tidy",
 	}
 	if !slices.Equal(got, want) {
 		t.Fatalf("got  %q\nwant %q", got, want)
@@ -310,7 +310,7 @@ func TestInitialsColumnIsABadge(t *testing.T) {
 	m.Update(tasksMsg{tasks: []asana.Task{fieldTask, bob, {GID: "3", Name: "Nobody's"}}})
 	m.moveTo(2)
 	got := listLines(m, 30, 3)
-	if !strings.HasSuffix(got[0], " AN") || !strings.HasSuffix(got[1], " BR") || strings.TrimSpace(got[2]) != "□ Nobody's" {
+	if !strings.HasSuffix(got[0], " AN") || !strings.HasSuffix(got[1], " BR") || strings.TrimSpace(got[2]) != "□  Nobody's" {
 		t.Fatalf("rows = %q", got)
 	}
 	if _, tail := m.listRow(1); !strings.Contains(tail, authorStyle("Bob Ray").Reverse(true).Bold(true).Render(" BR ")) {

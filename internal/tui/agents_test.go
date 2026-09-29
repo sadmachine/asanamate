@@ -45,7 +45,7 @@ func TestAgentColumnOrdersByUrgency(t *testing.T) {
 	other.Repo = "/other"
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1"), other, onBranch(agents.Waiting, "q1")}})
 	first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]
-	if first != "□ Fix login"+strings.Repeat(" ", 12)+"🤖 ⚠ ◐ " {
+	if first != "□  Fix login"+strings.Repeat(" ", 11)+"🤖 ⚠ ◐ " {
 		t.Fatalf("row = %q", first)
 	}
 	m.width = 120
@@ -64,7 +64,7 @@ func TestSelectedBadgeReversesItsColors(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, true)
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1")}})
 	working := stateStyles[agents.Working].Bold(true)
-	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Reverse(true).Render("◐")+selectedStyle.Render(" ")) || !strings.HasPrefix(row, selectedStyle.Render("□ Fix login    ")) {
+	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Reverse(true).Render("◐")+selectedStyle.Render(" ")) || !strings.HasPrefix(row, selectedStyle.Render("□  Fix login   ")) {
 		t.Fatalf("selected row = %q", row)
 	}
 	m.moveTo(1)
@@ -104,7 +104,7 @@ func TestSpinnerAnimatesWorkingAgents(t *testing.T) {
 func TestReducedMotionAndASCII(t *testing.T) {
 	m := agentModel(t, config.SymbolsASCII, false)
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, ""), onBranch(agents.Idle, "")}})
-	if first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]; !strings.HasPrefix(first, "[ ] Fix login") || !strings.HasSuffix(first, "(~) (-) ") || m.spinning {
+	if first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]; !strings.HasPrefix(first, "[ ]  Fix login") || !strings.HasSuffix(first, "(~) (-) ") || m.spinning {
 		t.Fatalf("ascii row = %q, spinning = %v", first, m.spinning)
 	}
 	r := agentModel(t, config.SymbolsUnicode, true)
@@ -143,7 +143,7 @@ func TestAgentsDisabledShowNothing(t *testing.T) {
 	if _, cmd := m.Update(agentsMsg{}); cmd != nil {
 		t.Fatal("disabled agents must not schedule refreshes")
 	}
-	if got := strings.Join(listLines(m, 80, 3), "\n"); got != "□ Fix login" {
+	if got := strings.Join(listLines(m, 80, 3), "\n"); got != "□  Fix login" {
 		t.Fatalf("list = %q", got)
 	}
 }

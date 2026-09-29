@@ -130,7 +130,7 @@ func (m *Model) openGroupPicker() {
 		}
 		items = append(items, it)
 	}
-	m.modal = newPicker(pickGroup, "Group by", items)
+	m.modal = newPicker(pickValue(m.pickedGroup), "Group by", items)
 	m.modal.cursor = current
 }
 

@@ -8,27 +8,6 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-type pickKind int
-
-const (
-	pickProject pickKind = iota
-	pickAction
-	pickTicketProject
-	pickRepo
-	pickAttachment
-	pickAgent
-	pickGroup
-	pickBranchFallback
-	pickEdit
-	pickEditProject
-	pickSection
-	pickField
-	pickEnumOption
-	pickUser
-	pickMultiEnum
-	pickPeople
-)
-
 type pickItem struct {
 	Label string
 	Hint  string
@@ -48,7 +27,7 @@ type pickResult struct {
 // selects by each item's Key. With allowFree, typed text can be returned as is.
 // With multi, enter toggles items and ctrl+s returns the checked ones.
 type picker struct {
-	kind      pickKind
+	onPick    func(pickResult) tea.Cmd // runs on the returned choice
 	title     string
 	items     []pickItem
 	matches   []int
@@ -61,21 +40,27 @@ type picker struct {
 	err       string
 }
 
-func newPicker(kind pickKind, title string, items []pickItem) *picker {
+// newPicker returns a picker that calls onPick with the choice.
+func newPicker(onPick func(pickResult) tea.Cmd, title string, items []pickItem) *picker {
 	in := textinput.New()
 	in.Prompt = "> "
 	in.Focus()
-	p := &picker{kind: kind, title: title, items: items, input: in}
+	p := &picker{onPick: onPick, title: title, items: items, input: in}
 	p.refilter()
 	return p
 }
 
 // newMultiPicker is a picker for checking several items; checked holds the
 // indexes of items checked at the start.
-func newMultiPicker(kind pickKind, title string, items []pickItem, checked map[int]bool) *picker {
-	p := newPicker(kind, title, items)
+func newMultiPicker(onPick func(pickResult) tea.Cmd, title string, items []pickItem, checked map[int]bool) *picker {
+	p := newPicker(onPick, title, items)
 	p.multi, p.checked = true, checked
 	return p
+}
+
+// pickValue adapts fn, which takes the chosen item's Value, to an onPick.
+func pickValue[T any](fn func(T) tea.Cmd) func(pickResult) tea.Cmd {
+	return func(res pickResult) tea.Cmd { return fn(res.item.Value.(T)) }
 }
 
 func matchesWords(label, query string) bool {

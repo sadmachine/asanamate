@@ -398,7 +398,7 @@ func (m *Model) updateModal(msg tea.KeyPressMsg) tea.Cmd {
 	case res.cancelled:
 		m.modal, m.run, m.edit = nil, nil, nil
 	case res.done:
-		return tea.Batch(cmd, m.handlePick(p.kind, res))
+		return tea.Batch(cmd, p.onPick(res))
 	}
 	return cmd
 }
@@ -415,46 +415,6 @@ func (m *Model) updateInput(msg tea.KeyPressMsg) tea.Cmd {
 		return tea.Batch(cmd, m.typedInput(res.free))
 	}
 	return cmd
-}
-
-func (m *Model) handlePick(kind pickKind, res pickResult) tea.Cmd {
-	switch kind {
-	case pickProject:
-		return m.pickedProject(res.item.Value.(*asana.Ref))
-	case pickAction:
-		return m.pickedAction(res.item.Value.(int))
-	case pickTicketProject:
-		return m.pickedTicketProject(res.item.Value.(asana.Ref))
-	case pickRepo:
-		path := res.free
-		if res.item != nil {
-			path = res.item.Value.(string)
-		}
-		return m.pickedRepo(path)
-	case pickAttachment:
-		return m.pickedAttachment(res.item.Value.(asana.Attachment))
-	case pickAgent:
-		return m.pickedAgent(res.item.Value.(agents.Agent))
-	case pickGroup:
-		return m.pickedGroup(res.item.Value.(string))
-	case pickBranchFallback:
-		return m.pickedBranchFallback(res.item.Value.(bool))
-	case pickEdit:
-		return m.pickedEdit(res.item.Value.(editOp))
-	case pickEditProject:
-		return m.pickedEditProject(res.item.Value.(asana.Ref))
-	case pickSection:
-		return m.pickedSection(res.item.Value.(asana.Ref))
-	case pickField:
-		return m.pickedField(res.item.Value.(asana.CustomField))
-	case pickEnumOption:
-		return m.setField(res.item.Value.(string))
-	case pickUser:
-		return m.pickedUser(res.item.Value.(asana.Ref))
-	case pickMultiEnum, pickPeople:
-		return m.pickedValues(res.items)
-	}
-	return nil
 }
 
 func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
@@ -676,7 +636,7 @@ func (m *Model) openProjectPicker() {
 	for _, p := range rest {
 		items = append(items, pickItem{Label: ticket.Clean(p.Name), Value: &asana.Ref{GID: p.GID, Name: p.Name}})
 	}
-	m.modal = newPicker(pickProject, "Switch project", items)
+	m.modal = newPicker(pickValue(m.pickedProject), "Switch project", items)
 }
 
 func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {

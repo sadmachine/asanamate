@@ -53,7 +53,7 @@ var (
 func TestSeveralProjectsAskWhichOne(t *testing.T) {
 	m, _ := flowModel(t, web, api)
 	m.pickedAction(0)
-	if m.modal == nil || m.modal.kind != pickTicketProject || len(m.modal.items) != 2 {
+	if m.modal == nil || m.modal.title != "Which project's repo?" || len(m.modal.items) != 2 {
 		t.Fatalf("modal = %+v", m.modal)
 	}
 }
@@ -77,7 +77,7 @@ func TestUnlinkedRepoPromptsAndSaves(t *testing.T) {
 	m, st := flowModel(t, web)
 	msg := m.pickedAction(0)().(candidatesMsg)
 	m.Update(msg)
-	if m.modal == nil || m.modal.kind != pickRepo || !m.modal.allowFree {
+	if m.modal == nil || !strings.HasPrefix(m.modal.title, "Repo for") || !m.modal.allowFree {
 		t.Fatalf("modal = %+v", m.modal)
 	}
 	m.modal.input.SetValue(t.TempDir())

@@ -38,7 +38,7 @@ func (m *Model) openEditMenu() {
 		m.status = "ticket details are still loading"
 		return
 	}
-	p := newPicker(pickEdit, "Edit: "+ticket.Clean(t.Name), []pickItem{
+	p := newPicker(pickValue(m.pickedEdit), "Edit: "+ticket.Clean(t.Name), []pickItem{
 		{Label: "Add comment", Key: "c", Value: editComment},
 		{Label: "Move to section", Key: "s", Value: editSection},
 		{Label: "Set custom field", Key: "f", Value: editField},
@@ -67,7 +67,7 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 			for i, p := range targets {
 				items[i] = pickItem{Label: ticket.Clean(p.Name), Value: p}
 			}
-			m.modal = newPicker(pickEditProject, "Move within which project?", items)
+			m.modal = newPicker(pickValue(m.pickedEditProject), "Move within which project?", items)
 		}
 	case editField:
 		m.openFieldPicker()
@@ -131,7 +131,7 @@ func (m *Model) openSectionPicker(msg sectionsMsg) {
 			items[i].Hint = "current"
 		}
 	}
-	m.modal = newPicker(pickSection, "Move to section of "+ticket.Clean(msg.project.Name), items)
+	m.modal = newPicker(pickValue(m.pickedSection), "Move to section of "+ticket.Clean(msg.project.Name), items)
 }
 
 func (m *Model) pickedSection(sec asana.Ref) tea.Cmd {
@@ -157,7 +157,7 @@ func (m *Model) openFieldPicker() {
 		m.edit, m.status = nil, "ticket has no editable custom fields"
 		return
 	}
-	m.modal = newPicker(pickField, "Set which field?", items)
+	m.modal = newPicker(pickValue(m.pickedField), "Set which field?", items)
 }
 
 // editable reports whether the edit flow can set custom field f.
@@ -237,7 +237,7 @@ func (m *Model) pickedField(f asana.CustomField) tea.Cmd {
 			items[i] = pickItem{Label: ticket.Clean(o.Name), Value: o.GID}
 			checked[i] = slices.ContainsFunc(f.MultiEnumValues, func(v asana.EnumOption) bool { return v.GID == o.GID })
 		}
-		m.modal = newMultiPicker(pickMultiEnum, ticket.FieldName(f), items, checked)
+		m.modal = newMultiPicker(m.pickedValues, ticket.FieldName(f), items, checked)
 		return nil
 	case asana.FieldPeople:
 		return m.requestUsers()
@@ -260,7 +260,7 @@ func (m *Model) pickedField(f asana.CustomField) tea.Cmd {
 		}
 		items = append(items, it)
 	}
-	m.modal = newPicker(pickEnumOption, ticket.FieldName(f), items)
+	m.modal = newPicker(pickValue(m.setField), ticket.FieldName(f), items)
 	return nil
 }
 
@@ -297,11 +297,11 @@ func (m *Model) typedEdit(text string) tea.Cmd {
 
 // pickedValues sets a multi_enum or people field to the checked option or
 // user gids; none checked clears it.
-func (m *Model) pickedValues(items []pickItem) tea.Cmd {
+func (m *Model) pickedValues(res pickResult) tea.Cmd {
 	m.modal = nil
 	f := *m.edit.field
-	gids := make([]string, len(items))
-	for i, it := range items {
+	gids := make([]string, len(res.items))
+	for i, it := range res.items {
 		gids[i] = it.Value.(string)
 	}
 	c, gid := m.deps.Client, m.edit.ticket.GID
@@ -332,7 +332,7 @@ func (m *Model) openUserPicker(err error) {
 			items[i] = pickItem{Label: ticket.Clean(u.Name), Value: u.GID}
 			checked[i] = slices.ContainsFunc(f.PeopleValue, func(v asana.Ref) bool { return v.GID == u.GID })
 		}
-		m.modal = newMultiPicker(pickPeople, ticket.FieldName(*f), items, checked)
+		m.modal = newMultiPicker(m.pickedValues, ticket.FieldName(*f), items, checked)
 		return
 	}
 	items := []pickItem{{Label: "(unassigned)", Value: asana.Ref{}}}
@@ -348,7 +348,7 @@ func (m *Model) openUserPicker(err error) {
 	} else {
 		items[0].Hint = "current"
 	}
-	m.modal = newPicker(pickUser, "Assign to", items)
+	m.modal = newPicker(pickValue(m.pickedUser), "Assign to", items)
 }
 
 func (m *Model) pickedUser(u asana.Ref) tea.Cmd {

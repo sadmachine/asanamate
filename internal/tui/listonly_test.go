@@ -38,7 +38,7 @@ func TestEnterOpensMenuAfterDetailLoads(t *testing.T) {
 		t.Fatalf("cmd = %v, modal = %v, menuFor = %q", cmd, m.modal, m.menuFor)
 	}
 	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask}})
-	if m.modal == nil || m.modal.kind != pickAction || m.menuFor != "" {
+	if m.modal == nil || !strings.HasPrefix(m.modal.title, "Run on: ") || m.menuFor != "" {
 		t.Fatalf("modal = %+v, menuFor = %q", m.modal, m.menuFor)
 	}
 }
@@ -48,7 +48,7 @@ func TestEnterWithCachedDetailOpensMenuImmediately(t *testing.T) {
 	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
 	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask}})
 	m.Update(key("enter"))
-	if m.modal == nil || m.modal.kind != pickAction {
+	if m.modal == nil || !strings.HasPrefix(m.modal.title, "Run on: ") {
 		t.Fatalf("modal = %+v", m.modal)
 	}
 }

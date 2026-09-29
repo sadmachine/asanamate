@@ -166,9 +166,10 @@ branch_field = ""
 [list]
 # "single": one line per ticket. "multi": title on line one, fields on line two.
 layout = "single"
-# Values shown with the title (the title is always shown). Built-ins: section,
-# due, assignee, project, tags, completed. Any other name is matched to a
-# custom field, for example "Status" or "Branch Name".
+# Values shown with the title (the title is always shown), in this order.
+# Built-ins: section, due, assignee, initials (the assignee's, as a badge),
+# project, tags, completed. Any other name is matched to a custom field, for
+# example "Status" or "Branch Name".
 fields = ["section", "due"]
 # Frame each ticket with lines above and below (neighbours share one).
 separator = false

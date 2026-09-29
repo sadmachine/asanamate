@@ -137,9 +137,12 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `reader.max_text_width` | `0` | cards view: wrap description and comment text at this many columns (words are kept whole); `0` wraps at the pane width |
 | `repo_source.command` | lists repos in your setup directory | prints one repo path per line |
 
-The title is always shown. `list.fields` accepts the built-ins `section`,
-`due`, `assignee`, `project`, `tags`, and `completed` (open/done). Any other
-name is matched to a custom field, ignoring case and surrounding spaces.
+The title is always shown. `list.fields` picks the other columns and their
+order: the built-ins `section`, `due`, `assignee`, `initials` (the assignee's
+initials as a colored badge, handy in shared projects), `project`, `tags`, and
+`completed` (open/done). Any other name is matched to a custom field, ignoring
+case and surrounding spaces. A column shows only when some visible ticket has
+a value for it.
 
 `list.group_by` takes the same names and puts a `Value (count)` header above
 each group. Groups keep Asana's order (first seen), with tickets missing

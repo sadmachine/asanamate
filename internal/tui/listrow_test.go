@@ -291,3 +291,25 @@ func TestDoneRowsAreStruckThrough(t *testing.T) {
 		t.Fatalf("done row = %q", row[0])
 	}
 }
+
+func TestInitials(t *testing.T) {
+	for name, want := range map[string]string{"Austin Fishbaugh": "AF", "jane q doe": "JD", "Ann": "AN", "X": "X", "  ": "", "Émile Zola": "ÉZ"} {
+		if got := initials(name); got != want {
+			t.Errorf("initials(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
+func TestInitialsColumnIsABadge(t *testing.T) {
+	m, _ := testModel(t, config.Config{List: config.List{Fields: []string{"initials"}}})
+	bob := asana.Task{GID: "2", Name: "Other", Assignee: &asana.Ref{Name: "Bob Ray"}}
+	m.Update(tasksMsg{tasks: []asana.Task{fieldTask, bob, {GID: "3", Name: "Nobody's"}}})
+	m.moveTo(2)
+	got := listLines(m, 30, 3)
+	if !strings.HasSuffix(got[0], " AN") || !strings.HasSuffix(got[1], " BR") || strings.TrimSpace(got[2]) != "□ Nobody's" {
+		t.Fatalf("rows = %q", got)
+	}
+	if _, tail := m.listRow(1); !strings.Contains(tail, authorStyle("Bob Ray").Reverse(true).Bold(true).Render(" BR ")) {
+		t.Fatalf("tail = %q", tail)
+	}
+}

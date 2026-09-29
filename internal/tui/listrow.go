@@ -84,8 +84,13 @@ func (m *Model) agentStates(t asana.Task) []string {
 }
 
 // builtinFields are the list field names fieldValue resolves itself, in the
-// group picker's order; any other name is a custom field.
+// group picker's order; any other name, except initialsField, is a custom
+// field.
 var builtinFields = []string{"section", "due", "assignee", "project", "tags", "completed"}
+
+// initialsField shows the assignee's initials as a colored badge. It is left
+// out of builtinFields since grouping by it would repeat assignee.
+const initialsField = "initials"
 
 // rowFields returns the non-empty display values of the configured list
 // fields, in order.
@@ -104,8 +109,12 @@ func rowFields(t asana.Task, names []string, rc rowContext) []string {
 // have no style of their own.
 func cellValue(t asana.Task, name string, rc rowContext, today time.Time) (string, lipgloss.Style) {
 	name = strings.TrimSpace(name)
-	if isDue(name) {
+	switch {
+	case isDue(name):
 		return dueLabel(t.DueOn, today)
+	case strings.EqualFold(name, initialsField) && t.Assignee != nil:
+		// One space each side keeps the badge readable.
+		return " " + initials(t.Assignee.Name) + " ", authorStyle(t.Assignee.Name).Reverse(true).Bold(true)
 	}
 	return ticket.OneLine(fieldValue(t, name, rc)), lipgloss.Style{}
 }
@@ -150,6 +159,11 @@ func fieldValue(t asana.Task, name string, rc rowContext) string {
 			return t.Assignee.Name
 		}
 		return ""
+	case initialsField:
+		if t.Assignee != nil {
+			return initials(t.Assignee.Name)
+		}
+		return ""
 	case "project":
 		var names []string
 		for _, m := range t.Memberships {
@@ -163,4 +177,19 @@ func fieldValue(t asana.Task, name string, rc rowContext) string {
 		return f.Value()
 	}
 	return ""
+}
+
+// initials returns the first letters of a name's first and last words, or
+// the first two letters of a one-word name, in upper case.
+func initials(name string) string {
+	words := strings.Fields(ticket.OneLine(name))
+	switch len(words) {
+	case 0:
+		return ""
+	case 1:
+		r := []rune(words[0])
+		return strings.ToUpper(string(r[:min(2, len(r))]))
+	}
+	first, last := []rune(words[0]), []rune(words[len(words)-1])
+	return strings.ToUpper(string(first[0]) + string(last[0]))
 }

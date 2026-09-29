@@ -949,7 +949,7 @@ func (m *Model) listRow(i int) (row []string, tail string) {
 			if v == "" {
 				continue
 			}
-			if !isDue(strings.TrimSpace(name)) {
+			if n := strings.TrimSpace(name); !isDue(n) && !strings.EqualFold(n, initialsField) {
 				style = dimStyle
 			}
 			parts = append(parts, style.Render(v))

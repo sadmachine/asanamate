@@ -53,6 +53,9 @@ var (
 // for what has focus.
 func (m *Model) mode() (name string, pill color.Color, hints [][2]string) {
 	switch {
+	case m.loading && m.tasks == nil:
+		// Only q works until the first tasks land.
+		return "NORMAL", m.accentStyle.GetForeground(), [][2]string{{"q", "quit"}}
 	case m.filtering:
 		return "FILTER", filterColor, [][2]string{{"enter", "apply"}, {"esc", "done"}}
 	case m.focusReader && m.fieldKey != "":

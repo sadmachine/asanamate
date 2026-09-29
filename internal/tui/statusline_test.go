@@ -84,3 +84,21 @@ func TestEmptyListExplainsAndHints(t *testing.T) {
 		}
 	}
 }
+
+func TestFirstLoadShowsPlaceholderRows(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 12})
+	body := ansi.Strip(m.body())
+	lines := strings.Split(body, "\n")
+	if !strings.Contains(lines[0], " loading ") || !strings.Contains(lines[1], "▆ ▆▆▆") || strings.Contains(body, "Loading tasks") {
+		t.Fatalf("first load:\n%s", body)
+	}
+	if s := ansi.Strip(m.statusline()); !strings.HasSuffix(s, "q quit") || strings.Contains(s, "enter") {
+		t.Fatalf("first load statusline = %q", s)
+	}
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.reload()
+	if body := ansi.Strip(m.body()); !strings.Contains(body, "Loading tasks") || !strings.Contains(body, "Fix login") {
+		t.Fatalf("a reload keeps the list under the loading modal:\n%s", body)
+	}
+}

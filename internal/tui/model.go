@@ -143,7 +143,7 @@ func colorStyle(color string) lipgloss.Style {
 func (m *Model) ExitCommand() *exec.Cmd { return m.exitCmd }
 
 func (m *Model) Init() tea.Cmd {
-	cmd := loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject)
+	cmd := tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject), m.startSpinner())
 	if m.deps.Config.AgentsEnabled() {
 		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents))
 	}
@@ -796,7 +796,7 @@ func (m *Model) body() string {
 	case m.help:
 		content = m.helpView()
 		style = style.BorderForeground(m.accentStyle.GetForeground()).Padding(0, 2)
-	case m.loading:
+	case m.loading && m.tasks != nil:
 		content = "Loading tasks…"
 		if m.sym.spinner != nil {
 			content = m.sym.spinner[m.frame%len(m.sym.spinner)] + " " + content
@@ -837,9 +837,38 @@ func (m *Model) panes(h int) string {
 	}
 }
 
-// listTitle is the list panel's title and its right-hand count.
+// listTitle is the list panel's title and its right-hand count, or a
+// loading note while tasks load.
 func (m *Model) listTitle() (title, count string) {
-	return "[1] Tickets · " + m.viewName(), fmt.Sprintf("%d/%d", len(m.visible), len(m.tasks))
+	count = fmt.Sprintf("%d/%d", len(m.visible), len(m.tasks))
+	if m.loading {
+		count = "loading"
+		if m.sym.spinner != nil {
+			count = m.sym.spinner[m.frame%len(m.sym.spinner)] + " " + count
+		}
+	}
+	return "[1] Tickets · " + m.viewName(), count
+}
+
+// skeletonWidths are the placeholder rows' title widths, in percent.
+var skeletonWidths = []int{70, 55, 82, 64, 48, 76, 60, 88, 52, 68, 58, 74}
+
+// skeleton fills the list with placeholder rows while the first tasks load;
+// a lighter band runs down them with the spinner.
+func (m *Model) skeleton(width, height int) string {
+	bar, lit := lipgloss.NewStyle().Foreground(borderColor), dimStyle
+	colW := min(12, width/4)
+	lines := make([]string, min(height, len(skeletonWidths)))
+	for i := range lines {
+		style := bar
+		if m.sym.spinner != nil && i == m.frame%len(lines) {
+			style = lit
+		}
+		titleW := max((width-colW-6)*skeletonWidths[i]/100, 1)
+		row := "▆ " + strings.Repeat("▆", titleW)
+		lines[i] = style.Render(row + strings.Repeat(" ", max(width-ansi.StringWidth(row)-colW, 1)) + strings.Repeat("▆", colW-2))
+	}
+	return strings.Join(lines, "\n")
 }
 
 // selectionBar reports whether the selected ticket is drawn as a reversed bar
@@ -876,7 +905,7 @@ func (m *Model) renderRowLine(line, tail string, width int, selected bool) strin
 func (m *Model) listView(width, height int) string {
 	switch {
 	case m.loading && m.tasks == nil:
-		return ""
+		return m.skeleton(width, height)
 	case len(m.visible) == 0:
 		return m.emptyView(width, height)
 	}

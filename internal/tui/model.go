@@ -759,7 +759,7 @@ func (m *Model) skeleton(width, height int) string {
 		}
 		titleW := max((width-colW-6)*skeletonWidths[i]/100, 1)
 		row := "▆ " + strings.Repeat("▆", titleW)
-		lines[i] = style.Render(row + strings.Repeat(" ", max(width-ansi.StringWidth(row)-colW, 1)) + strings.Repeat("▆", colW-2))
+		lines[i] = style.Render(row + strings.Repeat(" ", max(width-ansi.StringWidth(row)-colW, 1)) + strings.Repeat("▆", max(colW-2, 0)))
 	}
 	return strings.Join(lines, "\n")
 }

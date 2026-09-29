@@ -1,0 +1,34 @@
+internal/asana/api.go
+  s_5d3dca97a40e88::t_85398b9e0cfb11 181-189
+internal/tui/edit_test.go
+  s_5d3dca97a40e88::t_cefb01a6b34f2a 138-154,202-231
+  s_8369dc9fb98316::t_7786cd9d644fad 232
+internal/tui/edit.go
+  s_5d3dca97a40e88::t_85398b9e0cfb11 7,23,36,51,84-89,274-275,353-364
+internal/ticket/markdown.go
+  s_5d3dca97a40e88::t_85398b9e0cfb11 13,20,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d17dfbeebb2e437ac156ac45708ecf839e57c68f",
+  "prompts": {},
+  "sessions": {
+    "s_5d3dca97a40e88": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0edf7-010b-7f21-9410-cd680101caf7",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    },
+    "s_8369dc9fb98316": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0edd9-2d99-7fd3-9f29-bfea7ecb5ac3",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

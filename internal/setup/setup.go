@@ -180,7 +180,7 @@ group_by = ""
 [list.header]
 # Group headers: "rule" (── Label (n) ───) or "bar" (reversed bar).
 style = "rule"
-# Blank line above and below each group header.
+# Blank line above and below each group header; S toggles.
 spacing = false
 # Header color; unset uses accent_color.
 # color = "4"

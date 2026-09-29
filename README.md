@@ -70,6 +70,7 @@ key press.
 | `=` | fit the list pane to its content (also on project, grouping, and filter changes) |
 | `v` | switch the reader between the cards and markdown views |
 | `s` | show or hide the lines between tickets |
+| `S` | add or remove the blank lines around group headers |
 | `o` | open the ticket in the browser |
 | `r` | reload |
 | `?` | show every key |
@@ -131,7 +132,7 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one; `s` toggles |
 | `list.group_by` | `""` (ungrouped) | starting grouping: any `list.fields` name; `b` picks another |
 | `list.header.style` | `"rule"` | group headers: `rule` (`── Label (n) ───`) or `bar` (reversed bar) |
-| `list.header.spacing` | `false` | `true` adds a blank line above and below each group header |
+| `list.header.spacing` | `false` | `true` adds a blank line above and below each group header; `S` toggles |
 | `list.header.color` | `accent_color` | group header color, same format as `accent_color` |
 | `list.selection.style` | `"marker"` | selected ticket: `marker` (bold title with a left `▌`) or `bar` (reversed row; agent badges swap colors) |
 | `list.selection.color` | `accent_color` | selection marker color, same format as `accent_color` |

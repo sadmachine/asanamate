@@ -85,6 +85,7 @@ type Model struct {
 	reader      viewport.Model
 	readerView  string // config.ViewCards or config.ViewMarkdown
 	separator   bool   // lines frame each ticket; starts at list.separator
+	spacing     bool   // blank lines around group headers; starts at list.header.spacing
 	renderers   map[rendererKey]*glamour.TermRenderer
 	details     map[string]ticket.Ticket
 	shownGID    string
@@ -124,6 +125,7 @@ func New(d Deps) *Model {
 		reader:        viewport.New(),
 		readerView:    d.Config.Reader.View,
 		separator:     d.Config.List.Separator,
+		spacing:       d.Config.List.Header.Spacing,
 		accentStyle:   colorStyle(d.Config.AccentColor),
 		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
 		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),
@@ -822,10 +824,10 @@ func (m *Model) listView(width, height int) string {
 	}
 	// Separators frame every item and neighbours share one; a group header
 	// takes the place of the separator above its item. The first row shown
-	// always has its group header. With header.spacing, headers get a blank
-	// line below, and above too unless they top the view.
+	// always has its group header. With spacing, headers get a blank line
+	// below, and above too unless they top the view.
 	spacing := 0
-	if m.deps.Config.List.Header.Spacing {
+	if m.spacing {
 		spacing = 1
 	}
 	header := func(i, start int) bool {

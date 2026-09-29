@@ -78,6 +78,7 @@ func keyBindings() []binding {
 		{keys: []string{"v"}, desc: "cards / markdown", group: "View", splitOnly: true, run: do((*Model).toggleReaderView)},
 		{keys: []string{"L"}, desc: "repo links", group: "View", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestProjects(m.openLinks) }},
 		{keys: []string{"s"}, desc: "separators", group: "View", run: do(func(m *Model) { m.separator = !m.separator })},
+		{keys: []string{"S"}, desc: "header spacing", group: "View", run: do(func(m *Model) { m.spacing = !m.spacing })},
 		{keys: []string{"b"}, desc: "group by", group: "View", run: do((*Model).openGroupPicker)},
 		{keys: []string{"="}, desc: "fit list", group: "View", run: do((*Model).fitList)},
 		{keys: []string{"?"}, desc: "this help", hint: "keys", group: "View", run: do(func(m *Model) { m.help = true })},

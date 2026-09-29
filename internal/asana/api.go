@@ -67,6 +67,12 @@ func (c *Client) MemberProjects(ctx context.Context, workspace, userGID string) 
 	return mine, nil
 }
 
+// Project returns one project's name, including projects the user is not a
+// member of and archived ones.
+func (c *Client) Project(ctx context.Context, gid string) (Ref, error) {
+	return getOne[Ref](ctx, c, "/projects/"+gid, fields("name"))
+}
+
 // Task returns one task with every field the reading pane shows.
 func (c *Client) Task(ctx context.Context, gid string) (Task, error) {
 	return getOne[Task](ctx, c, "/tasks/"+gid, fields(detailFields))

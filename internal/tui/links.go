@@ -12,17 +12,28 @@ import (
 )
 
 // openLinks opens the repo links picker: linked projects first, including
-// links whose project no longer loads, then the rest, each by name. The
-// cursor starts on the viewed project.
-func (m *Model) openLinks() {
+// links outside the member projects, then the rest, each by name. It first
+// loads the names of those outside links; one whose project no longer loads
+// shows as unavailable. The cursor starts on the viewed project.
+func (m *Model) openLinks() tea.Cmd {
 	names := map[string]string{}
 	for _, p := range m.projects {
 		names[p.GID] = p.Name
 	}
+	var missing []string
 	for gid := range m.deps.State.Repos {
-		if _, ok := names[gid]; !ok {
-			names[gid] = gid
+		if _, ok := names[gid]; ok {
+			continue
 		}
+		name, ok := m.linkNames[gid]
+		if !ok && m.deps.Client != nil {
+			missing = append(missing, gid)
+		}
+		names[gid] = cmp.Or(name, "unavailable project")
+	}
+	if len(missing) > 0 {
+		m.status = "loading projects…"
+		return loadLinkNames(m.deps.Client, missing)
 	}
 	refs := make([]asana.Ref, 0, len(names))
 	for gid, name := range names {
@@ -54,6 +65,7 @@ func (m *Model) openLinks() {
 	p := newPicker(pickValue(m.pickedLinkProject), "Repo links", items)
 	p.cursor = cursor
 	m.modal = p
+	return nil
 }
 
 // pickedLinkProject loads candidates for the chosen project's repo picker.

@@ -1,0 +1,19 @@
+internal/tui/cards.go
+  s_d84573e5cdc637::t_c6f634a636317d 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "821ae9b4f87ad801fe4eca8816095df3fe5dd961",
+  "prompts": {},
+  "sessions": {
+    "s_d84573e5cdc637": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7c00aed2-c363-437c-9676-e6f1833db54a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

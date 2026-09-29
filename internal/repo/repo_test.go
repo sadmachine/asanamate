@@ -50,3 +50,27 @@ func TestResolveRejectsNonRepo(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestWorktreeFindsBranch(t *testing.T) {
+	dir := t.TempDir()
+	main, wt := filepath.Join(dir, "main"), filepath.Join(dir, "wt")
+	for _, args := range [][]string{
+		{"init", "-q", "-b", "main", main},
+		{"-C", main, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "init"},
+		{"-C", main, "worktree", "add", "-q", "-b", "feat/x", wt},
+	} {
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	real := func(p string) string { r, _ := filepath.EvalSymlinks(p); return r }
+	if got := Worktree(main, "feat/x"); real(got) != real(wt) {
+		t.Errorf("Worktree(feat/x) = %q, want %q", got, wt)
+	}
+	if got := Worktree(main, "main"); real(got) != real(main) {
+		t.Errorf("Worktree(main) = %q, want %q", got, main)
+	}
+	if got := Worktree(main, "feat"); got != "" {
+		t.Errorf("Worktree(feat) = %q, want none", got)
+	}
+}

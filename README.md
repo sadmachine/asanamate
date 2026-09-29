@@ -192,6 +192,7 @@ paste ticket text into the command, because ticket content is untrusted.
 | `ASANAMATE_MY_SECTION` | My Tasks section |
 | `ASANAMATE_PROJECT`, `ASANAMATE_PROJECT_GID`, `ASANAMATE_SECTION` | active project and the ticket's section in it |
 | `ASANAMATE_REPO` | resolved repo (`repo = true` actions) |
+| `ASANAMATE_WORKTREE` | the repo's worktree with `$ASANAMATE_BRANCH` checked out, the main one included; empty when none has it |
 | `ASANAMATE_BRANCH` | the ticket's branch: `branch_field`'s value, or the title slug |
 | `ASANAMATE_AGENT_STATE`, `ASANAMATE_AGENT_STATUS`, `ASANAMATE_AGENT_PATH`, `ASANAMATE_AGENT_TARGET`, `ASANAMATE_AGENT_TITLE` | the agent the action is about (the chosen one for `agent = true`, else the most urgent): normalized state, raw status, directory, jump id, title. Empty without agents |
 | `ASANAMATE_AGENT_TARGETS` | every linked agent, one `target<TAB>state<TAB>path<TAB>title` line each |

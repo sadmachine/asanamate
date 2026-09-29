@@ -29,13 +29,13 @@ func TestEnvIncludesTicketFields(t *testing.T) {
 		Memberships:     []asana.Membership{{Project: asana.Ref{GID: "7", Name: "Web"}, Section: &asana.Ref{Name: "Doing"}}},
 		CustomFields:    []asana.CustomField{{Name: "Branch Name ", DisplayValue: &branch}},
 	}}
-	env := Env(Context{Ticket: tk, Project: &asana.Ref{GID: "7", Name: "Web"}, Repo: "/r", ConfirmWrites: true, Files: Files{JSON: "/j", Markdown: "/m"}})
+	env := Env(Context{Ticket: tk, Project: &asana.Ref{GID: "7", Name: "Web"}, Repo: "/r", Worktree: "/w", ConfirmWrites: true, Files: Files{JSON: "/j", Markdown: "/m"}})
 	for _, want := range []string{
 		"ASANAMATE_GID=42", "ASANAMATE_TITLE=Fix Login!", "ASANAMATE_URL=https://app.asana.com/t/42",
 		"ASANAMATE_SLUG=fix-login", "ASANAMATE_COMPLETED=false", "ASANAMATE_ASSIGNEE=Ann",
 		"ASANAMATE_DUE=2026-10-01", "ASANAMATE_TAGS=bug,p1", "ASANAMATE_MY_SECTION=Today",
 		"ASANAMATE_PROJECT=Web", "ASANAMATE_PROJECT_GID=7", "ASANAMATE_SECTION=Doing",
-		"ASANAMATE_REPO=/r", "ASANAMATE_TICKET_JSON=/j", "ASANAMATE_TICKET_MD=/m",
+		"ASANAMATE_REPO=/r", "ASANAMATE_WORKTREE=/w", "ASANAMATE_TICKET_JSON=/j", "ASANAMATE_TICKET_MD=/m",
 		"ASANAMATE_CONFIRM_WRITES=1", "ASANAMATE_FIELD_BRANCH_NAME=feat/x",
 	} {
 		if !slices.Contains(env, want) {

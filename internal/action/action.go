@@ -34,9 +34,12 @@ type Files struct {
 
 // Context is everything an action run knows about.
 type Context struct {
-	Ticket        ticket.Ticket
-	Project       *asana.Ref
-	Repo          string
+	Ticket  ticket.Ticket
+	Project *asana.Ref
+	Repo    string
+	// Worktree is Repo's working tree with the ticket's branch checked out,
+	// "" when none has it.
+	Worktree      string
 	ConfirmWrites bool
 	Files         Files
 	// Preferred holds the gids of the active project's custom fields; it
@@ -117,6 +120,7 @@ func Env(c Context) []string {
 		"SLUG":           Slug(t.Name),
 		"COMPLETED":      strconv.FormatBool(t.Completed),
 		"REPO":           c.Repo,
+		"WORKTREE":       c.Worktree,
 		"TICKET_JSON":    c.Files.JSON,
 		"TICKET_MD":      c.Files.Markdown,
 		"INPUT_FILE":     c.Files.Input,

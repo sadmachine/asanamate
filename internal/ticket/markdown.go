@@ -10,13 +10,14 @@ import (
 )
 
 // Field is a cleaned label and value shown for a ticket. Key names the
-// ticket property behind an editable field: KeyAssignee, KeyMyTasks,
+// ticket property behind an editable field: KeyAssignee, KeyDue, KeyMyTasks,
 // ProjectKey(gid), or FieldKey(custom field gid); it is "" otherwise.
 type Field struct{ Label, Value, Key string }
 
 // Field keys. Project and custom field keys are "<kind>:<gid>".
 const (
 	KeyAssignee = "assignee"
+	KeyDue      = "due"
 	KeyMyTasks  = "my_tasks"
 	KeyProject  = "project"
 	KeyField    = "field"
@@ -45,7 +46,7 @@ func (t Ticket) Meta() []Field {
 		add("Assignee", t.Assignee.Name, KeyAssignee)
 	}
 	if t.DueOn != nil {
-		add("Due", *t.DueOn, "")
+		add("Due", *t.DueOn, KeyDue)
 	}
 	for _, m := range t.Memberships {
 		value := m.Project.Name

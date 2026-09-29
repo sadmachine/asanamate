@@ -178,6 +178,15 @@ func (c *Client) SetAssignee(ctx context.Context, taskGID, userGID string) error
 	return c.updateTask(ctx, taskGID, map[string]any{"assignee": assignee})
 }
 
+// SetDueOn sets a task's due date (YYYY-MM-DD); an empty date clears it.
+func (c *Client) SetDueOn(ctx context.Context, taskGID, date string) error {
+	var dueOn any
+	if date != "" {
+		dueOn = date
+	}
+	return c.updateTask(ctx, taskGID, map[string]any{"due_on": dueOn})
+}
+
 // SetMyTasksSection moves a task into a section of its assignee's My Tasks.
 // Only the assignee can do this.
 func (c *Client) SetMyTasksSection(ctx context.Context, taskGID, sectionGID string) error {

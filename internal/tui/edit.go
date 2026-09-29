@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -19,6 +20,7 @@ const (
 	editSection
 	editField
 	editAssignee
+	editDue
 	editAddProject
 	editRemoveProject
 )
@@ -31,6 +33,7 @@ var myTasks = asana.Ref{Name: "My Tasks"}
 type pendingEdit struct {
 	ticket  ticket.Ticket
 	field   *asana.CustomField // the field being set, once picked
+	due     bool               // editing the task's built-in due date
 	myTasks bool               // moving within My Tasks, not a project
 }
 
@@ -45,6 +48,7 @@ func (m *Model) openEditMenu() {
 		{Label: "Move to section", Key: "s", Value: editSection},
 		{Label: "Set custom field", Key: "f", Value: editField},
 		{Label: "Assign", Key: "a", Value: editAssignee},
+		{Label: "Set due date", Key: "d", Value: editDue},
 		{Label: "Add to project", Key: "p", Value: editAddProject},
 		{Label: "Remove from project", Key: "r", Value: editRemoveProject},
 	})
@@ -77,6 +81,12 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 		m.openFieldPicker()
 	case editAssignee:
 		return m.requestUsers()
+	case editDue:
+		m.edit.due = true
+		m.input = newInputBox("Due date", "YYYY-MM-DD; empty clears the date")
+		if t.DueOn != nil {
+			m.input.area.SetValue(*t.DueOn)
+		}
 	case editAddProject:
 		return m.requestProjects(func() tea.Cmd { m.openAddProjectPicker(); return nil })
 	case editRemoveProject:
@@ -261,6 +271,8 @@ func (m *Model) openField(key string) tea.Cmd {
 	switch kind {
 	case ticket.KeyAssignee:
 		return m.pickedEdit(editAssignee)
+	case ticket.KeyDue:
+		return m.pickedEdit(editDue)
 	case commentKey:
 		return m.pickedEdit(editComment)
 	case ticket.KeyMyTasks:
@@ -338,6 +350,18 @@ func (m *Model) setField(value string) tea.Cmd {
 // typedEdit takes the input box's text: a field value or a comment.
 func (m *Model) typedEdit(text string) tea.Cmd {
 	m.input = nil
+	if m.edit.due {
+		if text != "" {
+			if _, err := time.Parse(time.DateOnly, text); err != nil {
+				m.edit, m.status = nil, "due date needs YYYY-MM-DD"
+				return nil
+			}
+		}
+		c, gid := m.deps.Client, m.edit.ticket.GID
+		return m.saveEdit("set due date", func(ctx context.Context) error {
+			return c.SetDueOn(ctx, gid, text)
+		})
+	}
 	if m.edit.field != nil {
 		return m.setField(text)
 	}

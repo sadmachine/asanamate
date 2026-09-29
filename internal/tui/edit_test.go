@@ -135,6 +135,23 @@ func TestEditWrites(t *testing.T) {
 			m.input.area.SetValue("2026-10-01")
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"custom_fields":{"f2":{"date":"2026-10-01"}}}}`},
+		{"due date", func(m *Model) {
+			press(m, "e", "d")
+			m.input.area.SetValue("2026-10-01")
+			send(m, ctrlS)
+		}, `PUT /tasks/1 {"data":{"due_on":"2026-10-01"}}`},
+		{"clear due date", func(m *Model) {
+			date := "2026-09-30"
+			tk := m.details["1"]
+			tk.DueOn = &date
+			m.details["1"] = tk
+			press(m, "e", "d")
+			if got := m.input.area.Value(); got != date {
+				t.Errorf("prefill = %q", got)
+			}
+			m.input.area.SetValue("")
+			send(m, ctrlS)
+		}, `PUT /tasks/1 {"data":{"due_on":null}}`},
 		{"multi-select field", func(m *Model) {
 			press(m, "e", "f", "down", "down", "enter", "down", "enter")
 			send(m, ctrlS)
@@ -179,6 +196,37 @@ func TestEditRejectsBadDate(t *testing.T) {
 	send(m, ctrlS)
 	if len(*writes) != 0 || !strings.Contains(m.status, "YYYY-MM-DD") {
 		t.Fatalf("writes = %q, status = %q", *writes, m.status)
+	}
+}
+
+func TestEditRejectsBadDueDate(t *testing.T) {
+	for _, value := range []string{"tomorrow", "2026-02-30"} {
+		t.Run(value, func(t *testing.T) {
+			m, writes := editModel(t)
+			press(m, "e", "d")
+			m.input.area.SetValue(value)
+			send(m, ctrlS)
+			if len(*writes) != 0 || !strings.Contains(m.status, "YYYY-MM-DD") {
+				t.Fatalf("writes = %q, status = %q", *writes, m.status)
+			}
+		})
+	}
+}
+
+func TestDueRowEdits(t *testing.T) {
+	m, writes := editModel(t)
+	date := "2026-09-30"
+	tk := m.details["1"]
+	tk.DueOn = &date
+	m.details["1"] = tk
+	press(m, "tab", "tab", "enter")
+	if got := m.input.area.Value(); got != date {
+		t.Fatalf("prefill = %q", got)
+	}
+	m.input.area.SetValue("2026-10-01")
+	send(m, ctrlS)
+	if want := `PUT /tasks/1 {"data":{"due_on":"2026-10-01"}}`; len(*writes) != 1 || (*writes)[0] != want {
+		t.Fatalf("writes = %q, want %q", *writes, want)
 	}
 }
 

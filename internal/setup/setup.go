@@ -171,7 +171,7 @@ layout = "single"
 # project, tags, completed. Any other name is matched to a custom field, for
 # example "Status" or "Branch Name".
 fields = ["section", "due"]
-# Frame each ticket with lines above and below (neighbours share one).
+# Frame each ticket with lines above and below (neighbours share one); s toggles.
 separator = false
 # Group tickets under a header per value of one field, such as "section" or
 # "due"; press b to pick another. Empty: ungrouped.
@@ -180,8 +180,8 @@ group_by = ""
 [list.header]
 # Group headers: "rule" (── Label (n) ───) or "bar" (reversed bar).
 style = "rule"
-# Blank lines above and below each group header.
-spacing = 0
+# Blank line above and below each group header; S toggles.
+spacing = false
 # Header color; unset uses accent_color.
 # color = "4"
 

@@ -91,6 +91,10 @@ func TestListViewSeparator(t *testing.T) {
 	if got := listLines(single, 4, 5); !slices.Equal(got, []string{"────", "□ A", "────", "□ B", "────"}) {
 		t.Fatalf("single = %q", got)
 	}
+	single.Update(key("s"))
+	if got := listLines(single, 4, 3); !slices.Equal(got, []string{"□ A", "□ B", "□ C"}) {
+		t.Fatalf("single toggled off = %q", got)
+	}
 	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Separator: true}})
 	multi.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
 	multi.moveTo(2)
@@ -165,7 +169,7 @@ func TestListViewGroups(t *testing.T) {
 	if got := listLines(m, 24, 4); got[0] != " Doing (2)" || got[1] != "□ C" {
 		t.Fatalf("first row shown mid-group gets its header: %q", got)
 	}
-	m.deps.Config.List.Header.Spacing = 1
+	m.Update(key("S"))
 	m.moveTo(0)
 	got = listLines(m, 24, 10)
 	want = []string{" Doing (2)", "", "□ A", strings.Repeat("─", 24), "□ C", "", " Next (1)", "", "□ B", strings.Repeat("─", 24)}

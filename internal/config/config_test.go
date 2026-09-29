@@ -131,6 +131,7 @@ func TestListConfig(t *testing.T) {
 		"empty field":   "[list]\nfields = [\" \"]\n",
 		"title group":   "[list]\ngroup_by = \"title\"\n",
 		"bad header":    "[list.header]\nstyle = \"box\"\n",
+		"int spacing":   "[list.header]\nspacing = 1\n",
 		"bad color":     "[list.header]\ncolor = \"blue\"\n",
 		"color range":   "[list.header]\ncolor = \"256\"\n",
 		"bad hex":       "[list.header]\ncolor = \"#12345g\"\n",

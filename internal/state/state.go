@@ -87,6 +87,11 @@ func (s *State) LinkRepo(projectGID, path string) {
 	s.Repos[projectGID] = path
 }
 
+// UnlinkRepo forgets the repository linked to a project.
+func (s *State) UnlinkRepo(projectGID string) {
+	delete(s.Repos, projectGID)
+}
+
 // SetView remembers the list view used for a project.
 func (s *State) SetView(projectGID string, v View) {
 	s.Views[projectGID] = v

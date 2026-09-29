@@ -10,6 +10,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/repo"
@@ -194,5 +195,82 @@ func TestInputActionCancels(t *testing.T) {
 	m.Update(key("esc"))
 	if m.input != nil || m.run != nil || m.ExitCommand() != nil {
 		t.Fatalf("input = %v, run = %v, exit = %v", m.input, m.run, m.ExitCommand())
+	}
+}
+
+// linksModel is a model viewing Web, with Web, API, and Zed loaded.
+func linksModel(t *testing.T) (*Model, *state.State) {
+	t.Helper()
+	m, st := testModel(t, config.Config{RepoSource: config.RepoSource{Command: `printf '/definitely/missing\n'`}})
+	m.projects = []asana.Project{{GID: "p3", Name: "Zed"}, {GID: "p1", Name: "Web"}, {GID: "p2", Name: "API"}}
+	m.viewProject, m.loading = &asana.Ref{GID: "p1", Name: "Web"}, false
+	return m, st
+}
+
+func TestRepoLinksListLinkedFirstFromViewedProject(t *testing.T) {
+	m, st := linksModel(t)
+	st.LinkRepo("p2", "/code/api")
+	st.LinkRepo("gone", "/code/old")
+	m.Update(key("L"))
+	if m.modal == nil || m.modal.title != "Repo links" {
+		t.Fatalf("modal = %+v", m.modal)
+	}
+	var got []string
+	for _, it := range m.modal.items {
+		got = append(got, it.Label+"="+it.Hint)
+	}
+	want := []string{"API=/code/api", "gone=/code/old", "Web=not linked", "Zed=not linked"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("items = %q, want %q", got, want)
+	}
+	if it := m.modal.items[m.modal.matches[m.modal.cursor]]; it.Label != "Web" {
+		t.Fatalf("cursor on %q, want the viewed project", it.Label)
+	}
+}
+
+// editLink opens the repo picker for the project under the links cursor.
+func editLink(t *testing.T, m *Model) {
+	t.Helper()
+	m.Update(key("L"))
+	_, cmd := m.Update(key("enter"))
+	if cmd == nil {
+		t.Fatal("want the repo picker to load candidates")
+	}
+	m.Update(cmd())
+	if m.modal == nil || m.modal.title != "Repo for Web" || !m.modal.allowFree {
+		t.Fatalf("modal = %+v", m.modal)
+	}
+}
+
+func TestRepoLinksRelinkSaves(t *testing.T) {
+	dir := gitRepo(t)
+	m, st := linksModel(t)
+	editLink(t, m)
+	if len(m.modal.items) != 1 {
+		t.Fatalf("unlinked project must not offer unlink; items = %+v", m.modal.items)
+	}
+	m.linked = map[string][]agents.Agent{}
+	m.modal.input.SetValue(dir)
+	m.Update(key("tab"))
+	if m.modal != nil || m.linked != nil {
+		t.Fatalf("modal = %+v, linked = %v", m.modal, m.linked)
+	}
+	again, _ := state.Load(st.Path())
+	if again.Repos["p1"] != dir {
+		t.Fatalf("saved repos = %v", again.Repos)
+	}
+}
+
+func TestRepoLinksUnlinkSaves(t *testing.T) {
+	m, st := linksModel(t)
+	st.LinkRepo("p1", "/code/web")
+	editLink(t, m)
+	if m.modal.items[0].Label != "unlink" {
+		t.Fatalf("items = %+v", m.modal.items)
+	}
+	m.Update(key("enter"))
+	again, _ := state.Load(st.Path())
+	if _, ok := again.Repos["p1"]; ok || m.modal != nil {
+		t.Fatalf("saved repos = %v, modal = %+v", again.Repos, m.modal)
 	}
 }

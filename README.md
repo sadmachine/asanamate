@@ -62,6 +62,7 @@ key press.
 | `0` / `1` / `2` | focus the views panel (wide screens) / the list / the reader |
 | `/` | edit the filter (Enter or Esc to finish) |
 | `p` | switch project (recent first) |
+| `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project) |
 | `enter`, `a` | run an action on the selected ticket |
 | `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), set a custom field (text, number, date, single- or multi-select, people), or assign it |
 | `f` | attachments: view images inline or open in the browser |
@@ -290,7 +291,9 @@ characters), else its pane title.
 
 **Linking.** A ticket matches every agent whose working directory has
 `$ASANAMATE_BRANCH` checked out, in a repo linked to one of the ticket's
-projects (worktrees count as their repo).
+projects (worktrees count as their repo). A project shared across repos that
+is linked to just one of them pulls that repo's agents into every ticket it
+holds; press `L` to unlink it.
 
 Agents missing from a ticket usually come down to one of these:
 

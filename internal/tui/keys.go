@@ -60,7 +60,7 @@ func keyBindings() []binding {
 			m.filtering = true
 			return m.filterInput.Focus()
 		}},
-		{keys: []string{"p"}, desc: "projects", hint: "proj", group: "Move", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestProjects() }},
+		{keys: []string{"p"}, desc: "projects", hint: "proj", group: "Move", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestProjects(m.openProjectPicker) }},
 		{keys: []string{"enter", "a"}, desc: "run action", hint: "act", group: "Ticket", run: menu(func(m *Model) func() { return m.openActionMenu })},
 		{keys: []string{"e"}, desc: "edit", hint: "edit", group: "Ticket", run: menu(func(m *Model) func() { return m.openEditMenu })},
 		{keys: []string{"f"}, desc: "attachments", group: "Ticket", run: menu(func(m *Model) func() { return m.openAttachments })},
@@ -76,6 +76,7 @@ func keyBindings() []binding {
 			return m.reload()
 		}},
 		{keys: []string{"v"}, desc: "cards / markdown", group: "View", splitOnly: true, run: do((*Model).toggleReaderView)},
+		{keys: []string{"L"}, desc: "repo links", group: "View", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestProjects(m.openLinks) }},
 		{keys: []string{"b"}, desc: "group by", group: "View", run: do((*Model).openGroupPicker)},
 		{keys: []string{"="}, desc: "fit list", group: "View", run: do((*Model).fitList)},
 		{keys: []string{"?"}, desc: "this help", hint: "keys", group: "View", run: do(func(m *Model) { m.help = true })},
@@ -168,14 +169,14 @@ func (m *Model) toggleReaderView() {
 	m.renderDetail(false)
 }
 
-// requestProjects opens the project picker, loading the projects first when
-// they have not loaded yet.
-func (m *Model) requestProjects() tea.Cmd {
+// requestProjects runs open, loading the projects first when they have not
+// loaded yet.
+func (m *Model) requestProjects(open func()) tea.Cmd {
 	if m.projects != nil {
-		m.openProjectPicker()
+		open()
 		return nil
 	}
-	m.pickProjects = true
+	m.afterProjects = open
 	m.status = "loading projects…"
 	if m.loadingProjects {
 		return nil

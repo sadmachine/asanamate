@@ -59,3 +59,13 @@ func TestTouchProjectOrdersAndCaps(t *testing.T) {
 		}
 	}
 }
+
+func TestUnlinkRepo(t *testing.T) {
+	s, _ := Load(filepath.Join(t.TempDir(), FileName))
+	s.LinkRepo("1", "/code/web")
+	s.LinkRepo("2", "/code/api")
+	s.UnlinkRepo("1")
+	if _, ok := s.Repos["1"]; ok || s.Repos["2"] != "/code/api" {
+		t.Fatalf("repos = %v", s.Repos)
+	}
+}

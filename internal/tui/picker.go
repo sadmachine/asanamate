@@ -5,6 +5,7 @@ import (
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -149,10 +150,14 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 	return pickResult{}, cmd
 }
 
-func (p *picker) view(width, height int) string {
+func (p *picker) view(width, height int, accent lipgloss.Style) string {
 	var b strings.Builder
-	b.WriteString(titleStyle.Render(p.title) + "\n")
+	b.WriteString(accent.Render(p.title) + "\n")
 	if !p.keySelect {
+		styles := p.input.Styles()
+		styles.Focused.Prompt = accent
+		p.input.SetStyles(styles)
+		p.input.SetWidth(max(width-2, 1))
 		b.WriteString(p.input.View() + "\n")
 	}
 	rows := max(height-4, 1)
@@ -165,18 +170,19 @@ func (p *picker) view(width, height int) string {
 		line := it.Label
 		switch {
 		case p.keySelect:
-			line = "[" + it.Key + "] " + line
+			line = accent.Render("["+it.Key+"]") + " " + line
 		case p.multi && p.checked[p.matches[i]]:
-			line = "[x] " + line
+			line = okStyle.Render("[x]") + " " + line
 		case p.multi:
 			line = "[ ] " + line
 		}
 		if it.Hint != "" {
 			line += "  " + dimStyle.Render(it.Hint)
 		}
-		line = ansi.Truncate(line, max(width-2, 1), "…")
+		line = ansi.Truncate(line, max(width-4, 1), "…")
 		if i == p.cursor {
-			line = selectedStyle.Render("▸ " + ansi.Strip(line))
+			selected := "▸ " + ansi.Strip(line)
+			line = accent.Reverse(true).Render(selected + strings.Repeat(" ", max(width-2-ansi.StringWidth(selected), 0)))
 		} else {
 			line = "  " + line
 		}
@@ -185,13 +191,14 @@ func (p *picker) view(width, height int) string {
 	if p.err != "" {
 		b.WriteString(errorStyle.Render(p.err) + "\n")
 	}
-	hint := "enter select · esc cancel"
+	hint := accent.Render("enter") + dimStyle.Render(" select · ") + accent.Render("esc") + dimStyle.Render(" cancel")
 	if p.multi {
-		hint = "enter toggle · ctrl+s save · esc cancel"
+		hint = accent.Render("enter") + dimStyle.Render(" toggle · ") + accent.Render("ctrl+s") +
+			dimStyle.Render(" save · ") + accent.Render("esc") + dimStyle.Render(" cancel")
 	}
 	if p.allowFree {
-		hint += " · tab use typed path"
+		hint += dimStyle.Render(" · ") + accent.Render("tab") + dimStyle.Render(" use typed path")
 	}
-	b.WriteString(dimStyle.Render(hint))
+	b.WriteString(hint)
 	return b.String()
 }

@@ -693,15 +693,15 @@ func (m *Model) body() string {
 	panes := m.panes(h)
 	w, mh := max(min(m.width-4, 80), 10), max(h-2, 3)
 	var content string
-	style := modalStyle
+	style := modalStyle.BorderForeground(m.accentStyle.GetForeground())
 	switch {
 	case m.input != nil:
-		content = m.input.view(w, mh)
+		content = m.input.view(w, mh, m.accentStyle)
 	case m.modal != nil:
-		content = m.modal.view(w, mh)
+		content = m.modal.view(w, mh, m.accentStyle)
 	case m.help:
 		content = m.helpView()
-		style = style.BorderForeground(m.accentStyle.GetForeground()).Padding(0, 2)
+		style = style.Padding(0, 2)
 	case m.loading && m.tasks != nil:
 		content = "Loading tasks…"
 		if m.sym.spinner != nil {

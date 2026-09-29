@@ -5,6 +5,7 @@ import (
 
 	"charm.land/bubbles/v2/textarea"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // inputBox is a modal for free-form, multi-line text.
@@ -34,9 +35,10 @@ func (b *inputBox) update(msg tea.KeyPressMsg) (res pickResult, cmd tea.Cmd) {
 	return pickResult{}, cmd
 }
 
-func (b *inputBox) view(width, height int) string {
+func (b *inputBox) view(width, height int, accent lipgloss.Style) string {
 	b.area.SetWidth(max(width-2, 1))
 	b.area.SetHeight(max(min(height-2, 8), 1))
-	return titleStyle.Render(b.title) + "\n" + b.area.View() + "\n" +
-		dimStyle.Render("enter newline · ctrl+s submit · esc cancel")
+	return accent.Render(b.title) + "\n" + b.area.View() + "\n" +
+		accent.Render("enter") + dimStyle.Render(" newline · ") + accent.Render("ctrl+s") +
+		dimStyle.Render(" submit · ") + accent.Render("esc") + dimStyle.Render(" cancel")
 }

@@ -1,0 +1,19 @@
+internal/tui/model.go
+  s_d84573e5cdc637::t_fd171d5b2f531f 762
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b35be69a92e7957ed68e9b69e67e8c56937e63f2",
+  "prompts": {},
+  "sessions": {
+    "s_d84573e5cdc637": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7c00aed2-c363-437c-9676-e6f1833db54a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

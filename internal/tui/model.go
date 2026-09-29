@@ -81,6 +81,7 @@ type Model struct {
 	projects      []asana.Project
 	projectFields map[string]map[string]bool // project gid -> its custom field gids
 	agents        []agents.Agent
+	linked        map[string][]agents.Agent // viewAgents by ticket gid; nil when stale
 	agentsErr     string
 	sym           symbolSet
 	frame         int  // spinner frame
@@ -152,7 +153,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.projectFields[msg.project.GID] = msg.fields
 		}
 		prev, _ := m.selected()
-		m.tasks = msg.tasks
+		m.tasks, m.linked = msg.tasks, nil
 		m.applyFilter()
 		// A reload that drops the selected ticket starts from the top.
 		if t, _ := m.selected(); t.GID != prev.GID {
@@ -178,9 +179,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
-		m.details[msg.gid] = msg.ticket
+		m.details[msg.gid], m.linked = msg.ticket, nil
 		if isSelected {
-			m.showDetail()
+			m.renderDetail(false)
 			if m.menuFor == msg.gid {
 				m.menuFor = ""
 				m.menuOpen()
@@ -203,7 +204,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.status, m.agentsErr = s, s
 			}
 		} else {
-			m.agents, m.agentsErr = msg.list, ""
+			m.agents, m.agentsErr, m.linked = msg.list, "", nil
 			m.applyFilter()
 			if t, ok := m.selectedDetail(); ok && t.GID == m.shownGID && m.agentsSection(t.Task) != m.shownAgents {
 				m.renderDetail(true)
@@ -223,7 +224,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.status = "loading project fields: " + msg.err.Error()
 		}
-		m.projectFields[msg.gid] = msg.fields
+		m.projectFields[msg.gid], m.linked = msg.fields, nil
 		if m.run != nil && m.run.awaitingFields {
 			m.run.awaitingFields = false
 			return m, m.execute(m.run.repo)
@@ -683,7 +684,7 @@ func (m *Model) openProjectPicker() {
 
 func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {
 	m.modal = nil
-	m.viewProject = ref
+	m.viewProject, m.linked = ref, nil
 	m.restoreView()
 	if ref != nil {
 		m.deps.State.TouchProject(ref.GID)

@@ -31,9 +31,22 @@ func (m *Model) ticketAgents(t asana.Task, preferred map[string]bool) []agents.A
 	return agents.MatchAll(m.agents, action.Branch(t, m.deps.Config.BranchField, preferred), m.deps.State.LinkedRepos(t))
 }
 
-// viewAgents returns the agents linked to t in the current view.
+// viewAgents returns the agents linked to t in the current view. Results are
+// cached per ticket until the agents, tasks, view, or repo links change,
+// since every frame asks for them.
 func (m *Model) viewAgents(t asana.Task) []agents.Agent {
-	return m.ticketAgents(t, m.projectFields[gidOf(m.viewProject)])
+	if len(m.agents) == 0 {
+		return nil
+	}
+	if list, ok := m.linked[t.GID]; ok {
+		return list
+	}
+	list := m.ticketAgents(t, m.projectFields[gidOf(m.viewProject)])
+	if m.linked == nil {
+		m.linked = map[string][]agents.Agent{}
+	}
+	m.linked[t.GID] = list
+	return list
 }
 
 // agentNotes explains, in the current view, why t may be missing agents: an

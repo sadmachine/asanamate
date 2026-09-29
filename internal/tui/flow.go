@@ -183,6 +183,7 @@ func (m *Model) pickedRepo(path string) tea.Cmd {
 	m.modal = nil
 	if p := m.run.project; p != nil {
 		m.deps.State.LinkRepo(p.GID, resolved)
+		m.linked = nil
 		if err := m.deps.State.Save(); err != nil {
 			m.status = "saving repo link: " + err.Error()
 		}

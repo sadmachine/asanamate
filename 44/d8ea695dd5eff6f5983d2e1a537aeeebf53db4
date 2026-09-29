@@ -1,0 +1,36 @@
+internal/tui/picker_test.go
+  s_b389977e6a97ce::t_a2fd50f5f6e55b 43,51,60,67,77,89,96
+internal/tui/model.go
+  s_b389977e6a97ce::t_a2fd50f5f6e55b 401,639
+internal/tui/flow_test.go
+  s_b389977e6a97ce::t_a2fd50f5f6e55b 56,80
+internal/tui/flow.go
+  s_b389977e6a97ce::t_a2fd50f5f6e55b 61,118,138,167,175-182,236,352
+internal/tui/group.go
+  s_b389977e6a97ce::t_a2fd50f5f6e55b 133
+internal/tui/edit.go
+  s_b389977e6a97ce::t_a2fd50f5f6e55b 41,70,134,160,240,263,300,303-304,335,351
+internal/tui/agents_test.go
+  s_b389977e6a97ce::t_a2fd50f5f6e55b 218
+internal/tui/listonly_test.go
+  s_b389977e6a97ce::t_a2fd50f5f6e55b 41,51
+internal/tui/picker.go
+  s_b389977e6a97ce::t_a2fd50f5f6e55b 30,43-44,48,55-56,61-63
+  s_b389977e6a97ce::t_ff86b1c83096ec 64-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "44d8ea695dd5eff6f5983d2e1a537aeeebf53db4",
+  "prompts": {},
+  "sessions": {
+    "s_b389977e6a97ce": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4cc56239-c061-4abc-b551-5c231c73d5e7",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

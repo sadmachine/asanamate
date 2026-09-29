@@ -91,6 +91,10 @@ func TestListViewSeparator(t *testing.T) {
 	if got := listLines(single, 4, 5); !slices.Equal(got, []string{"────", "□ A", "────", "□ B", "────"}) {
 		t.Fatalf("single = %q", got)
 	}
+	single.Update(key("s"))
+	if got := listLines(single, 4, 3); !slices.Equal(got, []string{"□ A", "□ B", "□ C"}) {
+		t.Fatalf("single toggled off = %q", got)
+	}
 	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Separator: true}})
 	multi.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
 	multi.moveTo(2)

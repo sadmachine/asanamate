@@ -84,6 +84,7 @@ type Model struct {
 	help        bool // the key help is open
 	reader      viewport.Model
 	readerView  string // config.ViewCards or config.ViewMarkdown
+	separator   bool   // lines frame each ticket; starts at list.separator
 	renderers   map[rendererKey]*glamour.TermRenderer
 	details     map[string]ticket.Ticket
 	shownGID    string
@@ -122,6 +123,7 @@ func New(d Deps) *Model {
 		filterInput:   in,
 		reader:        viewport.New(),
 		readerView:    d.Config.Reader.View,
+		separator:     d.Config.List.Separator,
 		accentStyle:   colorStyle(d.Config.AccentColor),
 		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
 		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),
@@ -815,7 +817,7 @@ func (m *Model) listView(width, height int) string {
 	if m.deps.Config.List.Layout == config.LayoutMulti {
 		itemH = 2
 	}
-	if m.deps.Config.List.Separator {
+	if m.separator {
 		sepH = 1
 	}
 	// Separators frame every item and neighbours share one; a group header

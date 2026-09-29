@@ -171,7 +171,7 @@ layout = "single"
 # project, tags, completed. Any other name is matched to a custom field, for
 # example "Status" or "Branch Name".
 fields = ["section", "due"]
-# Frame each ticket with lines above and below (neighbours share one).
+# Frame each ticket with lines above and below (neighbours share one); s toggles.
 separator = false
 # Group tickets under a header per value of one field, such as "section" or
 # "due"; press b to pick another. Empty: ungrouped.

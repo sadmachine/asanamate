@@ -69,6 +69,7 @@ key press.
 | `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) |
 | `=` | fit the list pane to its content (also on project, grouping, and filter changes) |
 | `v` | switch the reader between the cards and markdown views |
+| `s` | show or hide the lines between tickets |
 | `o` | open the ticket in the browser |
 | `r` | reload |
 | `?` | show every key |
@@ -127,7 +128,7 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `agents.preset` / `agents.command` | unset (off) | opt-in agent tracking; see [Agents](#agents-optional) |
 | `symbols` | `unicode` on UTF-8, else `ascii` | `unicode`, `nerd`, or `ascii` for ticket markers and agent states |
 | `reduced_motion` | OS setting | `true` shows static agent symbols instead of the spinner |
-| `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one |
+| `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one; `s` toggles |
 | `list.group_by` | `""` (ungrouped) | starting grouping: any `list.fields` name; `b` picks another |
 | `list.header.style` | `"rule"` | group headers: `rule` (`── Label (n) ───`) or `bar` (reversed bar) |
 | `list.header.spacing` | `0` | blank lines above and below each group header |

@@ -1,0 +1,96 @@
+# Deferred ideas
+
+Improvements found during the 2026-09-28 code review that were left out of the
+cleanup. Each one either adds a feature or rewrites behavior, so it needs its
+own design pass. They are recorded here so they can be picked up later.
+
+## Configurable key bindings
+
+**Now:** `Model.handleKey` in `internal/tui/model.go` hardcodes every
+key. `Model.footer` builds its hint text as a separate string, so a new or
+changed binding can leave the footer out of date.
+
+**Idea:** Define one table of bindings with `bubbles/key` and render the footer
+from it with `bubbles/help`. The same table could later accept overrides from
+the config, for example a `[keys]` table.
+
+**Watch out for:** Adding config keys is a public contract (see `AGENTS.md`).
+Action keys are only read inside the action menu, so they do not collide with
+list keys today. An override system must keep that true.
+
+## Theme-aware colors
+
+**Now:** `theme = "light"` only changes the glamour Markdown style. The TUI's
+own colors are fixed ANSI numbers: `errorStyle` in `styles.go`, `borderColor`,
+`openStyle`, and `doneStyle` in `cards.go`, and `stateStyles` in `symbols.go`.
+Borders and agent state colors therefore stay tuned for dark terminals.
+
+**Idea:** Add a small palette struct with a dark and a light variant, chosen
+by `theme`, and build the styles from it.
+
+**Watch out for:** This changes how the light theme looks, so review it
+visually in both themes.
+
+## Action run steps
+
+**Now:** `pendingRun` in `internal/tui/flow.go` tracks progress with four
+flags (`projectChosen`, `awaitingFields`, `inputDone`, `branchOK`).
+`continueRun` and `execute` re-enter each other until every flag is settled.
+The flow works, but each new step adds another flag and another re-entry
+point.
+
+**Idea:** Model the run as an ordered list of steps: pick agent, pick project,
+resolve repo, collect input, load project fields, confirm branch fallback. Each
+step either finishes right away or opens a modal and resumes when it is
+answered.
+
+**Watch out for:** This is the most intricate flow in the TUI. The tests in
+`flow_test.go` and `agents_test.go` cover it and should pass unchanged.
+
+## Multi-enum and people fields from the CLI
+
+**Now:** The TUI can set `multi_enum` and `people` custom fields
+(`pickedValues` in `internal/tui/edit.go`). `asanamate field` goes through
+`writeback.FieldValue`, which only supports text, number, enum, and date.
+
+**Idea:** Teach `FieldValue` to accept a comma-separated list of option names
+or people names and resolve them to gids. Then the CLI and TUI share one
+conversion.
+
+**Watch out for:** People names need a workspace user lookup and a rule for
+ambiguous names. `CommentHTML` already refuses two users with the same name.
+Clearing the field with `""` must keep working.
+
+## Cheaper project list
+
+**Now:** `Client.MemberProjects` loads every unarchived project in the
+workspace with its member list, then keeps the ones the user belongs to. In
+large workspaces this is slow and moves a lot of data.
+
+**Idea:** Check whether the Asana API has a server-side way to list only the
+user's projects, for example through team memberships
+(`/users/{gid}/team_memberships`, then `/teams/{gid}/projects`), and compare
+the cost.
+
+**Watch out for:** A team-based list may include projects the user can see
+but is not a member of, which changes what the project picker shows.
+
+## Shared shell runner
+
+**Now:** `agents.List`, `action.Command`, and `repo.Candidates` each build
+`/bin/sh -c <command>`.
+
+**Idea:** Add one helper that builds the command.
+
+**Why deferred:** It is a one-line duplicate in three places, and a new
+package for it costs more than it saves. Revisit if shell handling grows, for
+example a configurable shell or Windows support.
+
+## Known issues found during the review
+
+These were already broken before the cleanup:
+
+- `TestRunBackgroundStartsNewSession` in `internal/action` fails under
+  `go test -race`. It passes without `-race`. The race is between
+  `action.RunBackground` and the test.
+- `gofmt -l` reports `internal/setup/update.go`.

@@ -15,8 +15,18 @@ import (
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
+// Due date groups.
+const (
+	dueOverdue  = "Overdue"
+	dueToday    = "Today"
+	dueTomorrow = "Tomorrow"
+	dueWeek     = "Next 7 days"
+	dueLater    = "Later"
+	dueNone     = "No due date"
+)
+
 // dueBuckets are the due date groups, in display order.
-var dueBuckets = []string{"Overdue", "Today", "Tomorrow", "Next 7 days", "Later", "No due date"}
+var dueBuckets = []string{dueOverdue, dueToday, dueTomorrow, dueWeek, dueLater, dueNone}
 
 // groupTasks orders tasks into groups by the named list field and returns each
 // task's group label. Tasks keep their order within a group. Groups appear in
@@ -32,7 +42,7 @@ func groupTasks(tasks []asana.Task, by string, rc rowContext, today time.Time) (
 			rank[b] = i
 		}
 	}
-	none := "No " + by
+	none := noneLabel(by)
 	labels := make([]string, len(tasks))
 	for i, t := range tasks {
 		labels[i] = groupLabel(t, by, rc, today)
@@ -58,6 +68,9 @@ func groupTasks(tasks []asana.Task, by string, rc rowContext, today time.Time) (
 
 func isDue(by string) bool { return strings.EqualFold(by, "due") }
 
+// noneLabel is the group of tasks with no value for the named field.
+func noneLabel(by string) string { return "No " + by }
+
 // groupLabel returns the group t belongs to when grouping by the named field.
 func groupLabel(t asana.Task, by string, rc rowContext, today time.Time) string {
 	if isDue(by) {
@@ -66,37 +79,37 @@ func groupLabel(t asana.Task, by string, rc rowContext, today time.Time) string 
 	if v := ticket.OneLine(fieldValue(t, by, rc)); v != "" {
 		return v
 	}
-	return "No " + by
+	return noneLabel(by)
 }
 
 // dueBucket places a due date (YYYY-MM-DD) relative to today's calendar date.
 func dueBucket(dueOn *string, today time.Time) string {
 	if dueOn == nil {
-		return dueBuckets[5]
+		return dueNone
 	}
 	due, err := time.Parse(time.DateOnly, *dueOn)
 	if err != nil {
-		return dueBuckets[5]
+		return dueNone
 	}
 	day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
 	switch days := int(due.Sub(day).Hours() / 24); {
 	case days < 0:
-		return dueBuckets[0]
+		return dueOverdue
 	case days == 0:
-		return dueBuckets[1]
+		return dueToday
 	case days == 1:
-		return dueBuckets[2]
+		return dueTomorrow
 	case days < 7:
-		return dueBuckets[3]
+		return dueWeek
 	default:
-		return dueBuckets[4]
+		return dueLater
 	}
 }
 
 // openGroupPicker offers the groupings: none, the built-in fields, then the
 // configured list fields and group_by, and the custom fields on loaded tickets.
 func (m *Model) openGroupPicker() {
-	names := []string{"", "section", "due", "assignee", "project", "tags", "completed"}
+	names := append([]string{""}, builtinFields...)
 	names = append(names, m.deps.Config.List.Fields...)
 	names = append(names, m.deps.Config.List.GroupBy)
 	for _, t := range m.tasks {
@@ -117,7 +130,7 @@ func (m *Model) openGroupPicker() {
 		}
 		items = append(items, it)
 	}
-	m.modal = newPicker(pickGroup, "Group by", items)
+	m.modal = newPicker(pickValue(m.pickedGroup), "Group by", items)
 	m.modal.cursor = current
 }
 
@@ -129,6 +142,11 @@ func (m *Model) pickedGroup(by string) tea.Cmd {
 	m.applyFilter()
 	m.fitList()
 	return m.selectionChanged()
+}
+
+// groupHeaderWidth is the width that shows a group's header in full, rule or bar.
+func groupHeaderWidth(label string, n int) int {
+	return ansi.StringWidth("── " + label + " (" + strconv.Itoa(n) + ") ─")
 }
 
 // groupHeader renders a group's header across width in the header color: a

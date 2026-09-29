@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -127,6 +128,10 @@ type nextPage struct {
 }
 
 func getAll[T any](ctx context.Context, c *Client, path string, q url.Values) ([]T, error) {
+	q = maps.Clone(q)
+	if q == nil {
+		q = url.Values{}
+	}
 	q.Set("limit", "100")
 	var all []T
 	for {

@@ -6,11 +6,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 	"unicode"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // State is asanamate's normalized view of an agent's status.
@@ -56,13 +59,21 @@ func title(s string) string {
 	return s
 }
 
-// Fetch lists agents from the ccmux preset or from command, then classifies
+// presets are the built-in agent sources, by agents.preset name.
+var presets = map[string]func(context.Context) ([]Agent, error){
+	"ccmux": CCMux,
+}
+
+// Presets returns the built-in agent source names, sorted.
+func Presets() []string { return slices.Sorted(maps.Keys(presets)) }
+
+// Fetch lists agents from preset when set, else from command, then classifies
 // their statuses with states (state name -> raw statuses).
 func Fetch(ctx context.Context, preset, command string, states map[string][]string) ([]Agent, error) {
 	var list []Agent
 	var err error
-	if preset == "ccmux" {
-		list, err = CCMux(ctx)
+	if source, ok := presets[preset]; ok {
+		list, err = source(ctx)
 	} else {
 		list, err = List(ctx, command)
 	}
@@ -138,14 +149,19 @@ func parseCCMux(ctx context.Context, data []byte) ([]Agent, error) {
 		}
 		if s.GitBranch != nil && s.MainRepoRoot != nil {
 			a.Branch, a.Repo = *s.GitBranch, *s.MainRepoRoot
-		} else {
-			a.Branch, a.Repo = gitInfo(ctx, s.Cwd)
-			if a.Branch == "" && s.GitBranch != nil {
-				a.Branch = *s.GitBranch
-			}
 		}
 		list = append(list, a)
 	}
+	inParallel(len(list), func(i int) {
+		s, a := sessions[i], &list[i]
+		if s.GitBranch != nil && s.MainRepoRoot != nil {
+			return
+		}
+		a.Branch, a.Repo = gitInfo(ctx, s.Cwd)
+		if a.Branch == "" && s.GitBranch != nil {
+			a.Branch = *s.GitBranch
+		}
+	})
 	return list, nil
 }
 
@@ -170,10 +186,23 @@ func List(ctx context.Context, command string) ([]Agent, error) {
 		if len(cols) > 3 {
 			a.Title = title(cols[3])
 		}
-		a.Branch, a.Repo = gitInfo(ctx, a.Path)
 		agents = append(agents, a)
 	}
+	inParallel(len(agents), func(i int) { agents[i].Branch, agents[i].Repo = gitInfo(ctx, agents[i].Path) })
 	return agents, nil
+}
+
+// maxGit caps the git processes run at once while resolving agents.
+const maxGit = 8
+
+// inParallel calls fn for 0..n-1, at most maxGit at a time, and waits.
+func inParallel(n int, fn func(i int)) {
+	var g errgroup.Group
+	g.SetLimit(maxGit)
+	for i := range n {
+		g.Go(func() error { fn(i); return nil })
+	}
+	_ = g.Wait()
 }
 
 func gitInfo(ctx context.Context, path string) (branch, repo string) {

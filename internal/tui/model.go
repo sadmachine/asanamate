@@ -81,6 +81,7 @@ type Model struct {
 	projects      []asana.Project
 	projectFields map[string]map[string]bool // project gid -> its custom field gids
 	agents        []agents.Agent
+	linked        map[string][]agents.Agent // viewAgents by ticket gid; nil when stale
 	agentsErr     string
 	sym           symbolSet
 	frame         int  // spinner frame
@@ -152,7 +153,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.projectFields[msg.project.GID] = msg.fields
 		}
 		prev, _ := m.selected()
-		m.tasks = msg.tasks
+		m.tasks, m.linked = msg.tasks, nil
 		m.applyFilter()
 		// A reload that drops the selected ticket starts from the top.
 		if t, _ := m.selected(); t.GID != prev.GID {
@@ -178,9 +179,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
-		m.details[msg.gid] = msg.ticket
+		m.details[msg.gid], m.linked = msg.ticket, nil
 		if isSelected {
-			m.showDetail()
+			m.renderDetail(false)
 			if m.menuFor == msg.gid {
 				m.menuFor = ""
 				m.menuOpen()
@@ -203,7 +204,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.status, m.agentsErr = s, s
 			}
 		} else {
-			m.agents, m.agentsErr = msg.list, ""
+			m.agents, m.agentsErr, m.linked = msg.list, "", nil
 			m.applyFilter()
 			if t, ok := m.selectedDetail(); ok && t.GID == m.shownGID && m.agentsSection(t.Task) != m.shownAgents {
 				m.renderDetail(true)
@@ -223,7 +224,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.status = "loading project fields: " + msg.err.Error()
 		}
-		m.projectFields[msg.gid] = msg.fields
+		m.projectFields[msg.gid], m.linked = msg.fields, nil
 		if m.run != nil && m.run.awaitingFields {
 			m.run.awaitingFields = false
 			return m, m.execute(m.run.repo)
@@ -350,8 +351,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "e":
 		return m.requestMenu(m.openEditMenu)
 	case "f":
-		m.openAttachments()
-		return nil
+		return m.requestMenu(m.openAttachments)
 	case "b":
 		m.openGroupPicker()
 		return nil
@@ -398,7 +398,7 @@ func (m *Model) updateModal(msg tea.KeyPressMsg) tea.Cmd {
 	case res.cancelled:
 		m.modal, m.run, m.edit = nil, nil, nil
 	case res.done:
-		return tea.Batch(cmd, m.handlePick(p.kind, res))
+		return tea.Batch(cmd, p.onPick(res))
 	}
 	return cmd
 }
@@ -415,46 +415,6 @@ func (m *Model) updateInput(msg tea.KeyPressMsg) tea.Cmd {
 		return tea.Batch(cmd, m.typedInput(res.free))
 	}
 	return cmd
-}
-
-func (m *Model) handlePick(kind pickKind, res pickResult) tea.Cmd {
-	switch kind {
-	case pickProject:
-		return m.pickedProject(res.item.Value.(*asana.Ref))
-	case pickAction:
-		return m.pickedAction(res.item.Value.(int))
-	case pickTicketProject:
-		return m.pickedTicketProject(res.item.Value.(asana.Ref))
-	case pickRepo:
-		path := res.free
-		if res.item != nil {
-			path = res.item.Value.(string)
-		}
-		return m.pickedRepo(path)
-	case pickAttachment:
-		return m.pickedAttachment(res.item.Value.(asana.Attachment))
-	case pickAgent:
-		return m.pickedAgent(res.item.Value.(agents.Agent))
-	case pickGroup:
-		return m.pickedGroup(res.item.Value.(string))
-	case pickBranchFallback:
-		return m.pickedBranchFallback(res.item.Value.(bool))
-	case pickEdit:
-		return m.pickedEdit(res.item.Value.(editOp))
-	case pickEditProject:
-		return m.pickedEditProject(res.item.Value.(asana.Ref))
-	case pickSection:
-		return m.pickedSection(res.item.Value.(asana.Ref))
-	case pickField:
-		return m.pickedField(res.item.Value.(asana.CustomField))
-	case pickEnumOption:
-		return m.setField(res.item.Value.(string))
-	case pickUser:
-		return m.pickedUser(res.item.Value.(asana.Ref))
-	case pickMultiEnum, pickPeople:
-		return m.pickedValues(res.items)
-	}
-	return nil
 }
 
 func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
@@ -551,15 +511,13 @@ func (m *Model) selectionChanged() tea.Cmd {
 	}
 	m.fieldKey = ""
 	if _, cached := m.details[t.GID]; cached {
-		m.showDetail()
+		m.renderDetail(false)
 		return nil
 	}
 	m.shownGID = ""
 	m.reader.SetContent(dimStyle.Render("Loading " + ticket.Clean(t.Name) + "…"))
 	return scheduleDetail(t.GID)
 }
-
-func (m *Model) showDetail() { m.renderDetail(false) }
 
 // renderDetail renders the selected ticket in the reader, from the top or at
 // the current scroll position.
@@ -678,12 +636,12 @@ func (m *Model) openProjectPicker() {
 	for _, p := range rest {
 		items = append(items, pickItem{Label: ticket.Clean(p.Name), Value: &asana.Ref{GID: p.GID, Name: p.Name}})
 	}
-	m.modal = newPicker(pickProject, "Switch project", items)
+	m.modal = newPicker(pickValue(m.pickedProject), "Switch project", items)
 }
 
 func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {
 	m.modal = nil
-	m.viewProject = ref
+	m.viewProject, m.linked = ref, nil
 	m.restoreView()
 	if ref != nil {
 		m.deps.State.TouchProject(ref.GID)
@@ -735,7 +693,7 @@ func (m *Model) layout() {
 	m.reader.SetHeight(m.bodyHeight())
 	m.filterInput.SetWidth(max(m.width/3, 10))
 	if m.shownGID != "" {
-		m.showDetail()
+		m.renderDetail(false)
 	}
 }
 
@@ -920,15 +878,12 @@ func (m *Model) listView(width, height int) string {
 		used += rowH(end, start)
 		end++
 	}
-	counts := map[string]int{}
-	for _, g := range m.groups {
-		counts[g]++
-	}
+	counts := m.groupCounts()
 	sep := dimStyle.Render(strings.Repeat("─", width))
 	// The marker style keeps a gutter on every row so text doesn't shift.
-	var cursor, gutter string
-	if m.deps.Config.List.Selection.Style == config.StyleMarker {
-		cursor = m.sym.cursor + " "
+	var gutter string
+	cursor := m.marker()
+	if cursor != "" {
 		gutter = strings.Repeat(" ", ansi.StringWidth(cursor))
 		cursorStyle := m.markerStyle
 		if m.focusReader {
@@ -970,6 +925,24 @@ func (m *Model) listView(width, height int) string {
 	return strings.Join(lines, "\n")
 }
 
+// groupCounts returns the number of visible tickets per group label.
+func (m *Model) groupCounts() map[string]int {
+	counts := map[string]int{}
+	for _, g := range m.groups {
+		counts[g]++
+	}
+	return counts
+}
+
+// marker is the selected row's left marker with its gap, or "" unless
+// selection.style is marker.
+func (m *Model) marker() string {
+	if m.deps.Config.List.Selection.Style != config.StyleMarker {
+		return ""
+	}
+	return m.sym.cursor + " "
+}
+
 // listRow returns the lines of visible ticket i's row and the badge
 // right-aligned on its first line.
 func (m *Model) listRow(i int) (row []string, badge string) {
@@ -1000,18 +973,10 @@ func (m *Model) listRow(i int) (row []string, badge string) {
 // fitList sizes the list pane to its widest row or group header, leaving the
 // reader at least minPaneW columns.
 func (m *Model) fitList() {
-	gutter := 0
-	if m.deps.Config.List.Selection.Style == config.StyleMarker {
-		gutter = ansi.StringWidth(m.sym.cursor + " ")
-	}
-	counts := map[string]int{}
-	for _, g := range m.groups {
-		counts[g]++
-	}
+	gutter := ansi.StringWidth(m.marker())
 	w := 0
-	for label, n := range counts {
-		// Wide enough that the header shows in full, rule or bar.
-		w = max(w, ansi.StringWidth(fmt.Sprintf("── %s (%d) ─", label, n)))
+	for label, n := range m.groupCounts() {
+		w = max(w, groupHeaderWidth(label, n))
 	}
 	for i := range m.visible {
 		row, badge := m.listRow(i)

@@ -98,18 +98,34 @@ type imageMsg struct {
 
 type statusMsg string
 
-func loadTasks(c *asana.Client, workspace string, project *asana.Ref) tea.Cmd {
+// request runs fn off the UI loop with a requestTimeout context.
+func request(fn func(ctx context.Context) tea.Msg) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 		defer cancel()
-		tasks, err := ticket.List(ctx, c, workspace, gidOf(project))
-		msg := tasksMsg{project: project, tasks: tasks, err: err}
-		if err == nil && project != nil {
-			// Best effort: only used to pick between same-named fields.
-			msg.fields, _ = c.ProjectFieldGIDs(ctx, project.GID)
+		return fn(ctx)
+	}
+}
+
+func loadTasks(c *asana.Client, workspace string, project *asana.Ref) tea.Cmd {
+	return request(func(ctx context.Context) tea.Msg {
+		msg := tasksMsg{project: project}
+		var fields map[string]bool
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			if project != nil {
+				// Best effort: only used to pick between same-named fields.
+				fields, _ = c.ProjectFieldGIDs(ctx, project.GID)
+			}
+		}()
+		msg.tasks, msg.err = ticket.List(ctx, c, workspace, gidOf(project))
+		<-done
+		if msg.err == nil {
+			msg.fields = fields
 		}
 		return msg
-	}
+	})
 }
 
 func loadAgents(cfg config.Agents) tea.Cmd {
@@ -126,12 +142,10 @@ func scheduleAgents() tea.Cmd {
 }
 
 func loadProjectFields(c *asana.Client, gid string) tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-		defer cancel()
+	return request(func(ctx context.Context) tea.Msg {
 		fields, err := c.ProjectFieldGIDs(ctx, gid)
 		return projectFieldsMsg{gid: gid, fields: fields, err: err}
-	}
+	})
 }
 
 func scheduleDetail(gid string) tea.Cmd {
@@ -139,42 +153,34 @@ func scheduleDetail(gid string) tea.Cmd {
 }
 
 func loadDetail(c *asana.Client, gid string) tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-		defer cancel()
+	return request(func(ctx context.Context) tea.Msg {
 		t, err := ticket.Fetch(ctx, c, gid)
 		return detailMsg{gid: gid, ticket: t, err: err}
-	}
+	})
 }
 
 func loadProjects(c *asana.Client, workspace string) tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-		defer cancel()
+	return request(func(ctx context.Context) tea.Msg {
 		me, err := c.Me(ctx)
 		if err != nil {
 			return projectsMsg{err: err}
 		}
 		projects, err := c.MemberProjects(ctx, workspace, me.GID)
 		return projectsMsg{projects: projects, err: err}
-	}
+	})
 }
 
 func loadCandidates(command string) tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-		defer cancel()
+	return request(func(ctx context.Context) tea.Msg {
 		paths, err := repo.Candidates(ctx, command)
 		return candidatesMsg{paths: paths, err: err}
-	}
+	})
 }
 
 // loadSections loads a project's sections, or My Tasks' sections when
 // project has no gid.
 func loadSections(c *asana.Client, workspace string, project asana.Ref) tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-		defer cancel()
+	return request(func(ctx context.Context) tea.Msg {
 		gid := project.GID
 		if gid == "" {
 			list, err := c.MyTaskList(ctx, workspace)
@@ -185,25 +191,21 @@ func loadSections(c *asana.Client, workspace string, project asana.Ref) tea.Cmd 
 		}
 		sections, err := c.Sections(ctx, gid)
 		return sectionsMsg{project: project, sections: sections, err: err}
-	}
+	})
 }
 
 func loadUsers(c *asana.Client, workspace string) tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-		defer cancel()
+	return request(func(ctx context.Context) tea.Msg {
 		users, err := c.WorkspaceUsers(ctx, workspace)
 		return usersMsg{users: users, err: err}
-	}
+	})
 }
 
 // saveEdit runs one write to ticket gid; what names it in the status line.
 func saveEdit(gid, what string, write func(context.Context) error) tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-		defer cancel()
+	return request(func(ctx context.Context) tea.Msg {
 		return editDoneMsg{gid: gid, what: what, err: write(ctx)}
-	}
+	})
 }
 
 func openURL(url string) tea.Cmd {
@@ -217,9 +219,7 @@ func openURL(url string) tea.Cmd {
 
 func loadImage(c *asana.Client, a asana.Attachment, cols, rows int, inTmux bool) tea.Cmd {
 	url := ticket.AttachmentURL(a)
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-		defer cancel()
+	return request(func(ctx context.Context) tea.Msg {
 		fresh, err := c.Attachment(ctx, a.GID)
 		if err != nil {
 			return imageMsg{url: url, err: err}
@@ -233,5 +233,5 @@ func loadImage(c *asana.Client, a asana.Attachment, cols, rows int, inTmux bool)
 		}
 		payload, err := kitty.Encode(data, cols, rows, inTmux)
 		return imageMsg{payload: payload, url: url, err: err}
-	}
+	})
 }

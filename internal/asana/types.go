@@ -15,10 +15,17 @@ type Membership struct {
 }
 
 // EnumOption is one choice of an enum custom field.
-type EnumOption struct {
-	GID  string `json:"gid"`
-	Name string `json:"name"`
-}
+type EnumOption = Ref
+
+// Custom field types (resource_subtype values).
+const (
+	FieldText      = "text"
+	FieldNumber    = "number"
+	FieldEnum      = "enum"
+	FieldMultiEnum = "multi_enum"
+	FieldDate      = "date"
+	FieldPeople    = "people"
+)
 
 // CustomField is a custom field value on a task.
 type CustomField struct {
@@ -57,6 +64,14 @@ type Task struct {
 	ModifiedAt      string        `json:"modified_at,omitempty"`
 }
 
+// Status is "done" for completed tasks, else "open".
+func (t Task) Status() string {
+	if t.Completed {
+		return "done"
+	}
+	return "open"
+}
+
 // SectionIn returns the task's section name in the given project, or "".
 func (t Task) SectionIn(projectGID string) string {
 	for _, m := range t.Memberships {
@@ -83,16 +98,23 @@ func (t Task) SectionFor(projectGID string) string {
 // surrounding spaces. Fields are separate objects that may share a name (for
 // example one per project); see PickField for which one wins.
 func (t Task) Field(name string, preferred map[string]bool) (CustomField, bool) {
+	matches := t.FieldsNamed(name)
+	if len(matches) == 0 {
+		return CustomField{}, false
+	}
+	return PickField(matches, preferred), true
+}
+
+// FieldsNamed returns the task's custom fields with the given name, ignoring
+// case and surrounding spaces, in task order.
+func (t Task) FieldsNamed(name string) []CustomField {
 	var matches []CustomField
 	for _, f := range t.CustomFields {
 		if SameFieldName(f.Name, name) {
 			matches = append(matches, f)
 		}
 	}
-	if len(matches) == 0 {
-		return CustomField{}, false
-	}
-	return PickField(matches, preferred), true
+	return matches
 }
 
 // PickField chooses among same-named fields: one whose gid is in preferred
@@ -123,6 +145,15 @@ func (f CustomField) Value() string {
 		return ""
 	}
 	return *f.DisplayValue
+}
+
+// Names returns the refs' names, in order.
+func Names(refs []Ref) []string {
+	names := make([]string, len(refs))
+	for i, r := range refs {
+		names[i] = r.Name
+	}
+	return names
 }
 
 // Story is an entry in a task's activity feed; comments have Type "comment".

@@ -215,7 +215,7 @@ func TestAgentActionWithOneAgentRunsDirectly(t *testing.T) {
 func TestAgentActionPicksAmongSeveral(t *testing.T) {
 	m := jumpModel(t, onBranch(agents.Idle, "a1"), onBranch(agents.Waiting, "a2"))
 	m.pickedAction(0)
-	if m.modal == nil || m.modal.kind != pickAgent || len(m.modal.items) != 2 {
+	if m.modal == nil || m.modal.title != "Which agent?" || len(m.modal.items) != 2 {
 		t.Fatalf("modal = %+v", m.modal)
 	}
 	if !strings.Contains(m.modal.items[0].Label, "waiting") {

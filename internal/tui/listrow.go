@@ -31,9 +31,22 @@ func (m *Model) ticketAgents(t asana.Task, preferred map[string]bool) []agents.A
 	return agents.MatchAll(m.agents, action.Branch(t, m.deps.Config.BranchField, preferred), m.deps.State.LinkedRepos(t))
 }
 
-// viewAgents returns the agents linked to t in the current view.
+// viewAgents returns the agents linked to t in the current view. Results are
+// cached per ticket until the agents, tasks, view, or repo links change,
+// since every frame asks for them.
 func (m *Model) viewAgents(t asana.Task) []agents.Agent {
-	return m.ticketAgents(t, m.projectFields[gidOf(m.viewProject)])
+	if len(m.agents) == 0 {
+		return nil
+	}
+	if list, ok := m.linked[t.GID]; ok {
+		return list
+	}
+	list := m.ticketAgents(t, m.projectFields[gidOf(m.viewProject)])
+	if m.linked == nil {
+		m.linked = map[string][]agents.Agent{}
+	}
+	m.linked[t.GID] = list
+	return list
 }
 
 // agentNotes explains, in the current view, why t may be missing agents: an
@@ -66,6 +79,10 @@ func (m *Model) agentStates(t asana.Task) []string {
 	return out
 }
 
+// builtinFields are the list field names fieldValue resolves itself, in the
+// group picker's order; any other name is a custom field.
+var builtinFields = []string{"section", "due", "assignee", "project", "tags", "completed"}
+
 // rowFields returns the non-empty display values of the configured list
 // fields, in order.
 func rowFields(t asana.Task, names []string, rc rowContext) []string {
@@ -85,10 +102,7 @@ func fieldValue(t asana.Task, name string, rc rowContext) string {
 	case "section":
 		return t.SectionFor(rc.projectGID)
 	case "completed":
-		if t.Completed {
-			return "done"
-		}
-		return "open"
+		return t.Status()
 	case "due":
 		if t.DueOn != nil && *t.DueOn != "" {
 			return "due " + *t.DueOn
@@ -106,11 +120,7 @@ func fieldValue(t asana.Task, name string, rc rowContext) string {
 		}
 		return strings.Join(names, ", ")
 	case "tags":
-		var names []string
-		for _, tag := range t.Tags {
-			names = append(names, tag.Name)
-		}
-		return strings.Join(names, ", ")
+		return strings.Join(asana.Names(t.Tags), ", ")
 	}
 	if f, ok := t.Field(name, rc.preferred); ok {
 		return f.Value()

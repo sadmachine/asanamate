@@ -40,7 +40,7 @@ func items(labels ...string) []pickItem {
 }
 
 func TestPickerFiltersByWords(t *testing.T) {
-	p := newPicker(pickProject, "Projects", items("Web App", "Mobile", "Web Site"))
+	p := newPicker(nil, "Projects", items("Web App", "Mobile", "Web Site"))
 	typeText(p, "site web")
 	if len(p.matches) != 1 || p.items[p.matches[0]].Label != "Web Site" {
 		t.Fatalf("matches = %v", p.matches)
@@ -48,7 +48,7 @@ func TestPickerFiltersByWords(t *testing.T) {
 }
 
 func TestPickerEnterSelectsHighlighted(t *testing.T) {
-	p := newPicker(pickProject, "Projects", items("A", "B"))
+	p := newPicker(nil, "Projects", items("A", "B"))
 	p.update(key("down"))
 	res, _ := p.update(key("enter"))
 	if !res.done || res.item == nil || res.item.Label != "B" {
@@ -57,14 +57,14 @@ func TestPickerEnterSelectsHighlighted(t *testing.T) {
 }
 
 func TestPickerFreeText(t *testing.T) {
-	p := newPicker(pickRepo, "Repo", items("/code/web"))
+	p := newPicker(nil, "Repo", items("/code/web"))
 	p.allowFree = true
 	typeText(p, "/tmp/x")
 	res, _ := p.update(key("enter"))
 	if !res.done || res.item != nil || res.free != "/tmp/x" {
 		t.Fatalf("enter with no matches: res = %+v", res)
 	}
-	p = newPicker(pickRepo, "Repo", items("/code/web"))
+	p = newPicker(nil, "Repo", items("/code/web"))
 	p.allowFree = true
 	typeText(p, "web")
 	res, _ = p.update(key("tab"))
@@ -74,7 +74,7 @@ func TestPickerFreeText(t *testing.T) {
 }
 
 func TestPickerKeySelect(t *testing.T) {
-	p := newPicker(pickAction, "Actions", []pickItem{{Label: "Claude", Key: "c"}, {Label: "View", Key: "v"}})
+	p := newPicker(nil, "Actions", []pickItem{{Label: "Claude", Key: "c"}, {Label: "View", Key: "v"}})
 	p.keySelect = true
 	if res, _ := p.update(key("z")); res.done {
 		t.Fatal("unbound key must not select")
@@ -86,14 +86,14 @@ func TestPickerKeySelect(t *testing.T) {
 }
 
 func TestPickerEscCancels(t *testing.T) {
-	p := newPicker(pickProject, "Projects", items("A"))
+	p := newPicker(nil, "Projects", items("A"))
 	if res, _ := p.update(key("esc")); !res.cancelled {
 		t.Fatalf("res = %+v", res)
 	}
 }
 
 func TestPickerMultiTogglesAndSaves(t *testing.T) {
-	p := newMultiPicker(pickMultiEnum, "Scope", items("A", "B", "C"), map[int]bool{0: true})
+	p := newMultiPicker(nil, "Scope", items("A", "B", "C"), map[int]bool{0: true})
 	p.update(key("down"))
 	if res, _ := p.update(key("enter")); res.done {
 		t.Fatal("enter must toggle, not save")

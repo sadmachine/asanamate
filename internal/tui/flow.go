@@ -58,7 +58,7 @@ func (m *Model) openActionMenu() {
 	for i, a := range m.deps.Config.Actions {
 		items[i] = pickItem{Label: a.Name, Hint: a.Mode, Key: a.Key, Value: i}
 	}
-	p := newPicker(pickAction, "Run on: "+ticket.Clean(t.Name), items)
+	p := newPicker(pickValue(m.pickedAction), "Run on: "+ticket.Clean(t.Name), items)
 	p.keySelect = true
 	m.modal = p
 	m.run, m.edit = &pendingRun{ticket: t}, nil
@@ -115,7 +115,7 @@ func (m *Model) continueRun() tea.Cmd {
 			for i, a := range list {
 				items[i] = pickItem{Label: m.agentLabel(a, lipgloss.NewStyle()), Hint: ticket.OneLine(filepath.Base(a.Path)), Value: a}
 			}
-			m.modal = newPicker(pickAgent, "Which agent?", items)
+			m.modal = newPicker(pickValue(m.pickedAgent), "Which agent?", items)
 			return nil
 		}
 	}
@@ -135,7 +135,7 @@ func (m *Model) continueRun() tea.Cmd {
 			for i, mb := range r.ticket.Memberships {
 				items[i] = pickItem{Label: ticket.Clean(mb.Project.Name), Value: mb.Project}
 			}
-			m.modal = newPicker(pickTicketProject, "Which project's repo?", items)
+			m.modal = newPicker(pickValue(m.pickedTicketProject), "Which project's repo?", items)
 			return nil
 		}
 	}
@@ -164,12 +164,20 @@ func (m *Model) openRepoPicker(msg candidatesMsg) {
 	if m.run.project != nil {
 		title = "Repo for " + ticket.Clean(m.run.project.Name)
 	}
-	p := newPicker(pickRepo, title, items)
+	p := newPicker(m.pickedRepoResult, title, items)
 	p.allowFree = true
 	if msg.err != nil {
 		p.err = msg.err.Error()
 	}
 	m.modal = p
+}
+
+// pickedRepoResult takes the repo picker's choice: a listed path or typed text.
+func (m *Model) pickedRepoResult(res pickResult) tea.Cmd {
+	if res.item != nil {
+		return m.pickedRepo(res.item.Value.(string))
+	}
+	return m.pickedRepo(res.free)
 }
 
 func (m *Model) pickedRepo(path string) tea.Cmd {
@@ -183,6 +191,7 @@ func (m *Model) pickedRepo(path string) tea.Cmd {
 	m.modal = nil
 	if p := m.run.project; p != nil {
 		m.deps.State.LinkRepo(p.GID, resolved)
+		m.linked = nil
 		if err := m.deps.State.Save(); err != nil {
 			m.status = "saving repo link: " + err.Error()
 		}
@@ -224,7 +233,7 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 	if !r.branchOK && strings.Contains(r.action.Command, "ASANAMATE_BRANCH") {
 		if w := action.BranchWarning(r.ticket.Task, m.deps.Config.BranchField, preferred); w != "" {
 			r.repo = repoPath
-			p := newPicker(pickBranchFallback, "Branch falls back to the title slug", []pickItem{
+			p := newPicker(pickValue(m.pickedBranchFallback), "Branch falls back to the title slug", []pickItem{
 				{Label: "Run anyway", Key: "y", Value: true},
 				{Label: "Cancel", Key: "n", Value: false},
 			})
@@ -340,7 +349,7 @@ func (m *Model) openAttachments() {
 		}
 		items[i] = pickItem{Label: fmt.Sprintf("%d. %s", i+1, ticket.Clean(a.Name)), Hint: hint, Value: a}
 	}
-	m.modal = newPicker(pickAttachment, "Attachments", items)
+	m.modal = newPicker(pickValue(m.pickedAttachment), "Attachments", items)
 }
 
 func (m *Model) showsInline(a asana.Attachment) bool {

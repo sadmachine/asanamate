@@ -339,120 +339,13 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	if m.focusNav && slices.Contains(navKeys, k) {
 		return m.updateNav(k)
 	}
-	switch k {
-	case "q":
-		return tea.Quit
-	case "?":
-		m.help = true
-		return nil
-	case "tab", "shift+tab":
-		if m.deps.NoPreview {
-			return nil
-		}
-		dir := 1
-		if k == "shift+tab" {
-			dir = -1
-		}
-		switch {
-		case m.focusNav:
-			m.focusNav = false
-		case !m.focusReader:
-			m.focusReader = true
-			m.stepField(dir)
-		case !m.stepField(dir):
-			m.focusReader = false
-		}
-		return nil
-	case "esc", "1":
-		m.focusNav = false
-		if m.focusReader {
-			m.focusReader = false
-			m.clearField()
-		}
-		return nil
-	case "0":
-		if m.showNav() {
-			m.focusNavPanel()
-			if m.focusReader {
-				m.focusReader = false
-				m.clearField()
-			}
-		}
-		return nil
-	case "2":
-		m.focusNav = false
-		if !m.deps.NoPreview && !m.focusReader {
-			m.focusReader = true
-			m.stepField(1)
-		}
-		return nil
-	case "/":
-		m.filtering = true
-		return m.filterInput.Focus()
-	case "p":
-		if m.projects != nil {
-			m.openProjectPicker()
-			return nil
-		}
-		m.pickProjects = true
-		m.status = "loading projects…"
-		if m.loadingProjects {
-			return nil
-		}
-		m.loadingProjects = true
-		return loadProjects(m.deps.Client, m.deps.Config.Workspace)
-	case "r":
-		m.details = map[string]ticket.Ticket{}
-		m.shownGID = ""
-		return m.reload()
-	case "o":
-		if t, ok := m.selected(); ok {
-			return openURL(t.PermalinkURL)
-		}
-		return nil
-	case "a", "enter":
-		return m.requestMenu(m.openActionMenu)
-	case "e":
-		return m.requestMenu(m.openEditMenu)
-	case "f":
-		return m.requestMenu(m.openAttachments)
-	case "b":
-		m.openGroupPicker()
-		return nil
-	case "=":
-		m.fitList()
-		return nil
-	case "v":
-		if m.deps.NoPreview {
-			return nil
-		}
-		if m.readerView == config.ViewCards {
-			m.readerView = config.ViewMarkdown
-		} else {
-			m.readerView = config.ViewCards
-		}
-		m.fieldKey = ""
-		m.renderDetail(false)
-		return nil
+	if b, ok := m.bindingFor(k); ok {
+		return b.run(m, msg)
 	}
 	if m.focusReader {
-		var cmd tea.Cmd
-		m.reader, cmd = m.reader.Update(msg)
-		return cmd
+		return m.scrollReader(msg)
 	}
-	switch k {
-	case "j", "down":
-		m.moveTo(m.cursor + 1)
-	case "k", "up":
-		m.moveTo(m.cursor - 1)
-	case "g", "home":
-		m.moveTo(0)
-	case "G", "end":
-		m.moveTo(len(m.visible) - 1)
-	default:
-		return nil
-	}
-	return m.selectionChanged()
+	return nil
 }
 
 func (m *Model) updateModal(msg tea.KeyPressMsg) tea.Cmd {

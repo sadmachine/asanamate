@@ -56,7 +56,7 @@ func TestStatusMessageReplacesHints(t *testing.T) {
 func TestHelpOpensAndAnyKeyCloses(t *testing.T) {
 	m := splitModel(t)
 	m.Update(key("?"))
-	if !m.help || !strings.Contains(ansi.Strip(m.body()), "jump to panel") {
+	if !m.help || !strings.Contains(ansi.Strip(m.body()), "1/esc  list") {
 		t.Fatalf("help = %v, body = %q", m.help, ansi.Strip(m.body()))
 	}
 	m.Update(key("j"))

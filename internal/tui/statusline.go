@@ -12,36 +12,6 @@ import (
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
-// binding is one row of the key help: its keys, what they do, and the help
-// column it sits in. splitOnly bindings need the reading pane.
-type binding struct {
-	keys, desc, group string
-	splitOnly         bool
-}
-
-// helpGroups are the key help's columns, in order.
-var helpGroups = []string{"Move", "Ticket", "View"}
-
-var bindings = []binding{
-	{keys: "j/k", desc: "up / down", group: "Move"},
-	{keys: "g/G", desc: "top / end", group: "Move"},
-	{keys: "0-2", desc: "jump to panel", group: "Move", splitOnly: true},
-	{keys: "tab", desc: "reader / next field", group: "Move", splitOnly: true},
-	{keys: "esc", desc: "back to the list", group: "Move"},
-	{keys: "/", desc: "filter", group: "Move"},
-	{keys: "p", desc: "projects", group: "Move"},
-	{keys: "enter", desc: "run action", group: "Ticket"},
-	{keys: "e", desc: "edit", group: "Ticket"},
-	{keys: "f", desc: "attachments", group: "Ticket"},
-	{keys: "o", desc: "open in browser", group: "Ticket"},
-	{keys: "r", desc: "reload", group: "Ticket"},
-	{keys: "v", desc: "cards / markdown", group: "View", splitOnly: true},
-	{keys: "b", desc: "group by", group: "View"},
-	{keys: "=", desc: "fit list", group: "View"},
-	{keys: "?", desc: "this help", group: "View"},
-	{keys: "q", desc: "quit", group: "View"},
-}
-
 // Mode pill colors: accent for the list, then ANSI cyan, magenta, and yellow.
 var (
 	readColor   = lipgloss.Color("6")
@@ -65,7 +35,7 @@ func (m *Model) mode() (name string, pill color.Color, hints [][2]string) {
 	case m.focusNav:
 		return "VIEWS", m.accentStyle.GetForeground(), [][2]string{{"j/k", "move"}, {"enter", "open"}, {"esc", "list"}, {"?", "keys"}}
 	}
-	return "NORMAL", m.accentStyle.GetForeground(), [][2]string{{"enter", "act"}, {"e", "edit"}, {"/", "filter"}, {"p", "proj"}, {"?", "keys"}}
+	return "NORMAL", m.accentStyle.GetForeground(), m.keyHints("enter", "e", "/", "p", "?")
 }
 
 // statusline is the bottom bar: a mode pill, where the list is and what it
@@ -135,19 +105,22 @@ func (m *Model) linkedAgents() []agents.Agent {
 
 // helpView renders the key help in one column per help group.
 func (m *Model) helpView() string {
-	split := !m.deps.NoPreview
+	var shown []binding
 	keyW := 0
-	for _, b := range bindings {
-		keyW = max(keyW, ansi.StringWidth(b.keys))
+	for _, b := range keyBindings() {
+		if !b.splitOnly || !m.deps.NoPreview {
+			shown = append(shown, b)
+			keyW = max(keyW, ansi.StringWidth(b.helpLabel()))
+		}
 	}
 	keyStyle := m.accentStyle.Width(keyW + 2)
 	head := lipgloss.NewStyle().Bold(true).Foreground(editColor)
 	cols := make([]string, len(helpGroups))
 	for i, g := range helpGroups {
 		lines := []string{head.Render(g)}
-		for _, b := range bindings {
-			if b.group == g && (split || !b.splitOnly) {
-				lines = append(lines, keyStyle.Render(b.keys)+b.desc)
+		for _, b := range shown {
+			if b.group == g {
+				lines = append(lines, keyStyle.Render(b.helpLabel())+b.desc)
 			}
 		}
 		cols[i] = lipgloss.NewStyle().PaddingRight(4).Render(strings.Join(lines, "\n"))

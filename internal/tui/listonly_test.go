@@ -25,7 +25,7 @@ func TestNoPreviewShowsOnlyTheList(t *testing.T) {
 	if m.shownGID != "1" || !strings.Contains(body, "Fix login") || strings.Contains(body, "Loading") {
 		t.Fatalf("shown = %q, body = %q", m.shownGID, body)
 	}
-	if strings.Contains(m.helpView(), "next field") || strings.Contains(m.helpView(), "0-2") {
+	if strings.Contains(m.helpView(), "next field") || strings.Contains(m.helpView(), "views panel") {
 		t.Fatal("key help must not advertise the reader in list-only mode")
 	}
 }

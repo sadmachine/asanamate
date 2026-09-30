@@ -45,7 +45,7 @@ func TestViewsPanelOnlyOnWideScreens(t *testing.T) {
 func TestViewsPanelListsRecentProjectsAndGroupings(t *testing.T) {
 	m := wideModel(t, 200)
 	body := ansi.Strip(m.navView(navW-panelFrame, 20))
-	for _, want := range []string{"My Tasks", "Mobile", "Web", "Group by", "● none", "○ section", "○ due"} {
+	for _, want := range []string{"My Tasks", "Mobile", "Web", "Group by", "● none", "○ section", "○ due", "Projects ────── [p] ─", "Group by ────── [b] ─", "+4 more"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %q in:\n%s", want, body)
 		}

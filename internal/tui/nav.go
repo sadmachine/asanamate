@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/agents"
@@ -60,7 +61,7 @@ func (m *Model) navItems() []navItem {
 	if m.viewProject == nil {
 		items[0].right = count
 	}
-	items = append(items, navItem{label: "Projects", heading: true})
+	items = append(items, navItem{label: "Projects", right: "p", heading: true})
 	names := map[string]string{}
 	for _, p := range m.projects {
 		names[p.GID] = p.Name
@@ -84,19 +85,28 @@ func (m *Model) navItems() []navItem {
 	}
 	if m.loadingProjects {
 		items = append(items, navItem{label: dimStyle.Render("loading…")})
+	} else {
+		hidden := 0
+		for _, p := range m.projects {
+			if !slices.Contains(gids, p.GID) {
+				hidden++
+			}
+		}
+		items = appendMore(items, hidden)
 	}
 
-	items = append(items, navItem{label: "Group by", heading: true})
-	var groups []string
-	for _, g := range append(append([]string{""}, m.deps.Config.List.Fields...), m.deps.Config.List.GroupBy, m.groupBy) {
-		g = strings.TrimSpace(g)
-		if !slices.ContainsFunc(groups, func(o string) bool { return strings.EqualFold(o, g) }) {
-			groups = append(groups, g)
-		}
-	}
+	items = append(items, navItem{label: "Group by", right: "b", heading: true})
+	groups := uniqueFold(append(append([]string{""}, m.deps.Config.List.Fields...), m.deps.Config.List.GroupBy, m.groupBy))
 	for _, g := range groups {
 		items = append(items, navItem{label: cmp.Or(ticket.OneLine(g), "none"), group: &g, active: strings.EqualFold(g, m.groupBy)})
 	}
+	hidden := 0
+	for _, g := range m.groupings() {
+		if !slices.ContainsFunc(groups, func(o string) bool { return strings.EqualFold(o, g) }) {
+			hidden++
+		}
+	}
+	items = appendMore(items, hidden)
 
 	if m.deps.Config.AgentsEnabled() {
 		items = append(items, navItem{label: "Agents", heading: true})
@@ -113,6 +123,15 @@ func (m *Model) navItems() []navItem {
 	return items
 }
 
+// appendMore adds a dim row counting the hidden entries a section's picker
+// offers, when there are any.
+func appendMore(items []navItem, hidden int) []navItem {
+	if hidden == 0 {
+		return items
+	}
+	return append(items, navItem{label: dimStyle.Render(fmt.Sprintf("+%d more", hidden))})
+}
+
 // navView renders the views panel's rows, width by height cells.
 func (m *Model) navView(width, height int) string {
 	items := m.navItems()
@@ -122,7 +141,7 @@ func (m *Model) navView(width, height int) string {
 			if i > 0 {
 				lines = append(lines, "")
 			}
-			lines = append(lines, m.rule(it.label, width, false))
+			lines = append(lines, m.navRule(it.label, it.right, width))
 			continue
 		}
 		mark := "  "
@@ -151,6 +170,19 @@ func (m *Model) navView(width, height int) string {
 		lines = lines[:height]
 	}
 	return strings.Join(lines, "\n")
+}
+
+// navRule is a heading rule with its section's key, if any, set in the
+// rule's right end: ── Projects ──── [p] ─
+func (m *Model) navRule(title, key string, width int) string {
+	if key == "" {
+		return m.rule(title, width, false)
+	}
+	line := m.sym.border.Top
+	tail := " [" + key + "] " + line
+	return m.rule(title, width-ansi.StringWidth(tail), false) +
+		dimStyle.Render(" [") + m.accentStyle.Render(key) + dimStyle.Render("] ") +
+		lipgloss.NewStyle().Foreground(borderColor).Render(line)
 }
 
 // navIndex is the index in items of the navCursor'th selectable item.

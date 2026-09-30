@@ -1,0 +1,44 @@
+internal/tui/flow.go
+  s_edf01d109d8ab5::t_3b2790ab3c19b7 67,69-74,77
+  s_edf01d109d8ab5::t_4012b9a8e524d7 78-80
+  s_edf01d109d8ab5::t_d560593e374890 29,60-66,75-76,85-95,376
+README.md
+  s_edf01d109d8ab5::t_9e1445c8051886 233,255,268-281
+  s_edf01d109d8ab5::t_65ea8b54b43fe5 282
+internal/setup/setup.go
+  s_edf01d109d8ab5::t_2c4ad86e0fe969 255-256
+internal/action/action.go
+  s_edf01d109d8ab5::t_144f8583eb9a1b 54-55,121-149,155-160
+  s_edf01d109d8ab5::t_be63723ea9c92e 161
+internal/config/config.go
+  s_edf01d109d8ab5::t_4e0af8cd7c7a1b 29-31,180-182,234,247-248,251,264
+  s_edf01d109d8ab5::t_e0cc0e041aa71d 175-179
+  s_edf01d109d8ab5::t_d1798841bcdc8a 265-266
+internal/tui/model.go
+  s_edf01d109d8ab5::t_32046d52d17b83 367-370
+internal/tui/cards.go
+  s_edf01d109d8ab5::t_d560593e374890 99,368-374
+  s_edf01d109d8ab5::t_07351ddb9871b3 375
+internal/action/action_test.go
+  s_edf01d109d8ab5::t_f946a7c970cf62 47-60
+internal/config/config_test.go
+  s_edf01d109d8ab5::t_4b27212569c5a5 84,114-128
+internal/tui/flow_test.go
+  s_edf01d109d8ab5::t_0890c8f27e954a 295-320
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "16d6dcfda1a83911e5dd1897bcabddec7b98f856",
+  "prompts": {},
+  "sessions": {
+    "s_edf01d109d8ab5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80c651ea-e089-4d5b-b476-b76d91e4e9ea",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

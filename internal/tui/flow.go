@@ -128,8 +128,9 @@ func (m *Model) pickedTicketProject(ref asana.Ref) tea.Cmd {
 	return m.continueRun()
 }
 
-// continueRun advances the run: choose the project, use its linked repo if
-// still valid, otherwise load candidates for the repo picker.
+// continueRun advances the run: use the ticket's own repo if still valid,
+// otherwise choose the project, use its linked repo if still valid, otherwise
+// load candidates for the repo picker.
 func (m *Model) continueRun() tea.Cmd {
 	r := m.run
 	if r.action.Agent && r.agent == nil {
@@ -153,6 +154,15 @@ func (m *Model) continueRun() tea.Cmd {
 		r.project = action.DefaultProject(r.ticket.Task, gidOf(m.viewProject))
 		return m.execute("")
 	}
+	if path, ok := m.deps.State.TaskRepos[r.ticket.GID]; ok {
+		if isRepoRoot(path) {
+			if !r.projectChosen {
+				r.project = action.DefaultProject(r.ticket.Task, gidOf(m.viewProject))
+			}
+			return m.execute(path)
+		}
+		m.status = fmt.Sprintf("ticket repo %s is no longer a git repository; using the project's", path)
+	}
 	if !r.projectChosen {
 		switch len(r.ticket.Memberships) {
 		case 0:
@@ -171,15 +181,36 @@ func (m *Model) continueRun() tea.Cmd {
 	}
 	if r.project != nil {
 		if path, ok := m.deps.State.Repos[r.project.GID]; ok {
-			// Links are saved as top-level paths; a different result means the
-			// directory is no longer its own repo (it may sit inside a parent one).
-			if resolved, err := repo.Resolve(path); err == nil && resolved == path {
-				return m.execute(resolved)
+			if isRepoRoot(path) {
+				return m.execute(path)
 			}
 			m.status = fmt.Sprintf("linked repo %s is no longer a git repository; pick again", path)
 		}
 	}
 	return loadCandidates(m.deps.Config.RepoSource.Command, nil)
+}
+
+// isRepoRoot reports whether a saved link still names a repo. Links are saved
+// as top-level paths; a different result means the directory is no longer its
+// own repo (it may sit inside a parent one).
+func isRepoRoot(path string) bool {
+	resolved, err := repo.Resolve(path)
+	return err == nil && resolved == path
+}
+
+// effectiveRepo returns the repo a repo = true action on t runs in without
+// asking, as continueRun picks it: t's own repo, else its only project's link.
+// own reports the former; path is "" when the action would ask.
+func (m *Model) effectiveRepo(t asana.Task) (path string, own bool) {
+	if p, ok := m.deps.State.TaskRepos[t.GID]; ok && isRepoRoot(p) {
+		return p, true
+	}
+	if len(t.Memberships) == 1 {
+		if p, ok := m.deps.State.Repos[t.Memberships[0].Project.GID]; ok && isRepoRoot(p) {
+			return p, false
+		}
+	}
+	return "", false
 }
 
 func (m *Model) openRepoPicker(msg candidatesMsg) {
@@ -228,7 +259,7 @@ func (m *Model) pickedRepo(path string) tea.Cmd {
 		return nil
 	}
 	if p := m.run.project; p != nil {
-		m.saveLink(p.GID, resolved)
+		m.saveLink(linkTarget{ref: *p}, resolved)
 	}
 	return m.execute(resolved)
 }
@@ -247,15 +278,22 @@ func (m *Model) resolvePicked(path string) (string, bool) {
 	return resolved, true
 }
 
-// saveLink links the project to path, or unlinks it when path is empty, and
-// saves the state.
-func (m *Model) saveLink(projectGID, path string) {
-	if path == "" {
-		m.deps.State.UnlinkRepo(projectGID)
-	} else {
-		m.deps.State.LinkRepo(projectGID, path)
+// saveLink links target to path, or unlinks it when path is empty, and saves
+// the state.
+func (m *Model) saveLink(target linkTarget, path string) {
+	gid, st := target.ref.GID, m.deps.State
+	switch {
+	case target.ticket && path == "":
+		st.UnlinkTaskRepo(gid)
+	case target.ticket:
+		st.LinkTaskRepo(gid, path)
+	case path == "":
+		st.UnlinkRepo(gid)
+	default:
+		st.LinkRepo(gid, path)
 	}
 	m.linked = nil
+	m.renderDetail(true)
 	if err := m.deps.State.Save(); err != nil {
 		m.status = "saving repo link: " + err.Error()
 	}

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
@@ -290,6 +291,112 @@ func TestRepoLinksUnlinkSaves(t *testing.T) {
 	again, _ := state.Load(st.Path())
 	if _, ok := again.Repos["p1"]; ok || m.modal != nil {
 		t.Fatalf("saved repos = %v, modal = %+v", again.Repos, m.modal)
+	}
+}
+
+func TestTicketRepoOverridesProjectLink(t *testing.T) {
+	own := gitRepo(t)
+	m, st := flowModel(t, web, api)
+	st.LinkRepo("p1", gitRepo(t))
+	st.LinkTaskRepo("1", own)
+	m.pickedAction(0)
+	if cmd := m.ExitCommand(); cmd == nil || cmd.Dir != own {
+		t.Fatalf("modal = %+v, exit = %+v", m.modal, cmd)
+	}
+	if got := st.LinkedRepos(m.details["1"].Task); !slices.Equal(got, []string{own}) {
+		t.Fatalf("linked repos = %q", got)
+	}
+}
+
+func TestStaleTicketRepoFallsBackToProjectLink(t *testing.T) {
+	dir := gitRepo(t)
+	m, st := flowModel(t, web)
+	st.LinkRepo("p1", dir)
+	st.LinkTaskRepo("1", t.TempDir())
+	m.pickedAction(0)
+	if cmd := m.ExitCommand(); cmd == nil || cmd.Dir != dir || !strings.Contains(m.status, "ticket repo") {
+		t.Fatalf("status = %q, exit = %+v", m.status, cmd)
+	}
+}
+
+func TestRepoLinksSetTicketRepoWithoutLinkingProject(t *testing.T) {
+	dir := gitRepo(t)
+	m, st := linksModel(t)
+	tk := asana.Task{GID: "1", Name: "Fix", Memberships: []asana.Membership{web}}
+	m.tasks, m.visible = []asana.Task{tk}, []asana.Task{tk}
+	m.Update(key("L"))
+	if it := m.modal.items[0]; it.Label != "This ticket only: Fix" || it.Hint != "uses project repo" {
+		t.Fatalf("items = %+v", m.modal.items)
+	}
+	if it := m.modal.items[m.modal.matches[m.modal.cursor]]; it.Label != "Web" {
+		t.Fatalf("cursor on %q, want the viewed project", it.Label)
+	}
+	m.modal.cursor = 0
+	_, cmd := m.Update(key("enter"))
+	m.Update(cmd())
+	if m.modal == nil || m.modal.title != "Repo for this ticket" || len(m.modal.items) != 1 {
+		t.Fatalf("modal = %+v", m.modal)
+	}
+	m.modal.input.SetValue(dir)
+	m.Update(key("tab"))
+	again, _ := state.Load(st.Path())
+	if again.TaskRepos["1"] != dir || len(again.Repos) != 0 {
+		t.Fatalf("task repos = %v, repos = %v", again.TaskRepos, again.Repos)
+	}
+	m.Update(key("L"))
+	m.modal.cursor = 0
+	_, cmd = m.Update(key("enter"))
+	m.Update(cmd())
+	if m.modal.items[0].Label != "unlink" {
+		t.Fatalf("items = %+v", m.modal.items)
+	}
+	m.Update(key("enter"))
+	again, _ = state.Load(st.Path())
+	if len(again.TaskRepos) != 0 {
+		t.Fatalf("task repos = %v", again.TaskRepos)
+	}
+}
+
+func TestEffectiveRepoMatchesRun(t *testing.T) {
+	own, linked := gitRepo(t), gitRepo(t)
+	m, st := testModel(t, config.Config{})
+	st.LinkRepo("p1", linked)
+	st.LinkRepo("p2", gitRepo(t))
+	one := asana.Task{GID: "1", Memberships: []asana.Membership{web}}
+	both := asana.Task{GID: "2", Memberships: []asana.Membership{web, api}}
+	if path, isOwn := m.effectiveRepo(one); path != linked || isOwn {
+		t.Fatalf("one project: %q, %v", path, isOwn)
+	}
+	if path, _ := m.effectiveRepo(both); path != "" {
+		t.Fatalf("several projects ask, so no effective repo; got %q", path)
+	}
+	st.LinkTaskRepo("2", own)
+	if path, isOwn := m.effectiveRepo(both); path != own || !isOwn {
+		t.Fatalf("own repo: %q, %v", path, isOwn)
+	}
+	st.LinkTaskRepo("1", t.TempDir())
+	if path, isOwn := m.effectiveRepo(one); path != linked || isOwn {
+		t.Fatalf("stale own repo must fall back: %q, %v", path, isOwn)
+	}
+	tk := ticket.Ticket{Task: both}
+	if body := ansi.Strip(m.renderCards(tk, 400)); !strings.Contains(body, own) || !strings.Contains(body, "this ticket only") {
+		t.Fatalf("details lack the repo:\n%s", body)
+	}
+}
+
+func TestTruncatePathKeepsLastElement(t *testing.T) {
+	for _, c := range []struct {
+		path  string
+		width int
+		want  string
+	}{
+		{"/code/web", 20, "/code/web"},
+		{"/private/var/folders/x/repo", 17, "/private/va…/repo"},
+		{"/private/var/folders/x/long-repo-name", 8, "…/long-…"},
+	} {
+		if got := truncatePath(c.path, c.width); got != c.want {
+			t.Errorf("truncatePath(%q, %d) = %q, want %q", c.path, c.width, got, c.want)
+		}
 	}
 }
 

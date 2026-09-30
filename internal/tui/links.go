@@ -14,7 +14,8 @@ import (
 // openLinks opens the repo links picker: linked projects first, including
 // links outside the member projects, then the rest, each by name. It first
 // loads the names of those outside links; one whose project no longer loads
-// shows as unavailable. The cursor starts on the viewed project.
+// shows as unavailable. The selected ticket's own repo leads the list. The
+// cursor starts on the viewed project.
 func (m *Model) openLinks() tea.Cmd {
 	names := map[string]string{}
 	for _, p := range m.projects {
@@ -50,43 +51,54 @@ func (m *Model) openLinks() tea.Cmd {
 		}
 		return cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
 	})
-	items := make([]pickItem, len(refs))
+	var items []pickItem
+	if t, ok := m.selected(); ok {
+		hint, ok := m.deps.State.TaskRepos[t.GID]
+		if !ok {
+			hint = "uses project repo"
+		}
+		items = append(items, pickItem{Label: "This ticket only: " + ticket.Clean(t.Name), Hint: hint, Value: linkTarget{ref: asana.Ref{GID: t.GID, Name: t.Name}, ticket: true}})
+	}
 	cursor := 0
-	for i, r := range refs {
+	for _, r := range refs {
 		hint, ok := m.deps.State.Repos[r.GID]
 		if !ok {
 			hint = "not linked"
 		}
-		items[i] = pickItem{Label: ticket.Clean(r.Name), Hint: hint, Value: r}
 		if r.GID == gidOf(m.viewProject) {
-			cursor = i
+			cursor = len(items)
 		}
+		items = append(items, pickItem{Label: ticket.Clean(r.Name), Hint: hint, Value: linkTarget{ref: r}})
 	}
-	p := newPicker(pickValue(m.pickedLinkProject), "Repo links", items)
+	p := newPicker(pickValue(m.pickedLink), "Repo links", items)
 	p.cursor = cursor
 	m.modal = p
 	return nil
 }
 
-// pickedLinkProject loads candidates for the chosen project's repo picker.
-func (m *Model) pickedLinkProject(ref asana.Ref) tea.Cmd {
+// pickedLink loads candidates for the chosen link's repo picker.
+func (m *Model) pickedLink(target linkTarget) tea.Cmd {
 	m.modal = nil
-	return loadCandidates(m.deps.Config.RepoSource.Command, &ref)
+	return loadCandidates(m.deps.Config.RepoSource.Command, &target)
 }
 
-// openLinkRepoPicker opens the repo picker for msg.link's project, offering
-// to unlink it when it is linked.
+// openLinkRepoPicker opens the repo picker for msg.link, offering to unlink
+// it when it is linked.
 func (m *Model) openLinkRepoPicker(msg candidatesMsg) {
-	ref := *msg.link
+	target := *msg.link
+	links, project := m.deps.State.Repos, &target.ref
+	if target.ticket {
+		links, project = m.deps.State.TaskRepos, nil
+	}
 	var lead []pickItem
-	if path, ok := m.deps.State.Repos[ref.GID]; ok {
+	if path, ok := links[target.ref.GID]; ok {
 		lead = append(lead, pickItem{Label: "unlink", Hint: path, Value: ""})
 	}
-	m.modal = repoPicker(msg, &ref, pickPath(func(path string) tea.Cmd {
-		name := ticket.Clean(ref.Name)
+	m.modal = repoPicker(msg, project, pickPath(func(path string) tea.Cmd {
+		name := ticket.Clean(target.ref.Name)
 		if path == "" {
 			m.modal = nil
-			m.saveLink(ref.GID, "")
+			m.saveLink(target, "")
 			m.status = "unlinked " + name
 			return nil
 		}
@@ -94,7 +106,7 @@ func (m *Model) openLinkRepoPicker(msg candidatesMsg) {
 		if !ok {
 			return nil
 		}
-		m.saveLink(ref.GID, resolved)
+		m.saveLink(target, resolved)
 		m.status = "linked " + name + " to " + resolved
 		return nil
 	}), lead...)

@@ -24,6 +24,9 @@ const maxRecent = 20
 type State struct {
 	// Repos maps an Asana project gid to a local git repository path.
 	Repos map[string]string `toml:"repos"`
+	// TaskRepos maps an Asana task gid to a repository path used for that task
+	// only, in place of its projects' links.
+	TaskRepos map[string]string `toml:"task_repos"`
 	// RecentProjects holds project gids, most recently opened first.
 	RecentProjects []string `toml:"recent_projects"`
 	// Views maps a project gid ("" for My Tasks) to the list view last used there.
@@ -51,6 +54,9 @@ func Load(path string) (*State, error) {
 	}
 	if s.Repos == nil {
 		s.Repos = map[string]string{}
+	}
+	if s.TaskRepos == nil {
+		s.TaskRepos = map[string]string{}
 	}
 	if s.Views == nil {
 		s.Views = map[string]View{}
@@ -137,6 +143,16 @@ func (s *State) UnlinkRepo(projectGID string) {
 	delete(s.Repos, projectGID)
 }
 
+// LinkTaskRepo remembers the repository used for one task only.
+func (s *State) LinkTaskRepo(taskGID, path string) {
+	s.TaskRepos[taskGID] = path
+}
+
+// UnlinkTaskRepo forgets a task's own repository, so its projects' links apply.
+func (s *State) UnlinkTaskRepo(taskGID string) {
+	delete(s.TaskRepos, taskGID)
+}
+
 // SetView remembers the list view used for a project.
 func (s *State) SetView(projectGID string, v View) {
 	s.Views[projectGID] = v
@@ -151,8 +167,12 @@ func (s *State) View(projectGID string) (View, bool) {
 // Path returns the file the state is saved to.
 func (s *State) Path() string { return s.path }
 
-// LinkedRepos returns the repos linked to t's projects, in membership order.
+// LinkedRepos returns t's own repo when set, otherwise the repos linked to its
+// projects, in membership order.
 func (s *State) LinkedRepos(t asana.Task) []string {
+	if path, ok := s.TaskRepos[t.GID]; ok {
+		return []string{path}
+	}
 	var repos []string
 	for _, m := range t.Memberships {
 		if path, ok := s.Repos[m.Project.GID]; ok {

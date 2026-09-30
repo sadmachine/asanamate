@@ -2,11 +2,16 @@ package ticket
 
 import (
 	"fmt"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
-	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
+	"github.com/JohannesKaufmann/dom"
+	"github.com/JohannesKaufmann/html-to-markdown/v2/converter"
+	"github.com/JohannesKaufmann/html-to-markdown/v2/plugin/base"
+	"github.com/JohannesKaufmann/html-to-markdown/v2/plugin/commonmark"
+	"golang.org/x/net/html"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 )
@@ -178,11 +183,35 @@ func HTMLToMarkdown(html string) string {
 	if strings.TrimSpace(html) == "" {
 		return ""
 	}
-	md, err := htmltomarkdown.ConvertString(html)
+	md, err := markdownConverter.ConvertString(html)
 	if err != nil {
 		return Clean(html)
 	}
 	return Clean(strings.TrimSpace(md))
+}
+
+var markdownConverter = newMarkdownConverter()
+
+// newMarkdownConverter returns the CommonMark converter, rendering a link
+// whose text is its URL as an autolink so it shows the URL once.
+func newMarkdownConverter() *converter.Converter {
+	conv := converter.NewConverter(converter.WithPlugins(
+		base.NewBasePlugin(),
+		commonmark.NewCommonmarkPlugin(),
+	))
+	conv.Register.RendererFor("a", converter.TagTypeInline, renderAutolink, converter.PriorityEarly)
+	return conv
+}
+
+func renderAutolink(_ converter.Context, w converter.Writer, n *html.Node) converter.RenderStatus {
+	href := strings.TrimSpace(dom.GetAttributeOr(n, "href", ""))
+	u, err := url.Parse(href)
+	if err != nil || u.Scheme == "" || strings.ContainsAny(href, " <>") ||
+		strings.TrimSpace(dom.CollectText(n)) != href {
+		return converter.RenderTryNext
+	}
+	w.WriteString("<" + href + ">")
+	return converter.RenderSuccess
 }
 
 // RichPart is a run of Asana rich text converted to Markdown. ImageGID is set

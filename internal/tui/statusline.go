@@ -35,9 +35,9 @@ func (m *Model) mode() (name string, pill color.Color, hints [][2]string) {
 		return "EDIT", editColor, [][2]string{{"j/k", "targets"}, {"enter", "edit"}, {"↑/↓", "scroll"}, {"esc", "list"}}
 	case m.focusReader:
 		if m.readerView != config.ViewMarkdown {
-			return "READ", readColor, [][2]string{{"j/k", "targets"}, {"↑/↓", "scroll"}, {"tab", "fields"}, {"esc", "list"}}
+			return "READ", readColor, [][2]string{{"j/k", "targets"}, {"↑/↓", "scroll"}, {"tab", "pane"}, {"esc", "list"}}
 		}
-		return "READ", readColor, [][2]string{{"j/k", "scroll"}, {"tab", "fields"}, {"esc", "list"}}
+		return "READ", readColor, [][2]string{{"j/k", "scroll"}, {"tab", "pane"}, {"esc", "list"}}
 	case m.focusNav:
 		return "VIEWS", m.accentStyle.GetForeground(), [][2]string{{"j/k", "move"}, {"enter", "open"}, {"esc", "list"}, {"?", "keys"}}
 	}

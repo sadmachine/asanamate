@@ -1,0 +1,22 @@
+internal/ticket/ticket_test.go
+  s_f4fa9ff65b1bdd::t_1a1215b2cb1f72 9,130-146
+  s_f4fa9ff65b1bdd::t_b4b63d8370d251 147
+internal/ticket/markdown.go
+  s_f4fa9ff65b1bdd::t_d268ef3d9977a1 5-6,187-241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "571fd76aa1f99b886941b147a540a856ef7badc6",
+  "prompts": {},
+  "sessions": {
+    "s_f4fa9ff65b1bdd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "66613795-1c03-4392-a08c-05a38c588457",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+internal/setup/update.go
+  s_b7c4dc2e97900b::t_f5f44ff88f6948 23,80,103-104,108,194-195,198,200-201
+internal/config/config.go
+  s_b7c4dc2e97900b::t_9a0a1ef1317240 65-66,154-155,197-241,284,367-370
+  s_b7c4dc2e97900b::t_6091a8cee21e61 371
+README.md
+  s_b7c4dc2e97900b::t_0133f0f44078db 257
+  s_b7c4dc2e97900b::t_8f2c139b1cfe3e 362,364-365
+  s_b7c4dc2e97900b::t_36aa30bb0fc96a 355
+  s_b7c4dc2e97900b::t_8987496aca7530 411
+  s_b7c4dc2e97900b::t_f67f263fc786df 28-29
+  s_b7c4dc2e97900b::t_487072a3956fe0 38
+  s_b7c4dc2e97900b::t_82da8c2ce928a8 230
+  s_b7c4dc2e97900b::t_6c164bc549d30e 263,265-266
+  s_b7c4dc2e97900b::t_36246f1f209948 179-184,186
+internal/setup/setup.go
+  s_b7c4dc2e97900b::t_8f17e4c474e39c 259-260
+  s_b7c4dc2e97900b::t_479c55edb2fb6f 63-67,131,236,238-242,251-258,261-262,264-279
+internal/config/config_test.go
+  s_b7c4dc2e97900b::t_a105c1062b95f5 21-34,36-37,40-41,66,77-111
+  s_b7c4dc2e97900b::t_06ef3ba6dcdf9a 112
+internal/tui/flow.go
+  s_b7c4dc2e97900b::t_b177b5b5bd6a77 54
+internal/setup/setup_test.go
+  s_b7c4dc2e97900b::t_a105c1062b95f5 65-90,131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ec77470c65b25af5f11c9e65c8fc857a7b76fc82",
+  "prompts": {},
+  "sessions": {
+    "s_b7c4dc2e97900b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c97e90ab-ef8f-43c7-b0c8-bef427eb5e6c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

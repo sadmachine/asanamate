@@ -784,14 +784,15 @@ func (m *Model) layout() {
 		m.focusNav = false
 	}
 	_, readerW, _ := m.paneWidths()
-	if readerW != m.reader.Width() {
+	widthChanged := readerW != m.reader.Width()
+	if widthChanged {
 		m.renderers = map[rendererKey]*glamour.TermRenderer{}
 	}
 	m.reader.SetWidth(readerW)
 	m.reader.SetHeight(m.paneHeight())
 	m.filterInput.SetWidth(max(m.width/3, 10))
-	if m.shownGID != "" {
-		m.renderDetail(false)
+	if t, ok := m.selected(); widthChanged && ok && t.GID == m.shownGID {
+		m.renderDetail(true)
 	}
 }
 

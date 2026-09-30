@@ -39,7 +39,8 @@ const minPaneW = 30
 // panelFrame is the cells a panel's border takes across and down.
 const panelFrame = 2
 
-// listGutter is the blank columns kept right of the list's content.
+// listGutter is the blank columns kept right of the list's rows; group
+// headers and separators still run the full width.
 const listGutter = 1
 
 // Deps are the services the TUI uses.
@@ -795,7 +796,7 @@ func (m *Model) panes(h int) string {
 	case split:
 		inner := m.paneHeight()
 		title, count := m.listTitle()
-		list := m.panel(title, count, m.listView(max(listW-listGutter, 1), inner), listW+panelFrame, h, !m.focusReader && !m.focusNav)
+		list := m.panel(title, count, m.listView(listW, inner), listW+panelFrame, h, !m.focusReader && !m.focusNav)
 		reader := m.panel("[2] Ticket", m.readerView, m.reader.View(), readerW+panelFrame, h, m.focusReader)
 		if !m.showNav() {
 			return lipgloss.JoinHorizontal(lipgloss.Top, list, reader)
@@ -805,7 +806,7 @@ func (m *Model) panes(h int) string {
 	case m.focusReader:
 		return m.reader.View()
 	default:
-		return lipgloss.NewStyle().Width(listW).Height(h).Render(m.listView(max(listW-listGutter, 1), h))
+		return lipgloss.NewStyle().Width(listW).Height(h).Render(m.listView(listW, h))
 	}
 }
 
@@ -938,7 +939,7 @@ func (m *Model) listView(width, height int) string {
 		}
 		cursor = cursorStyle.Render(cursor)
 	}
-	rowW := max(width-ansi.StringWidth(gutter), 1)
+	rowW := max(width-ansi.StringWidth(gutter)-listGutter, 1)
 	var lines []string
 	for i := start; i < end; i++ {
 		switch {

@@ -44,7 +44,7 @@ func TestSelectedRowFillsWidth(t *testing.T) {
 	m, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle}})
 	m.Update(tasksMsg{tasks: []asana.Task{{GID: "1", Name: "A"}, {GID: "2", Name: "B"}}})
 	got := strings.Split(m.listView(10, 2), "\n")
-	if want := selectedStyle.Render("□  A      "); got[0] != want {
+	if want := selectedStyle.Render("□  A     "); got[0] != want {
 		t.Fatalf("selected = %q, want %q", got[0], want)
 	}
 	if ansi.Strip(got[1]) != "□  B" {
@@ -68,7 +68,7 @@ func TestListViewLayouts(t *testing.T) {
 	other := asana.Task{GID: "2", Name: "Fix footer"}
 	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Fields: []string{"section", "due"}}})
 	single.Update(tasksMsg{tasks: []asana.Task{fieldTask, other}})
-	if got := listLines(single, 80, 5); len(got) != 2 || got[0] != "□  Fix login"+strings.Repeat(" ", 58)+"Today  Thu" {
+	if got := listLines(single, 80, 5); len(got) != 2 || got[0] != "□  Fix login"+strings.Repeat(" ", 57)+"Today  Thu" {
 		t.Fatalf("single = %q", got)
 	}
 
@@ -88,17 +88,17 @@ func TestListViewSeparator(t *testing.T) {
 	a, b, c := asana.Task{GID: "1", Name: "A"}, asana.Task{GID: "2", Name: "B"}, asana.Task{GID: "3", Name: "C"}
 	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Separator: true}})
 	single.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
-	if got := listLines(single, 4, 5); !slices.Equal(got, []string{"────", "□  A", "────", "□  B", "────"}) {
+	if got := listLines(single, 5, 5); !slices.Equal(got, []string{"─────", "□  A", "─────", "□  B", "─────"}) {
 		t.Fatalf("single = %q", got)
 	}
 	single.Update(key("s"))
-	if got := listLines(single, 4, 3); !slices.Equal(got, []string{"□  A", "□  B", "□  C"}) {
+	if got := listLines(single, 5, 3); !slices.Equal(got, []string{"□  A", "□  B", "□  C"}) {
 		t.Fatalf("single toggled off = %q", got)
 	}
 	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Separator: true}})
 	multi.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
 	multi.moveTo(2)
-	if got := listLines(multi, 4, 7); !slices.Equal(got, []string{"────", "□  B", "", "────", "□  C", "", "────"}) {
+	if got := listLines(multi, 5, 7); !slices.Equal(got, []string{"─────", "□  B", "", "─────", "□  C", "", "─────"}) {
 		t.Fatalf("multi scrolled = %q", got)
 	}
 }
@@ -278,8 +278,8 @@ func TestColumnsAlignAcrossRows(t *testing.T) {
 	m.Update(tasksMsg{tasks: []asana.Task{fieldTask, long, plain}})
 	got := listLines(m, 40, 3)
 	want := []string{
-		"□  Fix login         Today        Thu",
-		"□  Ship              In Progress  1d ago",
+		"□  Fix login        Today        Thu",
+		"□  Ship             In Progress  1d ago",
 		"□  Tidy",
 	}
 	if !slices.Equal(got, want) {

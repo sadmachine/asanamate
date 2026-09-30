@@ -45,7 +45,7 @@ func TestAgentColumnOrdersByUrgency(t *testing.T) {
 	other.Repo = "/other"
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1"), other, onBranch(agents.Waiting, "q1")}})
 	first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]
-	if first != "□  Fix login"+strings.Repeat(" ", 11)+"🤖 ⚠ ◐ " {
+	if first != "□  Fix login"+strings.Repeat(" ", 10)+"🤖 ⚠ ◐ " {
 		t.Fatalf("row = %q", first)
 	}
 	m.width = 120

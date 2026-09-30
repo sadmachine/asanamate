@@ -1,0 +1,40 @@
+internal/config/config_test.go
+  s_5d7eb1eea7d84b::t_3befa185e2b26c 211-233
+internal/config/config.go
+  s_5d7eb1eea7d84b::t_290549b6546049 12,134,210,321-323,343-349
+  s_5d7eb1eea7d84b::t_8436fee9c6bf9a 135-141,211
+  s_5d7eb1eea7d84b::t_3e8534f6584d52 350-351
+README.md
+  s_5d7eb1eea7d84b::t_290549b6546049 82,133
+internal/tui/model.go
+  s_5d7eb1eea7d84b::t_8436fee9c6bf9a 67-82
+  s_5d7eb1eea7d84b::t_e728b894d6a71c 154,167,176-177,424-426
+internal/tui/refresh.go
+  s_5d7eb1eea7d84b::t_e728b894d6a71c 1-49
+internal/tui/inputbox.go
+  s_5d7eb1eea7d84b::t_e728b894d6a71c 16,37,44-48
+  s_5d7eb1eea7d84b::t_8436fee9c6bf9a 13-15
+internal/tui/refresh_test.go
+  s_5d7eb1eea7d84b::t_dc2f6bc8611bec 83-91
+  s_5d7eb1eea7d84b::t_3befa185e2b26c 1-82,92-118
+internal/setup/setup.go
+  s_5d7eb1eea7d84b::t_290549b6546049 169-171
+internal/tui/keys.go
+  s_5d7eb1eea7d84b::t_e728b894d6a71c 145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "df80e01a73d859aa76d7426835ac6f46285d1645",
+  "prompts": {},
+  "sessions": {
+    "s_5d7eb1eea7d84b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0f3c8-6c3b-7ca1-b482-cf97a456fafa",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

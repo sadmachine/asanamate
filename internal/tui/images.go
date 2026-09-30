@@ -119,5 +119,5 @@ func (m *Model) renderRich(html string, width int) string {
 			out = append(out, s)
 		}
 	}
-	return strings.Join(out, "\n\n")
+	return strings.Join(out, "\n")
 }

@@ -227,9 +227,14 @@ func (m *Model) openFieldPicker() {
 	m.modal = newPicker(pickValue(m.pickedField), "Set which field?", items)
 }
 
-// editable reports whether the edit flow can set custom field f.
+// editable reports whether the edit flow can set custom field f. ID and
+// formula fields are read-only text and number fields.
 func editable(f asana.CustomField) bool {
-	switch f.ResourceSubtype {
+	kind := f.RepresentationType
+	if kind == "" {
+		kind = f.ResourceSubtype
+	}
+	switch kind {
 	case asana.FieldText, asana.FieldNumber, asana.FieldEnum, asana.FieldMultiEnum, asana.FieldDate, asana.FieldPeople:
 		return true
 	}

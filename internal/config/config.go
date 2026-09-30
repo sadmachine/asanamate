@@ -26,6 +26,9 @@ const (
 	ModeExit       = "exit"
 )
 
+// ContextComment limits an action to a highlighted comment.
+const ContextComment = "comment"
+
 // List layouts.
 const (
 	LayoutSingle = "single"
@@ -169,11 +172,14 @@ type RepoSource struct {
 // Action is a user-defined command run against the selected ticket. Each
 // action is its own file in ActionsDir, with these keys at the top level.
 type Action struct {
-	Name    string `toml:"name"`
-	Key     string `toml:"key"`
-	Mode    string `toml:"mode"`
-	Repo    bool   `toml:"repo"`
-	Agent   bool   `toml:"agent"`
+	Name  string `toml:"name"`
+	Key   string `toml:"key"`
+	Mode  string `toml:"mode"`
+	Repo  bool   `toml:"repo"`
+	Agent bool   `toml:"agent"`
+	// Context limits the action to a highlighted item, such as ContextComment,
+	// where it is listed first; "" shows it everywhere.
+	Context string `toml:"context"`
 	Command string `toml:"command"`
 	// Form optionally asks for select or hours values before running the command.
 	Form form.Spec `toml:"form"`
@@ -225,7 +231,7 @@ func loadActions(dir string) ([]Action, error) {
 		return nil, err
 	}
 	var actions []Action
-	keys := map[string]string{} // action key -> file that binds it
+	keys := map[[2]string]string{} // context and action key -> file that binds it
 	for _, file := range files {
 		a := Action{Mode: ModeForeground}
 		md, err := toml.DecodeFile(file, &a)
@@ -238,10 +244,11 @@ func loadActions(dir string) ([]Action, error) {
 		if err := a.validate(); err != nil {
 			return nil, fmt.Errorf("%s: %w", file, err)
 		}
-		if other, ok := keys[a.Key]; ok {
+		k := [2]string{a.Context, a.Key}
+		if other, ok := keys[k]; ok {
 			return nil, fmt.Errorf("%s: key %q is already used by %s", file, a.Key, other)
 		}
-		keys[a.Key] = file
+		keys[k] = file
 		actions = append(actions, a)
 	}
 	return actions, nil
@@ -252,6 +259,9 @@ func (a Action) validate() error {
 		return errors.New("name and command are required")
 	}
 	if err := oneOf("mode", a.Mode, ModeForeground, ModeBackground, ModeExit); err != nil {
+		return err
+	}
+	if err := oneOf("context", a.Context, "", ContextComment); err != nil {
 		return err
 	}
 	if len([]rune(a.Key)) != 1 {

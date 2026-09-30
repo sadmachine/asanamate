@@ -96,10 +96,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		comments = make([]string, len(t.Comments))
 		line := m.fieldLines[commentKey] + 2
 		for i, c := range t.Comments {
-			key := "comment:" + c.GID
-			if c.GID == "" {
-				key = fmt.Sprintf("comment:index:%d", i)
-			}
+			key := commentTarget(c, i)
 			m.fieldLines[key] = line
 			m.cardTargets = append(m.cardTargets, key)
 			comments[i] = m.comment(c, width, m.fieldKey == key)
@@ -367,4 +364,12 @@ func refLines(refs []asana.Ref) string {
 		lines[i] = "- " + ticket.OneLine(r.Name)
 	}
 	return strings.Join(lines, "\n")
+}
+
+// commentTarget is the card target key of comment c at index i.
+func commentTarget(c asana.Story, i int) string {
+	if c.GID == "" {
+		return fmt.Sprintf("comment:index:%d", i)
+	}
+	return "comment:" + c.GID
 }

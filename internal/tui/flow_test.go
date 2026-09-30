@@ -292,3 +292,29 @@ func TestRepoLinksUnlinkSaves(t *testing.T) {
 		t.Fatalf("saved repos = %v, modal = %+v", again.Repos, m.modal)
 	}
 }
+
+func TestCommentActionsListFirstOnHighlightedComment(t *testing.T) {
+	m, _ := testModel(t, config.Config{Actions: []config.Action{
+		{Name: "Global", Key: "r", Mode: config.ModeExit, Command: "true"},
+		{Name: "Reply", Key: "r", Mode: config.ModeExit, Context: config.ContextComment, Command: "true"},
+	}})
+	tk := ticket.Ticket{Task: asana.Task{GID: "1", Name: "Fix"}, Comments: []asana.Story{{GID: "9", HTMLText: "<body>hi</body>"}}}
+	m.tasks, m.visible = []asana.Task{tk.Task}, []asana.Task{tk.Task}
+	m.details["1"] = tk
+
+	m.openActionMenu()
+	if p := m.modal; len(p.items) != 1 || p.items[0].Label != "Global" {
+		t.Fatalf("without a comment, items = %+v", p.items)
+	}
+	m.modal, m.run = nil, nil
+
+	m.fieldKey = "comment:9"
+	m.openActionMenu()
+	if p := m.modal; len(p.items) != 2 || p.items[0].Label != "Reply" {
+		t.Fatalf("on a comment, items = %+v", p.items)
+	}
+	m.Update(key("r"))
+	if cmd := m.ExitCommand(); cmd == nil || !slices.Contains(cmd.Env, "ASANAMATE_COMMENT_GID=9") || !slices.Contains(cmd.Env, "ASANAMATE_COMMENT_TEXT=hi") {
+		t.Fatalf("exit command = %+v", cmd)
+	}
+}

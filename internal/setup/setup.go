@@ -252,6 +252,8 @@ var actionFiles = []struct{ name, body string }{
 # command as $ASANAMATE_PARAM_<ID>. See README for an example.
 # mode: "foreground" (suspend the TUI), "background" (detached, logged), or
 # "exit" (quit asanamate, then run). repo = true resolves the ticket's repo first.
+# context = "comment" shows the action only on a highlighted comment, first in
+# the menu, with the comment in $ASANAMATE_COMMENT_*.
 name = "View ticket in pager"
 key = "v"
 mode = "foreground"

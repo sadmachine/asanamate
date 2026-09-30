@@ -81,6 +81,7 @@ func TestLoadRejectsInvalidActions(t *testing.T) {
 		"long key":      {"a.toml": "name = \"a\"\nkey = \"ab\"\ncommand = \"true\"\n"},
 		"no command":    {"a.toml": "name = \"a\"\nkey = \"a\"\n"},
 		"duplicate key": {"a.toml": "name = \"a\"\nkey = \"x\"\ncommand = \"true\"\n", "b.toml": "name = \"b\"\nkey = \"x\"\ncommand = \"true\"\n"},
+		"bad context":   {"a.toml": "name = \"a\"\nkey = \"a\"\ncontext = \"subtask\"\ncommand = \"true\"\n"},
 	}
 	for name, files := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -106,6 +107,21 @@ func TestLoadActionsInFileNameOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(cfg.Actions) != 2 || cfg.Actions[0].Name != "a" || cfg.Actions[1].Name != "b" {
+		t.Fatalf("actions = %+v", cfg.Actions)
+	}
+}
+
+func TestLoadActionsAllowKeyReuseAcrossContexts(t *testing.T) {
+	path := writeFile(t, `workspace = "1"`)
+	writeActions(t, path, map[string]string{
+		"a.toml": "name = \"a\"\nkey = \"r\"\ncommand = \"true\"\n",
+		"b.toml": "name = \"b\"\nkey = \"r\"\ncontext = \"comment\"\ncommand = \"true\"\n",
+	})
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Actions) != 2 || cfg.Actions[1].Context != ContextComment {
 		t.Fatalf("actions = %+v", cfg.Actions)
 	}
 }

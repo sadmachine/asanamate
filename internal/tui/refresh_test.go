@@ -6,8 +6,11 @@ import (
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
+
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
 func TestRefreshIntervalSessionOverride(t *testing.T) {
@@ -75,6 +78,84 @@ func TestAutoRefreshPreservesViewAndRetriesAfterError(t *testing.T) {
 	if m.loading || !ok || selected.GID != sideTask.GID || len(m.visible) != 2 ||
 		m.filterInput.Value() != "is:open" || m.viewProject.GID != "project" {
 		t.Fatal("reload changed selection, filter, or project")
+	}
+}
+
+func TestAutoRefreshPreservesReader(t *testing.T) {
+	for _, view := range []string{config.ViewCards, config.ViewMarkdown} {
+		for _, wider := range []bool{false, true} {
+			name := view + "/same width"
+			if wider {
+				name = view + "/wider list"
+			}
+			t.Run(name, func(t *testing.T) {
+				cfg := config.Default()
+				cfg.Reader.View = view
+				m, _ := testModel(t, cfg)
+				m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
+				m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+				detail := ticket.Ticket{Task: openTask}
+				detail.HTMLNotes = "<body>" + strings.Repeat("Reading this ticket.<br>", 100) + "</body>"
+				m.Update(detailMsg{gid: openTask.GID, ticket: detail})
+				m.focusReader = true
+				m.fieldKey, m.showEmpty = "description", true
+				m.reader.SetYOffset(10)
+				before, width := m.reader.View(), m.reader.Width()
+				m.Update(refreshTickMsg{seq: m.refreshSeq})
+				incoming := sideTask
+				if wider {
+					incoming.Name = strings.Repeat("New ticket ", 8)
+				}
+				_, cmd := m.Update(tasksMsg{tasks: []asana.Task{incoming, openTask}})
+				selected, ok := m.selected()
+				if !ok || selected.GID != openTask.GID || len(m.visible) != 2 || m.loading || cmd != nil {
+					t.Fatal("refresh did not update the list while keeping the selected ticket")
+				}
+				if m.reader.YOffset() != 10 || !m.focusReader || m.fieldKey != "description" || !m.showEmpty {
+					t.Fatal("refresh changed reader scroll, focus, or field selection")
+				}
+				if wider {
+					if m.reader.Width() >= width {
+						t.Fatal("wider list did not exercise reader reflow")
+					}
+				} else if m.reader.Width() != width || m.reader.View() != before {
+					t.Fatal("unchanged reader width changed the ticket view")
+				}
+			})
+		}
+	}
+}
+
+func TestAutoRefreshUpdatesReaderWhenTicketRemoved(t *testing.T) {
+	for _, empty := range []bool{false, true} {
+		name := "select remaining ticket"
+		if empty {
+			name = "empty list"
+		}
+		t.Run(name, func(t *testing.T) {
+			m, _ := testModel(t, config.Default())
+			m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
+			m.Update(tasksMsg{tasks: []asana.Task{openTask, sideTask}})
+			detail := ticket.Ticket{Task: openTask}
+			detail.HTMLNotes = "<body>" + strings.Repeat("Reading this ticket.<br>", 100) + "</body>"
+			m.Update(detailMsg{gid: openTask.GID, ticket: detail})
+			m.Update(detailMsg{gid: sideTask.GID, ticket: ticket.Ticket{Task: sideTask}})
+			m.fieldKey, m.showEmpty = "description", true
+			m.reader.SetYOffset(10)
+			m.Update(refreshTickMsg{seq: m.refreshSeq})
+			tasks := []asana.Task{sideTask}
+			if empty {
+				tasks = nil
+			}
+			m.Update(tasksMsg{tasks: tasks})
+			if empty {
+				if m.shownGID != "" || strings.Contains(m.reader.View(), openTask.Name) {
+					t.Fatal("empty list retained the removed ticket")
+				}
+			} else if m.shownGID != sideTask.GID || m.reader.YOffset() != 0 || m.fieldKey != "" || m.showEmpty {
+				t.Fatal("removed ticket did not reset the reader to the remaining ticket")
+			}
+		})
 	}
 }
 

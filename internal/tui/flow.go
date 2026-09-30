@@ -301,7 +301,8 @@ func (m *Model) saveLink(target linkTarget, path string) {
 }
 
 // typedInput takes the input box's text: the action's input, or, once that
-// is done, the branch for a ticket whose branch field is empty.
+// is done, the branch for a ticket whose branch field is empty. A branch
+// other than the fallback is saved for the ticket, so agents on it link.
 func (m *Model) typedInput(text string) tea.Cmd {
 	m.input = nil
 	r := m.run
@@ -309,6 +310,9 @@ func (m *Model) typedInput(text string) tea.Cmd {
 		r.input, r.inputDone = text, true
 	} else {
 		r.branch = cmp.Or(text, action.DefaultBranch(r.ticket.Task))
+		if r.branch != action.DefaultBranch(r.ticket.Task) {
+			m.saveBranch(r.ticket.GID, r.branch)
+		}
 	}
 	return m.execute(r.repo)
 }
@@ -367,9 +371,10 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 	preferred := m.projectFields[gidOf(r.project)]
 	branch := r.branch
 	if branch == "" {
-		branch = action.Branch(r.ticket.Task, m.deps.Config.BranchField, preferred)
+		saved := m.deps.State.TaskBranches[r.ticket.GID]
+		branch = action.Branch(r.ticket.Task, saved, m.deps.Config.BranchField, preferred)
 		if strings.Contains(r.action.Command, "ASANAMATE_BRANCH") &&
-			action.BranchWarning(r.ticket.Task, m.deps.Config.BranchField, preferred) != "" {
+			action.BranchWarning(r.ticket.Task, saved, m.deps.Config.BranchField, preferred) != "" {
 			r.repo = repoPath
 			m.input = newInputBox(fmt.Sprintf("Branch (%q is empty)", m.deps.Config.BranchField), "empty uses the ID field or title slug")
 			m.input.area.SetValue(branch)

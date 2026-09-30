@@ -68,7 +68,7 @@ key press.
 | `p` | switch project (recent first) |
 | `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project), or give the selected ticket its own repo that overrides its projects' links without changing them |
 | `enter`, `a` | run an action on the selected ticket |
-| `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), or assign it |
+| `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), assign it, or set its branch (saved locally, overrides `branch_field`; empty removes it) |
 | `t` | log completed time for the selected ticket (only when time tracking is configured) |
 | `f` | attachments: view images inline or open in the browser |
 | `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) |
@@ -255,7 +255,7 @@ paste ticket text into the command, because ticket content is untrusted.
 | `ASANAMATE_PROJECT`, `ASANAMATE_PROJECT_GID`, `ASANAMATE_SECTION` | active project and the ticket's section in it |
 | `ASANAMATE_REPO` | resolved repo (`repo = true` actions) |
 | `ASANAMATE_WORKTREE` | the repo's worktree with `$ASANAMATE_BRANCH` checked out, the main one included; empty when none has it |
-| `ASANAMATE_BRANCH` | the ticket's branch: `branch_field`'s value, else the ID field, else the title slug |
+| `ASANAMATE_BRANCH` | the ticket's branch: the one saved for it, else `branch_field`'s value, else the ID field, else the title slug |
 | `ASANAMATE_AGENT_STATE`, `ASANAMATE_AGENT_STATUS`, `ASANAMATE_AGENT_PATH`, `ASANAMATE_AGENT_TARGET`, `ASANAMATE_AGENT_TITLE` | the agent the action is about (the chosen one for `agent = true`, else the most urgent): normalized state, raw status, directory, jump id, title. Empty without agents |
 | `ASANAMATE_AGENT_TARGETS` | every linked agent, one `target<TAB>state<TAB>path<TAB>title` line each |
 | `ASANAMATE_COMMENT_GID`, `ASANAMATE_COMMENT_AUTHOR`, `ASANAMATE_COMMENT_AUTHOR_GID`, `ASANAMATE_COMMENT_DATE`, `ASANAMATE_COMMENT_TEXT` | the highlighted comment when the menu opened: story gid, author name and gid, `created_at` timestamp, and body as Markdown. Empty when no comment is highlighted |
@@ -409,7 +409,9 @@ Agents missing from a ticket usually come down to one of these:
 - `branch_field` is unset, or empty for the ticket, so the branch is the title
   slug rather than the branch you work on. When a set `branch_field` is
   empty, the reading pane warns, and actions whose command uses
-  `$ASANAMATE_BRANCH` ask before running.
+  `$ASANAMATE_BRANCH` ask before running. A branch typed there, other than
+  the fallback, is saved for the ticket and used from then on in place of
+  `branch_field`. Set branch in the `e` menu edits or removes it.
 - The repo is on another branch or a detached HEAD. When a ticket has no
   agents, the reading pane lists the agents in its repos and the branch each
   one is on. Start agents with an action that switches to `$ASANAMATE_BRANCH`
@@ -504,7 +506,7 @@ set -g allow-passthrough on
 
 - Config: `~/.config/asanamate/config.toml`
 - Actions: `~/.config/asanamate/actions/*.toml`
-- State (repo links, recent projects): `~/.local/state/asanamate/state.toml`
+- State (repo links, saved branches, recent projects): `~/.local/state/asanamate/state.toml`
 - Ticket exports: `~/.local/state/asanamate/tickets/<gid>/`
 - Background action log: `~/.local/state/asanamate/actions.log`
 

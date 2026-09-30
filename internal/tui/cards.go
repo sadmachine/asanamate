@@ -10,6 +10,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -143,10 +144,8 @@ func (m *Model) summaryLine(t asana.Task, width int) string {
 		due, _, _ := dueDays(t.DueOn, m.now())
 		chips = append(chips, style.Render(m.sym.icon(iconDue)+shortDate(due, m.now())+" · "+rel))
 	}
-	if name := m.deps.Config.BranchField; name != "" {
-		if f, ok := t.Field(name, rc.preferred); ok && f.Value() != "" {
-			chips = append(chips, dimStyle.Render(m.sym.icon(iconBranch)+ticket.OneLine(f.Value())))
-		}
+	if branch := action.Branch(t, m.deps.State.TaskBranches[t.GID], m.deps.Config.BranchField, rc.preferred); branch != action.Slug(t.Name) {
+		chips = append(chips, dimStyle.Render(m.sym.icon(iconBranch)+ticket.OneLine(branch)))
 	}
 	return ansi.Truncate(strings.Join(chips, "   "), width, "…")
 }

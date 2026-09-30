@@ -2,12 +2,14 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/ticket"
 	"github.com/sadmachine/asanamate/internal/writeback"
@@ -23,6 +25,7 @@ const (
 	editDue
 	editAddProject
 	editRemoveProject
+	editBranch
 )
 
 // myTasks stands for the My Tasks list among a ticket's projects.
@@ -51,6 +54,7 @@ func (m *Model) openEditMenu() {
 		{Label: "Set due date", Key: "d", Value: editDue},
 		{Label: "Add to project", Key: "p", Value: editAddProject},
 		{Label: "Remove from project", Key: "r", Value: editRemoveProject},
+		{Label: "Set branch", Key: "b", Value: editBranch},
 	})
 	p.keySelect = true
 	m.modal = p
@@ -91,8 +95,39 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 		return m.requestProjects(func() tea.Cmd { m.openAddProjectPicker(); return nil })
 	case editRemoveProject:
 		m.openRemoveProjectPicker()
+	case editBranch:
+		m.openBranchInput(t.Task)
 	}
 	return nil
+}
+
+// openBranchInput edits the branch saved for t, which overrides its branch
+// field and fallback. Submitting it empty removes the saved branch.
+func (m *Model) openBranchInput(t asana.Task) {
+	fallback := action.Branch(t, "", m.deps.Config.BranchField, m.projectFields[gidOf(m.viewProject)])
+	b := newInputBox("Branch", fmt.Sprintf("empty uses %q", fallback))
+	b.area.SetValue(m.deps.State.TaskBranches[t.GID])
+	b.onSubmit = func(value string) tea.Cmd {
+		m.input, m.edit = nil, nil
+		m.saveBranch(t.GID, value)
+		return nil
+	}
+	m.input = b
+}
+
+// saveBranch saves branch for the task, or removes its saved branch when
+// branch is "", and relinks agents.
+func (m *Model) saveBranch(gid, branch string) {
+	m.deps.State.SetTaskBranch(gid, branch)
+	m.linked = nil
+	m.renderDetail(true)
+	m.status = "branch saved"
+	if branch == "" {
+		m.status = "branch cleared"
+	}
+	if err := m.deps.State.Save(); err != nil {
+		m.status = "saving branch: " + err.Error()
+	}
 }
 
 func (m *Model) openAddProjectPicker() {

@@ -32,7 +32,7 @@ func (m *Model) ticketAgents(t asana.Task, preferred map[string]bool) []agents.A
 	if len(m.agents) == 0 {
 		return nil
 	}
-	return agents.MatchAll(m.agents, action.Branch(t, m.deps.Config.BranchField, preferred), m.deps.State.LinkedRepos(t))
+	return agents.MatchAll(m.agents, action.Branch(t, m.deps.State.TaskBranches[t.GID], m.deps.Config.BranchField, preferred), m.deps.State.LinkedRepos(t))
 }
 
 // viewAgents returns the agents linked to t in the current view. Results are
@@ -62,11 +62,12 @@ func (m *Model) agentNotes(t asana.Task) []string {
 	}
 	preferred := m.projectFields[gidOf(m.viewProject)]
 	var notes []string
-	if w := action.BranchWarning(t, m.deps.Config.BranchField, preferred); w != "" {
+	saved := m.deps.State.TaskBranches[t.GID]
+	if w := action.BranchWarning(t, saved, m.deps.Config.BranchField, preferred); w != "" {
 		notes = append(notes, w)
 	}
 	if len(m.viewAgents(t)) == 0 {
-		branch := action.Branch(t, m.deps.Config.BranchField, preferred)
+		branch := action.Branch(t, saved, m.deps.Config.BranchField, preferred)
 		for _, a := range agents.Unlinked(m.agents, branch, m.deps.State.LinkedRepos(t)) {
 			notes = append(notes, agents.Hint(a, branch))
 		}

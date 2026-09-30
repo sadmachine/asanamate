@@ -429,10 +429,10 @@ func runDoctor(args []string) error {
 	if err != nil {
 		return err
 	}
-	branch := action.Branch(t.Task, cfg.BranchField, nil)
+	branch := action.Branch(t.Task, st.TaskBranches[t.GID], cfg.BranchField, nil)
 	repos := st.LinkedRepos(t.Task)
 	fmt.Fprintf(w, "\nticket  %s\nbranch  %s\n", ticket.OneLine(t.Name), branch)
-	if warn := action.BranchWarning(t.Task, cfg.BranchField, nil); warn != "" {
+	if warn := action.BranchWarning(t.Task, st.TaskBranches[t.GID], cfg.BranchField, nil); warn != "" {
 		fmt.Fprintf(w, "warning %s\n", warn)
 	}
 	if len(repos) == 0 {

@@ -27,6 +27,9 @@ type State struct {
 	// TaskRepos maps an Asana task gid to a repository path used for that task
 	// only, in place of its projects' links.
 	TaskRepos map[string]string `toml:"task_repos"`
+	// TaskBranches maps an Asana task gid to a git branch typed for that task,
+	// used in place of its branch field and the fallback.
+	TaskBranches map[string]string `toml:"task_branches"`
 	// RecentProjects holds project gids, most recently opened first.
 	RecentProjects []string `toml:"recent_projects"`
 	// Views maps a project gid ("" for My Tasks) to the list view last used there.
@@ -57,6 +60,9 @@ func Load(path string) (*State, error) {
 	}
 	if s.TaskRepos == nil {
 		s.TaskRepos = map[string]string{}
+	}
+	if s.TaskBranches == nil {
+		s.TaskBranches = map[string]string{}
 	}
 	if s.Views == nil {
 		s.Views = map[string]View{}
@@ -151,6 +157,15 @@ func (s *State) LinkTaskRepo(taskGID, path string) {
 // UnlinkTaskRepo forgets a task's own repository, so its projects' links apply.
 func (s *State) UnlinkTaskRepo(taskGID string) {
 	delete(s.TaskRepos, taskGID)
+}
+
+// SetTaskBranch remembers the git branch typed for a task; "" forgets it.
+func (s *State) SetTaskBranch(taskGID, branch string) {
+	if branch == "" {
+		delete(s.TaskBranches, taskGID)
+		return
+	}
+	s.TaskBranches[taskGID] = branch
 }
 
 // SetView remembers the list view used for a project.

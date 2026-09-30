@@ -60,10 +60,10 @@ type Context struct {
 	FormValues map[string]string
 }
 
-// Branch returns the ticket's git branch: the value of branchField when set,
-// otherwise DefaultBranch.
-func Branch(t asana.Task, branchField string, preferred map[string]bool) string {
-	return cmp.Or(fieldBranch(t, branchField, preferred), DefaultBranch(t))
+// Branch returns the ticket's git branch: saved, the branch typed for it, when
+// set, then the value of branchField, otherwise DefaultBranch.
+func Branch(t asana.Task, saved, branchField string, preferred map[string]bool) string {
+	return cmp.Or(saved, fieldBranch(t, branchField, preferred), DefaultBranch(t))
 }
 
 // DefaultBranch is the branch of a ticket without a branch field value: its
@@ -73,9 +73,10 @@ func DefaultBranch(t asana.Task) string {
 }
 
 // BranchWarning explains a Branch that fell back to DefaultBranch even though
-// branchField is set, or returns "" when there is nothing to warn about.
-func BranchWarning(t asana.Task, branchField string, preferred map[string]bool) string {
-	if branchField == "" || fieldBranch(t, branchField, preferred) != "" {
+// branchField is set, or returns "" when there is nothing to warn about. A
+// saved branch leaves nothing to warn about.
+func BranchWarning(t asana.Task, saved, branchField string, preferred map[string]bool) string {
+	if saved != "" || branchField == "" || fieldBranch(t, branchField, preferred) != "" {
 		return ""
 	}
 	return fmt.Sprintf("%q is empty, so the branch is %q", branchField, DefaultBranch(t))
@@ -124,7 +125,7 @@ func (f *Files) WriteInput(text string) error {
 func Env(c Context) []string {
 	t := c.Ticket
 	if c.Branch == "" {
-		c.Branch = Branch(t.Task, c.BranchField, c.Preferred)
+		c.Branch = Branch(t.Task, "", c.BranchField, c.Preferred)
 	}
 	vars := map[string]string{
 		"GID":                t.GID,

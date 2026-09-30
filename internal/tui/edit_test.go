@@ -367,3 +367,32 @@ func TestTabTogglesInMarkdownView(t *testing.T) {
 		t.Fatal("tab should return focus to the list")
 	}
 }
+
+func TestEditBranchSavesAndClearsOverride(t *testing.T) {
+	m, writes := editModel(t)
+	press(m, "e", "b")
+	if m.input == nil || m.input.area.Value() != "" {
+		t.Fatalf("input = %v", m.input)
+	}
+	m.input.area.SetValue("feature/x")
+	send(m, ctrlS)
+	if got := m.deps.State.TaskBranches["1"]; got != "feature/x" || m.input != nil || m.edit != nil {
+		t.Fatalf("saved = %q, input = %v, edit = %v", got, m.input, m.edit)
+	}
+	if line := ansi.Strip(m.summaryLine(m.tasks[0], 200)); !strings.Contains(line, "feature/x") {
+		t.Fatalf("summary = %q", line)
+	}
+
+	press(m, "e", "b")
+	if m.input.area.Value() != "feature/x" {
+		t.Fatalf("prefill = %q", m.input.area.Value())
+	}
+	m.input.area.SetValue("")
+	send(m, ctrlS)
+	if _, ok := m.deps.State.TaskBranches["1"]; ok || m.status != "branch cleared" {
+		t.Fatalf("branches = %v, status = %q", m.deps.State.TaskBranches, m.status)
+	}
+	if len(*writes) != 0 {
+		t.Fatalf("writes = %q", *writes)
+	}
+}

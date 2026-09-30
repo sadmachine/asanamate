@@ -92,6 +92,8 @@ type Model struct {
 	spacing     bool   // blank lines around group headers; starts at list.header.spacing
 	renderers   map[rendererKey]*glamour.TermRenderer
 	details     map[string]ticket.Ticket
+	images      map[string]*inlineImage // inline images by attachment gid
+	imageSeq    int                     // inline images requested, for their ids
 	shownGID    string
 	shownAgents string         // agents section rendered for shownGID
 	fieldKey    string         // selected cards view target; "" for none
@@ -140,6 +142,7 @@ func New(d Deps) *Model {
 		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),
 		renderers:     map[rendererKey]*glamour.TermRenderer{},
 		details:       map[string]ticket.Ticket{},
+		images:        map[string]*inlineImage{},
 		projectFields: map[string]map[string]bool{},
 		sym:           newSymbols(d.Symbols, d.Config.Agents.Symbols, d.ReducedMotion),
 		loading:       true,
@@ -215,13 +218,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.details[msg.gid], m.linked = msg.ticket, nil
+		images := m.loadInlineImages(msg.ticket)
 		if isSelected {
 			m.renderDetail(false)
 			if m.menuFor == msg.gid {
 				m.menuFor = ""
-				return m, m.menuOpen()
+				return m, tea.Batch(images, m.menuOpen())
 			}
 		}
+		return m, images
 	case projectsMsg:
 		m.loadingProjects = false
 		if msg.err != nil {
@@ -306,6 +311,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.shownGID = ""
 		}
 		return m, m.reload()
+	case inlineImageMsg:
+		return m, m.inlineImageLoaded(msg)
 	case imageMsg:
 		if msg.err != nil {
 			m.status = "image: " + msg.err.Error() + "; opening in browser"

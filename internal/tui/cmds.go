@@ -2,7 +2,6 @@ package tui
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -245,14 +244,7 @@ func openURL(url string) tea.Cmd {
 func loadImage(c *asana.Client, a asana.Attachment, cols, rows int, inTmux bool) tea.Cmd {
 	url := ticket.AttachmentURL(a)
 	return request(func(ctx context.Context) tea.Msg {
-		fresh, err := c.Attachment(ctx, a.GID)
-		if err != nil {
-			return imageMsg{url: url, err: err}
-		}
-		if fresh.DownloadURL == nil {
-			return imageMsg{url: url, err: errors.New("attachment has no download URL")}
-		}
-		data, err := kitty.Download(ctx, *fresh.DownloadURL)
+		data, err := fetchImage(ctx, c, a.GID)
 		if err != nil {
 			return imageMsg{url: url, err: err}
 		}

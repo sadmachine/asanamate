@@ -281,7 +281,7 @@ func runTUI(args []string) error {
 		State:         st,
 		Client:        client,
 		StateDir:      stateDir,
-		Images:        kitty.Supported(cfg.Images, os.Getenv, kitty.TmuxPassthrough),
+		Images:        kitty.Supported(cfg.Images.Mode, os.Getenv, kitty.TmuxPassthrough),
 		InTmux:        os.Getenv("TMUX") != "",
 		NoPreview:     *noPreview,
 		Symbols:       cfg.SymbolSet(os.Getenv),

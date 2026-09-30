@@ -75,8 +75,13 @@ func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
 	if line := lines[m.fieldLines["comment:c2"]]; !strings.Contains(line, "Zed") {
 		t.Fatalf("comment line = %q", line)
 	}
-	if line := m.fieldLines["comment:c2"]; line < m.reader.YOffset() || line >= m.reader.YOffset()+m.reader.Height() {
-		t.Fatalf("comment line %d outside reader at %d, height %d", line, m.reader.YOffset(), m.reader.Height())
+	if line := lines[m.fieldEnds["comment:c2"]]; !strings.Contains(line, "Second") {
+		t.Fatalf("comment end line = %q", line)
+	}
+	for _, line := range []int{m.fieldLines["comment:c2"], m.fieldEnds["comment:c2"]} {
+		if line < m.reader.YOffset() || line >= m.reader.YOffset()+m.reader.Height() {
+			t.Fatalf("comment line %d outside reader at %d, height %d", line, m.reader.YOffset(), m.reader.Height())
+		}
 	}
 	if name, _, _ := m.mode(); name != "READ" {
 		t.Fatalf("comment mode = %q", name)
@@ -86,8 +91,8 @@ func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
 		t.Fatal("comment selection opened an editor")
 	}
 	press(m, "j")
-	if m.fieldKey != "assignee" {
-		t.Fatalf("wrapped target = %q", m.fieldKey)
+	if m.fieldKey != "assignee" || m.reader.YOffset() != 0 {
+		t.Fatalf("wrapped target = %q at offset %d, want the ticket's top", m.fieldKey, m.reader.YOffset())
 	}
 	press(m, "k")
 	if m.fieldKey != "comment:c2" {
@@ -102,6 +107,14 @@ func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
 	if m.fieldKey != "assignee" {
 		t.Fatalf("tab from comment = %q", m.fieldKey)
 	}
+	press(m, "G")
+	if m.fieldKey != "comment:c2" || !m.reader.AtBottom() {
+		t.Fatalf("G target = %q, at bottom %v", m.fieldKey, m.reader.AtBottom())
+	}
+	press(m, "g")
+	if m.fieldKey != "assignee" || m.reader.YOffset() != 0 {
+		t.Fatalf("g target = %q at offset %d", m.fieldKey, m.reader.YOffset())
+	}
 }
 
 func TestMarkdownKeepsJScroll(t *testing.T) {
@@ -113,5 +126,11 @@ func TestMarkdownKeepsJScroll(t *testing.T) {
 	press(m, "j")
 	if m.reader.YOffset() == 0 || m.fieldKey != "" {
 		t.Fatalf("markdown scroll = %d, target = %q", m.reader.YOffset(), m.fieldKey)
+	}
+	if press(m, "G"); !m.reader.AtBottom() {
+		t.Fatalf("markdown G scroll = %d", m.reader.YOffset())
+	}
+	if press(m, "g"); m.reader.YOffset() != 0 {
+		t.Fatalf("markdown g scroll = %d", m.reader.YOffset())
 	}
 }

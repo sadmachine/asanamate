@@ -61,6 +61,19 @@ func TestMarkdownStripsControlCharacters(t *testing.T) {
 	}
 }
 
+func TestHTMLToMarkdownAutolinksURLText(t *testing.T) {
+	for in, want := range map[string]string{
+		`<a href="https://google.com">https://google.com</a>`: "<https://google.com>",
+		`<a href="https://g.com/a_b">https://g.com/a_b</a>`:   "<https://g.com/a_b>",
+		`<a href="https://google.com">Google</a>`:             "[Google](https://google.com)",
+		`<a href="/docs">/docs</a>`:                           "[/docs](/docs)",
+	} {
+		if got := HTMLToMarkdown("<body>" + in + "</body>"); got != want {
+			t.Errorf("HTMLToMarkdown(%s) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestJSONFlattensTaskAndIncludesExtras(t *testing.T) {
 	b, err := json.Marshal(sample())
 	if err != nil {

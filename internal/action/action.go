@@ -6,6 +6,7 @@
 package action
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -47,6 +48,8 @@ type Context struct {
 	Preferred map[string]bool
 	// BranchField names the custom field holding the ticket's git branch.
 	BranchField string
+	// Branch overrides the ticket's git branch when set.
+	Branch string
 	// Agent is the running agent the action is about, if any.
 	Agent *agents.Agent
 	// Agents are all running agents linked to the ticket, most urgent first.
@@ -58,21 +61,24 @@ type Context struct {
 }
 
 // Branch returns the ticket's git branch: the value of branchField when set,
-// otherwise the title slug.
+// otherwise DefaultBranch.
 func Branch(t asana.Task, branchField string, preferred map[string]bool) string {
-	if v := fieldBranch(t, branchField, preferred); v != "" {
-		return v
-	}
-	return Slug(t.Name)
+	return cmp.Or(fieldBranch(t, branchField, preferred), DefaultBranch(t))
 }
 
-// BranchWarning explains a Branch that fell back to the title slug even though
+// DefaultBranch is the branch of a ticket without a branch field value: its
+// ID field's value, otherwise the title slug.
+func DefaultBranch(t asana.Task) string {
+	return cmp.Or(t.CustomID(), Slug(t.Name))
+}
+
+// BranchWarning explains a Branch that fell back to DefaultBranch even though
 // branchField is set, or returns "" when there is nothing to warn about.
 func BranchWarning(t asana.Task, branchField string, preferred map[string]bool) string {
 	if branchField == "" || fieldBranch(t, branchField, preferred) != "" {
 		return ""
 	}
-	return fmt.Sprintf("%q is empty, so the branch is the title slug %q", branchField, Slug(t.Name))
+	return fmt.Sprintf("%q is empty, so the branch is %q", branchField, DefaultBranch(t))
 }
 
 func fieldBranch(t asana.Task, branchField string, preferred map[string]bool) string {
@@ -117,6 +123,9 @@ func (f *Files) WriteInput(text string) error {
 // Env returns the ASANAMATE_* variables for an action run, sorted.
 func Env(c Context) []string {
 	t := c.Ticket
+	if c.Branch == "" {
+		c.Branch = Branch(t.Task, c.BranchField, c.Preferred)
+	}
 	vars := map[string]string{
 		"GID":                t.GID,
 		"TITLE":              t.Name,
@@ -135,7 +144,7 @@ func Env(c Context) []string {
 		"PROJECT":            "",
 		"PROJECT_GID":        "",
 		"SECTION":            "",
-		"BRANCH":             Branch(t.Task, c.BranchField, c.Preferred),
+		"BRANCH":             c.Branch,
 		"AGENT_STATUS":       "",
 		"AGENT_STATE":        "",
 		"AGENT_TITLE":        "",

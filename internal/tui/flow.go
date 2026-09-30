@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"cmp"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -31,7 +32,7 @@ type pendingRun struct {
 	inputDone      bool
 	formValues     map[string]string
 	formDone       bool
-	branchOK       bool // user chose to run despite the branch falling back to the slug
+	branch         string // branch typed when the branch field is empty
 }
 
 // sharesFieldNames reports whether two of the task's custom fields share a
@@ -299,20 +300,17 @@ func (m *Model) saveLink(target linkTarget, path string) {
 	}
 }
 
-func (m *Model) pickedBranchFallback(run bool) tea.Cmd {
-	m.modal = nil
-	if !run {
-		m.run = nil
-		return nil
-	}
-	m.run.branchOK = true
-	return m.execute(m.run.repo)
-}
-
+// typedInput takes the input box's text: the action's input, or, once that
+// is done, the branch for a ticket whose branch field is empty.
 func (m *Model) typedInput(text string) tea.Cmd {
 	m.input = nil
-	m.run.input, m.run.inputDone = text, true
-	return m.execute(m.run.repo)
+	r := m.run
+	if r.action.Input != "" && !r.inputDone {
+		r.input, r.inputDone = text, true
+	} else {
+		r.branch = cmp.Or(text, action.DefaultBranch(r.ticket.Task))
+	}
+	return m.execute(r.repo)
 }
 
 func (m *Model) typedActionForm(values map[string]string) tea.Cmd {
@@ -367,15 +365,14 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		}
 	}
 	preferred := m.projectFields[gidOf(r.project)]
-	if !r.branchOK && strings.Contains(r.action.Command, "ASANAMATE_BRANCH") {
-		if w := action.BranchWarning(r.ticket.Task, m.deps.Config.BranchField, preferred); w != "" {
+	branch := r.branch
+	if branch == "" {
+		branch = action.Branch(r.ticket.Task, m.deps.Config.BranchField, preferred)
+		if strings.Contains(r.action.Command, "ASANAMATE_BRANCH") &&
+			action.BranchWarning(r.ticket.Task, m.deps.Config.BranchField, preferred) != "" {
 			r.repo = repoPath
-			p := newPicker(pickValue(m.pickedBranchFallback), "Branch falls back to the title slug", []pickItem{
-				{Label: "Run anyway", Key: "y", Value: true},
-				{Label: "Cancel", Key: "n", Value: false},
-			})
-			p.keySelect, p.err = true, w
-			m.modal = p
+			m.input = newInputBox(fmt.Sprintf("Branch (%q is empty)", m.deps.Config.BranchField), "empty uses the ID field or title slug")
+			m.input.area.SetValue(branch)
 			return nil
 		}
 	}
@@ -398,7 +395,7 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 	}
 	var worktree string
 	if repoPath != "" {
-		worktree = repo.Worktree(repoPath, action.Branch(r.ticket.Task, m.deps.Config.BranchField, preferred))
+		worktree = repo.Worktree(repoPath, branch)
 	}
 	cmd := action.Command(r.action, action.Context{
 		Ticket:        r.ticket,
@@ -409,6 +406,7 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		Files:         files,
 		Preferred:     preferred,
 		BranchField:   m.deps.Config.BranchField,
+		Branch:        branch,
 		Agent:         agent,
 		Agents:        linked,
 		Comment:       r.comment,

@@ -156,7 +156,8 @@ default_filter = "is:open"
 confirm_writes = true
 
 # Custom field holding a ticket's git branch, exposed to actions as
-# $ASANAMATE_BRANCH. Empty uses the title slug. Example: "Branch Name".
+# $ASANAMATE_BRANCH. Empty uses the ID field, else the title slug.
+# Example: "Branch Name".
 branch_field = ""
 
 # Symbols for ticket markers and agent states: "unicode", "nerd" (needs a Nerd

@@ -8,7 +8,10 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -16,8 +19,33 @@ import (
 	"github.com/sadmachine/asanamate/internal/form"
 )
 
-// RunHarvest serves the provider protocol using the installed hrvst CLI.
+type harvestExternalReference struct {
+	ID        string `json:"id"`
+	GroupID   string `json:"group_id"`
+	Permalink string `json:"permalink"`
+}
+
+type harvestEntryRequest struct {
+	ProjectID         string                   `json:"project_id"`
+	TaskID            string                   `json:"task_id"`
+	SpentDate         string                   `json:"spent_date"`
+	Hours             float64                  `json:"hours"`
+	Notes             string                   `json:"notes"`
+	ExternalReference harvestExternalReference `json:"external_reference"`
+}
+
+// RunHarvest serves the provider protocol using hrvst's project assignments
+// and credentials. Harvest's API needs a nested external_reference object;
+// hrvst's create command flattens its bracketed flags and drops the link.
 func RunHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID string) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	return runHarvest(ctx, in, out, taskID, filepath.Join(home, ".hrvst", "config.json"), "https://api.harvestapp.com/v2/time_entries")
+}
+
+func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, configPath, endpoint string) error {
 	var req Request
 	if err := json.NewDecoder(in).Decode(&req); err != nil {
 		return fmt.Errorf("time provider request: %w", err)
@@ -61,15 +89,65 @@ func RunHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID string)
 		if selectedTask != taskID {
 			return errors.New("hrvst task is not the configured default task")
 		}
-		args := []string{"time-entries", "create", "--project_id", projectID, "--task_id", selectedTask, "--spent_date", time.Now().Format("2006-01-02"), "--hours", strconv.FormatFloat(hours, 'f', -1, 64), "--notes", req.Asana.Title, "--external_reference[id]", req.Asana.TaskGID, "--external_reference[group_id]", req.Asana.ProjectGID, "--external_reference[permalink]", req.Asana.URL}
-		data, err := exec.CommandContext(ctx, "hrvst", args...).CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("hrvst time-entries create: %s: %w", strings.TrimSpace(string(data)), err)
-		}
-		return nil
+		return createHarvestEntry(ctx, configPath, endpoint, projectID, selectedTask, hours, *req.Asana)
 	default:
 		return fmt.Errorf("unknown time provider operation %q", req.Operation)
 	}
+}
+
+func createHarvestEntry(ctx context.Context, configPath, endpoint, projectID, taskID string, hours float64, asana Asana) error {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("hrvst credentials: %w", err)
+	}
+	var credentials struct {
+		AccessToken string `json:"accessToken"`
+		AccountID   string `json:"accountId"`
+	}
+	if err := json.Unmarshal(data, &credentials); err != nil || credentials.AccessToken == "" || credentials.AccountID == "" {
+		return errors.New("hrvst credentials: missing access token or account ID; run `hrvst login`")
+	}
+	body, err := json.Marshal(harvestEntryRequest{
+		ProjectID: projectID, TaskID: taskID, SpentDate: time.Now().Format("2006-01-02"), Hours: hours, Notes: asana.Title,
+		ExternalReference: harvestExternalReference{ID: asana.TaskGID, GroupID: asana.ProjectGID, Permalink: asana.URL},
+	})
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Authorization", "Bearer "+credentials.AccessToken)
+	request.Header.Set("Harvest-Account-ID", credentials.AccountID)
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("User-Agent", "asanamate")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return fmt.Errorf("Harvest time entry: %w", err)
+	}
+	defer response.Body.Close()
+	result, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	if err != nil {
+		return fmt.Errorf("Harvest time entry response: %w", err)
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("Harvest time entry: %s: %s", response.Status, strings.TrimSpace(string(result)))
+	}
+	var entry struct {
+		ID                json.Number `json:"id"`
+		ExternalReference *struct {
+			ID        string `json:"id"`
+			Permalink string `json:"permalink"`
+		} `json:"external_reference"`
+	}
+	if err := json.Unmarshal(result, &entry); err != nil {
+		return fmt.Errorf("Harvest created time entry, but response could not be checked: %w; do not submit again", err)
+	}
+	if entry.ExternalReference == nil || entry.ExternalReference.ID != asana.TaskGID || entry.ExternalReference.Permalink == "" {
+		return fmt.Errorf("Harvest created time entry %s without the Asana link; do not submit again", entry.ID)
+	}
+	return nil
 }
 
 func digits(s string) bool {

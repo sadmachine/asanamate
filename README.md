@@ -189,7 +189,9 @@ command = "asanamate time-provider hrvst --task-id YOUR_ENGINEERING_TASK_ID"
 
 Set `--task-id` to numeric ID of your default Harvest task (Engineering in
 your case). `hrvst alias list` can show that ID for an existing Engineering
-alias. Aliases do not populate project picker.
+alias. Aliases do not populate project picker. Project choices come from
+`hrvst users project-assignments me`; entry creation uses Harvest's API with
+the credentials in `~/.hrvst/config.json` so Asana link metadata is preserved.
 
 Press `t` on a ticket. If ticket belongs to several Asana projects, choose one.
 The form shows Harvest project, Engineering task, and decimal hours. Press

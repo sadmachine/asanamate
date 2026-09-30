@@ -15,12 +15,14 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	ansikitty "github.com/charmbracelet/x/ansi/kitty"
+	"golang.org/x/sys/unix"
 )
 
 const chunkSize = 4096
@@ -117,9 +119,30 @@ func Encode(data []byte, cols, rows int, inTmux bool) (string, error) {
 	return transmit(data, "a=T,f=100,q=2,"+size, inTmux), nil
 }
 
-// cellPixels is the assumed cell width in pixels; cells are about twice as
-// tall. Inline images show at about this scale, or smaller to fit.
-const cellPixels = 8
+// terminalCellSize returns the terminal's cell dimensions in pixels. Older
+// terminals that omit pixel dimensions use the previous 8x16 estimate.
+func terminalCellSize() (width, height int) {
+	for _, f := range []*os.File{os.Stdout, os.Stdin} {
+		ws, err := unix.IoctlGetWinsize(int(f.Fd()), unix.TIOCGWINSZ)
+		if err == nil && ws.Col > 0 && ws.Row > 0 {
+			width, height = int(ws.Xpixel)/int(ws.Col), int(ws.Ypixel)/int(ws.Row)
+			if width > 0 && height > 0 {
+				return width, height
+			}
+		}
+	}
+	return 8, 16
+}
+
+// inlineSize fits an image to the available cells without enlarging it.
+// Round height up so the placement leaves less than one row of padding.
+func inlineSize(w, h, maxCols, maxRows, cellWidth, cellHeight int) (cols, rows int) {
+	cols = min(max(maxCols, 1), (w+cellWidth-1)/cellWidth, maxDiacritic)
+	lim := min(max(maxRows, 1), maxDiacritic)
+	cols = min(cols, max(lim*w*cellHeight/(h*cellWidth), 1))
+	rows = min(max((cols*h*cellWidth+w*cellHeight-1)/(w*cellHeight), 1), lim)
+	return cols, rows
+}
 
 // Inline transmits an image as id with a virtual placement no larger than
 // maxCols x maxRows cells, drawn wherever Placeholder text for id is shown.
@@ -130,11 +153,8 @@ func Inline(data []byte, id, maxCols, maxRows int, inTmux bool) (seq string, col
 	if err != nil {
 		return "", 0, 0, err
 	}
-	cols = min(max(maxCols, 1), (w+cellPixels-1)/cellPixels, maxDiacritic)
-	rows = max((cols*h+w)/(2*w), 1)
-	if lim := min(max(maxRows, 1), maxDiacritic); rows > lim {
-		cols, rows = max(cols*lim/rows, 1), lim
-	}
+	cellWidth, cellHeight := terminalCellSize()
+	cols, rows = inlineSize(w, h, maxCols, maxRows, cellWidth, cellHeight)
 	control := fmt.Sprintf("a=T,f=100,q=2,U=1,i=%d,c=%d,r=%d", id, cols, rows)
 	return transmit(data, control, inTmux), cols, rows, nil
 }

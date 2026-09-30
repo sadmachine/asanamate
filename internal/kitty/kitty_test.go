@@ -174,6 +174,32 @@ func TestInlineFitsAndPlaces(t *testing.T) {
 	}
 }
 
+func TestInlineSize(t *testing.T) {
+	cases := []struct {
+		name                              string
+		w, h, maxCols, maxRows            int
+		cellWidth, cellHeight, cols, rows int
+	}{
+		{"fallback", 160, 80, 80, 24, 8, 16, 20, 5},
+		{"taller cells", 160, 80, 80, 24, 8, 24, 20, 4},
+		{"retina cells", 320, 160, 80, 24, 16, 36, 20, 5},
+		{"width limit", 160, 80, 10, 24, 8, 24, 10, 2},
+		{"height limit", 160, 80, 80, 2, 8, 24, 12, 2},
+		{"fractional height limit", 160, 80, 10, 2, 8, 16, 8, 2},
+		{"tiny image", 1, 1, 80, 24, 8, 24, 1, 1},
+		{"invalid limits", 160, 80, 0, 0, 8, 24, 1, 1},
+		{"diacritic limit", 10000, 10000, 1000, 1000, 8, 16, 297, 149},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cols, rows := inlineSize(tc.w, tc.h, tc.maxCols, tc.maxRows, tc.cellWidth, tc.cellHeight)
+			if cols != tc.cols || rows != tc.rows {
+				t.Fatalf("size = %dx%d, want %dx%d", cols, rows, tc.cols, tc.rows)
+			}
+		})
+	}
+}
+
 func TestPlaceholderCells(t *testing.T) {
 	lines := strings.Split(Placeholder(42, 3, 2), "\n")
 	if len(lines) != 2 {

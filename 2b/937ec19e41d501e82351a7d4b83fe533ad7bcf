@@ -1,0 +1,27 @@
+README.md
+  s_1c7136a1dcb819::t_0df06f54f2a9f8 189-191
+internal/timetracking/hrvst.go
+  s_1c7136a1dcb819::t_9076322630f88e 11-12,14,37-39,41-48,92,98-109,111,113-151
+  s_1c7136a1dcb819::t_d3a80752158c34 22-36,110,112
+  s_1c7136a1dcb819::t_3492a6c47491e7 152
+internal/timetracking/hrvst_test.go
+  s_1c7136a1dcb819::t_f335e26e3755bb 7-8,33,51-52,55-57,59,64-81,83,87-101
+  s_1c7136a1dcb819::t_8da0ab482e7e7b 60-63
+  s_1c7136a1dcb819::t_5ff8f1df69c8c4 102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2b937ec19e41d501e82351a7d4b83fe533ad7bcf",
+  "prompts": {},
+  "sessions": {
+    "s_1c7136a1dcb819": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0eee4-716b-70d3-8b23-39182f27f80d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+internal/tui/model.go
+  s_1e33437f69f29b::t_a416f3adc3a481 599-615
+  s_1e33437f69f29b::t_c68930c6460df0 622-623,629-630
+  s_1e33437f69f29b::t_05db24ea2ce640 99,621,627,633-634
+internal/tui/keys_test.go
+  s_1e33437f69f29b::t_0055c3e87a2889 130-135
+  s_1e33437f69f29b::t_b3f00435e982c6 78-84
+  s_1e33437f69f29b::t_c9839bcfda4078 94-95
+  s_1e33437f69f29b::t_a416f3adc3a481 110-117
+internal/tui/keys.go
+  s_1e33437f69f29b::t_a416f3adc3a481 57-67,81-82
+internal/tui/cards.go
+  s_1e33437f69f29b::t_05db24ea2ce640 26,35,52,54,56,70,77-79,112
+README.md
+  s_1e33437f69f29b::t_a416f3adc3a481 60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "eda18af9a602845184a573008297b51250de7875",
+  "prompts": {},
+  "sessions": {
+    "s_1e33437f69f29b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bcfe77-9e39-4aa6-8e62-8689f3668e42",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+internal/tui/images.go
+  s_42f234444c620c::t_4ac1c668021996 122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b78fe8549d483b0e2a7a93ec3dddadcfd7530ccc",
+  "prompts": {},
+  "sessions": {
+    "s_42f234444c620c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0f3bd-ed08-7e11-ab44-0990177041f1",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

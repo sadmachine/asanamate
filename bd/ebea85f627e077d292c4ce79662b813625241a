@@ -1,0 +1,25 @@
+README.md
+  s_0dae62f108d4aa::t_21591ea7a51a9a 61-62
+internal/tui/keys.go
+  s_0dae62f108d4aa::t_cc5cc78914076b 68-88,104-105
+internal/tui/keys_test.go
+  s_0dae62f108d4aa::t_ca4da1f15dd883 54-67
+internal/tui/statusline_test.go
+  s_0dae62f108d4aa::t_db2eef1263d815 4,60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bdebea85f627e077d292c4ce79662b813625241a",
+  "prompts": {},
+  "sessions": {
+    "s_0dae62f108d4aa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d0af2d83-b201-4758-a9e2-20e08515edfb",
+        "model": "unknown"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

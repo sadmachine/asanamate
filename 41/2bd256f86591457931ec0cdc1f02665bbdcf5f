@@ -1,0 +1,22 @@
+internal/kitty/kitty.go
+  s_42f234444c620c::t_2c85c3e6336e7f 18,25,122-145,156-157
+internal/kitty/kitty_test.go
+  s_42f234444c620c::t_fbf42ccd578f96 177-178,182-202
+  s_42f234444c620c::t_3fe42ab0cd33f8 179-181
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "412bd256f86591457931ec0cdc1f02665bbdcf5f",
+  "prompts": {},
+  "sessions": {
+    "s_42f234444c620c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0f3bd-ed08-7e11-ab44-0990177041f1",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

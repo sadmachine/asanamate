@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -56,7 +57,7 @@ func TestStatusMessageReplacesHints(t *testing.T) {
 func TestHelpOpensAndAnyKeyCloses(t *testing.T) {
 	m := splitModel(t)
 	m.Update(key("?"))
-	if !m.help || !strings.Contains(ansi.Strip(m.body()), "1/esc  list") {
+	if !m.help || !regexp.MustCompile(`1/esc +list`).MatchString(ansi.Strip(m.body())) {
 		t.Fatalf("help = %v, body = %q", m.help, ansi.Strip(m.body()))
 	}
 	m.Update(key("j"))

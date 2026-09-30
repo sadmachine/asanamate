@@ -58,6 +58,8 @@ key press.
 | `j`/`k` | move in the list; in cards view, select the next or previous field, section, or comment; in markdown view, scroll |
 | up/down arrows | move in the list or scroll the reader |
 | `g`/`G` | first/last ticket; in the reader, jump to its top or bottom (in cards view, selecting the first or last field, section, or comment) |
+| `ctrl+d`/`ctrl+u` | half page down/up in the list, or scroll the reader half a page |
+| `ctrl+f`/`ctrl+b` (or pgdown/pgup) | page down/up in the list, or scroll the reader a page |
 | `tab` | switch focus between the list and the reader; in the cards view, move into the reader and select its first editable row |
 | `tab` / `shift+tab` (reader, cards view) | move between editable rows: assignee, project and My Tasks sections, settable custom fields, and Add comment |
 | `enter` (reader, editable row selected) | edit the selected row, skipping the `e` menu; Add comment opens the comment editor |

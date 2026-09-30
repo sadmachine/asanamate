@@ -51,6 +51,20 @@ func TestReaderScrollsWithMoveKeys(t *testing.T) {
 	}
 }
 
+func TestPageKeysMoveTheList(t *testing.T) {
+	m := splitModel(t)
+	ctrl := func(r rune) tea.KeyPressMsg { return tea.KeyPressMsg{Code: r, Mod: tea.ModCtrl} }
+	for _, tc := range []struct {
+		key  rune
+		want int
+	}{{'d', 1}, {'u', 0}, {'f', 1}, {'b', 0}} {
+		m.Update(ctrl(tc.key))
+		if m.cursor != tc.want {
+			t.Fatalf("ctrl+%c: cursor = %d, want %d", tc.key, m.cursor, tc.want)
+		}
+	}
+}
+
 func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
 	m, _ := editModel(t)
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})

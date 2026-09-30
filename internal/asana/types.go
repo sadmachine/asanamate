@@ -27,6 +27,10 @@ const (
 	FieldPeople    = "people"
 )
 
+// FieldCustomID is the representation_type of a read-only ID field, such as
+// "ENG-123".
+const FieldCustomID = "custom_id"
+
 // CustomField is a custom field value on a task.
 type CustomField struct {
 	GID                string       `json:"gid"`
@@ -104,6 +108,18 @@ func (t Task) Field(name string, preferred map[string]bool) (CustomField, bool) 
 		return CustomField{}, false
 	}
 	return PickField(matches, preferred), true
+}
+
+// CustomID returns the value of the task's first ID field that has one, or "".
+func (t Task) CustomID() string {
+	for _, f := range t.CustomFields {
+		if f.RepresentationType == FieldCustomID {
+			if v := f.Value(); v != "" {
+				return v
+			}
+		}
+	}
+	return ""
 }
 
 // FieldsNamed returns the task's custom fields with the given name, ignoring

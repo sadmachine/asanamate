@@ -308,7 +308,7 @@ func (m *Model) typedInput(text string) tea.Cmd {
 	if r.action.Input != "" && !r.inputDone {
 		r.input, r.inputDone = text, true
 	} else {
-		r.branch = cmp.Or(text, action.Slug(r.ticket.Name))
+		r.branch = cmp.Or(text, action.DefaultBranch(r.ticket.Task))
 	}
 	return m.execute(r.repo)
 }
@@ -371,7 +371,7 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		if strings.Contains(r.action.Command, "ASANAMATE_BRANCH") &&
 			action.BranchWarning(r.ticket.Task, m.deps.Config.BranchField, preferred) != "" {
 			r.repo = repoPath
-			m.input = newInputBox(fmt.Sprintf("Branch (%q is empty)", m.deps.Config.BranchField), "empty uses the title slug")
+			m.input = newInputBox(fmt.Sprintf("Branch (%q is empty)", m.deps.Config.BranchField), "empty uses the ID field or title slug")
 			m.input.area.SetValue(branch)
 			return nil
 		}

@@ -6,6 +6,7 @@
 package action
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -60,21 +61,24 @@ type Context struct {
 }
 
 // Branch returns the ticket's git branch: the value of branchField when set,
-// otherwise the title slug.
+// otherwise DefaultBranch.
 func Branch(t asana.Task, branchField string, preferred map[string]bool) string {
-	if v := fieldBranch(t, branchField, preferred); v != "" {
-		return v
-	}
-	return Slug(t.Name)
+	return cmp.Or(fieldBranch(t, branchField, preferred), DefaultBranch(t))
 }
 
-// BranchWarning explains a Branch that fell back to the title slug even though
+// DefaultBranch is the branch of a ticket without a branch field value: its
+// ID field's value, otherwise the title slug.
+func DefaultBranch(t asana.Task) string {
+	return cmp.Or(t.CustomID(), Slug(t.Name))
+}
+
+// BranchWarning explains a Branch that fell back to DefaultBranch even though
 // branchField is set, or returns "" when there is nothing to warn about.
 func BranchWarning(t asana.Task, branchField string, preferred map[string]bool) string {
 	if branchField == "" || fieldBranch(t, branchField, preferred) != "" {
 		return ""
 	}
-	return fmt.Sprintf("%q is empty, so the branch is the title slug %q", branchField, Slug(t.Name))
+	return fmt.Sprintf("%q is empty, so the branch is %q", branchField, DefaultBranch(t))
 }
 
 func fieldBranch(t asana.Task, branchField string, preferred map[string]bool) string {

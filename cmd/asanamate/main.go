@@ -395,7 +395,7 @@ func runDoctor(args []string) error {
 	w := os.Stdout
 	fmt.Fprintf(w, "config        %s\n", path)
 	if cfg.BranchField == "" {
-		fmt.Fprintln(w, "branch_field  unset: tickets use their title slug as the branch")
+		fmt.Fprintln(w, "branch_field  unset: tickets use their ID field or title slug as the branch")
 	} else {
 		fmt.Fprintf(w, "branch_field  %q\n", cfg.BranchField)
 	}

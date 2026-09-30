@@ -409,9 +409,13 @@ func (m *Model) updateInput(msg tea.KeyPressMsg) tea.Cmd {
 
 func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
 	switch msg.String() {
+	case "?":
+		m.help = true
+		return nil
 	case "enter", "esc":
 		m.filtering = false
 		m.filterInput.Blur()
+		m.reader.SetHeight(m.paneHeight())
 		m.saveView()
 		m.fitList()
 		return nil
@@ -710,9 +714,9 @@ func (m *Model) bodyHeight() int { return max(m.height-1, 1) }
 // paneHeight is the height of the panes' content.
 func (m *Model) paneHeight() int {
 	if _, _, split := m.paneWidths(); split {
-		return max(m.bodyHeight()-panelFrame, 1)
+		return max(m.bodyHeight()-m.filterHintHeight()-panelFrame, 1)
 	}
-	return m.bodyHeight()
+	return max(m.bodyHeight()-m.filterHintHeight(), 1)
 }
 
 func (m *Model) layout() {
@@ -739,7 +743,11 @@ func (m *Model) View() tea.View {
 
 func (m *Model) body() string {
 	h := m.bodyHeight()
-	panes := m.panes(h)
+	hints := m.filterHints()
+	panes := m.panes(max(h-len(hints), 1))
+	if len(hints) > 0 {
+		panes += "\n" + strings.Join(hints, "\n")
+	}
 	w, mh := max(min(m.width-4, 80), 10), max(h-2, 3)
 	var content string
 	style := modalStyle.BorderForeground(m.accentStyle.GetForeground())
@@ -751,7 +759,11 @@ func (m *Model) body() string {
 	case m.modal != nil:
 		content = m.modal.view(w, mh, m.accentStyle)
 	case m.help:
-		content = m.helpView()
+		if m.filtering {
+			content = m.filterHelpView()
+		} else {
+			content = m.helpView()
+		}
 		style = style.Padding(0, 2)
 	case m.loading && m.tasks != nil:
 		content = "Loading tasks…"

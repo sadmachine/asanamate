@@ -63,7 +63,7 @@ key press.
 | `enter` (reader, editable row selected) | edit the selected row, skipping the `e` menu; Add comment opens the comment editor |
 | `esc` (reader) | return focus to the list |
 | `0` / `1` / `2` | focus the views panel (wide screens) / the list / the reader |
-| `/` | edit the filter (Enter or Esc to finish) |
+| `/` | edit the filter (available fields appear while editing; `?` opens the filter guide; Enter or Esc to finish) |
 | `p` | switch project (recent first) |
 | `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project) |
 | `enter`, `a` | run an action on the selected ticket |

@@ -8,13 +8,17 @@
 package filter
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 )
 
-var keys = map[string]bool{"section": true, "project": true, "assignee": true, "tag": true, "is": true, "agent": true}
+var keys = []string{"section", "project", "assignee", "tag", "is", "agent"}
+
+// Keys returns the filter fields in display order.
+func Keys() []string { return slices.Clone(keys) }
 
 type term struct {
 	key, value string
@@ -34,7 +38,7 @@ func Parse(query string) Filter {
 		if len(tok) > 1 && tok[0] == '-' {
 			t.negate, tok = true, tok[1:]
 		}
-		if k, v, ok := strings.Cut(tok, ":"); ok && keys[strings.ToLower(k)] {
+		if k, v, ok := strings.Cut(tok, ":"); ok && slices.Contains(keys, strings.ToLower(k)) {
 			t.key, t.value = strings.ToLower(k), strings.ToLower(v)
 		} else {
 			t.value = strings.ToLower(tok)

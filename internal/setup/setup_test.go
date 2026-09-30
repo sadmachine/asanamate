@@ -62,6 +62,32 @@ func TestRunWritesLoadableConfig(t *testing.T) {
 	}
 }
 
+// Setup never overwrites action files, and the example works once renamed.
+func TestRunKeepsActionsAndExampleLoads(t *testing.T) {
+	root := t.TempDir()
+	o, _ := options(t, "2\n"+root+"\n")
+	dir := config.ActionsDir(o.ConfigPath)
+	os.MkdirAll(dir, 0o700)
+	mine := "name = \"Mine\"\nkey = \"v\"\ncommand = \"true\"\n"
+	os.WriteFile(filepath.Join(dir, "pager.toml"), []byte(mine), 0o600)
+	if err := Run(context.Background(), o); err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(filepath.Join(dir, "pager.toml")); string(data) != mine {
+		t.Fatalf("action overwritten: %q", data)
+	}
+	if err := os.Rename(filepath.Join(dir, "claude-tmux.toml.example"), filepath.Join(dir, "claude-tmux.toml")); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(o.ConfigPath)
+	if err != nil {
+		t.Fatalf("enabled example does not load: %v", err)
+	}
+	if len(cfg.Actions) != 2 || !cfg.Actions[0].Repo || cfg.Actions[1].Name != "Mine" {
+		t.Fatalf("actions = %+v", cfg.Actions)
+	}
+}
+
 func TestRunKeepsExistingConfigWhenDeclined(t *testing.T) {
 	o, _ := options(t, "n\n")
 	os.MkdirAll(filepath.Dir(o.ConfigPath), 0o700)
@@ -102,7 +128,7 @@ func TestTemplateMatchesDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := config.Default()
-	want.Workspace, want.RepoSource, want.Actions = got.Workspace, got.RepoSource, got.Actions
+	want.Workspace, want.RepoSource = got.Workspace, got.RepoSource
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("template values differ from config.Default():\ngot  %+v\nwant %+v", got, want)
 	}

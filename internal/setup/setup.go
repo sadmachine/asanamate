@@ -60,7 +60,11 @@ func Run(ctx context.Context, o Options) error {
 	if err := writePrivate(o.ConfigPath, []byte(Render(workspace, root))); err != nil {
 		return err
 	}
-	fmt.Fprintf(o.Out, summary, o.ConfigPath, root, o.StatePath)
+	actions := config.ActionsDir(o.ConfigPath)
+	if err := writeActions(actions); err != nil {
+		return err
+	}
+	fmt.Fprintf(o.Out, summary, o.ConfigPath, root, actions, o.StatePath)
 	return nil
 }
 
@@ -124,6 +128,7 @@ Defaults:
   - Repo picker: git repositories directly inside %s.
     Change [repo_source] command to use sesh, zoxide, or anything else.
   - Writes to Asana ask for confirmation (confirm_writes = true).
+  - Actions: one file each in %s. Rename the .example file to enable it.
   - Repo links and recent projects are stored in %s.
 
 Run asanamate to start.
@@ -228,26 +233,47 @@ max_text_width = 0
 # The default lists repositories directly inside %s.
 # Alternatives: "sesh list -z", "zoxide query -l".
 command = '''find '%s' -mindepth 2 -maxdepth 2 -name .git -exec dirname {} \;'''
+`
 
-# Actions run with /bin/sh -c. Ticket data arrives in ASANAMATE_* environment
+// actionFiles are written to the actions directory by setup. The .example
+// file stays inactive until renamed to .toml.
+var actionFiles = []struct{ name, body string }{
+	{"pager.toml", `# One action per file. Every *.toml file here is an action, in file name order.
+# Commands run with /bin/sh -c. Ticket data arrives in ASANAMATE_* environment
 # variables and in the files $ASANAMATE_TICKET_JSON and $ASANAMATE_TICKET_MD.
 # Never paste ticket text into the command; always use the variables.
 # mode: "foreground" (suspend the TUI), "background" (detached, logged), or
 # "exit" (quit asanamate, then run). repo = true resolves the ticket's repo first.
-
-[[actions]]
 name = "View ticket in pager"
 key = "v"
 mode = "foreground"
 command = '${PAGER:-less} "$ASANAMATE_TICKET_MD"'
+`},
+	{"claude-tmux.toml.example", `# Rename to claude-tmux.toml to enable.
+name = "Start Claude in a new tmux window"
+key = "c"
+mode = "background"
+repo = true
+# Switch to the ticket's branch first so the agent links to the ticket.
+# tmux new-window does not inherit this environment; pass variables with -e.
+command = '''git switch "$ASANAMATE_BRANCH" 2>/dev/null || git switch -c "$ASANAMATE_BRANCH" &&
+tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "ASANAMATE_TICKET_MD=$ASANAMATE_TICKET_MD" -e "ASANAMATE_GID=$ASANAMATE_GID" 'claude "$(cat "$ASANAMATE_TICKET_MD")"' '''
+`},
+}
 
-# [[actions]]
-# name = "Start Claude in a new tmux window"
-# key = "c"
-# mode = "background"
-# repo = true
-# # Switch to the ticket's branch first so the agent links to the ticket.
-# # tmux new-window does not inherit this environment; pass variables with -e.
-# command = '''git switch "$ASANAMATE_BRANCH" 2>/dev/null || git switch -c "$ASANAMATE_BRANCH" &&
-# tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "ASANAMATE_TICKET_MD=$ASANAMATE_TICKET_MD" -e "ASANAMATE_GID=$ASANAMATE_GID" 'claude "$(cat "$ASANAMATE_TICKET_MD")"' '''
-`
+// writeActions adds the default action files, keeping any that already exist.
+func writeActions(dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	for _, f := range actionFiles {
+		path := filepath.Join(dir, f.name)
+		if _, err := os.Stat(path); err == nil {
+			continue
+		}
+		if err := writePrivate(path, []byte(f.body)); err != nil {
+			return err
+		}
+	}
+	return nil
+}

@@ -25,7 +25,8 @@ Prebuilt binaries are attached to each [GitHub release](https://github.com/sadma
    `export ASANA_ACCESS_TOKEN=...`
 2. Run `asanamate setup`. It checks the token, asks for your workspace and the
    directory that holds your git repositories, and writes
-   `~/.config/asanamate/config.toml` with every default explained.
+   `~/.config/asanamate/config.toml` with every default explained, plus a
+   pager action and a Claude example in `~/.config/asanamate/actions/`.
 3. Run `asanamate`.
 
 `asanamate config` opens the config file in `$VISUAL` or `$EDITOR` (falling
@@ -34,6 +35,7 @@ back to `vi`) and reports any errors in it after you save.
 `asanamate config update` rewrites the config from the current template so it
 picks up new settings and comments, keeping every value you set. The previous
 file is saved as `config.toml.bak`; copy any comments of your own back from it.
+Actions live in their own files, so updates never touch them.
 
 ## Layout
 
@@ -174,8 +176,14 @@ command = "sesh list -z"
 
 ## Actions
 
+Each action is its own file in `~/.config/asanamate/actions/`, next to
+`config.toml`. Every `*.toml` file there loads in file name order, so prefixes
+such as `10-` and `20-` set the menu order. Other files, such as
+`claude-tmux.toml.example`, are ignored until renamed. A file holds one action,
+with its keys at the top level:
+
 ```toml
-[[actions]]
+# actions/claude.toml
 name = "Start Claude"   # shown in the menu
 key = "c"               # one character
 mode = "background"     # foreground | background | exit
@@ -219,7 +227,7 @@ starts on the same ticket overwrites the text from the one before. For example, 
 Claude's first prompt:
 
 ```toml
-[[actions]]
+# actions/claude-notes.toml
 name = "Start Claude with notes"
 key = "C"
 mode = "background"
@@ -246,14 +254,16 @@ remembers it. Tickets in several projects always ask which project to use.
 More examples:
 
 ```toml
-[[actions]]
+# actions/branch.toml
 name = "Create branch and record it"
 key = "b"
 mode = "foreground"
 repo = true
 command = '''git switch -c "feature/$ASANAMATE_SLUG" && asanamate field "$ASANAMATE_GID" "Branch Name" "feature/$ASANAMATE_SLUG"'''
+```
 
-[[actions]]
+```toml
+# actions/session.toml
 name = "Jump to repo session"
 key = "s"
 mode = "exit"
@@ -342,15 +352,17 @@ with `agent = true` needs one: it runs directly for a single agent, asks which
 one (by title) when there are several, and refuses when there are none.
 
 ```toml
-[[actions]]
+# actions/agent.toml
 name = "Start agent in a worktree"
 key = "c"
 mode = "background"
 repo = true
 command = '''ccmux spawn claude --cwd "$ASANAMATE_REPO" --worktree "$ASANAMATE_BRANCH" --detach --prompt "$(cat "$ASANAMATE_TICKET_MD")" &&
 asanamate field --yes "$ASANAMATE_GID" "Branch Name" "$ASANAMATE_BRANCH"'''
+```
 
-[[actions]]
+```toml
+# actions/jump.toml
 name = "Jump to agent"
 key = "j"
 mode = "exit"
@@ -396,6 +408,7 @@ set -g allow-passthrough on
 ## Files
 
 - Config: `~/.config/asanamate/config.toml`
+- Actions: `~/.config/asanamate/actions/*.toml`
 - State (repo links, recent projects): `~/.local/state/asanamate/state.toml`
 - Ticket exports: `~/.local/state/asanamate/tickets/<gid>/`
 - Background action log: `~/.local/state/asanamate/actions.log`

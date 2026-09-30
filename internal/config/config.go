@@ -62,7 +62,8 @@ type Config struct {
 	Agents        Agents     `toml:"agents"`
 	List          List       `toml:"list"`
 	Reader        Reader     `toml:"reader"`
-	Actions       []Action   `toml:"actions"`
+	// Actions come from the *.toml files in ActionsDir, not from config.toml.
+	Actions []Action `toml:"-"`
 }
 
 // Agents links tickets to running coding agents. It is off unless Preset or
@@ -150,7 +151,8 @@ type RepoSource struct {
 	Command string `toml:"command"`
 }
 
-// Action is a user-defined command run against the selected ticket.
+// Action is a user-defined command run against the selected ticket. Each
+// action is its own file in ActionsDir, with these keys at the top level.
 type Action struct {
 	Name    string `toml:"name"`
 	Key     string `toml:"key"`
@@ -189,15 +191,54 @@ func Load(path string) (Config, error) {
 	if undecoded := md.Undecoded(); len(undecoded) > 0 {
 		return cfg, fmt.Errorf("%s: unknown keys: %v", path, undecoded)
 	}
-	for i := range cfg.Actions {
-		if cfg.Actions[i].Mode == "" {
-			cfg.Actions[i].Mode = ModeForeground
-		}
-	}
 	if err := cfg.validate(); err != nil {
 		return cfg, fmt.Errorf("%s: %w", path, err)
 	}
-	return cfg, nil
+	cfg.Actions, err = loadActions(ActionsDir(path))
+	return cfg, err
+}
+
+// loadActions reads every *.toml file in dir, in file name order. A missing
+// dir means no actions.
+func loadActions(dir string) ([]Action, error) {
+	files, err := filepath.Glob(filepath.Join(dir, "*.toml"))
+	if err != nil {
+		return nil, err
+	}
+	var actions []Action
+	keys := map[string]string{} // action key -> file that binds it
+	for _, file := range files {
+		a := Action{Mode: ModeForeground}
+		md, err := toml.DecodeFile(file, &a)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", file, err)
+		}
+		if undecoded := md.Undecoded(); len(undecoded) > 0 {
+			return nil, fmt.Errorf("%s: unknown keys: %v", file, undecoded)
+		}
+		if err := a.validate(); err != nil {
+			return nil, fmt.Errorf("%s: %w", file, err)
+		}
+		if other, ok := keys[a.Key]; ok {
+			return nil, fmt.Errorf("%s: key %q is already used by %s", file, a.Key, other)
+		}
+		keys[a.Key] = file
+		actions = append(actions, a)
+	}
+	return actions, nil
+}
+
+func (a Action) validate() error {
+	if a.Name == "" || a.Command == "" {
+		return errors.New("name and command are required")
+	}
+	if err := oneOf("mode", a.Mode, ModeForeground, ModeBackground, ModeExit); err != nil {
+		return err
+	}
+	if len([]rune(a.Key)) != 1 {
+		return errors.New("key must be a single character")
+	}
+	return nil
 }
 
 func (c Config) validate() error {
@@ -240,28 +281,7 @@ func (c Config) validate() error {
 	if strings.EqualFold(strings.TrimSpace(c.List.GroupBy), "title") {
 		return errors.New("list.group_by can't be the title; use a field such as section or due")
 	}
-	if err := c.Agents.validate(); err != nil {
-		return err
-	}
-	keys := map[string]string{}
-	for _, a := range c.Actions {
-		if a.Name == "" || a.Command == "" {
-			return errors.New("every action needs a name and a command")
-		}
-		switch a.Mode {
-		case ModeForeground, ModeBackground, ModeExit:
-		default:
-			return fmt.Errorf("action %q: mode must be foreground, background, or exit", a.Name)
-		}
-		if len([]rune(a.Key)) != 1 {
-			return fmt.Errorf("action %q: key must be a single character", a.Name)
-		}
-		if other, ok := keys[a.Key]; ok {
-			return fmt.Errorf("actions %q and %q share key %q", other, a.Name, a.Key)
-		}
-		keys[a.Key] = a.Name
-	}
-	return nil
+	return c.Agents.validate()
 }
 
 // validColor reports whether s is an ANSI color number or a #rgb/#rrggbb hex color.
@@ -342,6 +362,11 @@ func Path() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, "config.toml"), nil
+}
+
+// ActionsDir returns the directory of action files next to the config file.
+func ActionsDir(configPath string) string {
+	return filepath.Join(filepath.Dir(configPath), "actions")
 }
 
 // StateDir returns the directory for files asanamate writes itself.

@@ -18,13 +18,27 @@ func writeFile(t *testing.T, body string) string {
 	return path
 }
 
+// writeActions writes each body to its named file in path's actions dir.
+func writeActions(t *testing.T, path string, files map[string]string) {
+	t.Helper()
+	dir := ActionsDir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestLoadAppliesDefaults(t *testing.T) {
-	cfg, err := Load(writeFile(t, `workspace = "123"
-[[actions]]
-name = "View"
+	path := writeFile(t, `workspace = "123"`)
+	writeActions(t, path, map[string]string{"view.toml": `name = "View"
 key = "v"
 command = "less \"$ASANAMATE_TICKET_MD\""
-`))
+`})
+	cfg, err := Load(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,10 +63,7 @@ func TestLoadRejectsInvalid(t *testing.T) {
 		"no workspace":  "theme = \"dark\"\n",
 		"bad theme":     "workspace = \"1\"\ntheme = \"blue\"\n",
 		"bad images":    "workspace = \"1\"\nimages = \"sixel\"\n",
-		"bad mode":      "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"a\"\nmode = \"later\"\ncommand = \"true\"\n",
-		"long key":      "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"ab\"\ncommand = \"true\"\n",
-		"duplicate key": "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"x\"\ncommand = \"true\"\n[[actions]]\nname = \"b\"\nkey = \"x\"\ncommand = \"true\"\n",
-		"no command":    "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"a\"\n",
+		"inline action": "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"a\"\ncommand = \"true\"\n",
 	}
 	for name, body := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -60,6 +71,42 @@ func TestLoadRejectsInvalid(t *testing.T) {
 				t.Fatal("expected an error")
 			}
 		})
+	}
+}
+
+func TestLoadRejectsInvalidActions(t *testing.T) {
+	cases := map[string]map[string]string{
+		"unknown key":   {"a.toml": "name = \"a\"\nkey = \"a\"\ncommand = \"true\"\nkye = \"b\"\n"},
+		"bad mode":      {"a.toml": "name = \"a\"\nkey = \"a\"\nmode = \"later\"\ncommand = \"true\"\n"},
+		"long key":      {"a.toml": "name = \"a\"\nkey = \"ab\"\ncommand = \"true\"\n"},
+		"no command":    {"a.toml": "name = \"a\"\nkey = \"a\"\n"},
+		"duplicate key": {"a.toml": "name = \"a\"\nkey = \"x\"\ncommand = \"true\"\n", "b.toml": "name = \"b\"\nkey = \"x\"\ncommand = \"true\"\n"},
+	}
+	for name, files := range cases {
+		t.Run(name, func(t *testing.T) {
+			path := writeFile(t, `workspace = "1"`)
+			writeActions(t, path, files)
+			_, err := Load(path)
+			if err == nil || !strings.Contains(err.Error(), "a.toml") && !strings.Contains(err.Error(), "b.toml") {
+				t.Fatalf("err = %v, want an error naming the action file", err)
+			}
+		})
+	}
+}
+
+func TestLoadActionsInFileNameOrder(t *testing.T) {
+	path := writeFile(t, `workspace = "1"`)
+	writeActions(t, path, map[string]string{
+		"20-b.toml":      "name = \"b\"\nkey = \"b\"\ncommand = \"true\"\n",
+		"10-a.toml":      "name = \"a\"\nkey = \"a\"\ncommand = \"true\"\n",
+		"c.toml.example": "not toml",
+	})
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Actions) != 2 || cfg.Actions[0].Name != "a" || cfg.Actions[1].Name != "b" {
+		t.Fatalf("actions = %+v", cfg.Actions)
 	}
 }
 

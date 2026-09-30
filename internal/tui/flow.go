@@ -51,7 +51,7 @@ func (m *Model) openActionMenu() {
 		return
 	}
 	if len(m.deps.Config.Actions) == 0 {
-		m.status = "no actions configured; add [[actions]] to config.toml"
+		m.status = "no actions configured; add a .toml file to the actions folder next to config.toml"
 		return
 	}
 	items := make([]pickItem, len(m.deps.Config.Actions))

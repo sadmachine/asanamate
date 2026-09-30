@@ -54,6 +54,27 @@ func keyBindings() []binding {
 			return m.selectionChanged()
 		}
 	}
+	// page moves the list by a share of the pane height, or scrolls the
+	// reader by it when the reader has focus: div 1 is a page, 2 half one.
+	// The up keys go up, the binding's other keys down.
+	page := func(div int, up ...string) func(*Model, tea.KeyPressMsg) tea.Cmd {
+		return func(m *Model, msg tea.KeyPressMsg) tea.Cmd {
+			n := max(m.paneHeight()/div, 1)
+			if m.focusReader {
+				if slices.Contains(up, msg.String()) {
+					m.reader.ScrollUp(n)
+				} else {
+					m.reader.ScrollDown(n)
+				}
+				return nil
+			}
+			if slices.Contains(up, msg.String()) {
+				n = -n
+			}
+			m.moveTo(m.cursor + n)
+			return m.selectionChanged()
+		}
+	}
 	do := func(fn func(m *Model)) func(*Model, tea.KeyPressMsg) tea.Cmd {
 		return func(m *Model, _ tea.KeyPressMsg) tea.Cmd { fn(m); return nil }
 	}
@@ -69,6 +90,8 @@ func keyBindings() []binding {
 		{keys: []string{"up"}, desc: "up / scroll reader", group: "Move", run: move(func(m *Model) int { return m.cursor - 1 })},
 		{keys: []string{"g", "home"}, desc: "top", group: "Move", run: move(func(m *Model) int { return 0 })},
 		{keys: []string{"G", "end"}, desc: "end", group: "Move", run: move(func(m *Model) int { return len(m.visible) - 1 })},
+		{keys: []string{"ctrl+d", "ctrl+u"}, label: "ctrl+d/u", desc: "half page down / up", group: "Move", run: page(2, "ctrl+u")},
+		{keys: []string{"ctrl+f", "ctrl+b", "pgdown", "pgup"}, label: "ctrl+f/b", desc: "page down / up", group: "Move", run: page(1, "ctrl+b", "pgup")},
 		{keys: []string{"0"}, desc: "views panel", group: "Move", splitOnly: true, run: do((*Model).focusViews)},
 		{keys: []string{"1", "esc"}, label: "1/esc", desc: "list", group: "Move", run: do((*Model).focusList)},
 		{keys: []string{"2"}, desc: "reader", group: "Move", splitOnly: true, run: do((*Model).focusReaderPane)},

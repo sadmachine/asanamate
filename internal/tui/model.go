@@ -39,6 +39,9 @@ const minPaneW = 30
 // panelFrame is the cells a panel's border takes across and down.
 const panelFrame = 2
 
+// listGutter is the blank columns kept right of the list's content.
+const listGutter = 1
+
 // Deps are the services the TUI uses.
 type Deps struct {
 	Config   config.Config
@@ -792,7 +795,7 @@ func (m *Model) panes(h int) string {
 	case split:
 		inner := m.paneHeight()
 		title, count := m.listTitle()
-		list := m.panel(title, count, m.listView(listW, inner), listW+panelFrame, h, !m.focusReader && !m.focusNav)
+		list := m.panel(title, count, m.listView(max(listW-listGutter, 1), inner), listW+panelFrame, h, !m.focusReader && !m.focusNav)
 		reader := m.panel("[2] Ticket", m.readerView, m.reader.View(), readerW+panelFrame, h, m.focusReader)
 		if !m.showNav() {
 			return lipgloss.JoinHorizontal(lipgloss.Top, list, reader)
@@ -802,7 +805,7 @@ func (m *Model) panes(h int) string {
 	case m.focusReader:
 		return m.reader.View()
 	default:
-		return lipgloss.NewStyle().Width(listW).Height(h).Render(m.listView(listW, h))
+		return lipgloss.NewStyle().Width(listW).Height(h).Render(m.listView(max(listW-listGutter, 1), h))
 	}
 }
 
@@ -1099,6 +1102,6 @@ func (m *Model) fitList() {
 	// The title needs its corners, the spaces around it and the count, and
 	// one rule cell between them.
 	title, count := m.listTitle()
-	m.listW = max(w+panelFrame, ansi.StringWidth(title)+ansi.StringWidth(count)+8)
+	m.listW = max(w+listGutter+panelFrame, ansi.StringWidth(title)+ansi.StringWidth(count)+8)
 	m.layout()
 }

@@ -76,7 +76,7 @@ func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
 	}
 	m.details["1"] = tk
 	press(m, "2")
-	want := []string{"assignee", "project:p1", "my_tasks", "field:f1", "section:description", commentKey, "comment:c1", "comment:c2"}
+	want := []string{"assignee", "project:p1", "my_tasks", "field:f1", emptyFieldsKey, "section:description", commentKey, "comment:c1", "comment:c2"}
 	for i, key := range want {
 		if m.fieldKey != key {
 			t.Fatalf("target %d = %q, want %q", i, m.fieldKey, key)

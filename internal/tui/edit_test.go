@@ -261,7 +261,7 @@ func cardLines(t *testing.T, m *Model, tk ticket.Ticket, width int) []string {
 	t.Helper()
 	lines := strings.Split(ansi.Strip(m.renderCards(tk, width)), "\n")
 	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Add comment"}
-	for _, key := range fieldTargets(tk) {
+	for _, key := range m.fieldTargets(tk) {
 		if l := lines[m.fieldLines[key]]; !strings.Contains(l, labels[key]) {
 			t.Errorf("%s line %d = %q", key, m.fieldLines[key], l)
 		}

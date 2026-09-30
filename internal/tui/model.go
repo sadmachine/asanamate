@@ -17,6 +17,7 @@ import (
 	"charm.land/glamour/v2"
 	"charm.land/glamour/v2/styles"
 	"charm.land/lipgloss/v2"
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/agents"
@@ -96,6 +97,7 @@ type Model struct {
 	details     map[string]ticket.Ticket
 	images      map[string]*inlineImage // inline images by attachment gid
 	imageSeq    int                     // inline images requested, for their ids
+	imageCell   kitty.CellSize          // cell size reported by the outer terminal
 	shownGID    string
 	shownAgents string         // agents section rendered for shownGID
 	fieldKey    string         // selected cards view target; "" for none
@@ -181,8 +183,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// The views panel lists recent projects by name.
 		if m.showNav() && m.projects == nil && !m.loadingProjects && m.deps.Client != nil {
 			m.loadingProjects = true
-			return m, loadProjects(m.deps.Client, m.deps.Config.Workspace)
+			return m, tea.Batch(loadProjects(m.deps.Client, m.deps.Config.Workspace), m.requestImageCellSize())
 		}
+		return m, m.requestImageCellSize()
+	case uv.CellSizeEvent:
+		return m, m.imageCellSizeChanged(kitty.CellSize{Width: msg.Width, Height: msg.Height})
 	case tasksMsg:
 		if !sameProject(msg.project, m.viewProject) {
 			return m, nil
@@ -532,7 +537,7 @@ func (m *Model) selectionChanged() tea.Cmd {
 	m.fieldKey, m.showEmpty = "", false
 	if _, cached := m.details[t.GID]; cached {
 		m.renderDetail(false)
-		return nil
+		return m.loadInlineImages(m.details[t.GID])
 	}
 	m.shownGID = ""
 	m.reader.SetContent(dimStyle.Render("Loading " + ticket.Clean(t.Name) + "…"))

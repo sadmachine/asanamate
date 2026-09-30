@@ -15,14 +15,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	ansikitty "github.com/charmbracelet/x/ansi/kitty"
-	"golang.org/x/sys/unix"
 )
 
 const chunkSize = 4096
@@ -119,25 +117,20 @@ func Encode(data []byte, cols, rows int, inTmux bool) (string, error) {
 	return transmit(data, "a=T,f=100,q=2,"+size, inTmux), nil
 }
 
-// terminalCellSize returns the terminal's cell dimensions in pixels. Older
-// terminals that omit pixel dimensions use the previous 8x16 estimate.
-func terminalCellSize() (width, height int) {
-	for _, f := range []*os.File{os.Stdout, os.Stdin} {
-		ws, err := unix.IoctlGetWinsize(int(f.Fd()), unix.TIOCGWINSZ)
-		if err == nil && ws.Col > 0 && ws.Row > 0 {
-			width, height = int(ws.Xpixel)/int(ws.Col), int(ws.Ypixel)/int(ws.Row)
-			if width > 0 && height > 0 {
-				return width, height
-			}
-		}
-	}
-	return 8, 16
-}
+// CellSize is the terminal's directly reported cell size in pixels.
+// A zero value uses the previous 8x16 estimate.
+type CellSize struct{ Width, Height int }
 
-// inlineSize fits an image to the available cells without enlarging it.
+// RequestCellSize asks the outer terminal for its cell dimensions, bypassing
+// tmux's pane/window pixel geometry.
+func RequestCellSize(inTmux bool) string { return wrap("\x1b[16t", inTmux) }
+
+// inlineSize fits an image to the available cells at the original eight-pixel
+// column scale. Only the cell aspect ratio affects its shape, so Retina pixel
+// dimensions do not shrink images.
 // Round height up so the placement leaves less than one row of padding.
 func inlineSize(w, h, maxCols, maxRows, cellWidth, cellHeight int) (cols, rows int) {
-	cols = min(max(maxCols, 1), (w+cellWidth-1)/cellWidth, maxDiacritic)
+	cols = min(max(maxCols, 1), (w+7)/8, maxDiacritic)
 	lim := min(max(maxRows, 1), maxDiacritic)
 	cols = min(cols, max(lim*w*cellHeight/(h*cellWidth), 1))
 	rows = min(max((cols*h*cellWidth+w*cellHeight-1)/(w*cellHeight), 1), lim)
@@ -148,13 +141,15 @@ func inlineSize(w, h, maxCols, maxRows, cellWidth, cellHeight int) (cols, rows i
 // maxCols x maxRows cells, drawn wherever Placeholder text for id is shown.
 // id must be in 16..255, since the placeholder's 256-color foreground carries
 // it. It returns the escape sequences and the placement's size in cells.
-func Inline(data []byte, id, maxCols, maxRows int, inTmux bool) (seq string, cols, rows int, err error) {
+func Inline(data []byte, id, maxCols, maxRows int, cell CellSize, inTmux bool) (seq string, cols, rows int, err error) {
 	data, w, h, err := toPNG(data)
 	if err != nil {
 		return "", 0, 0, err
 	}
-	cellWidth, cellHeight := terminalCellSize()
-	cols, rows = inlineSize(w, h, maxCols, maxRows, cellWidth, cellHeight)
+	if cell.Width <= 0 || cell.Height <= 0 {
+		cell = CellSize{Width: 8, Height: 16}
+	}
+	cols, rows = inlineSize(w, h, maxCols, maxRows, cell.Width, cell.Height)
 	control := fmt.Sprintf("a=T,f=100,q=2,U=1,i=%d,c=%d,r=%d", id, cols, rows)
 	return transmit(data, control, inTmux), cols, rows, nil
 }

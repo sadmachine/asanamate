@@ -42,7 +42,7 @@ command = "less \"$ASANAMATE_TICKET_MD\""
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Theme != "dark" || cfg.Images != "auto" || cfg.DefaultFilter != "is:open" || !cfg.ConfirmWrites {
+	if cfg.Theme != "dark" || cfg.Images.Mode != "auto" || cfg.Images.Inline || cfg.DefaultFilter != "is:open" || !cfg.ConfirmWrites {
 		t.Fatalf("defaults not applied: %+v", cfg)
 	}
 	if cfg.Actions[0].Mode != ModeForeground {
@@ -62,7 +62,7 @@ func TestLoadRejectsInvalid(t *testing.T) {
 		"unknown key":   "workspace = \"1\"\nworkspaec = \"2\"\n",
 		"no workspace":  "theme = \"dark\"\n",
 		"bad theme":     "workspace = \"1\"\ntheme = \"blue\"\n",
-		"bad images":    "workspace = \"1\"\nimages = \"sixel\"\n",
+		"bad images":    "workspace = \"1\"\n[images]\nmode = \"sixel\"\n",
 		"inline action": "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"a\"\ncommand = \"true\"\n",
 	}
 	for name, body := range cases {

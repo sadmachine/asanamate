@@ -147,9 +147,6 @@ theme = "dark"
 # color number (0-255) or "#rrggbb".
 accent_color = "4"
 
-# Images: "auto" detects kitty-protocol terminals, "kitty" forces on, "off" disables.
-images = "auto"
-
 # Filter applied at startup. Terms: words, section:, project:, assignee:, tag:,
 # is:open, is:done. Prefix a term with "-" to negate it; quote multi-word values.
 default_filter = "is:open"
@@ -203,6 +200,13 @@ view = "cards"
 # Wrap description and comment text in the cards view at this many columns;
 # 0 wraps at the pane width.
 max_text_width = 0
+
+[images]
+# Kitty graphics: "auto" detects kitty-protocol terminals, "kitty" forces on,
+# "off" disables.
+mode = "auto"
+# Draw images in descriptions and comments in the cards view instead of links.
+inline = false
 
 # Optional: show running coding agents next to their tickets. Off unless a
 # preset or command is set. A ticket matches agents on its branch (see

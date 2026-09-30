@@ -56,7 +56,6 @@ type Config struct {
 	Workspace     string     `toml:"workspace"`
 	Theme         string     `toml:"theme"`
 	AccentColor   string     `toml:"accent_color"`
-	Images        string     `toml:"images"`
 	DefaultFilter string     `toml:"default_filter"`
 	ConfirmWrites bool       `toml:"confirm_writes"`
 	BranchField   string     `toml:"branch_field"`
@@ -68,6 +67,7 @@ type Config struct {
 	TimeTracking TimeTracking `toml:"time_tracking"`
 	List         List         `toml:"list"`
 	Reader       Reader       `toml:"reader"`
+	Images       Images       `toml:"images"`
 	// Actions come from the *.toml files in ActionsDir, not from config.toml.
 	Actions []Action `toml:"-"`
 }
@@ -164,6 +164,14 @@ type Reader struct {
 	MaxTextWidth int    `toml:"max_text_width"`
 }
 
+// Images configures kitty graphics. Mode is "auto" (detect kitty-protocol
+// terminals), "kitty" (force on), or "off". Inline draws images in ticket
+// descriptions and comments in place of their links, in the cards view.
+type Images struct {
+	Mode   string `toml:"mode"`
+	Inline bool   `toml:"inline"`
+}
+
 // RepoSource configures where repo picker candidates come from.
 type RepoSource struct {
 	Command string `toml:"command"`
@@ -192,7 +200,7 @@ type Action struct {
 // Default returns the values used for keys the config file omits.
 func Default() Config {
 	return Config{
-		Theme: "dark", AccentColor: "4", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true,
+		Theme: "dark", AccentColor: "4", DefaultFilter: "is:open", ConfirmWrites: true,
 		TimeTracking: TimeTracking{},
 		Actions:      nil,
 		List: List{
@@ -200,6 +208,7 @@ func Default() Config {
 			Header: Header{Style: StyleRule}, Selection: Selection{Style: StyleMarker},
 		},
 		Reader: Reader{View: ViewCards},
+		Images: Images{Mode: "auto"},
 	}
 }
 
@@ -287,7 +296,7 @@ func (c Config) validate() error {
 	}
 	for _, e := range []error{
 		oneOf("theme", c.Theme, "dark", "light"),
-		oneOf("images", c.Images, "auto", "kitty", "off"),
+		oneOf("images.mode", c.Images.Mode, "auto", "kitty", "off"),
 		oneOf("list.layout", c.List.Layout, LayoutSingle, LayoutMulti),
 		oneOf("reader.view", c.Reader.View, ViewCards, ViewMarkdown),
 		oneOf("list.header.style", c.List.Header.Style, StyleBar, StyleRule),

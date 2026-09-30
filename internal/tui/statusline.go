@@ -60,7 +60,7 @@ func (m *Model) statusline() string {
 	if m.groupBy != "" {
 		segs = append(segs, m.sym.icon(iconGroup)+m.groupBy)
 	}
-	segs = append(segs, fmt.Sprintf("%d/%d", len(m.visible), len(m.tasks)))
+	segs = append(segs, fmt.Sprintf("%d/%d", len(m.visible), len(m.tasks)), m.refreshLabel())
 	if s := m.sym.summary(m.linkedAgents(), m.frame); s != "" {
 		segs = append(segs, s)
 	}

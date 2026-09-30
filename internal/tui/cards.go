@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"hash/fnv"
+	"image/color"
 	"path/filepath"
 	"strings"
 	"time"
@@ -356,12 +357,13 @@ func (m *Model) card(title, body string, width int, selected bool) string {
 }
 
 // panel boxes a pane's body, width by height cells in all, with title and
-// right set into the top edge. The focused panel's edge is in the accent color.
-// body must already fit width-2 by height-2 cells.
-func (m *Model) panel(title, right, body string, width, height int, focused bool) string {
+// right set into the top edge. A highlighted panel's edge and title are in the
+// highlight color; nil draws the plain border. body must already fit width-2
+// by height-2 cells.
+func (m *Model) panel(title, right, body string, width, height int, highlight color.Color) string {
 	edge, head := lipgloss.NewStyle().Foreground(borderColor), dimStyle
-	if focused {
-		edge, head = lipgloss.NewStyle().Foreground(m.accentStyle.GetForeground()), m.accentStyle
+	if highlight != nil {
+		edge, head = lipgloss.NewStyle().Foreground(highlight), lipgloss.NewStyle().Bold(true).Foreground(highlight)
 	}
 	box := lipgloss.NewStyle().Border(m.sym.border).BorderTop(false).BorderForeground(edge.GetForeground()).
 		Width(width).Height(height - 1).MaxHeight(height - 1).Render(body)

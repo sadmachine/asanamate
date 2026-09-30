@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
@@ -22,7 +23,7 @@ func TestRefreshIntervalSessionOverride(t *testing.T) {
 		t.Fatalf("initial interval = %s", m.refreshInterval)
 	}
 	m.Update(key("R"))
-	if m.input == nil || m.input.area.Value() != "1m0s" {
+	if m.input == nil || m.input.area.Value() != "1m" {
 		t.Fatal("R did not open modal with current interval")
 	}
 	m.input.area.SetValue("500ms")
@@ -195,5 +196,28 @@ func TestRefreshTimerWaitsForInterval(t *testing.T) {
 	msg, ok := cmd().(refreshTickMsg)
 	if !ok || msg.seq != 0 || time.Since(started) < time.Second {
 		t.Fatalf("timer fired early or carried wrong generation: %+v", msg)
+	}
+}
+
+func TestAutoRefreshShowsNoModal(t *testing.T) {
+	m, _ := testModel(t, config.Default())
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 12})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	if s := ansi.Strip(m.statusline()); !strings.Contains(s, "auto 30s") {
+		t.Fatalf("statusline lacks the interval: %q", s)
+	}
+	m.Update(refreshTickMsg{seq: m.refreshSeq})
+	body := ansi.Strip(m.body())
+	if !m.loading || strings.Contains(body, "Loading tasks") || !strings.Contains(body, "loading") {
+		t.Fatalf("timer refresh must mark the list title, not open the modal:\n%s", body)
+	}
+	if m.listHighlight() != warnStyle.GetForeground() {
+		t.Fatal("timer refresh did not highlight the list")
+	}
+	m.Update(key("r")) // keys wait for the refresh
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(key("r"))
+	if !strings.Contains(ansi.Strip(m.body()), "Loading tasks") {
+		t.Fatal("a manual reload must keep the modal")
 	}
 }

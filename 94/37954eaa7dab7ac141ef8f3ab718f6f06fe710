@@ -1,0 +1,41 @@
+internal/action/action.go
+  s_6ef1aa17d2beaa::t_0ba14c5e11786d 63-66,76-79,128
+internal/tui/flow.go
+  s_6ef1aa17d2beaa::t_0ba14c5e11786d 304-305,313,315,374-375,377
+  s_6ef1aa17d2beaa::t_26a28e77dd12c9 314
+internal/tui/cards.go
+  s_6ef1aa17d2beaa::t_7f699594b205ff 13
+  s_6ef1aa17d2beaa::t_26a28e77dd12c9 147-148
+internal/tui/listrow.go
+  s_6ef1aa17d2beaa::t_0ba14c5e11786d 35,65-66,70
+internal/tui/edit.go
+  s_6ef1aa17d2beaa::t_26a28e77dd12c9 5,12,28,57,98-99,104-131
+  s_6ef1aa17d2beaa::t_a34e55f42b562b 132
+README.md
+  s_6ef1aa17d2beaa::t_573a65333dc7b1 71,414
+  s_6ef1aa17d2beaa::t_baf971945c9aa1 258,412-413,509
+internal/tui/edit_test.go
+  s_6ef1aa17d2beaa::t_27dcf9b163d84f 370-398
+cmd/asanamate/main.go
+  s_6ef1aa17d2beaa::t_0ba14c5e11786d 432,435
+internal/state/state.go
+  s_6ef1aa17d2beaa::t_0ba14c5e11786d 30-32,64-66,163,168
+  s_6ef1aa17d2beaa::t_26a28e77dd12c9 162,164-167
+  s_6ef1aa17d2beaa::t_f5cd11aa4d3948 169-170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9437954eaa7dab7ac141ef8f3ab718f6f06fe710",
+  "prompts": {},
+  "sessions": {
+    "s_6ef1aa17d2beaa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5ba32b20-ed9a-4ec7-be1f-4d101aedaed8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

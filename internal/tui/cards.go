@@ -37,7 +37,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	m.cardTargets = append(m.cardTargets[:0], fields[:len(fields)-1]...)
 	var agentLines []string
 	for _, a := range m.viewAgents(t.Task) {
-		agentLines = append(agentLines, m.agentLabel(a, stateStyles[a.State])+dimStyle.Render(" — "+ticket.OneLine(filepath.Base(a.Path))))
+		agentLines = append(agentLines, m.agentLabel(a, stateStyles[a.State].Bold(true))+dimStyle.Render(" — "+ticket.OneLine(filepath.Base(a.Path))))
 	}
 	for _, n := range m.agentNotes(t.Task) {
 		agentLines = append(agentLines, dimStyle.Render(ticket.OneLine(n)))
@@ -65,7 +65,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 			key := "section:agents"
 			m.fieldLines[key] = sideLine
 			m.cardTargets = append(m.cardTargets, key)
-			card := m.card(m.sym.robot+"  Agents", wrap(strings.Join(agentLines, "\n"), rightW-4), rightW, m.fieldKey == key)
+			card := m.card(m.sym.robot+"   Agents", wrap(strings.Join(agentLines, "\n"), rightW-4), rightW, m.fieldKey == key)
 			side = append(side, card)
 			m.fieldEnds[key] = sideLine + lipgloss.Height(card) - 1
 			sideLine += lipgloss.Height(card) + 1

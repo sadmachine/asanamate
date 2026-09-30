@@ -2,6 +2,8 @@ package ticket
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
@@ -181,4 +183,59 @@ func HTMLToMarkdown(html string) string {
 		return Clean(html)
 	}
 	return Clean(strings.TrimSpace(md))
+}
+
+// RichPart is a run of Asana rich text converted to Markdown. ImageGID is set
+// on an inline image, the attachment it shows; its Markdown is the image link.
+type RichPart struct{ Markdown, ImageGID string }
+
+var (
+	imgTag      = regexp.MustCompile(`<img\b[^>]*>`)
+	imgGID      = regexp.MustCompile(`\bdata-asana-gid="(\d+)"`)
+	imgToken    = regexp.MustCompile(`asanamateimage(\d+)x`)
+	blankMarkup = regexp.MustCompile(`^[\s\-*+>#.\d]*$`)
+)
+
+// ImageGIDs returns the attachment gids of the inline images in rich text.
+func ImageGIDs(html string) []string {
+	var gids []string
+	for _, tag := range imgTag.FindAllString(html, -1) {
+		if m := imgGID.FindStringSubmatch(tag); m != nil {
+			gids = append(gids, m[1])
+		}
+	}
+	return gids
+}
+
+// SplitImages converts rich text to Markdown split around its inline images.
+// Parts left holding only list or quote markers are dropped.
+func SplitImages(html string) []RichPart {
+	var images []RichPart
+	marked := imgTag.ReplaceAllStringFunc(html, func(tag string) string {
+		m := imgGID.FindStringSubmatch(tag)
+		if m == nil {
+			return tag
+		}
+		images = append(images, RichPart{Markdown: HTMLToMarkdown(tag), ImageGID: m[1]})
+		return fmt.Sprintf("asanamateimage%dx", len(images)-1)
+	})
+	md := HTMLToMarkdown(marked)
+	if len(images) == 0 {
+		return []RichPart{{Markdown: md}}
+	}
+	var parts []RichPart
+	text := func(s string) {
+		if !blankMarkup.MatchString(s) {
+			parts = append(parts, RichPart{Markdown: strings.TrimSpace(s)})
+		}
+	}
+	last := 0
+	for _, loc := range imgToken.FindAllStringSubmatchIndex(md, -1) {
+		text(md[last:loc[0]])
+		i, _ := strconv.Atoi(md[loc[2]:loc[3]])
+		parts = append(parts, images[i])
+		last = loc[1]
+	}
+	text(md[last:])
+	return parts
 }

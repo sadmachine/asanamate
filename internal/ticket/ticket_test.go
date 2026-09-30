@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -124,5 +125,23 @@ func TestListPicksViewEndpoint(t *testing.T) {
 	want := "/users/me/user_task_list,/user_task_lists/55/tasks,/projects/9/tasks"
 	if got := strings.Join(paths, ","); got != want {
 		t.Fatalf("paths = %s, want %s", got, want)
+	}
+}
+
+func TestSplitImages(t *testing.T) {
+	html := `<body>Before<img data-asana-gid="111" src="https://a/1.png" alt="one.png">` +
+		`<ul><li><img data-asana-gid="222" src="https://a/2.png"></li></ul><img src="https://a/3.png"></body>`
+	parts := SplitImages(html)
+	want := []RichPart{
+		{Markdown: "Before"},
+		{Markdown: "![one.png](https://a/1.png)", ImageGID: "111"},
+		{Markdown: "![](https://a/2.png)", ImageGID: "222"},
+		{Markdown: "![](https://a/3.png)"},
+	}
+	if !slices.Equal(parts, want) {
+		t.Fatalf("parts = %#v", parts)
+	}
+	if gids := ImageGIDs(html); !slices.Equal(gids, []string{"111", "222"}) {
+		t.Fatalf("gids = %v", gids)
 	}
 }

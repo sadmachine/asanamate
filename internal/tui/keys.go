@@ -75,6 +75,7 @@ func keyBindings() []binding {
 		{keys: []string{"tab", "shift+tab"}, desc: "reader / next field", group: "Move", splitOnly: true, run: (*Model).tab},
 		{keys: []string{"/"}, desc: "filter", hint: "filter", group: "Move", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			m.filtering = true
+			m.reader.SetHeight(m.paneHeight())
 			return m.filterInput.Focus()
 		}},
 		{keys: []string{"p"}, desc: "projects", hint: "proj", group: "Move", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {

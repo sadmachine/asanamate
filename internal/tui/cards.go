@@ -23,7 +23,7 @@ const sideBySideW = 90
 // summary line, and the local repo line, a details card with the agents and subtasks beside it (or
 // below, when narrow), titled sections, and the comments as a timeline, all
 // width columns wide. It records the line of each editable row in
-// m.fieldLines.
+// m.fieldLines, and the last line of each multi-line one in m.fieldEnds.
 func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	head := lipgloss.NewStyle().Bold(true).Width(width).Render(ticket.Clean(t.Name))
 	if chips := m.summaryLine(t.Task, width); chips != "" {
@@ -32,7 +32,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	if line := m.repoLine(t.Task, width); line != "" {
 		head += "\n" + line
 	}
-	m.fieldLines = map[string]int{}
+	m.fieldLines, m.fieldEnds = map[string]int{}, map[string]int{}
 	fields := fieldTargets(t)
 	m.cardTargets = append(m.cardTargets[:0], fields[:len(fields)-1]...)
 	var agentLines []string
@@ -49,9 +49,11 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	var blocks []string
 	add := func(key, title, body string) {
 		if body != "" {
+			block := m.rule(title, width, m.fieldKey == key) + "\n" + body
 			m.fieldLines[key] = lipgloss.Height(strings.Join(blocks, "\n\n")) + 1
+			m.fieldEnds[key] = m.fieldLines[key] + lipgloss.Height(block) - 1
 			m.cardTargets = append(m.cardTargets, key)
-			blocks = append(blocks, m.rule(title, width, m.fieldKey == key)+"\n"+body)
+			blocks = append(blocks, block)
 		}
 	}
 	if width >= sideBySideW && (len(agentLines) > 0 || subtasks != "") {
@@ -65,13 +67,16 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 			m.cardTargets = append(m.cardTargets, key)
 			card := m.card(m.sym.robot+"  Agents", wrap(strings.Join(agentLines, "\n"), rightW-4), rightW, m.fieldKey == key)
 			side = append(side, card)
+			m.fieldEnds[key] = sideLine + lipgloss.Height(card) - 1
 			sideLine += lipgloss.Height(card) + 1
 		}
 		if subtasks != "" {
 			key := "section:subtasks"
 			m.fieldLines[key] = sideLine
 			m.cardTargets = append(m.cardTargets, key)
-			side = append(side, m.card(subtaskTitle, wrap(subtasks, rightW-4), rightW, m.fieldKey == key))
+			card := m.card(subtaskTitle, wrap(subtasks, rightW-4), rightW, m.fieldKey == key)
+			m.fieldEnds[key] = sideLine + lipgloss.Height(card) - 1
+			side = append(side, card)
 		}
 		details := m.card("Details", m.detailsBody(t, leftW-4, top), leftW, false)
 		blocks = []string{head, lipgloss.JoinHorizontal(lipgloss.Top, details, " ", strings.Join(side, "\n"))}
@@ -104,6 +109,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 			m.fieldLines[key] = line
 			m.cardTargets = append(m.cardTargets, key)
 			comments[i] = m.comment(c, width, m.fieldKey == key)
+			m.fieldEnds[key] = line + lipgloss.Height(comments[i]) - 1
 			line += lipgloss.Height(comments[i]) + 1
 		}
 	}

@@ -54,6 +54,17 @@ func keyBindings() []binding {
 			return m.selectionChanged()
 		}
 	}
+	// Home and end jump the reader too, when it has focus.
+	jump := func(top bool, to func(m *Model) int) func(*Model, tea.KeyPressMsg) tea.Cmd {
+		return func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			if m.focusReader {
+				m.jumpReader(top)
+				return nil
+			}
+			m.moveTo(to(m))
+			return m.selectionChanged()
+		}
+	}
 	do := func(fn func(m *Model)) func(*Model, tea.KeyPressMsg) tea.Cmd {
 		return func(m *Model, _ tea.KeyPressMsg) tea.Cmd { fn(m); return nil }
 	}
@@ -67,8 +78,8 @@ func keyBindings() []binding {
 		{keys: []string{"k"}, desc: "up / previous card target", group: "Move", run: cardMove(-1, func(m *Model) int { return m.cursor - 1 })},
 		{keys: []string{"down"}, desc: "down / scroll reader", group: "Move", run: move(func(m *Model) int { return m.cursor + 1 })},
 		{keys: []string{"up"}, desc: "up / scroll reader", group: "Move", run: move(func(m *Model) int { return m.cursor - 1 })},
-		{keys: []string{"g", "home"}, desc: "top", group: "Move", run: move(func(m *Model) int { return 0 })},
-		{keys: []string{"G", "end"}, desc: "end", group: "Move", run: move(func(m *Model) int { return len(m.visible) - 1 })},
+		{keys: []string{"g", "home"}, desc: "top", group: "Move", run: jump(true, func(m *Model) int { return 0 })},
+		{keys: []string{"G", "end"}, desc: "end", group: "Move", run: jump(false, func(m *Model) int { return len(m.visible) - 1 })},
 		{keys: []string{"0"}, desc: "views panel", group: "Move", splitOnly: true, run: do((*Model).focusViews)},
 		{keys: []string{"1", "esc"}, label: "1/esc", desc: "list", group: "Move", run: do((*Model).focusList)},
 		{keys: []string{"2"}, desc: "reader", group: "Move", splitOnly: true, run: do((*Model).focusReaderPane)},

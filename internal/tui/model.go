@@ -96,6 +96,7 @@ type Model struct {
 	shownAgents string         // agents section rendered for shownGID
 	fieldKey    string         // selected cards view target; "" for none
 	fieldLines  map[string]int // reader line of each cards view target, by key
+	fieldEnds   map[string]int // last reader line of multi-line targets, by key
 	cardTargets []string       // cards view targets in reading order
 
 	projects        []asana.Project
@@ -595,20 +596,42 @@ func (m *Model) stepCardTarget(dir int) bool {
 	return true
 }
 
+// jumpReader scrolls the reader to its top or bottom, selecting the cards
+// view's first or last target.
+func (m *Model) jumpReader(top bool) {
+	if _, ok := m.selectedDetail(); ok && m.readerView != config.ViewMarkdown && len(m.cardTargets) > 0 {
+		m.fieldKey = m.cardTargets[len(m.cardTargets)-1]
+		if top {
+			m.fieldKey = m.cardTargets[0]
+		}
+		m.renderDetail(true)
+	}
+	if top {
+		m.reader.GotoTop()
+	} else {
+		m.reader.GotoBottom()
+	}
+}
+
 func (m *Model) editableTarget() bool {
 	t, ok := m.selectedDetail()
 	return ok && m.readerView != config.ViewMarkdown && slices.Contains(fieldTargets(t), m.fieldKey)
 }
 
-// showTarget redraws the highlight and brings its first line into view.
+// showTarget redraws the highlight and brings the whole target into view, or
+// its first line when it is taller than the reader. A target that fits on
+// screen with the ticket's top scrolls to the top, so the head stays reachable.
 func (m *Model) showTarget() {
 	m.renderDetail(true)
 	line, top, h := m.fieldLines[m.fieldKey], m.reader.YOffset(), m.reader.Height()
+	last := max(m.fieldEnds[m.fieldKey], line)
 	switch {
+	case line < top && last < h:
+		m.reader.GotoTop()
 	case line < top:
 		m.reader.SetYOffset(line)
-	case line >= top+h:
-		m.reader.SetYOffset(line - h + 1)
+	case last >= top+h:
+		m.reader.SetYOffset(min(line, last-h+1))
 	}
 }
 

@@ -76,6 +76,17 @@ func (t Ticket) FieldValues() []Field {
 	return fields
 }
 
+// EmptyFields returns the ticket's custom fields that have no value.
+func (t Ticket) EmptyFields() []Field {
+	var fields []Field
+	for _, f := range t.CustomFields {
+		if f.DisplayValue == nil || *f.DisplayValue == "" {
+			fields = append(fields, Field{FieldName(f), "", FieldKey(f.GID)})
+		}
+	}
+	return fields
+}
+
 // Description returns the ticket's notes as Markdown.
 func (t Ticket) Description() string { return HTMLToMarkdown(t.HTMLNotes) }
 

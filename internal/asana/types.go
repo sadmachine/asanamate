@@ -29,14 +29,15 @@ const (
 
 // CustomField is a custom field value on a task.
 type CustomField struct {
-	GID             string       `json:"gid"`
-	Name            string       `json:"name"`
-	ResourceSubtype string       `json:"resource_subtype"`
-	DisplayValue    *string      `json:"display_value"`
-	EnumOptions     []EnumOption `json:"enum_options,omitempty"`
-	MultiEnumValues []EnumOption `json:"multi_enum_values,omitempty"`
-	PeopleValue     []Ref        `json:"people_value,omitempty"`
-	DateValue       *DateValue   `json:"date_value,omitempty"`
+	GID                string       `json:"gid"`
+	Name               string       `json:"name"`
+	ResourceSubtype    string       `json:"resource_subtype"`
+	RepresentationType string       `json:"representation_type,omitempty"` // refines ResourceSubtype: custom_id, formula
+	DisplayValue       *string      `json:"display_value"`
+	EnumOptions        []EnumOption `json:"enum_options,omitempty"`
+	MultiEnumValues    []EnumOption `json:"multi_enum_values,omitempty"`
+	PeopleValue        []Ref        `json:"people_value,omitempty"`
+	DateValue          *DateValue   `json:"date_value,omitempty"`
 }
 
 // DateValue is a date custom field's value.

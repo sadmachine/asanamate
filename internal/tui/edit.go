@@ -227,9 +227,14 @@ func (m *Model) openFieldPicker() {
 	m.modal = newPicker(pickValue(m.pickedField), "Set which field?", items)
 }
 
-// editable reports whether the edit flow can set custom field f.
+// editable reports whether the edit flow can set custom field f. ID and
+// formula fields are read-only text and number fields.
 func editable(f asana.CustomField) bool {
-	switch f.ResourceSubtype {
+	kind := f.RepresentationType
+	if kind == "" {
+		kind = f.ResourceSubtype
+	}
+	switch kind {
 	case asana.FieldText, asana.FieldNumber, asana.FieldEnum, asana.FieldMultiEnum, asana.FieldDate, asana.FieldPeople:
 		return true
 	}
@@ -239,11 +244,19 @@ func editable(f asana.CustomField) bool {
 // commentKey is the field key of the cards view's Add comment row.
 const commentKey = "comment"
 
+// emptyFieldsKey is the field key of the cards view's Show empty fields row.
+const emptyFieldsKey = "empty_fields"
+
 // fieldTargets are the keys of the rows the cards view can tab to, in the
-// order they render: editable details rows, then the Add comment row.
-func fieldTargets(t ticket.Ticket) []string {
+// order they render: editable details rows, the Show empty fields row while
+// empty fields are hidden, then the Add comment row.
+func (m *Model) fieldTargets(t ticket.Ticket) []string {
 	var keys []string
-	for _, f := range append(t.Meta(), t.FieldValues()...) {
+	rows := append(t.Meta(), t.FieldValues()...)
+	if m.showEmpty {
+		rows = append(rows, t.EmptyFields()...)
+	}
+	for _, f := range rows {
 		if f.Key == "" {
 			continue
 		}
@@ -255,7 +268,27 @@ func fieldTargets(t ticket.Ticket) []string {
 		}
 		keys = append(keys, f.Key)
 	}
+	if !m.showEmpty && len(t.EmptyFields()) > 0 {
+		keys = append(keys, emptyFieldsKey)
+	}
 	return append(keys, commentKey)
+}
+
+// showEmptyFields reveals the selected ticket's empty custom fields and
+// selects the first editable one.
+func (m *Model) showEmptyFields() {
+	t, ok := m.selectedDetail()
+	if !ok {
+		return
+	}
+	m.showEmpty, m.fieldKey = true, ""
+	for _, f := range t.EmptyFields() {
+		if slices.Contains(m.fieldTargets(t), f.Key) {
+			m.fieldKey = f.Key
+			break
+		}
+	}
+	m.showTarget()
 }
 
 // openField starts editing the row with key on the selected ticket, skipping

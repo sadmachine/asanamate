@@ -33,7 +33,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		head += "\n" + line
 	}
 	m.fieldLines, m.fieldEnds = map[string]int{}, map[string]int{}
-	fields := fieldTargets(t)
+	fields := m.fieldTargets(t)
 	m.cardTargets = append(m.cardTargets[:0], fields[:len(fields)-1]...)
 	var agentLines []string
 	for _, a := range m.viewAgents(t.Task) {
@@ -254,10 +254,14 @@ func shortDate(d, today time.Time) string {
 	return d.Format("Jan 2 2006")
 }
 
-// detailsBody lists the built-in fields, then any custom fields below a rule.
+// detailsBody lists the built-in fields, then any custom fields below a rule,
+// ending with the empty ones or a row that shows them.
 // top is the reader line of its first row, for m.fieldLines.
 func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
-	meta, custom := t.Meta(), t.FieldValues()
+	meta, custom, empty := t.Meta(), t.FieldValues(), t.EmptyFields()
+	if m.showEmpty {
+		custom, empty = append(custom, empty...), nil
+	}
 	labelW := 0
 	for _, f := range append(meta, custom...) {
 		labelW = max(labelW, ansi.StringWidth(f.Label))
@@ -268,10 +272,13 @@ func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
 		out := make([]string, len(fields))
 		for i, f := range fields {
 			value := f.Value
-			switch f.Label {
-			case "Status":
+			if value == "" {
+				value = dimStyle.Render("—")
+			}
+			switch {
+			case f.Label == "Status" && f.Key == "":
 				value = m.statusBadge(t.Completed)
-			case "Due":
+			case f.Key == ticket.KeyDue:
 				if due, _, ok := dueDays(t.DueOn, m.now()); ok {
 					rel, style := dueLabel(t.DueOn, m.now())
 					value = style.Render(shortDate(due, m.now()) + " (" + rel + ")")
@@ -291,10 +298,22 @@ func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
 		return out
 	}
 	lines := rows(meta)
-	if len(custom) > 0 {
+	if len(custom) > 0 || len(empty) > 0 {
 		lines = append(lines, lipgloss.NewStyle().Foreground(borderColor).Render(strings.Repeat(m.sym.border.Top, width)))
 		line++
 		lines = append(lines, rows(custom)...)
+	}
+	if len(empty) > 0 {
+		m.fieldLines[emptyFieldsKey] = line
+		style := dimStyle.Italic(true)
+		if m.fieldKey == emptyFieldsKey {
+			style = m.fieldStyle()
+		}
+		label := fmt.Sprintf("+ Show %d empty fields", len(empty))
+		if len(empty) == 1 {
+			label = "+ Show 1 empty field"
+		}
+		lines = append(lines, style.Render(label))
 	}
 	return strings.Join(lines, "\n")
 }

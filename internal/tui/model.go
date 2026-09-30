@@ -95,6 +95,7 @@ type Model struct {
 	shownGID    string
 	shownAgents string         // agents section rendered for shownGID
 	fieldKey    string         // selected cards view target; "" for none
+	showEmpty   bool           // the cards view lists empty custom fields; resets per ticket
 	fieldLines  map[string]int // reader line of each cards view target, by key
 	fieldEnds   map[string]int // last reader line of multi-line targets, by key
 	cardTargets []string       // cards view targets in reading order
@@ -366,6 +367,10 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return m.updateFilter(msg)
 	}
 	if k == "enter" && m.focusReader && m.fieldKey != "" {
+		if m.fieldKey == emptyFieldsKey {
+			m.showEmptyFields()
+			return nil
+		}
 		if m.editableTarget() {
 			return m.openField(m.fieldKey)
 		}
@@ -509,7 +514,7 @@ func (m *Model) selectionChanged() tea.Cmd {
 	if t.GID == m.shownGID {
 		return nil
 	}
-	m.fieldKey = ""
+	m.fieldKey, m.showEmpty = "", false
 	if _, cached := m.details[t.GID]; cached {
 		m.renderDetail(false)
 		return nil
@@ -562,7 +567,7 @@ func (m *Model) stepField(dir int) bool {
 	if !ok || m.readerView == config.ViewMarkdown {
 		return false
 	}
-	keys := fieldTargets(t)
+	keys := m.fieldTargets(t)
 	i := slices.Index(keys, m.fieldKey)
 	switch {
 	case i < 0 && dir < 0:
@@ -615,7 +620,7 @@ func (m *Model) jumpReader(top bool) {
 
 func (m *Model) editableTarget() bool {
 	t, ok := m.selectedDetail()
-	return ok && m.readerView != config.ViewMarkdown && slices.Contains(fieldTargets(t), m.fieldKey)
+	return ok && m.readerView != config.ViewMarkdown && slices.Contains(m.fieldTargets(t), m.fieldKey)
 }
 
 // showTarget redraws the highlight and brings the whole target into view, or

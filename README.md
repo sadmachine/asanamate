@@ -230,6 +230,7 @@ name = "Start Claude"   # shown in the menu
 key = "c"               # one character
 mode = "background"     # foreground | background | exit
 repo = true             # resolve the ticket's repo and run inside it
+context = ""            # "" (everywhere) | "comment"; see below
 command = '''git switch "$ASANAMATE_BRANCH" 2>/dev/null || git switch -c "$ASANAMATE_BRANCH" &&
 tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "ASANAMATE_TICKET_MD=$ASANAMATE_TICKET_MD" -e "ASANAMATE_GID=$ASANAMATE_GID" 'claude "$(cat "$ASANAMATE_TICKET_MD")"' '''
 confirm_writes = false  # optional per-action override
@@ -251,6 +252,7 @@ paste ticket text into the command, because ticket content is untrusted.
 | `ASANAMATE_BRANCH` | the ticket's branch: `branch_field`'s value, or the title slug |
 | `ASANAMATE_AGENT_STATE`, `ASANAMATE_AGENT_STATUS`, `ASANAMATE_AGENT_PATH`, `ASANAMATE_AGENT_TARGET`, `ASANAMATE_AGENT_TITLE` | the agent the action is about (the chosen one for `agent = true`, else the most urgent): normalized state, raw status, directory, jump id, title. Empty without agents |
 | `ASANAMATE_AGENT_TARGETS` | every linked agent, one `target<TAB>state<TAB>path<TAB>title` line each |
+| `ASANAMATE_COMMENT_GID`, `ASANAMATE_COMMENT_AUTHOR`, `ASANAMATE_COMMENT_AUTHOR_GID`, `ASANAMATE_COMMENT_DATE`, `ASANAMATE_COMMENT_TEXT` | the highlighted comment when the menu opened: story gid, author name and gid, `created_at` timestamp, and body as Markdown. Empty when no comment is highlighted |
 | `ASANAMATE_TICKET_JSON`, `ASANAMATE_TICKET_MD` | full ticket as JSON / Markdown |
 | `ASANAMATE_INPUT_FILE` | text typed into the `input` box, possibly empty. Empty path for actions without `input` |
 | `ASANAMATE_PARAM_<ID>` | selected action form value, with its field ID uppercased |
@@ -262,6 +264,21 @@ Modes:
 - `foreground`: suspends the TUI, runs in the same terminal, and resumes.
 - `background`: runs detached. Output goes to `~/.local/state/asanamate/actions.log`.
 - `exit`: quits asanamate, then runs the command. Best for popups.
+
+Context: an action with `context = "comment"` appears only when a comment is
+highlighted in the cards view, listed before the other actions. Press `enter`
+or `a` on a comment to open the menu. Its key may repeat a key of an
+everywhere action; the comment action wins while a comment is highlighted.
+
+```toml
+# actions/reply.toml
+name = "Reply to comment"
+key = "r"
+context = "comment"
+input = "Reply"
+command = '''{ printf '> %s wrote:\n\n' "$ASANAMATE_COMMENT_AUTHOR"; printf '%s\n' "$ASANAMATE_COMMENT_TEXT" | sed 's/^/> /'; printf '\n'; cat "$ASANAMATE_INPUT_FILE"; } |
+asanamate comment "$ASANAMATE_GID" -'''
+```
 
 Input: set `input` to a title, and asanamate asks for free-form text right
 before running the action. Enter adds a newline, ctrl+s runs, and esc cancels.

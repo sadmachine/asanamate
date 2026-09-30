@@ -51,6 +51,8 @@ type Context struct {
 	Agent *agents.Agent
 	// Agents are all running agents linked to the ticket, most urgent first.
 	Agents []agents.Agent
+	// Comment is the highlighted comment for comment context actions, if any.
+	Comment *asana.Story
 	// FormValues are selected action parameters, exposed as ASANAMATE_PARAM_*.
 	FormValues map[string]string
 }
@@ -116,34 +118,46 @@ func (f *Files) WriteInput(text string) error {
 func Env(c Context) []string {
 	t := c.Ticket
 	vars := map[string]string{
-		"GID":            t.GID,
-		"TITLE":          t.Name,
-		"URL":            t.PermalinkURL,
-		"SLUG":           Slug(t.Name),
-		"COMPLETED":      strconv.FormatBool(t.Completed),
-		"REPO":           c.Repo,
-		"WORKTREE":       c.Worktree,
-		"TICKET_JSON":    c.Files.JSON,
-		"TICKET_MD":      c.Files.Markdown,
-		"INPUT_FILE":     c.Files.Input,
-		"CONFIRM_WRITES": "0",
-		"ASSIGNEE":       "",
-		"DUE":            "",
-		"MY_SECTION":     "",
-		"PROJECT":        "",
-		"PROJECT_GID":    "",
-		"SECTION":        "",
-		"BRANCH":         Branch(t.Task, c.BranchField, c.Preferred),
-		"AGENT_STATUS":   "",
-		"AGENT_STATE":    "",
-		"AGENT_TITLE":    "",
-		"AGENT_TARGETS":  agentTargets(c.Agents),
-		"AGENT_PATH":     "",
-		"AGENT_TARGET":   "",
+		"GID":                t.GID,
+		"TITLE":              t.Name,
+		"URL":                t.PermalinkURL,
+		"SLUG":               Slug(t.Name),
+		"COMPLETED":          strconv.FormatBool(t.Completed),
+		"REPO":               c.Repo,
+		"WORKTREE":           c.Worktree,
+		"TICKET_JSON":        c.Files.JSON,
+		"TICKET_MD":          c.Files.Markdown,
+		"INPUT_FILE":         c.Files.Input,
+		"CONFIRM_WRITES":     "0",
+		"ASSIGNEE":           "",
+		"DUE":                "",
+		"MY_SECTION":         "",
+		"PROJECT":            "",
+		"PROJECT_GID":        "",
+		"SECTION":            "",
+		"BRANCH":             Branch(t.Task, c.BranchField, c.Preferred),
+		"AGENT_STATUS":       "",
+		"AGENT_STATE":        "",
+		"AGENT_TITLE":        "",
+		"AGENT_TARGETS":      agentTargets(c.Agents),
+		"AGENT_PATH":         "",
+		"AGENT_TARGET":       "",
+		"COMMENT_GID":        "",
+		"COMMENT_TEXT":       "",
+		"COMMENT_AUTHOR":     "",
+		"COMMENT_AUTHOR_GID": "",
+		"COMMENT_DATE":       "",
 	}
 	if c.Agent != nil {
 		vars["AGENT_STATUS"], vars["AGENT_PATH"], vars["AGENT_TARGET"] = c.Agent.Status, c.Agent.Path, c.Agent.Target
 		vars["AGENT_STATE"], vars["AGENT_TITLE"] = string(c.Agent.State), c.Agent.Title
+	}
+	if cm := c.Comment; cm != nil {
+		vars["COMMENT_GID"], vars["COMMENT_DATE"] = cm.GID, cm.CreatedAt
+		vars["COMMENT_TEXT"], vars["COMMENT_AUTHOR"] = ticket.HTMLToMarkdown(cm.HTMLText), ticket.Author(*cm)
+		if cm.CreatedBy != nil {
+			vars["COMMENT_AUTHOR_GID"] = cm.CreatedBy.GID
+		}
 	}
 	for id, value := range c.FormValues {
 		vars["PARAM_"+strings.ToUpper(id)] = value

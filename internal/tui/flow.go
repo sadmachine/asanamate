@@ -26,6 +26,7 @@ type pendingRun struct {
 	repo           string // resolved repo, kept while input or project fields are pending
 	awaitingFields bool
 	agent          *agents.Agent // chosen agent for agent = true actions
+	comment        *asana.Story  // highlighted comment, set when the menu opened
 	input          string        // text typed for an input action
 	inputDone      bool
 	formValues     map[string]string
@@ -56,14 +57,42 @@ func (m *Model) openActionMenu() {
 		m.status = "no actions configured; add a .toml file to the actions folder next to config.toml"
 		return
 	}
-	items := make([]pickItem, len(m.deps.Config.Actions))
+	comment := m.selectedComment(t)
+	context := ""
+	if comment != nil {
+		context = config.ContextComment
+	}
+	// Actions for the highlighted item come first, so their keys win over
+	// everywhere actions bound to the same key.
+	var first, rest []pickItem
 	for i, a := range m.deps.Config.Actions {
-		items[i] = pickItem{Label: a.Name, Hint: a.Mode, Key: a.Key, Value: i}
+		item := pickItem{Label: a.Name, Hint: a.Mode, Key: a.Key, Value: i}
+		switch a.Context {
+		case "":
+			rest = append(rest, item)
+		case context:
+			first = append(first, item)
+		}
+	}
+	items := append(first, rest...)
+	if len(items) == 0 {
+		m.status = "no actions for this selection"
+		return
 	}
 	p := newPicker(pickValue(m.pickedAction), "Run on: "+ticket.Clean(t.Name), items)
 	p.keySelect = true
 	m.modal = p
-	m.run, m.edit = &pendingRun{ticket: t}, nil
+	m.run, m.edit = &pendingRun{ticket: t, comment: comment}, nil
+}
+
+// selectedComment returns the comment highlighted in the reader, or nil.
+func (m *Model) selectedComment(t ticket.Ticket) *asana.Story {
+	for i, c := range t.Comments {
+		if m.fieldKey == commentTarget(c, i) {
+			return &t.Comments[i]
+		}
+	}
+	return nil
 }
 
 // requestMenu runs open, first fetching the selected ticket's details if
@@ -344,6 +373,7 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		BranchField:   m.deps.Config.BranchField,
 		Agent:         agent,
 		Agents:        linked,
+		Comment:       r.comment,
 		FormValues:    r.formValues,
 	})
 	name := r.action.Name

@@ -47,6 +47,8 @@ type Context struct {
 	Preferred map[string]bool
 	// BranchField names the custom field holding the ticket's git branch.
 	BranchField string
+	// Branch overrides the ticket's git branch when set.
+	Branch string
 	// Agent is the running agent the action is about, if any.
 	Agent *agents.Agent
 	// Agents are all running agents linked to the ticket, most urgent first.
@@ -117,6 +119,9 @@ func (f *Files) WriteInput(text string) error {
 // Env returns the ASANAMATE_* variables for an action run, sorted.
 func Env(c Context) []string {
 	t := c.Ticket
+	if c.Branch == "" {
+		c.Branch = Branch(t.Task, c.BranchField, c.Preferred)
+	}
 	vars := map[string]string{
 		"GID":                t.GID,
 		"TITLE":              t.Name,
@@ -135,7 +140,7 @@ func Env(c Context) []string {
 		"PROJECT":            "",
 		"PROJECT_GID":        "",
 		"SECTION":            "",
-		"BRANCH":             Branch(t.Task, c.BranchField, c.Preferred),
+		"BRANCH":             c.Branch,
 		"AGENT_STATUS":       "",
 		"AGENT_STATE":        "",
 		"AGENT_TITLE":        "",

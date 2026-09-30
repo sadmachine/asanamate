@@ -4,6 +4,7 @@ package tui
 import (
 	"cmp"
 	"fmt"
+	"image/color"
 	"maps"
 	"os/exec"
 	"slices"
@@ -79,6 +80,7 @@ type Model struct {
 	badgeW          int              // width of the widest agent badge
 	now             func() time.Time // today, for due dates
 	loading         bool             // tasks are loading; the stale view stays frozen under a modal
+	background      bool             // the timer started the loading reload, so it shows no modal
 	refreshInterval time.Duration    // session interval, initialized from config
 	refreshSeq      uint64           // invalidates timers from earlier session intervals
 
@@ -458,7 +460,7 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
 
 // reload refetches the tasks, keeping the current view until they land.
 func (m *Model) reload() tea.Cmd {
-	m.loading = true
+	m.loading, m.background = true, false
 	return tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject), m.startSpinner())
 }
 
@@ -826,7 +828,7 @@ func (m *Model) body() string {
 			content = m.helpView()
 		}
 		style = style.Padding(0, 2)
-	case m.loading && m.tasks != nil:
+	case m.loading && m.tasks != nil && !m.background:
 		content = "Loading tasks…"
 		if m.sym.spinner != nil {
 			content = m.sym.spinner[m.frame%len(m.sym.spinner)] + " " + content
@@ -853,18 +855,35 @@ func (m *Model) panes(h int) string {
 	case split:
 		inner := m.paneHeight()
 		title, count := m.listTitle()
-		list := m.panel(title, count, m.listView(listW, inner), listW+panelFrame, h, !m.focusReader && !m.focusNav)
-		reader := m.panel("[2] Ticket", m.readerView, m.reader.View(), readerW+panelFrame, h, m.focusReader)
+		list := m.panel(title, count, m.listView(listW, inner), listW+panelFrame, h, m.listHighlight())
+		reader := m.panel("[2] Ticket", m.readerView, m.reader.View(), readerW+panelFrame, h, m.focusColor(m.focusReader))
 		if !m.showNav() {
 			return lipgloss.JoinHorizontal(lipgloss.Top, list, reader)
 		}
-		nav := m.panel("[0] Views", "", m.navView(navW-panelFrame, inner), navW, h, m.focusNav)
+		nav := m.panel("[0] Views", "", m.navView(navW-panelFrame, inner), navW, h, m.focusColor(m.focusNav))
 		return lipgloss.JoinHorizontal(lipgloss.Top, nav, list, reader)
 	case m.focusReader:
 		return m.reader.View()
 	default:
 		return lipgloss.NewStyle().Width(listW).Height(h).Render(m.listView(listW, h))
 	}
+}
+
+// focusColor is the accent color for a focused panel, or nil.
+func (m *Model) focusColor(focused bool) color.Color {
+	if focused {
+		return m.accentStyle.GetForeground()
+	}
+	return nil
+}
+
+// listHighlight marks the list panel in the warning color while the timer
+// refreshes it, since that refresh shows no modal.
+func (m *Model) listHighlight() color.Color {
+	if m.loading && m.background {
+		return warnStyle.GetForeground()
+	}
+	return m.focusColor(!m.focusReader && !m.focusNav)
 }
 
 // listTitle is the list panel's title and its right-hand count, or a

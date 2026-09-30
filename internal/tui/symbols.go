@@ -27,14 +27,15 @@ type symbolSet struct {
 
 // Icon names, for symbolSet.icon.
 const (
-	iconView   = "view"
-	iconFilter = "filter"
-	iconGroup  = "group"
-	iconFolder = "folder"
-	iconDue    = "due"
-	iconBranch = "branch"
-	iconClip   = "clip"
-	iconRepo   = "repo"
+	iconView    = "view"
+	iconFilter  = "filter"
+	iconGroup   = "group"
+	iconFolder  = "folder"
+	iconDue     = "due"
+	iconBranch  = "branch"
+	iconClip    = "clip"
+	iconRepo    = "repo"
+	iconRefresh = "refresh"
 )
 
 var braille = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
@@ -49,7 +50,7 @@ var (
 	// Nerd Font (Font Awesome) glyphs; needs a Nerd Font.
 	nerdSymbols = unicodeSymbols.with(symbolSet{open: "", done: "", robot: "󰚩", states: map[agents.State]string{
 		agents.Waiting: "", agents.Working: "", agents.Completed: "", agents.Idle: "", agents.Unknown: ""},
-		icons: map[string]string{iconView: "\uf01c", iconFilter: "\uf0b0", iconGroup: "\uf03a", iconFolder: "\uf07b", iconDue: "\uf073", iconBranch: "\ue725", iconClip: "\uf0c6", iconRepo: "\ue702"}})
+		icons: map[string]string{iconView: "\uf01c", iconFilter: "\uf0b0", iconGroup: "\uf03a", iconFolder: "\uf07b", iconDue: "\uf073", iconBranch: "\ue725", iconClip: "\uf0c6", iconRepo: "\ue702", iconRefresh: "\uf021"}})
 )
 
 var symbolSets = map[string]symbolSet{

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -27,12 +28,14 @@ func (m *Model) autoRefresh(msg refreshTickMsg) tea.Cmd {
 		m.run != nil || m.edit != nil || m.timeEntry != nil || m.menuFor != "" {
 		return next
 	}
-	return tea.Batch(next, m.reload())
+	cmd := m.reload()
+	m.background = true
+	return tea.Batch(next, cmd)
 }
 
 func (m *Model) openRefreshInterval() {
 	b := newInputBox("Auto-update interval (session only; e.g. 15s or 1m)", "")
-	b.area.SetValue(m.refreshInterval.String())
+	b.area.SetValue(shortDuration(m.refreshInterval))
 	b.onSubmit = func(value string) tea.Cmd {
 		interval, err := config.ParseRefreshInterval(value)
 		if err != nil {
@@ -42,8 +45,30 @@ func (m *Model) openRefreshInterval() {
 		m.refreshInterval = interval
 		m.refreshSeq++
 		m.input = nil
-		m.status = fmt.Sprintf("auto-update: %s (session only)", interval)
+		m.status = fmt.Sprintf("auto-update: %s (session only)", shortDuration(interval))
 		return m.scheduleRefresh()
 	}
 	m.input = b
+}
+
+// refreshLabel is the statusline's auto-update interval, led by the refresh
+// icon, or by "auto" when the symbol set has no icons.
+func (m *Model) refreshLabel() string {
+	lead := m.sym.icon(iconRefresh)
+	if lead == "" {
+		lead = "auto "
+	}
+	return lead + shortDuration(m.refreshInterval)
+}
+
+// shortDuration drops a duration's zero trailing units: 1m, not 1m0s.
+func shortDuration(d time.Duration) string {
+	s := d.String()
+	if strings.HasSuffix(s, "m0s") {
+		s = strings.TrimSuffix(s, "0s")
+	}
+	if strings.HasSuffix(s, "h0m") {
+		s = strings.TrimSuffix(s, "0m")
+	}
+	return s
 }

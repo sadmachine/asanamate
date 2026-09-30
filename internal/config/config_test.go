@@ -208,6 +208,29 @@ func TestListConfig(t *testing.T) {
 	}
 }
 
+func TestRefreshIntervalConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
+	if err != nil || cfg.List.RefreshInterval != "30s" {
+		t.Fatalf("default interval = %q, err = %v", cfg.List.RefreshInterval, err)
+	}
+	for _, value := range []string{"1s", "15s", "1m", "1m30s"} {
+		t.Run(value, func(t *testing.T) {
+			cfg, err := Load(writeFile(t, "workspace = \"1\"\n[list]\nrefresh_interval = \""+value+"\"\n"))
+			if err != nil || cfg.List.RefreshInterval != value {
+				t.Fatalf("interval = %q, err = %v", cfg.List.RefreshInterval, err)
+			}
+		})
+	}
+	for _, value := range []string{"", "15", "0s", "-1s", "500ms", "999999999999999999999h"} {
+		t.Run("invalid "+value, func(t *testing.T) {
+			_, err := Load(writeFile(t, "workspace = \"1\"\n[list]\nrefresh_interval = \""+value+"\"\n"))
+			if err == nil || !strings.Contains(err.Error(), "list.refresh_interval") {
+				t.Fatalf("want dotted config key in error, got %v", err)
+			}
+		})
+	}
+}
+
 func TestAgentsOffByDefault(t *testing.T) {
 	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
 	if err != nil || cfg.AgentsEnabled() || cfg.BranchField != "" {

@@ -167,6 +167,9 @@ branch_field = ""
 # reduced_motion = true
 
 [list]
+# Automatically reload the list at this interval (at least 1s).
+# R changes it for the current session only; use durations such as "15s" or "1m".
+refresh_interval = "30s"
 # "single": one line per ticket. "multi": title on line one, fields on line two.
 layout = "single"
 # Values shown with the title (the title is always shown), in this order.

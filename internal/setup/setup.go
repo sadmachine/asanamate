@@ -227,6 +227,12 @@ max_text_width = 0
 # [agents.symbols]
 # waiting = "!"
 
+# Optional completed time tracking. The command reads a JSON request from
+# stdin and writes a form spec as JSON. See README for the protocol.
+[time_tracking]
+# id = "hrvst"
+# command = "asanamate time-provider hrvst --task-id YOUR_TASK_ID"
+
 
 [repo_source]
 # Prints one git repository path per line for the repo picker.
@@ -242,6 +248,8 @@ var actionFiles = []struct{ name, body string }{
 # Commands run with /bin/sh -c. Ticket data arrives in ASANAMATE_* environment
 # variables and in the files $ASANAMATE_TICKET_JSON and $ASANAMATE_TICKET_MD.
 # Never paste ticket text into the command; always use the variables.
+# Optional [form] fields provide select or hours controls. Values reach the
+# command as $ASANAMATE_PARAM_<ID>. See README for an example.
 # mode: "foreground" (suspend the TUI), "background" (detached, logged), or
 # "exit" (quit asanamate, then run). repo = true resolves the ticket's repo first.
 name = "View ticket in pager"

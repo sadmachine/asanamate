@@ -203,6 +203,47 @@ func TestAgentsOffByDefault(t *testing.T) {
 	}
 }
 
+func TestTimeTrackingConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
+	if err != nil || cfg.TimeTrackingEnabled() {
+		t.Fatalf("default time tracking = %+v, err = %v", cfg.TimeTracking, err)
+	}
+	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[time_tracking]\nid = \"hrvst\"\ncommand = \"asanamate time-provider hrvst\"\n"))
+	if err != nil || !cfg.TimeTrackingEnabled() {
+		t.Fatalf("configured time tracking = %+v, err = %v", cfg.TimeTracking, err)
+	}
+	for _, body := range []string{"id = \"hrvst\"", "command = \"provider\"", "id = \"hrvst\"\ncommand = \"  \""} {
+		if _, err := Load(writeFile(t, "workspace = \"1\"\n[time_tracking]\n"+body+"\n")); err == nil || !strings.Contains(err.Error(), "time_tracking") {
+			t.Fatalf("config %q error = %v", body, err)
+		}
+	}
+}
+
+func TestActionFormConfig(t *testing.T) {
+	path := writeFile(t, `workspace = "1"`)
+	body := `name = "Deploy"
+key = "d"
+command = "deploy"
+[[form.fields]]
+id = "target"
+label = "Target"
+type = "select"
+remember = true
+[[form.fields.options]]
+id = "prod"
+name = "Production"
+`
+	writeActions(t, path, map[string]string{"deploy.toml": body})
+	cfg, err := Load(path)
+	if err != nil || len(cfg.Actions) != 1 || len(cfg.Actions[0].Form.Fields) != 1 || cfg.Actions[0].Form.Fields[0].Options[0].ID != "prod" {
+		t.Fatalf("action form = %+v, err = %v", cfg.Actions, err)
+	}
+	writeActions(t, path, map[string]string{"deploy.toml": strings.Replace(body, `type = "select"`, `type = "unknown"`, 1)})
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), `action "Deploy" form`) {
+		t.Fatalf("invalid action form error = %v", err)
+	}
+}
+
 func TestAgentsPresetAndValidation(t *testing.T) {
 	cfg, err := Load(writeFile(t, "workspace = \"1\"\n[agents]\npreset = \"ccmux\"\n[agents.states]\nworking = [\"busy\"]\n[agents.symbols]\nwaiting = \"!!\"\n"))
 	if err != nil || !cfg.AgentsEnabled() || cfg.Agents.States["working"][0] != "busy" || cfg.Agents.Symbols["waiting"] != "!!" {

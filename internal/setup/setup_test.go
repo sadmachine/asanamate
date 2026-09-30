@@ -157,3 +157,18 @@ func TestTemplateOptionsStayTopLevel(t *testing.T) {
 		t.Fatalf("cfg = %+v", cfg)
 	}
 }
+
+func TestMergeKeepsTimeTrackingProvider(t *testing.T) {
+	updated, _, err := Merge("workspace = \"1\"\n[time_tracking]\nid = \"hrvst\"\ncommand = \"asanamate time-provider hrvst --task-id 456\"\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte(updated), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(path)
+	if err != nil || cfg.TimeTracking.ID != "hrvst" || cfg.TimeTracking.Command != "asanamate time-provider hrvst --task-id 456" {
+		t.Fatalf("merged provider = %+v, err = %v", cfg.TimeTracking, err)
+	}
+}

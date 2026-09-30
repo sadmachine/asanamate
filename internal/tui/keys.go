@@ -58,7 +58,9 @@ func keyBindings() []binding {
 		return func(m *Model, _ tea.KeyPressMsg) tea.Cmd { fn(m); return nil }
 	}
 	menu := func(open func(m *Model) func()) func(*Model, tea.KeyPressMsg) tea.Cmd {
-		return func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestMenu(open(m)) }
+		return func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			return m.requestMenu(func() tea.Cmd { open(m)(); return nil })
+		}
 	}
 	return []binding{
 		{keys: []string{"j"}, desc: "down / next card target", group: "Move", run: cardMove(1, func(m *Model) int { return m.cursor + 1 })},
@@ -75,9 +77,12 @@ func keyBindings() []binding {
 			m.filtering = true
 			return m.filterInput.Focus()
 		}},
-		{keys: []string{"p"}, desc: "projects", hint: "proj", group: "Move", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestProjects(func() tea.Cmd { m.openProjectPicker(); return nil }) }},
+		{keys: []string{"p"}, desc: "projects", hint: "proj", group: "Move", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			return m.requestProjects(func() tea.Cmd { m.openProjectPicker(); return nil })
+		}},
 		{keys: []string{"enter", "a"}, desc: "run action", hint: "act", group: "Ticket", run: menu(func(m *Model) func() { return m.openActionMenu })},
 		{keys: []string{"e"}, desc: "edit", hint: "edit", group: "Ticket", run: menu(func(m *Model) func() { return m.openEditMenu })},
+		{keys: []string{"t"}, desc: "log time", hint: "time", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestMenu(m.openTime) }},
 		{keys: []string{"f"}, desc: "attachments", group: "Ticket", run: menu(func(m *Model) func() { return m.openAttachments })},
 		{keys: []string{"o"}, desc: "open in browser", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			if t, ok := m.selected(); ok {
@@ -115,7 +120,7 @@ func keyBindings() []binding {
 // bindingFor returns the binding k runs in the current layout.
 func (m *Model) bindingFor(k string) (binding, bool) {
 	for _, b := range keyBindings() {
-		if slices.Contains(b.keys, k) && (!b.splitOnly || !m.deps.NoPreview) {
+		if slices.Contains(b.keys, k) && (!b.splitOnly || !m.deps.NoPreview) && (b.keys[0] != "t" || m.deps.Config.TimeTrackingEnabled()) {
 			return b, true
 		}
 	}

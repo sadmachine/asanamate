@@ -51,6 +51,8 @@ type Context struct {
 	Agent *agents.Agent
 	// Agents are all running agents linked to the ticket, most urgent first.
 	Agents []agents.Agent
+	// FormValues are selected action parameters, exposed as ASANAMATE_PARAM_*.
+	FormValues map[string]string
 }
 
 // Branch returns the ticket's git branch: the value of branchField when set,
@@ -142,6 +144,9 @@ func Env(c Context) []string {
 	if c.Agent != nil {
 		vars["AGENT_STATUS"], vars["AGENT_PATH"], vars["AGENT_TARGET"] = c.Agent.Status, c.Agent.Path, c.Agent.Target
 		vars["AGENT_STATE"], vars["AGENT_TITLE"] = string(c.Agent.State), c.Agent.Title
+	}
+	for id, value := range c.FormValues {
+		vars["PARAM_"+strings.ToUpper(id)] = value
 	}
 	if c.ConfirmWrites {
 		vars["CONFIRM_WRITES"] = "1"

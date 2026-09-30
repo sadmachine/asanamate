@@ -68,6 +68,7 @@ key press.
 | `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project) |
 | `enter`, `a` | run an action on the selected ticket |
 | `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), or assign it |
+| `t` | log completed time for the selected ticket (only when time tracking is configured) |
 | `f` | attachments: view images inline or open in the browser |
 | `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) |
 | `=` | fit the list pane to its content (also on project, grouping, and filter changes) |
@@ -143,6 +144,7 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `reader.view` | `"cards"` | reader's starting view: `cards` (details card, titled sections, one box per comment) or `markdown` (the rendered ticket Markdown); `v` switches |
 | `reader.max_text_width` | `0` | cards view: wrap description and comment text at this many columns (words are kept whole); `0` wraps at the pane width |
 | `repo_source.command` | lists repos in your setup directory | prints one repo path per line |
+| `time_tracking.id` / `time_tracking.command` | unset (off) | provider ID for saved choices and command implementing the time tracking JSON protocol |
 
 The title is always shown. `list.fields` picks the other columns and their
 order: the built-ins `section`, `due`, `assignee`, `initials` (the assignee's
@@ -173,6 +175,46 @@ To pick repos from sesh or zoxide instead:
 [repo_source]
 command = "sesh list -z"
 ```
+
+### Time tracking (optional)
+
+To use installed `hrvst`, add:
+
+```toml
+[time_tracking]
+id = "hrvst"
+command = "asanamate time-provider hrvst --task-id YOUR_ENGINEERING_TASK_ID"
+```
+
+Set `--task-id` to numeric ID of your default Harvest task (Engineering in
+your case). `hrvst alias list` can show that ID for an existing Engineering
+alias. Aliases do not populate project picker.
+
+Press `t` on a ticket. If ticket belongs to several Asana projects, choose one.
+The form shows Harvest project, Engineering task, and decimal hours. Press
+Enter to edit a field, Tab to move, and Ctrl+S to log. Project and task choices
+are remembered per Asana project after a successful log; hours starts empty.
+Harvest notes contain ticket title; external reference links to Asana ticket
+and chosen Asana project.
+
+Other trackers can implement same command protocol. Command runs through
+`/bin/sh -c` and reads one JSON request from stdin. For `{"operation":"form"}`
+return a form spec, such as:
+
+```json
+{"fields":[
+  {"id":"project_id","label":"Project","type":"select","remember":true,
+   "options":[{"id":"123","name":"Web"}]},
+  {"id":"hours","label":"Hours","type":"hours"}
+]}
+```
+
+Fields are required. IDs use snake_case. Select option IDs must be stable;
+`remember` saves a select choice per Asana project. Time forms need exactly
+one `hours` field. The `log` request contains `values` keyed by field ID and
+an `asana` object with `task_gid`, `project_gid`, `title`, and `url`. Exit zero
+only after creating entry. Failed logs are never retried automatically. Use a
+different provider `id` when changing trackers so saved choices stay separate.
 
 ## Actions
 
@@ -211,6 +253,7 @@ paste ticket text into the command, because ticket content is untrusted.
 | `ASANAMATE_AGENT_TARGETS` | every linked agent, one `target<TAB>state<TAB>path<TAB>title` line each |
 | `ASANAMATE_TICKET_JSON`, `ASANAMATE_TICKET_MD` | full ticket as JSON / Markdown |
 | `ASANAMATE_INPUT_FILE` | text typed into the `input` box, possibly empty. Empty path for actions without `input` |
+| `ASANAMATE_PARAM_<ID>` | selected action form value, with its field ID uppercased |
 | `ASANAMATE_FIELD_<NAME>` | custom field display values, e.g. `ASANAMATE_FIELD_BRANCH_NAME` |
 | `ASANAMATE_CONFIRM_WRITES` | `1`/`0`, read by the write-back subcommands |
 
@@ -238,6 +281,31 @@ p="$ASANAMATE_INPUT_FILE.prompt" &&
 { [ -s "$ASANAMATE_INPUT_FILE" ] && { cat "$ASANAMATE_INPUT_FILE"; printf '\n\nTicket information below.\n\n'; }; cat "$ASANAMATE_TICKET_MD"; } > "$p" &&
 tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "P=$p" -e "ASANAMATE_GID=$ASANAMATE_GID" 'claude "$(cat "$P")"' '''
 ```
+
+Actions can use the same form spec with static fields in TOML. Answers reach
+the command through `ASANAMATE_PARAM_<ID>`:
+
+```toml
+# actions/deploy.toml
+name = "Deploy"
+key = "D"
+command = 'deploy --target "$ASANAMATE_PARAM_TARGET"'
+[[form.fields]]
+id = "target"
+label = "Target"
+type = "select"
+remember = true
+[[form.fields.options]]
+id = "stage"
+name = "Staging"
+[[form.fields.options]]
+id = "prod"
+name = "Production"
+```
+
+Remembered action choices use the chosen Asana project and action key. They
+are saved when the form is submitted. Existing `input` actions keep their text
+box; an action can use both.
 
 **tmux note:** `tmux new-window` and `split-window` run their command in the
 tmux server's environment, so `ASANAMATE_*` variables do not reach them. Pass

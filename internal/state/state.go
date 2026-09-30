@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 
@@ -27,6 +28,11 @@ type State struct {
 	RecentProjects []string `toml:"recent_projects"`
 	// Views maps a project gid ("" for My Tasks) to the list view last used there.
 	Views map[string]View `toml:"views"`
+	// TimeProjects holds recent tracker project IDs by provider ID and Asana project GID.
+	// Kept so choices saved by earlier builds can seed the new form field.
+	TimeProjects map[string]map[string][]string `toml:"time_projects"`
+	// FormChoices holds recent select IDs by form owner, Asana project, and field.
+	FormChoices map[string]map[string]map[string][]string `toml:"form_choices"`
 
 	path string
 }
@@ -49,7 +55,46 @@ func Load(path string) (*State, error) {
 	if s.Views == nil {
 		s.Views = map[string]View{}
 	}
+	if s.TimeProjects == nil {
+		s.TimeProjects = map[string]map[string][]string{}
+	}
+	if s.FormChoices == nil {
+		s.FormChoices = map[string]map[string]map[string][]string{}
+	}
 	return s, nil
+}
+
+// RecentFormChoices returns saved choices for a select field. The previous
+// time-project state remains readable until the first new successful log.
+func (s *State) RecentFormChoices(owner, projectGID, fieldID string) []string {
+	if recent := s.FormChoices[owner][projectGID][fieldID]; len(recent) > 0 {
+		return recent
+	}
+	if fieldID == "project_id" {
+		if providerID, ok := strings.CutPrefix(owner, "time:"); ok {
+			return s.TimeProjects[providerID][projectGID]
+		}
+	}
+	return nil
+}
+
+// TouchFormChoice makes a chosen select value the most recent one.
+func (s *State) TouchFormChoice(owner, projectGID, fieldID, choiceID string) {
+	if s.FormChoices == nil {
+		s.FormChoices = map[string]map[string]map[string][]string{}
+	}
+	if s.FormChoices[owner] == nil {
+		s.FormChoices[owner] = map[string]map[string][]string{}
+	}
+	if s.FormChoices[owner][projectGID] == nil {
+		s.FormChoices[owner][projectGID] = map[string][]string{}
+	}
+	recent := slices.DeleteFunc(s.FormChoices[owner][projectGID][fieldID], func(id string) bool { return id == choiceID })
+	recent = append([]string{choiceID}, recent...)
+	if len(recent) > maxRecent {
+		recent = recent[:maxRecent]
+	}
+	s.FormChoices[owner][projectGID][fieldID] = recent
 }
 
 // Save writes the state atomically with owner-only permissions.

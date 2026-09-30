@@ -44,6 +44,13 @@ func TestEnvIncludesTicketFields(t *testing.T) {
 	}
 }
 
+func TestEnvIncludesFormValues(t *testing.T) {
+	env := Env(Context{FormValues: map[string]string{"target": "prod", "hours": "1.25"}})
+	if !slices.Contains(env, "ASANAMATE_PARAM_TARGET=prod") || !slices.Contains(env, "ASANAMATE_PARAM_HOURS=1.25") {
+		t.Fatalf("form values missing: %v", env)
+	}
+}
+
 func TestSlug(t *testing.T) {
 	cases := map[string]string{
 		"Fix Login!":              "fix-login",

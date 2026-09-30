@@ -28,6 +28,8 @@ type pendingRun struct {
 	agent          *agents.Agent // chosen agent for agent = true actions
 	input          string        // text typed for an input action
 	inputDone      bool
+	formValues     map[string]string
+	formDone       bool
 	branchOK       bool // user chose to run despite the branch falling back to the slug
 }
 
@@ -66,14 +68,13 @@ func (m *Model) openActionMenu() {
 
 // requestMenu runs open, first fetching the selected ticket's details if
 // they have not arrived yet.
-func (m *Model) requestMenu(open func()) tea.Cmd {
+func (m *Model) requestMenu(open func() tea.Cmd) tea.Cmd {
 	t, ok := m.selected()
 	if !ok {
 		return nil
 	}
 	if _, cached := m.details[t.GID]; cached {
-		open()
-		return nil
+		return open()
 	}
 	m.menuFor, m.menuOpen = t.GID, open
 	m.status = "loading ticket…"
@@ -247,11 +248,48 @@ func (m *Model) typedInput(text string) tea.Cmd {
 	return m.execute(m.run.repo)
 }
 
+func (m *Model) typedActionForm(values map[string]string) tea.Cmd {
+	m.form = nil
+	r := m.run
+	r.formValues, r.formDone = values, true
+	if r.project != nil {
+		remembered := false
+		for _, field := range r.action.Form.Fields {
+			if field.Remember {
+				m.deps.State.TouchFormChoice("action:"+r.action.Key, r.project.GID, field.ID, values[field.ID])
+				remembered = true
+			}
+		}
+		if remembered {
+			if err := m.deps.State.Save(); err != nil {
+				m.status = "saving action choices: " + err.Error()
+			}
+		}
+	}
+	return m.execute(r.repo)
+}
+
 func (m *Model) execute(repoPath string) tea.Cmd {
 	r := m.run
 	if r.action.Input != "" && !r.inputDone {
 		r.repo = repoPath
 		m.input = newInputBox(r.action.Input, "optional; leave empty to skip")
+		return nil
+	}
+	if len(r.action.Form.Fields) > 0 && !r.formDone {
+		r.repo = repoPath
+		defaults := map[string]string{}
+		if r.project != nil {
+			for _, field := range r.action.Form.Fields {
+				for _, id := range m.deps.State.RecentFormChoices("action:"+r.action.Key, r.project.GID, field.ID) {
+					if field.HasOption(id) {
+						defaults[field.ID] = id
+						break
+					}
+				}
+			}
+		}
+		m.form = newFormModal(r.action.Name, r.action.Form, defaults, m.typedActionForm)
 		return nil
 	}
 	if p := r.project; p != nil && sharesFieldNames(r.ticket.Task) {
@@ -306,6 +344,7 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		BranchField:   m.deps.Config.BranchField,
 		Agent:         agent,
 		Agents:        linked,
+		FormValues:    r.formValues,
 	})
 	name := r.action.Name
 	switch r.action.Mode {

@@ -13,6 +13,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 func env(vars map[string]string) func(string) string {
@@ -148,5 +150,41 @@ func TestEncodeRejectsHugeDimensions(t *testing.T) {
 	_, err := Encode(b.Bytes(), 80, 24, false)
 	if err == nil || !strings.Contains(err.Error(), "too large") {
 		t.Fatalf("err = %v, want a too-large error", err)
+	}
+}
+
+func TestInlineFitsAndPlaces(t *testing.T) {
+	// 160x80 px is 20x5 cells at the assumed scale.
+	seq, cols, rows, err := Inline(pngBytes(t, 160, 80, false), 42, 80, 24, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cols != 20 || rows != 5 {
+		t.Fatalf("size = %dx%d, want 20x5", cols, rows)
+	}
+	if !strings.HasPrefix(seq, "\x1b_Ga=T,f=100,q=2,U=1,i=42,c=20,r=5,m=0;") {
+		t.Fatalf("prefix = %q", seq[:48])
+	}
+	// Width and height limits shrink it, keeping its shape.
+	if _, cols, rows, _ := Inline(pngBytes(t, 160, 80, false), 42, 10, 24, false); cols != 10 || rows != 3 {
+		t.Fatalf("width-capped size = %dx%d, want 10x3", cols, rows)
+	}
+	if _, cols, rows, _ := Inline(pngBytes(t, 160, 80, false), 42, 80, 2, false); cols != 8 || rows != 2 {
+		t.Fatalf("height-capped size = %dx%d, want 8x2", cols, rows)
+	}
+}
+
+func TestPlaceholderCells(t *testing.T) {
+	lines := strings.Split(Placeholder(42, 3, 2), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("lines = %d, want 2", len(lines))
+	}
+	for _, l := range lines {
+		if w := ansi.StringWidth(l); w != 3 {
+			t.Fatalf("width = %d, want 3: %q", w, l)
+		}
+		if !strings.HasPrefix(l, "\x1b[38;5;42m") {
+			t.Fatalf("line lacks the id color: %q", l)
+		}
 	}
 }

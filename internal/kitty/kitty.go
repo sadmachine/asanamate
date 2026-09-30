@@ -19,6 +19,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	ansikitty "github.com/charmbracelet/x/ansi/kitty"
 )
 
 const chunkSize = 4096
@@ -104,30 +106,89 @@ func Download(ctx context.Context, rawURL string) ([]byte, error) {
 // Encode converts an image to kitty graphics escape sequences sized to fit
 // cols x rows cells, assuming cells are about twice as tall as wide.
 func Encode(data []byte, cols, rows int, inTmux bool) (string, error) {
+	data, w, h, err := toPNG(data)
+	if err != nil {
+		return "", err
+	}
+	size := fmt.Sprintf("r=%d", max(rows, 1))
+	if w*2*rows > cols*h {
+		size = fmt.Sprintf("c=%d", max(cols, 1))
+	}
+	return transmit(data, "a=T,f=100,q=2,"+size, inTmux), nil
+}
+
+// cellPixels is the assumed cell width in pixels; cells are about twice as
+// tall. Inline images show at about this scale, or smaller to fit.
+const cellPixels = 8
+
+// Inline transmits an image as id with a virtual placement no larger than
+// maxCols x maxRows cells, drawn wherever Placeholder text for id is shown.
+// id must be in 16..255, since the placeholder's 256-color foreground carries
+// it. It returns the escape sequences and the placement's size in cells.
+func Inline(data []byte, id, maxCols, maxRows int, inTmux bool) (seq string, cols, rows int, err error) {
+	data, w, h, err := toPNG(data)
+	if err != nil {
+		return "", 0, 0, err
+	}
+	cols = min(max(maxCols, 1), (w+cellPixels-1)/cellPixels, maxDiacritic)
+	rows = max((cols*h+w)/(2*w), 1)
+	if lim := min(max(maxRows, 1), maxDiacritic); rows > lim {
+		cols, rows = max(cols*lim/rows, 1), lim
+	}
+	control := fmt.Sprintf("a=T,f=100,q=2,U=1,i=%d,c=%d,r=%d", id, cols, rows)
+	return transmit(data, control, inTmux), cols, rows, nil
+}
+
+// maxDiacritic is the number of row and column diacritics placeholders can use.
+const maxDiacritic = 297
+
+// Placeholder returns rows lines of cols cells that draw image id, placed by
+// Inline, one cell of the image each.
+func Placeholder(id, cols, rows int) string {
+	var b strings.Builder
+	for r := range rows {
+		if r > 0 {
+			b.WriteByte('\n')
+		}
+		fmt.Fprintf(&b, "\x1b[38;5;%dm", id)
+		// Every cell names its row and column so a partial redraw still
+		// places it.
+		for c := range cols {
+			b.WriteRune(ansikitty.Placeholder)
+			b.WriteRune(ansikitty.Diacritic(r))
+			b.WriteRune(ansikitty.Diacritic(c))
+		}
+		b.WriteString("\x1b[39m")
+	}
+	return b.String()
+}
+
+// toPNG decodes an image, returning it as PNG with its size. Decoding catches
+// corrupt files the terminal would silently drop.
+func toPNG(data []byte) ([]byte, int, int, error) {
 	cfg, format, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
-		return "", fmt.Errorf("decode image: %w", err)
+		return nil, 0, 0, fmt.Errorf("decode image: %w", err)
 	}
 	if cfg.Width*cfg.Height > maxPixels {
-		return "", fmt.Errorf("image is too large to display (%dx%d)", cfg.Width, cfg.Height)
+		return nil, 0, 0, fmt.Errorf("image is too large to display (%dx%d)", cfg.Width, cfg.Height)
 	}
-	// Decoding catches corrupt files the terminal would silently drop. PNG is
-	// sent as is; other formats are converted to it.
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return "", fmt.Errorf("decode image: %w", err)
+		return nil, 0, 0, fmt.Errorf("decode image: %w", err)
 	}
 	if format != "png" {
 		var buf bytes.Buffer
 		if err := png.Encode(&buf, img); err != nil {
-			return "", err
+			return nil, 0, 0, err
 		}
 		data = buf.Bytes()
 	}
-	size := fmt.Sprintf("r=%d", max(rows, 1))
-	if cfg.Width*2*rows > cols*cfg.Height {
-		size = fmt.Sprintf("c=%d", max(cols, 1))
-	}
+	return data, cfg.Width, cfg.Height, nil
+}
+
+// transmit sends PNG data in chunks, control leading the first.
+func transmit(data []byte, control string, inTmux bool) string {
 	encoded := base64.StdEncoding.EncodeToString(data)
 	var out strings.Builder
 	for i := 0; i < len(encoded); i += chunkSize {
@@ -136,13 +197,13 @@ func Encode(data []byte, cols, rows int, inTmux bool) (string, error) {
 		if end == len(encoded) {
 			more = 0
 		}
-		control := fmt.Sprintf("m=%d", more)
+		c := fmt.Sprintf("m=%d", more)
 		if i == 0 {
-			control = "a=T,f=100,q=2," + size + "," + control
+			c = control + "," + c
 		}
-		out.WriteString(wrap("\x1b_G"+control+";"+encoded[i:end]+"\x1b\\", inTmux))
+		out.WriteString(wrap("\x1b_G"+c+";"+encoded[i:end]+"\x1b\\", inTmux))
 	}
-	return out.String(), nil
+	return out.String()
 }
 
 // Clear deletes every image placed on screen.

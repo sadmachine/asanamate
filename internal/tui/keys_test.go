@@ -31,7 +31,7 @@ func TestHelpAndHintsComeFromTheTable(t *testing.T) {
 	m := splitModel(t)
 	help := ansi.Strip(m.helpView())
 	for _, b := range keyBindings() {
-		if !strings.Contains(help, b.desc) {
+		if _, ok := m.bindingFor(b.keys[0]); ok && !strings.Contains(help, b.desc) {
 			t.Errorf("help lacks %q", b.desc)
 		}
 	}

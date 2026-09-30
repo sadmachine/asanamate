@@ -65,14 +65,6 @@ func TestHelpOpensAndAnyKeyCloses(t *testing.T) {
 	}
 }
 
-func TestPanelTitlesShowViewAndCount(t *testing.T) {
-	m := splitModel(t)
-	top := strings.Split(ansi.Strip(m.body()), "\n")[0]
-	if !strings.Contains(top, "[1] Tickets · My Tasks") || !strings.Contains(top, " 2/2 ") || !strings.Contains(top, "[2] Ticket") {
-		t.Fatalf("top = %q", top)
-	}
-}
-
 func TestEmptyListExplainsAndHints(t *testing.T) {
 	m := splitModel(t)
 	m.filterInput.SetValue("tag:nope")

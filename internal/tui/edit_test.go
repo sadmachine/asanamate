@@ -189,44 +189,25 @@ func TestAddProjectExcludesExistingMemberships(t *testing.T) {
 	}
 }
 
-func TestEditRejectsBadDate(t *testing.T) {
-	m, writes := editModel(t)
-	press(m, "e", "f", "down", "enter")
-	m.input.area.SetValue("tomorrow")
-	send(m, ctrlS)
-	if len(*writes) != 0 || !strings.Contains(m.status, "YYYY-MM-DD") {
-		t.Fatalf("writes = %q, status = %q", *writes, m.status)
-	}
-}
-
-func TestEditRejectsBadDueDate(t *testing.T) {
-	for _, value := range []string{"tomorrow", "2026-02-30"} {
-		t.Run(value, func(t *testing.T) {
+func TestEditRejectsBadDates(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		keys  []string
+		value string
+	}{
+		{"date field", []string{"e", "f", "down", "enter"}, "tomorrow"},
+		{"due date word", []string{"e", "d"}, "tomorrow"},
+		{"due date impossible", []string{"e", "d"}, "2026-02-30"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
 			m, writes := editModel(t)
-			press(m, "e", "d")
-			m.input.area.SetValue(value)
+			press(m, tc.keys...)
+			m.input.area.SetValue(tc.value)
 			send(m, ctrlS)
 			if len(*writes) != 0 || !strings.Contains(m.status, "YYYY-MM-DD") {
 				t.Fatalf("writes = %q, status = %q", *writes, m.status)
 			}
 		})
-	}
-}
-
-func TestDueRowEdits(t *testing.T) {
-	m, writes := editModel(t)
-	date := "2026-09-30"
-	tk := m.details["1"]
-	tk.DueOn = &date
-	m.details["1"] = tk
-	press(m, "tab", "tab", "enter")
-	if got := m.input.area.Value(); got != date {
-		t.Fatalf("prefill = %q", got)
-	}
-	m.input.area.SetValue("2026-10-01")
-	send(m, ctrlS)
-	if want := `PUT /tasks/1 {"data":{"due_on":"2026-10-01"}}`; len(*writes) != 1 || (*writes)[0] != want {
-		t.Fatalf("writes = %q, want %q", *writes, want)
 	}
 }
 
@@ -264,16 +245,24 @@ func TestTabCyclesFields(t *testing.T) {
 	}
 }
 
-func TestFieldLinesMatchRows(t *testing.T) {
-	m, _ := editModel(t)
-	tk := m.details["1"]
-	lines := strings.Split(ansi.Strip(m.renderCards(tk, 60)), "\n")
+// cardLines renders the cards at width and checks each field target's
+// recorded line holds that field's row.
+func cardLines(t *testing.T, m *Model, tk ticket.Ticket, width int) []string {
+	t.Helper()
+	lines := strings.Split(ansi.Strip(m.renderCards(tk, width)), "\n")
 	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Add comment"}
 	for _, key := range fieldTargets(tk) {
 		if l := lines[m.fieldLines[key]]; !strings.Contains(l, labels[key]) {
 			t.Errorf("%s line %d = %q", key, m.fieldLines[key], l)
 		}
 	}
+	return lines
+}
+
+func TestFieldLinesMatchRows(t *testing.T) {
+	m, _ := editModel(t)
+	tk := m.details["1"]
+	cardLines(t, m, tk, 60)
 	m.fieldKey = commentKey
 	selected := strings.Split(ansi.Strip(m.renderCards(tk, 60)), "\n")
 	line := m.fieldLines[commentKey]
@@ -286,13 +275,7 @@ func TestWideCardsPutSubtasksBesideDetails(t *testing.T) {
 	m, _ := editModel(t)
 	tk := m.details["1"]
 	tk.Subtasks = []asana.Task{{Name: "Repro", Completed: true}, {Name: "Patch"}}
-	lines := strings.Split(ansi.Strip(m.renderCards(tk, 120)), "\n")
-	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Add comment"}
-	for _, key := range fieldTargets(tk) {
-		if l := lines[m.fieldLines[key]]; !strings.Contains(l, labels[key]) {
-			t.Errorf("%s line %d = %q", key, m.fieldLines[key], l)
-		}
-	}
+	lines := cardLines(t, m, tk, 120)
 	edge := slices.IndexFunc(lines, func(l string) bool { return strings.Contains(l, "Details") })
 	if edge < 0 || !strings.Contains(lines[edge], "Subtasks ▰▰▱▱▱ 1/2") || !strings.Contains(lines[edge+1], "✓ Repro") {
 		t.Fatalf("subtasks not beside details:\n%s", strings.Join(lines, "\n"))
@@ -314,6 +297,18 @@ func TestTabFieldEdits(t *testing.T) {
 		{"project section", func(m *Model) {
 			press(m, "tab", "tab", "enter", "down", "enter")
 		}, `POST /sections/s2/addTask {"data":{"task":"1"}}`},
+		{"due date", func(m *Model) {
+			date := "2026-09-30"
+			tk := m.details["1"]
+			tk.DueOn = &date
+			m.details["1"] = tk
+			press(m, "tab", "tab", "enter")
+			if got := m.input.area.Value(); got != date {
+				t.Errorf("prefill = %q", got)
+			}
+			m.input.area.SetValue("2026-10-01")
+			send(m, ctrlS)
+		}, `PUT /tasks/1 {"data":{"due_on":"2026-10-01"}}`},
 		{"my tasks section", func(m *Model) {
 			press(m, "tab", "tab", "tab", "enter", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee_section":"m2"}}`},

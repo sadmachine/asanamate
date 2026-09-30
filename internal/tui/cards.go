@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -18,8 +19,8 @@ import (
 // beside the details card instead of below it.
 const sideBySideW = 90
 
-// renderCards renders t as the reading pane's cards view: the name and a
-// summary line, a details card with the agents and subtasks beside it (or
+// renderCards renders t as the reading pane's cards view: the name, a
+// summary line, and the local repo line, a details card with the agents and subtasks beside it (or
 // below, when narrow), titled sections, and the comments as a timeline, all
 // width columns wide. It records the line of each editable row in
 // m.fieldLines.
@@ -27,6 +28,9 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	head := lipgloss.NewStyle().Bold(true).Width(width).Render(ticket.Clean(t.Name))
 	if chips := m.summaryLine(t.Task, width); chips != "" {
 		head += "\n" + chips
+	}
+	if line := m.repoLine(t.Task, width); line != "" {
+		head += "\n" + line
 	}
 	m.fieldLines = map[string]int{}
 	fields := fieldTargets(t)
@@ -139,6 +143,37 @@ func (m *Model) summaryLine(t asana.Task, width int) string {
 		}
 	}
 	return ansi.Truncate(strings.Join(chips, "   "), width, "…")
+}
+
+// repoLine is the faint line under the summary naming the local repo a
+// repo = true action on t runs in, its path cut to fit width; "" when the
+// action would ask.
+func (m *Model) repoLine(t asana.Task, width int) string {
+	path, own := m.effectiveRepo(t)
+	if path == "" {
+		return ""
+	}
+	note := " · local"
+	if own {
+		note = " · local, this ticket only"
+	}
+	icon := m.sym.icon(iconRepo)
+	path = truncatePath(repo.CollapseHome(path), width-ansi.StringWidth(icon+note))
+	return dimStyle.Render(icon + path + note)
+}
+
+// truncatePath cuts path to width by dropping the middle of its directory,
+// keeping its last element: "/private/va…/repo".
+func truncatePath(path string, width int) string {
+	if ansi.StringWidth(path) <= width {
+		return path
+	}
+	dir, base := filepath.Split(path)
+	tail := "…" + string(filepath.Separator) + base
+	if avail := width - ansi.StringWidth(tail); avail > 0 {
+		return ansi.Truncate(dir, avail, "") + tail
+	}
+	return ansi.Truncate(tail, width, "…")
 }
 
 // subtasks returns the subtasks section's title, with a progress bar, and its

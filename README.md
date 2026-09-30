@@ -65,7 +65,7 @@ key press.
 | `0` / `1` / `2` | focus the views panel (wide screens) / the list / the reader |
 | `/` | edit the filter (available fields appear while editing; `?` opens the filter guide; Enter or Esc to finish) |
 | `p` | switch project (recent first) |
-| `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project) |
+| `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project), or give the selected ticket its own repo that overrides its projects' links without changing them |
 | `enter`, `a` | run an action on the selected ticket |
 | `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), or assign it |
 | `t` | log completed time for the selected ticket (only when time tracking is configured) |
@@ -335,6 +335,10 @@ ticket's only project.
 Repo resolution: the first time a project's ticket runs a `repo = true` action,
 you pick a repo from `repo_source.command` or type any path (Tab). asanamate
 remembers it. Tickets in several projects always ask which project to use.
+A ticket given its own repo with `L` (**This ticket only**) uses that repo
+instead, skips the project question, and leaves every project link as it is.
+The reading pane's header shows the local repo such an action will run in,
+when it will not ask: the ticket's own repo, else its only project's link.
 
 More examples:
 
@@ -389,8 +393,8 @@ ccmux's session summary, else its first prompt (one line, cut to 60
 characters), else its pane title.
 
 **Linking.** A ticket matches every agent whose working directory has
-`$ASANAMATE_BRANCH` checked out, in a repo linked to one of the ticket's
-projects (worktrees count as their repo). A project shared across repos that
+`$ASANAMATE_BRANCH` checked out, in the ticket's own repo when set, else a
+repo linked to one of the ticket's projects (worktrees count as their repo). A project shared across repos that
 is linked to just one of them pulls that repo's agents into every ticket it
 holds; press `L` to unlink it.
 

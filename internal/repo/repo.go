@@ -21,6 +21,21 @@ func ExpandHome(p string) string {
 	return p
 }
 
+// CollapseHome replaces a leading home directory with "~", undoing ExpandHome.
+func CollapseHome(p string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return p
+	}
+	if p == home {
+		return "~"
+	}
+	if rest, ok := strings.CutPrefix(p, home+string(filepath.Separator)); ok {
+		return filepath.Join("~", rest)
+	}
+	return p
+}
+
 // Candidates runs command with /bin/sh and returns one path per output line.
 func Candidates(ctx context.Context, command string) ([]string, error) {
 	if strings.TrimSpace(command) == "" {

@@ -69,7 +69,14 @@ type linkNamesMsg struct{ names map[string]string }
 type candidatesMsg struct {
 	paths []string
 	err   error
-	link  *asana.Ref // project whose link is being edited, outside a run
+	link  *linkTarget // link being edited, outside a run
+}
+
+// linkTarget is a project whose repo link is edited, or with ticket set, a
+// ticket's own repo that overrides its projects' links.
+type linkTarget struct {
+	ref    asana.Ref
+	ticket bool
 }
 
 type actionDoneMsg struct {
@@ -187,8 +194,8 @@ func loadLinkNames(c *asana.Client, gids []string) tea.Cmd {
 }
 
 // loadCandidates loads the repo picker's paths; link is set when editing a
-// project's link from the repo links picker.
-func loadCandidates(command string, link *asana.Ref) tea.Cmd {
+// link from the repo links picker.
+func loadCandidates(command string, link *linkTarget) tea.Cmd {
 	return request(func(ctx context.Context) tea.Msg {
 		paths, err := repo.Candidates(ctx, command)
 		return candidatesMsg{paths: paths, err: err, link: link}

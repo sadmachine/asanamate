@@ -74,3 +74,12 @@ func TestWorktreeFindsBranch(t *testing.T) {
 		t.Errorf("Worktree(feat) = %q, want none", got)
 	}
 }
+
+func TestCollapseHome(t *testing.T) {
+	t.Setenv("HOME", "/home/u")
+	for in, want := range map[string]string{"/home/u": "~", "/home/u/code/web": "~/code/web", "/home/user2/x": "/home/user2/x", "/b": "/b"} {
+		if got := CollapseHome(in); got != want {
+			t.Errorf("CollapseHome(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

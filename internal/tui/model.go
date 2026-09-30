@@ -534,7 +534,15 @@ func (m *Model) renderDetail(keepScroll bool) {
 	offset := m.reader.YOffset()
 	width := max(readerW-2, 20)
 	if m.readerView == config.ViewMarkdown {
-		m.reader.SetContent(m.glamour(t.MarkdownWith(section), width, false))
+		extra := section
+		if path, own := m.effectiveRepo(t.Task); path != "" {
+			repo := "`" + path + "`"
+			if own {
+				repo += " (this ticket only)"
+			}
+			extra = "\n## Local repo\n\n" + repo + "\n" + extra
+		}
+		m.reader.SetContent(m.glamour(t.MarkdownWith(extra), width, false))
 	} else {
 		m.reader.SetContent(lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width)))
 	}

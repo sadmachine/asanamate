@@ -1,6 +1,9 @@
 package asana
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 // Ref is a compact Asana object: a gid and a display name.
 type Ref struct {
@@ -27,10 +30,6 @@ const (
 	FieldPeople    = "people"
 )
 
-// FieldCustomID is the representation_type of a read-only ID field, such as
-// "ENG-123".
-const FieldCustomID = "custom_id"
-
 // CustomField is a custom field value on a task.
 type CustomField struct {
 	GID                string       `json:"gid"`
@@ -38,6 +37,8 @@ type CustomField struct {
 	ResourceSubtype    string       `json:"resource_subtype"`
 	RepresentationType string       `json:"representation_type,omitempty"` // refines ResourceSubtype: custom_id, formula
 	DisplayValue       *string      `json:"display_value"`
+	IsValueReadOnly    bool         `json:"is_value_read_only,omitempty"`
+	IsFormulaField     bool         `json:"is_formula_field,omitempty"`
 	EnumOptions        []EnumOption `json:"enum_options,omitempty"`
 	MultiEnumValues    []EnumOption `json:"multi_enum_values,omitempty"`
 	PeopleValue        []Ref        `json:"people_value,omitempty"`
@@ -110,13 +111,16 @@ func (t Task) Field(name string, preferred map[string]bool) (CustomField, bool) 
 	return PickField(matches, preferred), true
 }
 
-// CustomID returns the value of the task's first ID field that has one, or "".
+// idValue matches an ID field's value: its prefix, a dash, and a number.
+var idValue = regexp.MustCompile(`^\S+-\d+$`)
+
+// CustomID returns the value of the task's first ID field, or "". Task
+// responses omit representation_type, so an ID field is a read-only,
+// non-formula field holding a value such as "ENG-123".
 func (t Task) CustomID() string {
 	for _, f := range t.CustomFields {
-		if f.RepresentationType == FieldCustomID {
-			if v := f.Value(); v != "" {
-				return v
-			}
+		if v := f.Value(); f.IsValueReadOnly && !f.IsFormulaField && idValue.MatchString(v) {
+			return v
 		}
 	}
 	return ""

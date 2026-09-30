@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 
@@ -130,12 +131,14 @@ func (c Config) SymbolSet(getenv func(string) string) string {
 // completed, or any custom field name. Separator frames each ticket with lines; neighbours share one.
 // GroupBy groups tickets under a header per value of one such field; "" is ungrouped.
 type List struct {
-	Layout    string    `toml:"layout"`
-	Fields    []string  `toml:"fields"`
-	Separator bool      `toml:"separator"`
-	GroupBy   string    `toml:"group_by"`
-	Header    Header    `toml:"header"`
-	Selection Selection `toml:"selection"`
+	// RefreshInterval is the automatic list reload interval, at least one second.
+	RefreshInterval string    `toml:"refresh_interval"`
+	Layout          string    `toml:"layout"`
+	Fields          []string  `toml:"fields"`
+	Separator       bool      `toml:"separator"`
+	GroupBy         string    `toml:"group_by"`
+	Header          Header    `toml:"header"`
+	Selection       Selection `toml:"selection"`
 }
 
 // Header configures group headers. Style draws them as a reversed bar or a
@@ -204,7 +207,8 @@ func Default() Config {
 		TimeTracking: TimeTracking{},
 		Actions:      nil,
 		List: List{
-			Layout: LayoutSingle, Fields: []string{"section", "due"},
+			RefreshInterval: "30s",
+			Layout:          LayoutSingle, Fields: []string{"section", "due"},
 			Header: Header{Style: StyleRule}, Selection: Selection{Style: StyleMarker},
 		},
 		Reader: Reader{View: ViewCards},
@@ -314,6 +318,9 @@ func (c Config) validate() error {
 	if c.Reader.MaxTextWidth < 0 {
 		return fmt.Errorf("reader.max_text_width must be 0 (no limit) or more, got %d", c.Reader.MaxTextWidth)
 	}
+	if _, err := ParseRefreshInterval(c.List.RefreshInterval); err != nil {
+		return fmt.Errorf("list.refresh_interval: %w", err)
+	}
 	for _, f := range c.List.Fields {
 		switch name := strings.TrimSpace(f); {
 		case name == "":
@@ -331,6 +338,15 @@ func (c Config) validate() error {
 		return errors.New("list.group_by can't be the title; use a field such as section or due")
 	}
 	return c.Agents.validate()
+}
+
+// ParseRefreshInterval validates a duration used by config and session overrides.
+func ParseRefreshInterval(value string) (time.Duration, error) {
+	d, err := time.ParseDuration(value)
+	if err != nil || d < time.Second {
+		return 0, errors.New("must be a duration of at least 1s, such as 15s or 1m")
+	}
+	return d, nil
 }
 
 // validColor reports whether s is an ANSI color number or a #rgb/#rrggbb hex color.

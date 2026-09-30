@@ -64,20 +64,22 @@ type Model struct {
 	deps          Deps
 	width, height int
 
-	viewProject *asana.Ref
-	tasks       []asana.Task
-	visible     []asana.Task
-	groups      []string       // group label per visible task; nil when ungrouped
-	groupBy     string         // list field the list is grouped by; "" for none
-	listW       int            // fitted list pane width; 0 for the default split
-	accentStyle lipgloss.Style // reader headings
-	headerStyle lipgloss.Style // group headers
-	markerStyle lipgloss.Style // selected ticket marker
-	cursor      int
-	cols        []int            // width of each list field column; 0 when empty
-	badgeW      int              // width of the widest agent badge
-	now         func() time.Time // today, for due dates
-	loading     bool             // tasks are loading; the stale view stays frozen under a modal
+	viewProject     *asana.Ref
+	tasks           []asana.Task
+	visible         []asana.Task
+	groups          []string       // group label per visible task; nil when ungrouped
+	groupBy         string         // list field the list is grouped by; "" for none
+	listW           int            // fitted list pane width; 0 for the default split
+	accentStyle     lipgloss.Style // reader headings
+	headerStyle     lipgloss.Style // group headers
+	markerStyle     lipgloss.Style // selected ticket marker
+	cursor          int
+	cols            []int            // width of each list field column; 0 when empty
+	badgeW          int              // width of the widest agent badge
+	now             func() time.Time // today, for due dates
+	loading         bool             // tasks are loading; the stale view stays frozen under a modal
+	refreshInterval time.Duration    // session interval, initialized from config
+	refreshSeq      uint64           // invalidates timers from earlier session intervals
 
 	filterInput textinput.Model
 	filtering   bool
@@ -149,6 +151,7 @@ func New(d Deps) *Model {
 		now:           time.Now,
 	}
 	m.restoreView()
+	m.refreshInterval, _ = config.ParseRefreshInterval(cmp.Or(d.Config.List.RefreshInterval, config.Default().List.RefreshInterval))
 	return m
 }
 
@@ -161,7 +164,7 @@ func colorStyle(color string) lipgloss.Style {
 func (m *Model) ExitCommand() *exec.Cmd { return m.exitCmd }
 
 func (m *Model) Init() tea.Cmd {
-	cmd := tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject), m.startSpinner())
+	cmd := tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject), m.startSpinner(), m.scheduleRefresh())
 	if m.deps.Config.AgentsEnabled() {
 		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents))
 	}
@@ -170,6 +173,8 @@ func (m *Model) Init() tea.Cmd {
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case refreshTickMsg:
+		return m, m.autoRefresh(msg)
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		m.layout()
@@ -416,6 +421,9 @@ func (m *Model) updateInput(msg tea.KeyPressMsg) tea.Cmd {
 	case res.cancelled:
 		m.input, m.run, m.edit = nil, nil, nil
 	case res.done:
+		if m.input.onSubmit != nil {
+			return tea.Batch(cmd, m.input.onSubmit(res.free))
+		}
 		if m.run == nil {
 			return tea.Batch(cmd, m.typedEdit(res.free))
 		}

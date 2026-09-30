@@ -1,0 +1,65 @@
+README.md
+  s_1c7136a1dcb819::t_51b5a6e32c8ae8 71,147,179-218,256,285-309
+cmd/asanamate/main.go
+  s_1c7136a1dcb819::t_db5ceba4302222 32,53,84-97
+internal/action/action.go
+  s_1c7136a1dcb819::t_130eeb3fbe3778 54-55,148-150
+internal/action/action_test.go
+  s_1c7136a1dcb819::t_11a0fed6baa208 47-53
+internal/config/config.go
+  s_1c7136a1dcb819::t_6e552f86d39943 16,64-67,72-83,178-179,190-191,260-264,272-277
+internal/config/config_test.go
+  s_1c7136a1dcb819::t_04097acd90d4f9 206-246
+internal/form/form.go
+  s_1c7136a1dcb819::t_8f28e76ee0edf8 1-116
+internal/form/form_test.go
+  s_1c7136a1dcb819::t_778dfe321a1fed 1-30
+internal/setup/setup.go
+  s_1c7136a1dcb819::t_ee734640bf8d38 230-235,251-252
+internal/setup/setup_test.go
+  s_1c7136a1dcb819::t_fa71ee91b8dc72 160-174
+internal/state/state.go
+  s_1c7136a1dcb819::t_3768f44aae67f6 11,31-35,58-63,67-99
+internal/state/state_test.go
+  s_1c7136a1dcb819::t_e182e18d917226 72-102
+internal/timetracking/hrvst.go
+  s_1c7136a1dcb819::t_ee97db98471e9c 1-127
+internal/timetracking/hrvst_test.go
+  s_1c7136a1dcb819::t_fbb6a213706cee 1-62
+internal/timetracking/provider.go
+  s_1c7136a1dcb819::t_e41762d7d2a93d 1-89
+internal/timetracking/provider_test.go
+  s_1c7136a1dcb819::t_425891ac6def7c 1-58
+internal/tui/flow.go
+  s_1c7136a1dcb819::t_7c96ece416c021 31-32,71,77,251-271,279-294,347
+internal/tui/form.go
+  s_1c7136a1dcb819::t_c8e947f548cd16 1-150
+internal/tui/form_test.go
+  s_1c7136a1dcb819::t_e885751181d550 1-67
+internal/tui/keys.go
+  s_1c7136a1dcb819::t_059cd3390a0eb2 61-63,80-82,85,123
+internal/tui/model.go
+  s_1c7136a1dcb819::t_c19ee76228fc0d 106-107,110,116,216,281-284,339-345,386,746-747
+internal/tui/statusline.go
+  s_1c7136a1dcb819::t_b22147972f9211 44,117
+internal/tui/time.go
+  s_1c7136a1dcb819::t_06711d41beee5c 1-140
+internal/tui/time_test.go
+  s_1c7136a1dcb819::t_4f334066a07c81 1-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ffd5e0a21f62f5a1a9ec11e69ba780b51859afdd",
+  "prompts": {},
+  "sessions": {
+    "s_1c7136a1dcb819": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0eee4-716b-70d3-8b23-39182f27f80d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

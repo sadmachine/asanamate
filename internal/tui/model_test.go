@@ -156,3 +156,29 @@ func TestReaderViewSwitch(t *testing.T) {
 		t.Fatalf("view = %q, want cards", m.readerView)
 	}
 }
+
+func TestInlineImages(t *testing.T) {
+	html := `<body>Look:<img data-asana-gid="9" src="https://app.asana.com/x/shot.png" alt="shot.png">done</body>`
+	placeholder := string(rune(0x10EEEE))
+
+	m, _ := testModel(t, config.Config{})
+	m.deps.Images = true
+	m.images["9"] = &inlineImage{id: 20, cols: 4, rows: 2}
+	if body := m.renderRich(html, 60); strings.Contains(body, placeholder) || !strings.Contains(ansi.Strip(body), "shot.png") {
+		t.Fatalf("inline off must keep the link:\n%s", body)
+	}
+
+	m.deps.Config.Images.Inline = true
+	body := m.renderRich(html, 60)
+	if strings.Count(body, placeholder) != 8 || strings.Contains(ansi.Strip(body), "shot.png") {
+		t.Fatalf("inline on must draw 4x2 placeholder cells in place of the link:\n%q", body)
+	}
+	if !strings.Contains(body, "Look:") || !strings.Contains(body, "done") {
+		t.Fatalf("text around the image is lost:\n%s", ansi.Strip(body))
+	}
+
+	m.images["9"] = &inlineImage{}
+	if body := m.renderRich(html, 60); strings.Contains(body, placeholder) || !strings.Contains(ansi.Strip(body), "shot.png") {
+		t.Fatalf("a loading image must stay a link:\n%s", body)
+	}
+}

@@ -80,11 +80,11 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		}
 		details := m.card("Details", m.detailsBody(t, leftW-4, top), leftW, false)
 		blocks = []string{head, lipgloss.JoinHorizontal(lipgloss.Top, details, " ", strings.Join(side, "\n"))}
-		add("section:description", "Description", m.renderBody(t.Description(), width))
+		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 	} else {
 		blocks = []string{head, m.card("Details", m.detailsBody(t, width-4, top), width, false)}
 		add("section:agents", "Agents", wrap(strings.Join(agentLines, "\n"), width))
-		add("section:description", "Description", m.renderBody(t.Description(), width))
+		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 		add("section:subtasks", subtaskTitle, wrap(subtasks, width))
 	}
 	add("section:blocked-by", "Blocked by", wrap(refLines(t.Dependencies), width))
@@ -222,7 +222,7 @@ func (m *Model) comment(c asana.Story, width int, selected bool) string {
 	if selected {
 		head = m.fieldStyle().Render(ansi.Strip(head))
 	}
-	body := m.renderBody(ticket.HTMLToMarkdown(c.HTMLText), width-2)
+	body := m.renderRich(c.HTMLText, width-2)
 	gutterStyle := lipgloss.NewStyle().Foreground(borderColor)
 	if selected {
 		gutterStyle = m.markerStyle

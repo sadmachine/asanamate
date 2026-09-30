@@ -230,18 +230,28 @@ func TestEditSkipsUnsupportedFields(t *testing.T) {
 	}
 }
 
-func TestTabCyclesFields(t *testing.T) {
+func TestTabCyclesPanes(t *testing.T) {
 	m, _ := editModel(t)
-	var got []string
-	for range 6 {
-		press(m, "tab")
-		got = append(got, m.fieldKey)
+	press(m, "tab")
+	if !m.focusReader || m.fieldKey != "assignee" {
+		t.Fatalf("tab from list: focusReader = %v, fieldKey = %q", m.focusReader, m.fieldKey)
 	}
-	press(m, "shift+tab", "shift+tab")
-	got = append(got, m.fieldKey)
-	want := []string{"assignee", "project:p1", "my_tasks", "field:f1", commentKey, "assignee", "field:f1"}
-	if !m.focusReader || strings.Join(got, " ") != strings.Join(want, " ") {
-		t.Fatalf("keys = %q, want %q (focusReader %v)", got, want, m.focusReader)
+	press(m, "j", "tab")
+	if m.focusReader || m.fieldKey != "" {
+		t.Fatalf("tab from reader: focusReader = %v, fieldKey = %q", m.focusReader, m.fieldKey)
+	}
+	press(m, "shift+tab")
+	if !m.focusReader {
+		t.Fatal("shift+tab from list should focus the reader")
+	}
+	m.Update(tea.WindowSizeMsg{Width: wideWidth, Height: 20})
+	press(m, "tab")
+	if !m.focusNav || m.focusReader {
+		t.Fatalf("tab from reader on a wide screen: focusNav = %v, focusReader = %v", m.focusNav, m.focusReader)
+	}
+	press(m, "shift+tab")
+	if !m.focusReader || m.focusNav {
+		t.Fatalf("shift+tab from views: focusNav = %v, focusReader = %v", m.focusNav, m.focusReader)
 	}
 }
 
@@ -285,24 +295,24 @@ func TestWideCardsPutSubtasksBesideDetails(t *testing.T) {
 	}
 }
 
-func TestTabFieldEdits(t *testing.T) {
+func TestReaderFieldEdits(t *testing.T) {
 	cases := []struct {
 		name string
 		do   func(m *Model)
 		want string
 	}{
 		{"assign", func(m *Model) {
-			press(m, "tab", "enter", "down", "down", "enter")
+			press(m, "2", "enter", "down", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee":"u2"}}`},
 		{"project section", func(m *Model) {
-			press(m, "tab", "tab", "enter", "down", "enter")
+			press(m, "2", "j", "enter", "down", "enter")
 		}, `POST /sections/s2/addTask {"data":{"task":"1"}}`},
 		{"due date", func(m *Model) {
 			date := "2026-09-30"
 			tk := m.details["1"]
 			tk.DueOn = &date
 			m.details["1"] = tk
-			press(m, "tab", "tab", "enter")
+			press(m, "2", "j", "enter")
 			if got := m.input.area.Value(); got != date {
 				t.Errorf("prefill = %q", got)
 			}
@@ -310,10 +320,10 @@ func TestTabFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"due_on":"2026-10-01"}}`},
 		{"my tasks section", func(m *Model) {
-			press(m, "tab", "tab", "tab", "enter", "down", "enter")
+			press(m, "2", "j", "j", "enter", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee_section":"m2"}}`},
 		{"text field", func(m *Model) {
-			press(m, "shift+tab", "shift+tab", "enter")
+			press(m, "2", "j", "j", "j", "enter")
 			if got := m.input.area.Value(); got != "old" {
 				t.Errorf("prefill = %q", got)
 			}
@@ -321,7 +331,7 @@ func TestTabFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"custom_fields":{"f1":"feat/x"}}}`},
 		{"comment", func(m *Model) {
-			press(m, "shift+tab", "enter")
+			press(m, "2", "G", "enter")
 			m.input.area.SetValue("hello")
 			send(m, ctrlS)
 		}, `POST /tasks/1/stories {"data":{"text":"hello"}}`},
@@ -339,7 +349,7 @@ func TestTabFieldEdits(t *testing.T) {
 
 func TestEscLeavesFields(t *testing.T) {
 	m, _ := editModel(t)
-	press(m, "tab", "esc")
+	press(m, "2", "esc")
 	if m.focusReader || m.fieldKey != "" {
 		t.Fatalf("focusReader = %v, fieldKey = %q", m.focusReader, m.fieldKey)
 	}

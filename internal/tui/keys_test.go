@@ -117,10 +117,6 @@ func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
 	if m.fieldKey != "comment:c2" || m.reader.YOffset() >= offset {
 		t.Fatalf("up changed target %q or did not scroll from %d to %d", m.fieldKey, offset, m.reader.YOffset())
 	}
-	press(m, "tab")
-	if m.fieldKey != "assignee" {
-		t.Fatalf("tab from comment = %q", m.fieldKey)
-	}
 	press(m, "G")
 	if m.fieldKey != "comment:c2" || !m.reader.AtBottom() {
 		t.Fatalf("G target = %q, at bottom %v", m.fieldKey, m.reader.AtBottom())

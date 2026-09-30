@@ -106,7 +106,7 @@ func keyBindings() []binding {
 		{keys: []string{"0"}, desc: "views panel", group: "Move", splitOnly: true, run: do((*Model).focusViews)},
 		{keys: []string{"1", "esc"}, label: "1/esc", desc: "list", group: "Move", run: do((*Model).focusList)},
 		{keys: []string{"2"}, desc: "reader", group: "Move", splitOnly: true, run: do((*Model).focusReaderPane)},
-		{keys: []string{"tab", "shift+tab"}, desc: "reader / next field", group: "Move", splitOnly: true, run: (*Model).tab},
+		{keys: []string{"tab", "shift+tab"}, desc: "next / previous pane", group: "Move", splitOnly: true, run: (*Model).tab},
 		{keys: []string{"/"}, desc: "filter", hint: "filter", group: "Move", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			m.filtering = true
 			m.reader.SetHeight(m.paneHeight())
@@ -206,23 +206,25 @@ func (m *Model) focusReaderPane() {
 	}
 }
 
-// tab moves from the views panel to the list, from the list into the reader,
-// and through the reader's editable rows back to the list; shift+tab goes
-// through the rows backwards.
+// tab moves focus to the next pane: the views panel when it shows, the list,
+// then the reader; shift+tab goes backwards.
 func (m *Model) tab(msg tea.KeyPressMsg) tea.Cmd {
+	panes := []func(){m.focusList, m.focusReaderPane}
+	if m.showNav() {
+		panes = append([]func(){m.focusViews}, panes...)
+	}
+	i := len(panes) - 2
+	switch {
+	case m.focusNav:
+		i = 0
+	case m.focusReader:
+		i = len(panes) - 1
+	}
 	dir := 1
 	if msg.String() == "shift+tab" {
 		dir = -1
 	}
-	switch {
-	case m.focusNav:
-		m.focusNav = false
-	case !m.focusReader:
-		m.focusReader = true
-		m.stepField(dir)
-	case !m.stepField(dir):
-		m.focusReader = false
-	}
+	panes[(i+dir+len(panes))%len(panes)]()
 	return nil
 }
 

@@ -69,3 +69,34 @@ func TestUnlinkRepo(t *testing.T) {
 		t.Fatalf("repos = %v", s.Repos)
 	}
 }
+
+func TestFormChoiceRecencyAndOwnerIsolation(t *testing.T) {
+	path := filepath.Join(t.TempDir(), FileName)
+	s, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.TouchFormChoice("time:hrvst", "123", "project_id", "harvest-1")
+	s.TouchFormChoice("time:hrvst", "123", "project_id", "harvest-2")
+	s.TouchFormChoice("time:hrvst", "123", "project_id", "harvest-1")
+	s.TouchFormChoice("action:x", "123", "project_id", "other-1")
+	if err := s.Save(); err != nil {
+		t.Fatal(err)
+	}
+	s, err = Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := s.RecentFormChoices("time:hrvst", "123", "project_id")
+	if len(got) != 2 || got[0] != "harvest-1" || got[1] != "harvest-2" || s.RecentFormChoices("action:x", "123", "project_id")[0] != "other-1" {
+		t.Fatalf("form choices = %+v", s.FormChoices)
+	}
+}
+
+func TestOldTimeChoiceStillLoads(t *testing.T) {
+	s, _ := Load(filepath.Join(t.TempDir(), FileName))
+	s.TimeProjects["hrvst"] = map[string][]string{"123": {"old"}}
+	if got := s.RecentFormChoices("time:hrvst", "123", "project_id"); len(got) != 1 || got[0] != "old" {
+		t.Fatalf("legacy choice = %v", got)
+	}
+}

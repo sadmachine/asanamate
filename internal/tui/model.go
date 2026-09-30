@@ -103,15 +103,17 @@ type Model struct {
 	frame           int  // spinner frame
 	spinning        bool // a spinner tick is scheduled
 	modal           *picker
-	input           *inputBox // free-text modal for input actions
+	input           *inputBox  // free-text modal for input actions
+	form            *formModal // shared action and time-entry controls
 	run             *pendingRun
 	edit            *pendingEdit
+	timeEntry       *pendingTime
 	users           []asana.Ref       // workspace users, loaded on first assign
 	afterProjects   func() tea.Cmd    // runs once projects load
 	linkNames       map[string]string // names of linked projects outside projects
 	loadingProjects bool              // projects are loading
 	menuFor         string            // gid whose menu opens once its details arrive
-	menuOpen        func()            // opens that menu
+	menuOpen        func() tea.Cmd    // opens that menu
 	status          string
 	exitCmd         *exec.Cmd
 }
@@ -211,7 +213,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.renderDetail(false)
 			if m.menuFor == msg.gid {
 				m.menuFor = ""
-				m.menuOpen()
+				return m, m.menuOpen()
 			}
 		}
 	case projectsMsg:
@@ -276,6 +278,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.openRepoPicker(msg)
 	case actionDoneMsg:
 		m.status = actionStatus(msg)
+	case timeFormMsg:
+		m.gotTimeForm(msg)
+	case timeDoneMsg:
+		m.finishTime(msg)
 	case sectionsMsg:
 		m.openSectionPicker(msg)
 	case usersMsg:
@@ -330,6 +336,13 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	if m.input != nil {
 		return m.updateInput(msg)
 	}
+	if m.form != nil {
+		cancelled, cmd := m.form.update(msg)
+		if cancelled {
+			m.form, m.run, m.timeEntry = nil, nil, nil
+		}
+		return cmd
+	}
 	if m.modal != nil {
 		return m.updateModal(msg)
 	}
@@ -370,7 +383,7 @@ func (m *Model) updateModal(msg tea.KeyPressMsg) tea.Cmd {
 	res, cmd := p.update(msg)
 	switch {
 	case res.cancelled:
-		m.modal, m.run, m.edit = nil, nil, nil
+		m.modal, m.run, m.edit, m.timeEntry = nil, nil, nil, nil
 	case res.done:
 		return tea.Batch(cmd, p.onPick(res))
 	}
@@ -730,6 +743,8 @@ func (m *Model) body() string {
 	switch {
 	case m.input != nil:
 		content = m.input.view(w, mh, m.accentStyle)
+	case m.form != nil:
+		content = m.form.view(w, mh, m.accentStyle)
 	case m.modal != nil:
 		content = m.modal.view(w, mh, m.accentStyle)
 	case m.help:

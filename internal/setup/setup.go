@@ -222,6 +222,12 @@ max_text_width = 0
 # [agents.symbols]
 # waiting = "!"
 
+# Optional completed time tracking. The command reads a JSON request from
+# stdin and writes a form spec as JSON. See README for the protocol.
+[time_tracking]
+# id = "hrvst"
+# command = "asanamate time-provider hrvst --task-id YOUR_TASK_ID"
+
 
 [repo_source]
 # Prints one git repository path per line for the repo picker.
@@ -240,6 +246,18 @@ name = "View ticket in pager"
 key = "v"
 mode = "foreground"
 command = '${PAGER:-less} "$ASANAMATE_TICKET_MD"'
+
+# Action form fields use the same select/hours spec as time tracking. Select
+# answers reach commands as $ASANAMATE_PARAM_<ID>; remember saves a choice by
+# Asana project and action key. See the README for a complete example.
+# [[actions.form.fields]]
+# id = "target"
+# label = "Target"
+# type = "select"
+# remember = true
+# [[actions.form.fields.options]]
+# id = "stage"
+# name = "Staging"
 
 # [[actions]]
 # name = "Start Claude in a new tmux window"

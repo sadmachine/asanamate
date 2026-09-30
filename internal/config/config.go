@@ -13,6 +13,7 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/sadmachine/asanamate/internal/agents"
+	"github.com/sadmachine/asanamate/internal/form"
 )
 
 // TokenEnv names the environment variable that holds the Asana personal access token.
@@ -60,9 +61,24 @@ type Config struct {
 	ReducedMotion *bool      `toml:"reduced_motion"`
 	RepoSource    RepoSource `toml:"repo_source"`
 	Agents        Agents     `toml:"agents"`
-	List          List       `toml:"list"`
-	Reader        Reader     `toml:"reader"`
-	Actions       []Action   `toml:"actions"`
+	// TimeTracking is disabled until both its provider ID and command are set.
+	TimeTracking TimeTracking `toml:"time_tracking"`
+	List         List         `toml:"list"`
+	Reader       Reader       `toml:"reader"`
+	Actions      []Action     `toml:"actions"`
+}
+
+// TimeTracking configures an optional JSON command provider. ID scopes saved
+// tracker project choices; Command runs once for each projects or log request.
+type TimeTracking struct {
+	// ID separates saved project choices for different providers.
+	ID string `toml:"id"`
+	// Command reads a JSON request from stdin and returns project choices as JSON.
+	Command string `toml:"command"`
+}
+
+func (c Config) TimeTrackingEnabled() bool {
+	return c.TimeTracking.ID != "" && c.TimeTracking.Command != ""
 }
 
 // Agents links tickets to running coding agents. It is off unless Preset or
@@ -158,6 +174,8 @@ type Action struct {
 	Repo    bool   `toml:"repo"`
 	Agent   bool   `toml:"agent"`
 	Command string `toml:"command"`
+	// Form optionally asks for select or hours values before running the command.
+	Form form.Spec `toml:"form"`
 	// Input, when set, is the title of a text box shown before the action
 	// runs; the typed text reaches the command as $ASANAMATE_INPUT_FILE.
 	Input         string `toml:"input"`
@@ -168,6 +186,8 @@ type Action struct {
 func Default() Config {
 	return Config{
 		Theme: "dark", AccentColor: "4", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true,
+		TimeTracking: TimeTracking{},
+		Actions:      nil,
 		List: List{
 			Layout: LayoutSingle, Fields: []string{"section", "due"},
 			Header: Header{Style: StyleRule}, Selection: Selection{Style: StyleMarker},
@@ -203,6 +223,12 @@ func Load(path string) (Config, error) {
 func (c Config) validate() error {
 	if c.Workspace == "" {
 		return errors.New("workspace is required; run `asanamate setup`")
+	}
+	if (c.TimeTracking.ID == "") != (c.TimeTracking.Command == "") || (c.TimeTracking.ID != "" && strings.TrimSpace(c.TimeTracking.Command) == "") {
+		return errors.New("time_tracking.id and time_tracking.command must both be set")
+	}
+	if strings.TrimSpace(c.TimeTracking.ID) != c.TimeTracking.ID {
+		return errors.New("time_tracking.id must not have surrounding whitespace")
 	}
 	for _, e := range []error{
 		oneOf("theme", c.Theme, "dark", "light"),
@@ -260,6 +286,11 @@ func (c Config) validate() error {
 			return fmt.Errorf("actions %q and %q share key %q", other, a.Name, a.Key)
 		}
 		keys[a.Key] = a.Name
+		if len(a.Form.Fields) > 0 {
+			if err := a.Form.Validate(); err != nil {
+				return fmt.Errorf("action %q form: %w", a.Name, err)
+			}
+		}
 	}
 	return nil
 }

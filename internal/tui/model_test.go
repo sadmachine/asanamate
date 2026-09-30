@@ -8,10 +8,12 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/kitty"
 	"github.com/sadmachine/asanamate/internal/state"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
@@ -176,9 +178,55 @@ func TestInlineImages(t *testing.T) {
 	if !strings.Contains(body, "Look:") || !strings.Contains(body, "done") {
 		t.Fatalf("text around the image is lost:\n%s", ansi.Strip(body))
 	}
+	lines := strings.Split(ansi.Strip(body), "\n")
+	if len(lines) != 6 || strings.TrimSpace(lines[1]) != "" || strings.TrimSpace(lines[4]) != "" {
+		t.Fatalf("want one blank row around the two-row image:\n%q", lines)
+	}
+	imageTag := `<img data-asana-gid="9" src="https://app.asana.com/x/shot.png" alt="shot.png">`
+	for _, tc := range []struct {
+		html      string
+		blankRows []int
+		rows      int
+	}{
+		{imageTag, []int{0, 3}, 4},
+		{imageTag + "done", []int{0, 3}, 5},
+		{"Look:" + imageTag, []int{1, 4}, 5},
+		{imageTag + imageTag, []int{0, 3, 6}, 7},
+	} {
+		lines := strings.Split(ansi.Strip(m.renderRich(tc.html, 60)), "\n")
+		if len(lines) != tc.rows {
+			t.Fatalf("rows = %d, want %d for %q", len(lines), tc.rows, tc.html)
+		}
+		for _, row := range tc.blankRows {
+			if strings.TrimSpace(lines[row]) != "" {
+				t.Fatalf("row %d must be blank for %q", row, tc.html)
+			}
+		}
+	}
 
 	m.images["9"] = &inlineImage{}
 	if body := m.renderRich(html, 60); strings.Contains(body, placeholder) || !strings.Contains(ansi.Strip(body), "shot.png") {
 		t.Fatalf("a loading image must stay a link:\n%s", body)
+	}
+}
+
+func TestImageCellSizeChanges(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	m.deps.Images = true
+	m.deps.Config.Images.Inline = true
+	m.images["9"] = &inlineImage{id: 20, cols: 4, rows: 2}
+	m.Update(uv.CellSizeEvent{Width: 8, Height: 18})
+	if m.imageCell != (kitty.CellSize{Width: 8, Height: 18}) || len(m.images) != 0 {
+		t.Fatal("cell report must invalidate placements sized with the old estimate")
+	}
+	m.images["9"] = &inlineImage{}
+	if cmd := m.inlineImageLoaded(inlineImageMsg{gid: "9", id: 20, cols: 4, rows: 2}); cmd != nil || m.images["9"].id != 0 {
+		t.Fatal("late results sized with the old estimate must be ignored")
+	}
+	m.inlineImageLoaded(inlineImageMsg{gid: "9", id: 21, cols: 4, rows: 2, cell: m.imageCell})
+	m.Update(uv.CellSizeEvent{Width: 8, Height: 18})
+	m.Update(uv.CellSizeEvent{Width: 0, Height: 0})
+	if m.images["9"].id != 21 {
+		t.Fatal("unchanged or invalid cell reports must keep loaded images")
 	}
 }

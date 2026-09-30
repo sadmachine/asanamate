@@ -155,7 +155,7 @@ func TestEncodeRejectsHugeDimensions(t *testing.T) {
 
 func TestInlineFitsAndPlaces(t *testing.T) {
 	// 160x80 px is 20x5 cells at the assumed scale.
-	seq, cols, rows, err := Inline(pngBytes(t, 160, 80, false), 42, 80, 24, false)
+	seq, cols, rows, err := Inline(pngBytes(t, 160, 80, false), 42, 80, 24, CellSize{}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,10 +166,10 @@ func TestInlineFitsAndPlaces(t *testing.T) {
 		t.Fatalf("prefix = %q", seq[:48])
 	}
 	// Width and height limits shrink it, keeping its shape.
-	if _, cols, rows, _ := Inline(pngBytes(t, 160, 80, false), 42, 10, 24, false); cols != 10 || rows != 3 {
+	if _, cols, rows, _ := Inline(pngBytes(t, 160, 80, false), 42, 10, 24, CellSize{}, false); cols != 10 || rows != 3 {
 		t.Fatalf("width-capped size = %dx%d, want 10x3", cols, rows)
 	}
-	if _, cols, rows, _ := Inline(pngBytes(t, 160, 80, false), 42, 80, 2, false); cols != 8 || rows != 2 {
+	if _, cols, rows, _ := Inline(pngBytes(t, 160, 80, false), 42, 80, 2, CellSize{}, false); cols != 8 || rows != 2 {
 		t.Fatalf("height-capped size = %dx%d, want 8x2", cols, rows)
 	}
 }
@@ -182,7 +182,11 @@ func TestInlineSize(t *testing.T) {
 	}{
 		{"fallback", 160, 80, 80, 24, 8, 16, 20, 5},
 		{"taller cells", 160, 80, 80, 24, 8, 24, 20, 4},
-		{"retina cells", 320, 160, 80, 24, 16, 36, 20, 5},
+		{"retina cells", 320, 160, 80, 24, 16, 36, 40, 9},
+		{"task first image", 872, 684, 77, 36, 8, 18, 77, 27},
+		{"task first image retina", 872, 684, 77, 36, 16, 36, 77, 27},
+		{"task second image", 654, 336, 77, 36, 8, 18, 77, 18},
+		{"task second image retina", 654, 336, 77, 36, 16, 36, 77, 18},
 		{"width limit", 160, 80, 10, 24, 8, 24, 10, 2},
 		{"height limit", 160, 80, 80, 2, 8, 24, 12, 2},
 		{"fractional height limit", 160, 80, 10, 2, 8, 16, 8, 2},
@@ -197,6 +201,15 @@ func TestInlineSize(t *testing.T) {
 				t.Fatalf("size = %dx%d, want %dx%d", cols, rows, tc.cols, tc.rows)
 			}
 		})
+	}
+}
+
+func TestRequestCellSize(t *testing.T) {
+	if got := RequestCellSize(false); got != "\x1b[16t" {
+		t.Fatalf("query = %q", got)
+	}
+	if got := RequestCellSize(true); got != "\x1bPtmux;\x1b\x1b[16t\x1b\\" {
+		t.Fatalf("tmux query = %q", got)
 	}
 }
 

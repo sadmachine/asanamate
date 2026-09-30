@@ -24,7 +24,31 @@ type inlineImageMsg struct {
 	gid            string
 	seq            string
 	id, cols, rows int
+	cell           kitty.CellSize
 	err            error
+}
+
+func (m *Model) requestImageCellSize() tea.Cmd {
+	if !m.inlineImagesOn() {
+		return nil
+	}
+	return tea.Raw(kitty.RequestCellSize(m.deps.InTmux))
+}
+
+func (m *Model) imageCellSizeChanged(cell kitty.CellSize) tea.Cmd {
+	if !m.inlineImagesOn() || cell.Width <= 0 || cell.Height <= 0 || cell == m.imageCell {
+		return nil
+	}
+	m.imageCell = cell
+	// Reload placements sized with the old estimate. Late results from those
+	// requests are ignored, so all images use the same cell dimensions.
+	m.images = map[string]*inlineImage{}
+	if t, ok := m.selectedDetail(); ok {
+		cmd := m.loadInlineImages(t)
+		m.renderDetail(true)
+		return cmd
+	}
+	return nil
 }
 
 // inlineImagesOn reports whether inline images draw in place of their links.
@@ -51,7 +75,7 @@ func (m *Model) loadInlineImages(t ticket.Ticket) tea.Cmd {
 			continue
 		}
 		m.images[gid] = &inlineImage{}
-		cmds = append(cmds, loadInlineImage(m.deps.Client, gid, m.nextImageID(), cols, rows, m.deps.InTmux))
+		cmds = append(cmds, loadInlineImage(m.deps.Client, gid, m.nextImageID(), cols, rows, m.imageCell, m.deps.InTmux))
 	}
 	return tea.Batch(cmds...)
 }
@@ -64,14 +88,14 @@ func (m *Model) nextImageID() int {
 	return id
 }
 
-func loadInlineImage(c *asana.Client, gid string, id, cols, rows int, inTmux bool) tea.Cmd {
+func loadInlineImage(c *asana.Client, gid string, id, cols, rows int, cell kitty.CellSize, inTmux bool) tea.Cmd {
 	return request(func(ctx context.Context) tea.Msg {
 		data, err := fetchImage(ctx, c, gid)
 		if err != nil {
-			return inlineImageMsg{gid: gid, err: err}
+			return inlineImageMsg{gid: gid, cell: cell, err: err}
 		}
-		seq, cols, rows, err := kitty.Inline(data, id, cols, rows, inTmux)
-		return inlineImageMsg{gid: gid, seq: seq, id: id, cols: cols, rows: rows, err: err}
+		seq, cols, rows, err := kitty.Inline(data, id, cols, rows, cell, inTmux)
+		return inlineImageMsg{gid: gid, seq: seq, id: id, cols: cols, rows: rows, cell: cell, err: err}
 	})
 }
 
@@ -91,7 +115,7 @@ func fetchImage(ctx context.Context, c *asana.Client, gid string) ([]byte, error
 // reader with it. A failed image stays a link.
 func (m *Model) inlineImageLoaded(msg inlineImageMsg) tea.Cmd {
 	img := m.images[msg.gid]
-	if img == nil {
+	if img == nil || msg.cell != m.imageCell {
 		return nil
 	}
 	if msg.err != nil {
@@ -112,12 +136,25 @@ func (m *Model) renderRich(html string, width int) string {
 		return m.renderBody(ticket.HTMLToMarkdown(html), width)
 	}
 	var out []string
+	var firstImage, lastImage bool
 	for _, p := range ticket.SplitImages(html) {
 		if img := m.images[p.ImageGID]; p.ImageGID != "" && img != nil && img.id != 0 && img.cols <= m.textWidth(width) {
+			if len(out) == 0 {
+				firstImage = true
+			}
+			lastImage = true
 			out = append(out, kitty.Placeholder(img.id, img.cols, img.rows))
 		} else if s := m.renderBody(p.Markdown, width); s != "" {
+			lastImage = false
 			out = append(out, s)
 		}
 	}
-	return strings.Join(out, "\n")
+	body := strings.Join(out, "\n\n")
+	if firstImage {
+		body = "\n" + body
+	}
+	if lastImage {
+		body += "\n"
+	}
+	return body
 }

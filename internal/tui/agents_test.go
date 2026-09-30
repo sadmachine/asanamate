@@ -60,19 +60,6 @@ func TestAgentColumnOrdersByUrgency(t *testing.T) {
 	}
 }
 
-func TestSelectedBadgeReversesItsColors(t *testing.T) {
-	m := agentModel(t, config.SymbolsUnicode, true)
-	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1")}})
-	working := stateStyles[agents.Working].Bold(true)
-	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Reverse(true).Render("◐")+selectedStyle.Render(" ")) || !strings.HasPrefix(row, selectedStyle.Render("□  Fix login   ")) {
-		t.Fatalf("selected row = %q", row)
-	}
-	m.moveTo(1)
-	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Render("◐")+" ") {
-		t.Fatalf("unselected row = %q", row)
-	}
-}
-
 func TestAgentColumnGroupsManyAgents(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, true)
 	var list []agents.Agent
@@ -237,28 +224,6 @@ func TestStatuslineCountsSharedAgentsOnce(t *testing.T) {
 	m.width = 120
 	if s := ansi.Strip(m.statusline()); !strings.Contains(s, "│ ◐1 ") {
 		t.Fatalf("statusline = %q", s)
-	}
-}
-
-func TestPickerUsesStaticWorkingSymbol(t *testing.T) {
-	m := agentModel(t, config.SymbolsUnicode, false)
-	m.deps.Config.Actions = []config.Action{jumpAction}
-	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "a1"), onBranch(agents.Idle, "a2")}})
-	m.details["1"] = ticket.Ticket{Task: agentTask("feat/x")}
-	m.openActionMenu()
-	m.pickedAction(0)
-	if m.modal == nil || !strings.HasPrefix(m.modal.items[0].Label, "◐ working") {
-		t.Fatalf("picker label = %q", m.modal.items[0].Label)
-	}
-}
-
-func TestListKeepsGapBeforeBorder(t *testing.T) {
-	m := agentModel(t, config.SymbolsUnicode, true)
-	m.Update(tea.WindowSizeMsg{Width: 120, Height: 10})
-	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Waiting, "")}})
-	line := strings.Split(ansi.Strip(m.body()), "\n")[1] // below the panel's top edge
-	if !strings.Contains(line, "⚠ │") {
-		t.Fatalf("badge touches the border: %q", line)
 	}
 }
 

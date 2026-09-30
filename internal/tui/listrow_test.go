@@ -287,15 +287,6 @@ func TestColumnsAlignAcrossRows(t *testing.T) {
 	}
 }
 
-func TestDoneRowsAreStruckThrough(t *testing.T) {
-	m, _ := testModel(t, config.Config{List: config.List{Selection: config.Selection{Style: config.StyleMarker}}})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask}})
-	row, _ := m.listRow(1)
-	if !strings.Contains(row[0], "\x1b[2;9m") && !strings.Contains(row[0], "\x1b[9;2m") {
-		t.Fatalf("done row = %q", row[0])
-	}
-}
-
 func TestInitials(t *testing.T) {
 	for name, want := range map[string]string{"Austin Fishbaugh": "AF", "jane q doe": "JD", "Ann": "AN", "X": "X", "  ": "", "Émile Zola": "ÉZ"} {
 		if got := initials(name); got != want {

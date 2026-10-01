@@ -137,6 +137,79 @@ func TestPickingProjectRecordsRecent(t *testing.T) {
 	}
 }
 
+// historyGIDs returns the ticket history's gids, most recent first.
+func historyGIDs(st *state.State) []string {
+	var gids []string
+	for _, r := range st.RecentTickets {
+		gids = append(gids, r.GID)
+	}
+	return gids
+}
+
+func TestFocusingReaderRecordsHistory(t *testing.T) {
+	m, st := testModel(t, config.Config{})
+	m.Update(tea.WindowSizeMsg{Width: 160, Height: 30})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask, sideTask}})
+	for _, k := range []string{"j", "j", "k"} {
+		m.Update(key(k))
+	}
+	if len(st.RecentTickets) != 0 {
+		t.Fatalf("moving recorded %v", historyGIDs(st))
+	}
+	// Focus a, b, c, then b again, by different keys.
+	for _, step := range [][]string{{"g", "2"}, {"j", "tab"}, {"j", "2"}, {"k", "shift+tab", "shift+tab"}} {
+		m.Update(key("1"))
+		for _, k := range step {
+			m.Update(key(k))
+		}
+	}
+	want := []string{m.visible[1].GID, m.visible[2].GID, m.visible[0].GID}
+	again, _ := state.Load(st.Path())
+	if got := historyGIDs(again); !slices.Equal(got, want) {
+		t.Fatalf("history = %v, want %v", got, want)
+	}
+}
+
+func TestPickingHistoryShowsTicket(t *testing.T) {
+	m, st := testModel(t, config.Config{})
+	m.Update(tea.WindowSizeMsg{Width: 160, Height: 30})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask, sideTask}})
+	st.TouchTicket(state.RecentTicket{GID: "3", Name: "Fix footer"})
+	st.TouchTicket(state.RecentTicket{GID: "9", Name: "Elsewhere", Project: "Other"})
+
+	// A ticket the view never had loads, then is pinned and focused.
+	m.Update(key("H"))
+	if m.modal == nil || m.modal.title != "Ticket history" {
+		t.Fatalf("modal = %+v", m.modal)
+	}
+	if _, cmd := m.Update(key("enter")); cmd == nil || m.openGID != "9" {
+		t.Fatalf("openGID = %q", m.openGID)
+	}
+	far := asana.Task{GID: "9", Name: "Elsewhere"}
+	m.Update(detailMsg{gid: "9", ticket: ticket.Ticket{Task: far}})
+	if sel, ok := m.selected(); !ok || sel.GID != "9" || !m.focusReader || m.shownGID != "9" || m.openGID != "" {
+		t.Fatalf("selected = %v, focusReader = %v, shown = %q", sel.GID, m.focusReader, m.shownGID)
+	}
+
+	// A listed ticket is selected, focused, and moves to the front.
+	m.Update(key("1"))
+	m.Update(key("H"))
+	m.Update(key("down"))
+	m.Update(key("enter"))
+	if sel, _ := m.selected(); sel.GID != "3" || !m.focusReader || st.RecentTickets[0].GID != "3" {
+		t.Fatalf("selected = %v, focusReader = %v, history = %v", sel.GID, m.focusReader, historyGIDs(st))
+	}
+}
+
+func TestEmptyHistoryOpensNothing(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(key("H"))
+	if m.modal != nil || m.status != "no ticket history yet" {
+		t.Fatalf("modal = %v, status = %q", m.modal, m.status)
+	}
+}
+
 func TestReaderViewSwitch(t *testing.T) {
 	m, _ := testModel(t, config.Config{Reader: config.Reader{View: config.ViewCards}})
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})

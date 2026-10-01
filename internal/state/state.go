@@ -1,5 +1,5 @@
 // Package state stores data asanamate learns while running: repo links, recent
-// projects, and each project's last list view.
+// projects and tickets, and each project's last list view.
 package state
 
 import (
@@ -20,6 +20,9 @@ const FileName = "state.toml"
 
 const maxRecent = 20
 
+// maxRecentTickets caps the ticket history.
+const maxRecentTickets = 10
+
 // State is the contents of state.toml.
 type State struct {
 	// Repos maps an Asana project gid to a local git repository path.
@@ -32,6 +35,8 @@ type State struct {
 	TaskBranches map[string]string `toml:"task_branches"`
 	// RecentProjects holds project gids, most recently opened first.
 	RecentProjects []string `toml:"recent_projects"`
+	// RecentTickets holds the tickets last focused in the reader, most recent first.
+	RecentTickets []RecentTicket `toml:"recent_tickets"`
 	// Views maps a project gid ("" for My Tasks) to the list view last used there.
 	Views map[string]View `toml:"views"`
 	// TimeProjects holds recent tracker project IDs by provider ID and Asana project GID.
@@ -47,6 +52,13 @@ type State struct {
 type View struct {
 	GroupBy string `toml:"group_by"`
 	Filter  string `toml:"filter"`
+}
+
+// RecentTicket is a ticket in the history, with the names its picker row shows.
+type RecentTicket struct {
+	GID     string `toml:"gid"`
+	Name    string `toml:"name"`
+	Project string `toml:"project"`
 }
 
 // Load reads the state file. A missing file yields empty state.
@@ -136,6 +148,15 @@ func (s *State) TouchProject(gid string) {
 	s.RecentProjects = append([]string{gid}, s.RecentProjects...)
 	if len(s.RecentProjects) > maxRecent {
 		s.RecentProjects = s.RecentProjects[:maxRecent]
+	}
+}
+
+// TouchTicket moves t to the front of the ticket history.
+func (s *State) TouchTicket(t RecentTicket) {
+	s.RecentTickets = slices.DeleteFunc(s.RecentTickets, func(r RecentTicket) bool { return r.GID == t.GID })
+	s.RecentTickets = append([]RecentTicket{t}, s.RecentTickets...)
+	if len(s.RecentTickets) > maxRecentTickets {
+		s.RecentTickets = s.RecentTickets[:maxRecentTickets]
 	}
 }
 

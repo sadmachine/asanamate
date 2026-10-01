@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -505,9 +506,26 @@ func (m *Model) showsInline(a asana.Attachment) bool {
 
 func (m *Model) pickedAttachment(a asana.Attachment) tea.Cmd {
 	m.modal = nil
-	if m.showsInline(a) {
-		m.status = "loading image…"
-		return loadImage(m.deps.Client, a, max(m.width, 1), max(m.height-2, 1), m.imageCell, m.deps.InTmux)
+	if !m.showsInline(a) {
+		return openURL(ticket.AttachmentURL(a))
 	}
-	return openURL(ticket.AttachmentURL(a))
+	t, _ := m.selectedDetail()
+	m.viewImages = nil
+	for _, other := range t.Attachments {
+		if m.showsInline(other) {
+			m.viewImages = append(m.viewImages, other)
+		}
+	}
+	m.viewIndex = slices.IndexFunc(m.viewImages, func(b asana.Attachment) bool { return b.GID == a.GID })
+	if m.viewIndex < 0 {
+		m.viewImages, m.viewIndex = []asana.Attachment{a}, 0
+	}
+	return m.viewImage(m.viewIndex)
+}
+
+// viewImage loads viewImages[i] for the attachment viewer.
+func (m *Model) viewImage(i int) tea.Cmd {
+	m.viewIndex = i
+	m.status = "loading image…"
+	return loadImage(m.deps.Client, m.viewImages[i], max(m.width, 1), max(m.height-2, 1), m.imageCell, m.deps.InTmux)
 }

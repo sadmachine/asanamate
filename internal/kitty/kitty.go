@@ -237,24 +237,30 @@ func wrap(seq string, inTmux bool) string {
 	return "\x1bPtmux;" + strings.ReplaceAll(seq, "\x1b", "\x1b\x1b") + "\x1b\\"
 }
 
-// Viewer shows an encoded image until Enter, q, or Esc is pressed.
+// Viewer shows an encoded image until Enter, q, or Esc is pressed. When it
+// is one of several images, j and k also close it, asking for the next or
+// previous image.
 // It implements tea.ExecCommand so Bubble Tea releases the terminal first.
 type Viewer struct {
 	payload, clear string
+	index, total   int
 	stdin          io.Reader
 	stdout         io.Writer
+	// Step is 1 after j, -1 after k, and 0 after a close key.
+	Step int
 }
 
-// NewViewer returns a viewer for a payload produced by Encode.
-func NewViewer(payload string, inTmux bool) *Viewer {
-	return &Viewer{payload: payload, clear: Clear(inTmux)}
+// NewViewer returns a viewer for a payload produced by Encode, the index'th
+// (from 0) of total images.
+func NewViewer(payload string, index, total int, inTmux bool) *Viewer {
+	return &Viewer{payload: payload, clear: Clear(inTmux), index: index, total: total}
 }
 
 func (v *Viewer) SetStdin(r io.Reader)  { v.stdin = r }
 func (v *Viewer) SetStdout(w io.Writer) { v.stdout = w }
 func (v *Viewer) SetStderr(io.Writer)   {}
 
-// Run draws the image, waits for a close key, then removes the image.
+// Run draws the image, waits for a close or step key, then removes the image.
 // A terminal stdin is put in raw mode so single keys arrive unbuffered.
 func (v *Viewer) Run() error {
 	if f, ok := v.stdin.(interface{ Fd() uintptr }); ok && term.IsTerminal(f.Fd()) {
@@ -264,9 +270,14 @@ func (v *Viewer) Run() error {
 		}
 		defer term.Restore(f.Fd(), state)
 	}
+	footer := fmt.Sprintf("Image %d/%d · ", v.index+1, max(v.total, 1))
+	if v.total > 1 {
+		footer += "j next · k previous · "
+	}
 	// Row 999 clamps to the bottom line.
-	fmt.Fprint(v.stdout, "\x1b[2J", v.payload, "\x1b[999;1HPress Enter, q, or Esc to return.")
-	err := waitForClose(bufio.NewReader(v.stdin))
+	fmt.Fprint(v.stdout, "\x1b[2J", v.payload, "\x1b[999;1H", footer, "Enter, q, or Esc to return.")
+	step, err := waitForKey(bufio.NewReader(v.stdin), v.total > 1)
+	v.Step = step
 	fmt.Fprint(v.stdout, v.clear)
 	if errors.Is(err, io.EOF) {
 		return nil
@@ -274,16 +285,21 @@ func (v *Viewer) Run() error {
 	return err
 }
 
-// waitForClose reads until Enter, q, Esc, or Ctrl+C.
-func waitForClose(r io.ByteReader) error {
+// waitForKey reads until Enter, q, Esc, or Ctrl+C, returning 0, or, when
+// stepping is on, until j or k, returning 1 or -1.
+func waitForKey(r io.ByteReader, stepping bool) (int, error) {
 	for {
 		b, err := r.ReadByte()
 		if err != nil {
-			return err
+			return 0, err
 		}
-		switch b {
-		case '\r', '\n', 'q', 0x1b, 0x03:
-			return nil
+		switch {
+		case b == '\r', b == '\n', b == 'q', b == 0x1b, b == 0x03:
+			return 0, nil
+		case stepping && b == 'j':
+			return 1, nil
+		case stepping && b == 'k':
+			return -1, nil
 		}
 	}
 }

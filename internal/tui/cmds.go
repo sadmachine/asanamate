@@ -107,6 +107,12 @@ type imageMsg struct {
 	err     error
 }
 
+// viewerDoneMsg reports the image viewer closing; step is kitty.Viewer.Step.
+type viewerDoneMsg struct {
+	step int
+	err  error
+}
+
 type statusMsg string
 
 // request runs fn off the UI loop with a requestTimeout context.

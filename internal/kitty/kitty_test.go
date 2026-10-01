@@ -125,9 +125,9 @@ func TestDownload(t *testing.T) {
 }
 
 func TestViewerWritesPayloadAndClears(t *testing.T) {
-	v := NewViewer("PAYLOAD", false)
+	v := NewViewer("PAYLOAD", 1, 3, false)
 	var out bytes.Buffer
-	v.SetStdin(strings.NewReader("q"))
+	v.SetStdin(strings.NewReader("k"))
 	v.SetStdout(&out)
 	if err := v.Run(); err != nil {
 		t.Fatal(err)
@@ -135,15 +135,31 @@ func TestViewerWritesPayloadAndClears(t *testing.T) {
 	if !strings.Contains(out.String(), "PAYLOAD") || !strings.HasSuffix(out.String(), Clear(false)) {
 		t.Fatalf("out = %q", out.String())
 	}
+	if !strings.Contains(out.String(), "Image 2/3 · j next · k previous") || v.Step != -1 {
+		t.Fatalf("step = %d, out = %q", v.Step, out.String())
+	}
 }
 
-func TestWaitForCloseStopsAtCloseKey(t *testing.T) {
-	for _, key := range []string{"\r", "\n", "q", "\x1b", "\x03"} {
+func TestWaitForKey(t *testing.T) {
+	cases := []struct {
+		key      string
+		stepping bool
+		want     int
+	}{
+		{"\r", true, 0}, {"\n", true, 0}, {"q", true, 0}, {"\x1b", true, 0}, {"\x03", true, 0},
+		{"j", true, 1}, {"k", true, -1},
+	}
+	for _, c := range cases {
 		// The key after "x" must stop the wait before "!" is read.
-		in := strings.NewReader("x" + key + "!")
-		if err := waitForClose(in); err != nil || in.Len() != 1 {
-			t.Fatalf("key %q: err = %v, unread = %d", key, err, in.Len())
+		in := strings.NewReader("x" + c.key + "!")
+		if step, err := waitForKey(in, c.stepping); err != nil || step != c.want || in.Len() != 1 {
+			t.Fatalf("key %q: step = %d, err = %v, unread = %d", c.key, step, err, in.Len())
 		}
+	}
+	// A single image ignores j and k.
+	in := strings.NewReader("jkq!")
+	if step, err := waitForKey(in, false); err != nil || step != 0 || in.Len() != 1 {
+		t.Fatalf("single image: step = %d, err = %v, unread = %d", step, err, in.Len())
 	}
 }
 

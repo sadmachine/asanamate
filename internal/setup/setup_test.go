@@ -3,6 +3,7 @@ package setup
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -170,5 +171,63 @@ func TestMergeKeepsTimeTrackingProvider(t *testing.T) {
 	cfg, err := config.Load(path)
 	if err != nil || cfg.TimeTracking.ID != "hrvst" || cfg.TimeTracking.Command != "asanamate time-provider hrvst --task-id 456" {
 		t.Fatalf("merged provider = %+v, err = %v", cfg.TimeTracking, err)
+	}
+}
+
+func TestOfferCodexHook(t *testing.T) {
+	home := t.TempDir()
+	path := filepath.Join(home, "hooks.json")
+	theirs := `{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"other && x"}]}]},"extra":1}`
+	os.WriteFile(path, []byte(theirs), 0o600)
+	offer := func(input string) string {
+		t.Helper()
+		out := &strings.Builder{}
+		o := Options{In: bufio.NewReader(strings.NewReader(input)), Out: out, CodexHome: home, Executable: "/bin/it's asanamate"}
+		if err := OfferCodexHook(o); err != nil {
+			t.Fatal(err)
+		}
+		return out.String()
+	}
+
+	if out := offer("n\n"); !strings.Contains(out, "inaccurate or wrong") || !strings.Contains(out, "setup hooks") {
+		t.Fatalf("decline output = %q", out)
+	}
+	if data, _ := os.ReadFile(path); string(data) != theirs {
+		t.Fatalf("declined but changed: %s", data)
+	}
+
+	offer("y\n")
+	if data, _ := os.ReadFile(path + ".bak"); string(data) != theirs {
+		t.Fatalf("backup = %s", data)
+	}
+	var got struct {
+		Hooks map[string][]struct {
+			Hooks []struct{ Type, Command string }
+		}
+		Extra int
+	}
+	data, _ := os.ReadFile(path)
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	want := `'/bin/it'\''s asanamate' hook codex`
+	stop := got.Hooks["Stop"]
+	if got.Extra != 1 || len(stop) != 2 || stop[0].Hooks[0].Command != "other && x" || stop[1].Hooks[0].Command != want {
+		t.Fatalf("hooks.json = %s", data)
+	}
+	if len(got.Hooks["UserPromptSubmit"]) != 1 || len(got.Hooks["SessionEnd"]) != 1 {
+		t.Fatalf("missing events: %s", data)
+	}
+
+	if out := offer(""); out != "" {
+		t.Fatalf("installed hook offered again: %q", out)
+	}
+}
+
+func TestOfferCodexHookSkipsWithoutCodex(t *testing.T) {
+	out := &strings.Builder{}
+	o := Options{Out: out, CodexHome: filepath.Join(t.TempDir(), "missing"), Executable: "asanamate"}
+	if err := OfferCodexHook(o); err != nil || out.Len() != 0 {
+		t.Fatalf("err = %v, out = %q", err, out)
 	}
 }

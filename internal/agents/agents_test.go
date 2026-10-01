@@ -2,10 +2,12 @@ package agents
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func git(t *testing.T, args ...string) {
@@ -98,11 +100,28 @@ const ccmuxJSON = `[
  {"id":"e19a","cwd":"/nowhere","status":"working","attentionState":null,"gitBranch":"main","mainRepoRoot":null,
   "summary":null,"prompts":["  Fix the queue\ntimeout  "],"paneTitle":"claude"},
  {"id":"f2c0","cwd":"/r","status":"idle","attentionState":"seen","gitBranch":"main","mainRepoRoot":"/r",
-  "prompts":[],"paneTitle":"✳ Claude Code"}
+  "prompts":[],"paneTitle":"✳ Claude Code"},
+ {"id":"codex_pane1","agentType":"codex","trackingMode":"pane","cwd":"/r","status":"idle","gitBranch":"main",
+  "mainRepoRoot":"/r","prompts":[],"paneTitle":"[ ! ] Action Required | Fix editor | r"},
+ {"id":"codex_pane2","agentType":"codex","trackingMode":"pane","cwd":"/r","status":"idle","gitBranch":"main",
+  "mainRepoRoot":"/r","prompts":[],"paneTitle":"⠼ Fix editor | r"},
+ {"id":"codex_pane3","agentType":"codex","trackingMode":"pane","cwd":"/r","status":"idle","gitBranch":"main",
+  "mainRepoRoot":"/r","prompts":[],"paneTitle":"Fix editor | r"},
+ {"id":"codex_pane4","agentType":"codex","trackingMode":"pane","cwd":"/r","status":"waiting","gitBranch":"main",
+  "mainRepoRoot":"/r","prompts":[],"paneTitle":"⠼ Fix editor | r"},
+ {"id":"codex_pane5","agentType":"codex","trackingMode":"pane","nativeSessionId":"n5","cwd":"/r","status":"idle",
+  "statusChangedAt":"2026-01-01T00:00:00.000Z","gitBranch":"main","mainRepoRoot":"/r","prompts":[],"paneTitle":"⠼ Fix editor | r"},
+ {"id":"n6","nativeSessionId":"n6","cwd":"/r","status":"idle","statusChangedAt":"2026-01-01T00:00:00.000Z",
+  "gitBranch":"main","mainRepoRoot":"/r","prompts":[],"paneTitle":"claude"}
 ]`
 
 func TestParseCCMux(t *testing.T) {
-	got, err := parseCCMux(context.Background(), []byte(ccmuxJSON))
+	changed := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	reported := map[string]live{
+		"n5": {State: Idle, At: changed.Add(time.Minute)},     // newer than ccmux: wins over the pane title
+		"n6": {State: Working, At: changed.Add(-time.Minute)}, // older than ccmux: ignored
+	}
+	got, err := parseCCMux(context.Background(), []byte(ccmuxJSON), reported)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,6 +129,12 @@ func TestParseCCMux(t *testing.T) {
 		{Path: "/r/.claude/worktrees/wicpa", Status: "completed", Target: "d48f", Branch: "update/3068", Repo: "/r", Title: "Fix license headings"},
 		{Path: "/nowhere", Status: "working", Target: "e19a", Branch: "main", Title: "Fix the queue timeout"},
 		{Path: "/r", Status: "idle", Target: "f2c0", Branch: "main", Repo: "/r", Title: "✳ Claude Code"},
+		{Path: "/r", Status: "waiting", Target: "codex_pane1", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
+		{Path: "/r", Status: "working", Target: "codex_pane2", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
+		{Path: "/r", Status: "idle", Target: "codex_pane3", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
+		{Path: "/r", Status: "waiting", Target: "codex_pane4", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
+		{Path: "/r", Status: "idle", Target: "codex_pane5", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
+		{Path: "/r", Status: "idle", Target: "n6", Branch: "main", Repo: "/r", Title: "claude"},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("got %+v", got)
@@ -119,7 +144,7 @@ func TestParseCCMux(t *testing.T) {
 			t.Errorf("session %d = %+v, want %+v", i, got[i], want[i])
 		}
 	}
-	if _, err := parseCCMux(context.Background(), []byte("not json")); err == nil {
+	if _, err := parseCCMux(context.Background(), []byte("not json"), nil); err == nil {
 		t.Fatal("want a parse error")
 	}
 }
@@ -130,5 +155,59 @@ func TestTitleIsOneShortLine(t *testing.T) {
 	}
 	if got := title(" a\tb\n\nc \x1b[31m"); got != "a b c [31m" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestHookRecordsSessionState(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "agents")
+	hook := func(event, id string) {
+		t.Helper()
+		if err := WriteHook(strings.NewReader(`{"hook_event_name":"`+event+`","session_id":"`+id+`"}`), dir); err != nil {
+			t.Fatal(err)
+		}
+	}
+	state := func(id string) State {
+		got := map[string]live{}
+		readHookFiles(dir, got)
+		return got[id].State
+	}
+	hook("UserPromptSubmit", "s1")
+	if got := state("s1"); got != Working {
+		t.Fatalf("after prompt = %q", got)
+	}
+	hook("PermissionRequest", "s1")
+	if got := state("s1"); got != Waiting {
+		t.Fatalf("after permission request = %q", got)
+	}
+	hook("PostCompact", "s1") // untracked: no change
+	hook("Stop", "s1")
+	if got := state("s1"); got != Idle {
+		t.Fatalf("after stop = %q", got)
+	}
+	hook("SessionEnd", "s1")
+	hook("SessionEnd", "s1") // already gone: no error
+	if got := state("s1"); got != "" {
+		t.Fatalf("after session end = %q", got)
+	}
+	hook("UserPromptSubmit", "../escape")
+	if entries, _ := os.ReadDir(filepath.Dir(dir)); len(entries) != 1 {
+		t.Fatalf("unsafe session id wrote outside dir: %v", entries)
+	}
+}
+
+func TestReadClaudeSessions(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("1.json", `{"sessionId":"a","status":"busy","statusUpdatedAt":1790000000000}`)
+	write("2.json", `{"sessionId":"b","status":"something-new"}`)
+	write("3.json", `not json`)
+	got := map[string]live{}
+	readClaudeSessions(dir, got)
+	if len(got) != 1 || got["a"].State != Working || !got["a"].At.Equal(time.UnixMilli(1790000000000)) {
+		t.Fatalf("got %+v", got)
 	}
 }

@@ -42,6 +42,7 @@ const usage = `usage:
                                                    print tickets (tsv: gid, section, due, title, url)
   asanamate show [--format md|json] <gid>          print one ticket
   asanamate setup                                  create the config file
+  asanamate setup hooks                            add the agent status hook to Codex
   asanamate config                                 edit the config file in $VISUAL or $EDITOR
   asanamate config update [--yes]                  refresh the config's comments and new defaults,
                                                    keeping your values (old file saved as .bak)
@@ -51,6 +52,8 @@ const usage = `usage:
                                                    set a custom field ("" clears it)
   asanamate doctor [<gid>]                         show agents and why they link (or not) to a ticket
   asanamate time-provider hrvst --task-id <id>     serve time tracking provider requests on stdin
+  asanamate hook codex                             record a Codex hook event read on stdin
+                                                   (installed by setup)
   asanamate version
 `
 
@@ -64,7 +67,7 @@ func run(args []string) int {
 	var err error
 	switch name {
 	case "setup":
-		err = runSetup()
+		err = runSetup(args[1:])
 	case "config":
 		err = runConfig(args[1:])
 	case "comment", "move", "field":
@@ -81,6 +84,9 @@ func run(args []string) int {
 		err = runShow(args[1:])
 	case "doctor":
 		err = runDoctor(args[1:])
+	case "hook":
+		runHook(args[1:])
+		return 0
 	case "time-provider":
 		if len(args) < 2 || args[1] != "hrvst" {
 			err = fmt.Errorf("usage: asanamate time-provider hrvst --task-id <id>")
@@ -107,6 +113,17 @@ func run(args []string) int {
 		return 1
 	}
 	return 0
+}
+
+// runHook records an agent hook event. It never fails: an agent runs it on
+// every event, and a hook error must not get in the agent's way.
+func runHook(args []string) {
+	if len(args) != 1 || args[0] != "codex" {
+		return
+	}
+	if stateDir, err := config.StateDir(); err == nil {
+		_ = agents.WriteHook(os.Stdin, agents.HookDir(stateDir))
+	}
 }
 
 func currentVersion() string {
@@ -188,7 +205,19 @@ func writeCommand(name string, args []string) error {
 	}
 }
 
-func runSetup() error {
+func runSetup(args []string) error {
+	codexHome, err := setup.CodexHome()
+	if err != nil {
+		return err
+	}
+	if len(args) > 0 {
+		if len(args) != 1 || args[0] != "hooks" {
+			return fmt.Errorf("usage: asanamate setup [hooks]")
+		}
+		return setup.OfferCodexHook(setup.Options{
+			In: bufio.NewReader(os.Stdin), Out: os.Stdout, CodexHome: codexHome, Executable: hookExecutable(),
+		})
+	}
 	client, err := newClient()
 	if err != nil {
 		return err
@@ -204,7 +233,20 @@ func runSetup() error {
 	return setup.Run(context.Background(), setup.Options{
 		In: bufio.NewReader(os.Stdin), Out: os.Stdout, Client: client,
 		ConfigPath: configPath, StatePath: filepath.Join(stateDir, state.FileName),
+		CodexHome: codexHome, Executable: hookExecutable(),
 	})
+}
+
+// hookExecutable is the asanamate path agent hooks run: the one on PATH,
+// which survives upgrades, else this binary.
+func hookExecutable() string {
+	if path, err := exec.LookPath("asanamate"); err == nil {
+		if abs, err := filepath.Abs(path); err == nil {
+			return abs
+		}
+	}
+	path, _ := os.Executable()
+	return path
 }
 
 // runConfig opens the config file in the user's editor, then checks that it
@@ -410,7 +452,7 @@ func runDoctor(args []string) error {
 		} else {
 			fmt.Fprintf(w, "agents        command %q\n", cfg.Agents.Command)
 		}
-		if list, err = agents.Fetch(ctx, cfg.Agents.Preset, cfg.Agents.Command, cfg.Agents.States); err != nil {
+		if list, err = agents.Fetch(ctx, cfg.Agents.Preset, cfg.Agents.Command, cfg.Agents.States, stateDir); err != nil {
 			return err
 		}
 		fmt.Fprintf(w, "\n%d running:\n", len(list))

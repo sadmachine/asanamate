@@ -26,7 +26,9 @@ Prebuilt binaries are attached to each [GitHub release](https://github.com/sadma
 2. Run `asanamate setup`. It checks the token, asks for your workspace and the
    directory that holds your git repositories, and writes
    `~/.config/asanamate/config.toml` with every default explained, plus a
-   pager action and a Claude example in `~/.config/asanamate/actions/`.
+   pager action and a Claude example in `~/.config/asanamate/actions/`. When
+   Codex is installed, it also offers to add asanamate's agent status hook (see
+   [Agent status](#agent-status)).
 3. Run `asanamate`.
 
 `asanamate config` opens the config file in `$VISUAL` or `$EDITOR` (falling
@@ -397,6 +399,27 @@ The sources run every 5 seconds. With the ccmux preset, a session that finished
 a turn you have not looked at yet counts as `completed`, and an agent's title is
 ccmux's session summary, else its first prompt (one line, cut to 60
 characters), else its pane title.
+
+### Agent status
+
+ccmux can report a busy session as `idle`, Codex sessions most of all. With the
+ccmux preset, an `idle` session therefore takes the state its agent last
+reported itself, when that report is newer than ccmux's:
+
+- **Claude Code** keeps a file per running session in
+  `$CLAUDE_CONFIG_DIR/sessions/` (else `~/.claude/sessions/`). asanamate reads
+  it as is; nothing to install.
+- **Codex** reports through a hook. `asanamate setup` offers to add
+  `asanamate hook codex` to `$CODEX_HOME/hooks.json` (else
+  `~/.codex/hooks.json`), saving the old file as `hooks.json.bak`; run
+  `asanamate setup hooks` to add it later. Codex asks you to trust the new
+  hooks on its next start, and needs hooks on (`[features] hooks = true`). The
+  hook writes one file per session in `$XDG_STATE_HOME/asanamate/agents/`
+  (else `~/.local/state/asanamate/agents/`).
+  Without it, Codex states fall back to the Codex pane title, and are
+  inaccurate or wrong when the title format changes.
+
+Any status other than `idle` from ccmux is kept as is.
 
 **Linking.** A ticket matches every agent whose working directory has
 `$ASANAMATE_BRANCH` checked out, in the ticket's own repo when set, else a

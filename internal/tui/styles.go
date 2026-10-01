@@ -8,6 +8,8 @@ var (
 	okStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
 	warnStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 	errorStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
+	// Bright cyan sets working agents apart from completed ones.
+	workingStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("14"))
 )
 
 var (

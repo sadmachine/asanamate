@@ -115,6 +115,7 @@ func keyBindings() []binding {
 		{keys: []string{"p"}, desc: "projects", hint: "proj", group: "Move", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			return m.requestProjects(func() tea.Cmd { m.openProjectPicker(); return nil })
 		}},
+		{keys: []string{"H"}, desc: "ticket history", group: "Move", splitOnly: true, run: do((*Model).openHistory)},
 		{keys: []string{"enter", "a"}, desc: "run action", hint: "act", group: "Ticket", run: menu(func(m *Model) func() { return m.openActionMenu })},
 		{keys: []string{"e"}, desc: "edit", hint: "edit", group: "Ticket", run: menu(func(m *Model) func() { return m.openEditMenu })},
 		{keys: []string{"t"}, desc: "log time", hint: "time", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestMenu(m.openTime) }},
@@ -198,12 +199,14 @@ func (m *Model) focusViews() {
 	}
 }
 
-// focusReaderPane gives the reader focus, on its first editable row.
+// focusReaderPane gives the reader focus, on its first editable row, and
+// counts the selected ticket as viewed.
 func (m *Model) focusReaderPane() {
 	m.focusNav = false
 	if !m.focusReader {
 		m.focusReader = true
 		m.stepField(1)
+		m.recordViewed()
 	}
 }
 

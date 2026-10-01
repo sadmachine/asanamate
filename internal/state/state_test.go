@@ -60,6 +60,23 @@ func TestTouchProjectOrdersAndCaps(t *testing.T) {
 	}
 }
 
+func TestTouchTicketOrdersAndCaps(t *testing.T) {
+	s, _ := Load(filepath.Join(t.TempDir(), FileName))
+	for _, gid := range []string{"a", "b", "c"} {
+		s.TouchTicket(RecentTicket{GID: gid, Name: gid})
+	}
+	s.TouchTicket(RecentTicket{GID: "b", Name: "renamed"})
+	if got := s.RecentTickets; len(got) != 3 || got[0] != (RecentTicket{GID: "b", Name: "renamed"}) || got[1].GID != "c" || got[2].GID != "a" {
+		t.Fatalf("history = %v", got)
+	}
+	for i := 0; i < maxRecentTickets+5; i++ {
+		s.TouchTicket(RecentTicket{GID: fmt.Sprint(i)})
+	}
+	if len(s.RecentTickets) != maxRecentTickets || s.RecentTickets[0].GID != fmt.Sprint(maxRecentTickets+4) {
+		t.Fatalf("history = %v", s.RecentTickets)
+	}
+}
+
 func TestUnlinkRepo(t *testing.T) {
 	s, _ := Load(filepath.Join(t.TempDir(), FileName))
 	s.LinkRepo("1", "/code/web")

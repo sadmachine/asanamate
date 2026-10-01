@@ -140,6 +140,7 @@ type Model struct {
 	loadingProjects bool              // projects are loading
 	menuFor         string            // gid whose menu opens once its details arrive
 	menuOpen        func() tea.Cmd    // opens that menu
+	openGID         string            // history ticket to show once its details arrive
 	status          string
 	exitCmd         *exec.Cmd
 }
@@ -234,8 +235,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t, ok := m.selected()
 		isSelected := ok && t.GID == msg.gid
 		if msg.err != nil {
-			if isSelected {
+			if isSelected || m.openGID == msg.gid {
 				m.status = "loading ticket: " + msg.err.Error()
+			}
+			if m.openGID == msg.gid {
+				m.openGID = ""
 			}
 			if m.menuFor == msg.gid {
 				m.menuFor = ""
@@ -247,6 +251,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.applyFilter()
 		}
 		images := m.loadInlineImages(msg.ticket)
+		if m.openGID == msg.gid {
+			m.openGID, m.status = "", ""
+			return m, tea.Batch(images, m.showTicket(msg.ticket.Task))
+		}
 		if isSelected {
 			m.renderDetail(false)
 			if m.menuFor == msg.gid {

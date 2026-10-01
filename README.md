@@ -70,6 +70,7 @@ key press.
 | `0` / `1` / `2` | focus the views panel (wide screens) / the list / the reader |
 | `/` | edit the filter (available fields appear while editing; `?` opens the filter guide; Enter or Esc to finish) |
 | `p` | switch project (recent first) |
+| `H` | ticket history: the last 10 tickets focused in the reader, most recent first; picking one selects it (pinning it to the list when the view doesn't show it) and focuses the reader |
 | `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project), or give the selected ticket its own repo that overrides its projects' links without changing them |
 | `enter`, `a` | run an action on the selected ticket |
 | `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), assign it, or set its branch (saved locally, overrides `branch_field`; empty removes it) |
@@ -531,7 +532,7 @@ set -g allow-passthrough on
 
 - Config: `~/.config/asanamate/config.toml`
 - Actions: `~/.config/asanamate/actions/*.toml`
-- State (repo links, saved branches, recent projects): `~/.local/state/asanamate/state.toml`
+- State (repo links, saved branches, recent projects, ticket history): `~/.local/state/asanamate/state.toml`
 - Ticket exports: `~/.local/state/asanamate/tickets/<gid>/`
 - Background action log: `~/.local/state/asanamate/actions.log`
 

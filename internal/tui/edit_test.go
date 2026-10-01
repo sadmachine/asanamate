@@ -335,6 +335,11 @@ func TestReaderFieldEdits(t *testing.T) {
 			m.input.area.SetValue("hello")
 			send(m, ctrlS)
 		}, `POST /tasks/1/stories {"data":{"text":"hello"}}`},
+		{"comment key", func(m *Model) {
+			press(m, "2", "C")
+			m.input.area.SetValue("hello")
+			send(m, ctrlS)
+		}, `POST /tasks/1/stories {"data":{"text":"hello"}}`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -38,6 +38,13 @@ const maxColW = 24
 // minPaneW is the narrowest a fitted list or its reader gets.
 const minPaneW = 30
 
+// The reader aims for readerIdealW columns in the default split. A fitted
+// list grows into the reader down to readerMinW, then truncates its titles.
+const (
+	readerIdealW = 120
+	readerMinW   = 80
+)
+
 // panelFrame is the cells a panel's border takes across and down.
 const panelFrame = 2
 
@@ -797,10 +804,11 @@ func (m *Model) paneWidths() (listW, readerW int, split bool) {
 		return m.width, m.width, false
 	}
 	room := m.width - m.navWidth()
-	outer := room * 2 / 5
+	outer := min(room*2/5, room-readerIdealW-panelFrame)
 	if m.listW > 0 {
-		outer = min(max(m.listW, minPaneW), room-minPaneW)
+		outer = min(m.listW, room-readerMinW-panelFrame)
 	}
+	outer = min(max(outer, minPaneW), room-minPaneW)
 	return outer - panelFrame, room - outer - panelFrame, true
 }
 
@@ -1191,8 +1199,8 @@ func (m *Model) measureColumns() {
 	}
 }
 
-// fitList sizes the list pane to its widest row or group header, leaving the
-// reader at least minPaneW columns.
+// fitList sizes the list pane to its widest row or group header. paneWidths
+// caps it to leave the reader readerMinW columns.
 func (m *Model) fitList() {
 	gutter := ansi.StringWidth(m.marker())
 	w := 0

@@ -230,3 +230,20 @@ func TestImageCellSizeChanges(t *testing.T) {
 		t.Fatal("unchanged or invalid cell reports must keep loaded images")
 	}
 }
+
+func TestEditedTicketStaysSelectedAfterReloadDropsIt(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask, sideTask}})
+	m.moveTo(1)
+	m.selectionChanged()
+	m.Update(editDoneMsg{gid: sideTask.GID, what: "assign"})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	if got, _ := m.selected(); got.GID != sideTask.GID {
+		t.Fatalf("selected = %q, want the edited ticket", got.GID)
+	}
+	m.moveTo(0)
+	m.selectionChanged()
+	if got, _ := m.selected(); got.GID != openTask.GID || len(m.visible) != 1 {
+		t.Fatalf("selected = %q, visible = %+v; want the pin dropped", got.GID, m.visible)
+	}
+}

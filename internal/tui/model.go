@@ -101,6 +101,7 @@ type Model struct {
 	imageSeq    int                     // inline images requested, for their ids
 	imageCell   kitty.CellSize          // cell size reported by the outer terminal
 	shownGID    string
+	pinned      *asana.Task    // edited ticket kept listed after a reload drops it, until the selection moves
 	shownAgents string         // agents section rendered for shownGID
 	fieldKey    string         // selected cards view target; "" for none
 	showEmpty   bool           // the cards view lists empty custom fields; resets per ticket
@@ -204,6 +205,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		prev, _ := m.selected()
 		m.tasks, m.linked = msg.tasks, nil
+		m.refreshPinned(msg.tasks...)
 		m.applyFilter()
 		// A reload that drops the selected ticket starts from the top.
 		if t, _ := m.selected(); t.GID != prev.GID {
@@ -230,6 +232,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.details[msg.gid], m.linked = msg.ticket, nil
+		if m.refreshPinned(msg.ticket.Task) {
+			m.applyFilter()
+		}
 		images := m.loadInlineImages(msg.ticket)
 		if isSelected {
 			m.renderDetail(false)
@@ -318,6 +323,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.status = msg.what + ": done"
+		// Keep the edited ticket shown even if the reload drops it from the view.
+		if t, ok := m.selected(); ok && t.GID == msg.gid {
+			m.pinned = &t
+		}
 		delete(m.details, msg.gid)
 		if m.shownGID == msg.gid {
 			m.shownGID = ""
@@ -472,6 +481,9 @@ func (m *Model) applyFilter() {
 		prevGID = prev.GID
 	}
 	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates)
+	if p := m.pinned; p != nil && !slices.ContainsFunc(visible, func(t asana.Task) bool { return t.GID == p.GID }) {
+		visible = append(visible, *p)
+	}
 	m.visible, m.groups = groupTasks(visible, m.groupBy, m.rowContext(), m.now())
 	m.measureColumns()
 	if prevGID != "" {
@@ -483,6 +495,21 @@ func (m *Model) applyFilter() {
 		}
 	}
 	m.moveTo(m.cursor)
+}
+
+// refreshPinned replaces the pinned ticket with its copy among tasks, if any,
+// and reports whether it did.
+func (m *Model) refreshPinned(tasks ...asana.Task) bool {
+	if m.pinned == nil {
+		return false
+	}
+	for _, t := range tasks {
+		if t.GID == m.pinned.GID {
+			m.pinned = &t
+			return true
+		}
+	}
+	return false
 }
 
 // animating reports whether anything shown uses the spinner.
@@ -528,6 +555,12 @@ func (m *Model) selectedDetail() (ticket.Ticket, bool) {
 
 func (m *Model) selectionChanged() tea.Cmd {
 	t, ok := m.selected()
+	if m.pinned != nil && (!ok || t.GID != m.pinned.GID) {
+		// Moving off the pinned ticket drops it unless the view still lists it.
+		m.pinned = nil
+		m.applyFilter()
+		t, ok = m.selected()
+	}
 	if !ok {
 		m.shownGID = ""
 		m.reader.SetContent("")
@@ -727,7 +760,7 @@ func (m *Model) openProjectPicker() {
 
 func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {
 	m.modal = nil
-	m.viewProject, m.linked = ref, nil
+	m.viewProject, m.linked, m.pinned = ref, nil, nil
 	m.restoreView()
 	if ref != nil {
 		m.deps.State.TouchProject(ref.GID)

@@ -304,7 +304,7 @@ func TestInitialsColumnIsABadge(t *testing.T) {
 	if !strings.HasSuffix(got[0], " AN") || !strings.HasSuffix(got[1], " BR") || strings.TrimSpace(got[2]) != "□  Nobody's" {
 		t.Fatalf("rows = %q", got)
 	}
-	if _, tail := m.listRow(1); !strings.Contains(tail, authorStyle("Bob Ray").Reverse(true).Bold(true).Render(" BR ")) {
+	if _, tail := m.listRow(1, m.cols); !strings.Contains(tail, authorStyle("Bob Ray").Reverse(true).Bold(true).Render(" BR ")) {
 		t.Fatalf("tail = %q", tail)
 	}
 }

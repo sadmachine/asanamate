@@ -38,6 +38,16 @@ const maxColW = 24
 // minPaneW is the narrowest a fitted list or its reader gets.
 const minPaneW = 30
 
+// minTitleW is the title room a list row keeps before its field columns hide.
+const minTitleW = 30
+
+// The reader aims for readerIdealW columns in the default split. A fitted
+// list grows into the reader down to readerMinW, then truncates its titles.
+const (
+	readerIdealW = 120
+	readerMinW   = 80
+)
+
 // panelFrame is the cells a panel's border takes across and down.
 const panelFrame = 2
 
@@ -78,6 +88,7 @@ type Model struct {
 	cursor          int
 	cols            []int            // width of each list field column; 0 when empty
 	badgeW          int              // width of the widest agent badge
+	titleW          int              // width of the widest ticket title
 	now             func() time.Time // today, for due dates
 	loading         bool             // tasks are loading; the stale view stays frozen under a modal
 	background      bool             // the timer started the loading reload, so it shows no modal
@@ -797,10 +808,11 @@ func (m *Model) paneWidths() (listW, readerW int, split bool) {
 		return m.width, m.width, false
 	}
 	room := m.width - m.navWidth()
-	outer := room * 2 / 5
+	outer := min(room*2/5, room-readerIdealW-panelFrame)
 	if m.listW > 0 {
-		outer = min(max(m.listW, minPaneW), room-minPaneW)
+		outer = min(m.listW, room-readerMinW-panelFrame)
 	}
+	outer = min(max(outer, minPaneW), room-minPaneW)
 	return outer - panelFrame, room - outer - panelFrame, true
 }
 
@@ -1049,6 +1061,7 @@ func (m *Model) listView(width, height int) string {
 		cursor = cursorStyle.Render(cursor)
 	}
 	rowW := max(width-ansi.StringWidth(gutter)-listGutter, 1)
+	cols := m.rowCols(rowW)
 	var lines []string
 	for i := start; i < end; i++ {
 		switch {
@@ -1063,7 +1076,7 @@ func (m *Model) listView(width, height int) string {
 		case sepH > 0:
 			lines = append(lines, sep)
 		}
-		row, rowTail := m.listRow(i)
+		row, rowTail := m.listRow(i, cols)
 		for j, line := range row {
 			tail := ""
 			if j == 0 {
@@ -1115,9 +1128,9 @@ func (m *Model) marker() string {
 }
 
 // listRow returns the lines of visible ticket i's row and the tail
-// right-aligned on its first line: the single layout's field columns and
-// agent badge, or the multi layout's badge.
-func (m *Model) listRow(i int) (row []string, tail string) {
+// right-aligned on its first line: the single layout's field columns sized by
+// cols and agent badge, or the multi layout's badge.
+func (m *Model) listRow(i int, cols []int) (row []string, tail string) {
 	t := m.visible[i]
 	mark := m.sym.open
 	if t.Completed {
@@ -1163,12 +1176,12 @@ func (m *Model) listRow(i int) (row []string, tail string) {
 	}
 	var cells []string
 	for j, name := range m.deps.Config.List.Fields {
-		if m.cols[j] == 0 {
+		if cols[j] == 0 {
 			continue
 		}
 		v, style := cellValue(t, name, rc, today)
-		v = ansi.Truncate(v, m.cols[j], "…")
-		cells = append(cells, pad(style.Render(v), m.cols[j]))
+		v = ansi.Truncate(v, cols[j], "…")
+		cells = append(cells, pad(style.Render(v), cols[j]))
 	}
 	if m.badgeW > 0 {
 		cells = append(cells, badge+pad("", m.badgeW-ansi.StringWidth(badge)))
@@ -1176,13 +1189,51 @@ func (m *Model) listRow(i int) (row []string, tail string) {
 	return []string{title}, strings.Join(cells, pad("", 2))
 }
 
+// rowCols returns the field column widths for rows width wide, hiding columns
+// until titles get minTitleW, or the widest title if shorter: other fields
+// from the right, then due. The agent badge always stays.
+func (m *Model) rowCols(width int) []int {
+	cols := slices.Clone(m.cols)
+	names := m.deps.Config.List.Fields
+	// The title line also holds the check mark and the two spaces after it.
+	room := min(m.titleW, minTitleW) + ansi.StringWidth(m.sym.open) + 2
+	var order, due []int
+	for j := len(cols) - 1; j >= 0; j-- {
+		if isDue(strings.TrimSpace(names[j])) {
+			due = append(due, j)
+		} else {
+			order = append(order, j)
+		}
+	}
+	for _, j := range append(order, due...) {
+		if width-tailWidth(cols, m.badgeW)-1 >= room {
+			break
+		}
+		cols[j] = 0
+	}
+	return cols
+}
+
+// tailWidth is the width of a row tail with these field columns and badge.
+func tailWidth(cols []int, badgeW int) int {
+	w, n := badgeW, min(badgeW, 1)
+	for _, c := range cols {
+		if c > 0 {
+			w, n = w+c, n+1
+		}
+	}
+	return w + 2*max(n-1, 0)
+}
+
 // measureColumns sizes each list field column to its widest visible value,
-// up to maxColW, and the badge column to the widest agent badge.
+// up to maxColW, the badge column to the widest agent badge, and titleW to
+// the widest title.
 func (m *Model) measureColumns() {
 	names := m.deps.Config.List.Fields
-	m.cols, m.badgeW = make([]int, len(names)), 0
+	m.cols, m.badgeW, m.titleW = make([]int, len(names)), 0, 0
 	rc, today := m.rowContext(), m.now()
 	for _, t := range m.visible {
+		m.titleW = max(m.titleW, ansi.StringWidth(ticket.OneLine(t.Name)))
 		for j, name := range names {
 			v, _ := cellValue(t, name, rc, today)
 			m.cols[j] = min(max(m.cols[j], ansi.StringWidth(v)), maxColW)
@@ -1191,8 +1242,8 @@ func (m *Model) measureColumns() {
 	}
 }
 
-// fitList sizes the list pane to its widest row or group header, leaving the
-// reader at least minPaneW columns.
+// fitList sizes the list pane to its widest row or group header. paneWidths
+// caps it to leave the reader readerMinW columns.
 func (m *Model) fitList() {
 	gutter := ansi.StringWidth(m.marker())
 	w := 0
@@ -1200,7 +1251,7 @@ func (m *Model) fitList() {
 		w = max(w, groupHeaderWidth(label, n))
 	}
 	for i := range m.visible {
-		row, tail := m.listRow(i)
+		row, tail := m.listRow(i, m.cols)
 		for j, line := range row {
 			lineW := gutter + ansi.StringWidth(line)
 			if j == 0 && tail != "" {

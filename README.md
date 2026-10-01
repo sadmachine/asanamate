@@ -42,7 +42,9 @@ Actions live in their own files, so updates never touch them.
 ## Layout
 
 At 100 columns and wider, the ticket list and the reader sit side by side in
-bordered panels; the focused one has an accent-colored border. At 160 columns
+bordered panels; the focused one has an accent-colored border. The list widens
+to fit full ticket titles, but leaves the reader at least 80 columns and cuts
+titles that no longer fit. At 160 columns
 and wider, a views panel on the left lists My Tasks, recent projects, the
 groupings, and running agents: press `0`, move with `j`/`k`, and open one
 with `enter`. In a reader at least 90 columns wide, the cards view puts the

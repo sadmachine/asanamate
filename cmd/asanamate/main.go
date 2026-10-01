@@ -51,6 +51,8 @@ const usage = `usage:
                                                    set a custom field ("" clears it)
   asanamate doctor [<gid>]                         show agents and why they link (or not) to a ticket
   asanamate time-provider hrvst --task-id <id>     serve time tracking provider requests on stdin
+  asanamate hook codex                             record a Codex hook event read on stdin
+                                                   (installed by setup)
   asanamate version
 `
 
@@ -81,6 +83,9 @@ func run(args []string) int {
 		err = runShow(args[1:])
 	case "doctor":
 		err = runDoctor(args[1:])
+	case "hook":
+		runHook(args[1:])
+		return 0
 	case "time-provider":
 		if len(args) < 2 || args[1] != "hrvst" {
 			err = fmt.Errorf("usage: asanamate time-provider hrvst --task-id <id>")
@@ -107,6 +112,17 @@ func run(args []string) int {
 		return 1
 	}
 	return 0
+}
+
+// runHook records an agent hook event. It never fails: an agent runs it on
+// every event, and a hook error must not get in the agent's way.
+func runHook(args []string) {
+	if len(args) != 1 || args[0] != "codex" {
+		return
+	}
+	if stateDir, err := config.StateDir(); err == nil {
+		_ = agents.WriteHook(os.Stdin, agents.HookDir(stateDir))
+	}
 }
 
 func currentVersion() string {
@@ -410,7 +426,7 @@ func runDoctor(args []string) error {
 		} else {
 			fmt.Fprintf(w, "agents        command %q\n", cfg.Agents.Command)
 		}
-		if list, err = agents.Fetch(ctx, cfg.Agents.Preset, cfg.Agents.Command, cfg.Agents.States); err != nil {
+		if list, err = agents.Fetch(ctx, cfg.Agents.Preset, cfg.Agents.Command, cfg.Agents.States, stateDir); err != nil {
 			return err
 		}
 		fmt.Fprintf(w, "\n%d running:\n", len(list))

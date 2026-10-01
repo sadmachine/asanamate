@@ -28,6 +28,10 @@ type Options struct {
 	Client     *asana.Client
 	ConfigPath string
 	StatePath  string
+	// CodexHome and Executable let setup offer the Codex status hook; leave
+	// either unset to skip it.
+	CodexHome  string
+	Executable string
 }
 
 // Run asks for the workspace and repo directory, then writes the config file.
@@ -65,7 +69,7 @@ func Run(ctx context.Context, o Options) error {
 		return err
 	}
 	fmt.Fprintf(o.Out, summary, o.ConfigPath, root, actions, o.StatePath)
-	return nil
+	return OfferCodexHook(o)
 }
 
 func chooseWorkspace(o Options, workspaces []asana.Ref) (asana.Ref, error) {

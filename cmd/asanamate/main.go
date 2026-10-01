@@ -42,6 +42,7 @@ const usage = `usage:
                                                    print tickets (tsv: gid, section, due, title, url)
   asanamate show [--format md|json] <gid>          print one ticket
   asanamate setup                                  create the config file
+  asanamate setup hooks                            add the agent status hook to Codex
   asanamate config                                 edit the config file in $VISUAL or $EDITOR
   asanamate config update [--yes]                  refresh the config's comments and new defaults,
                                                    keeping your values (old file saved as .bak)
@@ -66,7 +67,7 @@ func run(args []string) int {
 	var err error
 	switch name {
 	case "setup":
-		err = runSetup()
+		err = runSetup(args[1:])
 	case "config":
 		err = runConfig(args[1:])
 	case "comment", "move", "field":
@@ -204,7 +205,19 @@ func writeCommand(name string, args []string) error {
 	}
 }
 
-func runSetup() error {
+func runSetup(args []string) error {
+	codexHome, err := setup.CodexHome()
+	if err != nil {
+		return err
+	}
+	if len(args) > 0 {
+		if len(args) != 1 || args[0] != "hooks" {
+			return fmt.Errorf("usage: asanamate setup [hooks]")
+		}
+		return setup.OfferCodexHook(setup.Options{
+			In: bufio.NewReader(os.Stdin), Out: os.Stdout, CodexHome: codexHome, Executable: hookExecutable(),
+		})
+	}
 	client, err := newClient()
 	if err != nil {
 		return err
@@ -220,7 +233,20 @@ func runSetup() error {
 	return setup.Run(context.Background(), setup.Options{
 		In: bufio.NewReader(os.Stdin), Out: os.Stdout, Client: client,
 		ConfigPath: configPath, StatePath: filepath.Join(stateDir, state.FileName),
+		CodexHome: codexHome, Executable: hookExecutable(),
 	})
+}
+
+// hookExecutable is the asanamate path agent hooks run: the one on PATH,
+// which survives upgrades, else this binary.
+func hookExecutable() string {
+	if path, err := exec.LookPath("asanamate"); err == nil {
+		if abs, err := filepath.Abs(path); err == nil {
+			return abs
+		}
+	}
+	path, _ := os.Executable()
+	return path
 }
 
 // runConfig opens the config file in the user's editor, then checks that it

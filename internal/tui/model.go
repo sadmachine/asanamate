@@ -361,7 +361,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, openURL(msg.url)
 		}
 		m.status = ""
-		viewer := kitty.NewViewer(msg.payload, m.viewIndex, len(m.viewImages), m.deps.InTmux)
+		viewer := kitty.NewViewer(msg.payload, m.viewerFooter(), len(m.viewImages) > 1, m.deps.InTmux)
 		return m, tea.Exec(viewer, func(err error) tea.Msg { return viewerDoneMsg{step: viewer.Step, err: err} })
 	case viewerDoneMsg:
 		if msg.err != nil || msg.step == 0 {

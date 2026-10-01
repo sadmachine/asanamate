@@ -318,6 +318,14 @@ func TestImageViewerStepsThroughImages(t *testing.T) {
 	if len(m.viewImages) != 2 || m.viewIndex != 1 {
 		t.Fatalf("images = %+v, index = %d; want the two images, at two.jpg", m.viewImages, m.viewIndex)
 	}
+	m.width = 60
+	footer := strings.Split(ansi.Strip(m.viewerFooter()), "\n")
+	if len(footer) != 2 || strings.TrimSpace(footer[0]) != "two.jpg" || !strings.Contains(footer[1], "‹ k previous    2 / 2    next j ›") {
+		t.Fatalf("footer = %q", footer)
+	}
+	if left := len(footer[1]) - len(strings.TrimLeft(footer[1], " ")); left == 0 || left > 30 {
+		t.Fatalf("footer keys are not centered: %q", footer[1])
+	}
 	m.Update(viewerDoneMsg{step: 1})
 	if m.viewIndex != 0 {
 		t.Fatalf("j on the last image: index = %d, want a wrap to 0", m.viewIndex)

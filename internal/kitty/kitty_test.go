@@ -125,7 +125,7 @@ func TestDownload(t *testing.T) {
 }
 
 func TestViewerWritesPayloadAndClears(t *testing.T) {
-	v := NewViewer("PAYLOAD", 1, 3, false)
+	v := NewViewer("PAYLOAD", "NAME\nKEYS", true, false)
 	var out bytes.Buffer
 	v.SetStdin(strings.NewReader("k"))
 	v.SetStdout(&out)
@@ -135,7 +135,7 @@ func TestViewerWritesPayloadAndClears(t *testing.T) {
 	if !strings.Contains(out.String(), "PAYLOAD") || !strings.HasSuffix(out.String(), Clear(false)) {
 		t.Fatalf("out = %q", out.String())
 	}
-	if !strings.Contains(out.String(), "Image 2/3 · j next · k previous") || v.Step != -1 {
+	if !strings.Contains(out.String(), "\x1b[999;1H\x1b[1A\rNAME\r\nKEYS") || v.Step != -1 {
 		t.Fatalf("step = %d, out = %q", v.Step, out.String())
 	}
 }

@@ -95,6 +95,8 @@ Space-separated terms, all of which must match:
 
 - words match the title
 - `section:`, `project:`, `assignee:`, `tag:` match names
+- `project:<name>[<section>]` matches a section within that project, such as
+  `project:web[backlog]` or `project:web["in progress"]`
 - `is:open`, `is:done`
 - `agent:any`, `agent:none`, `agent:<state>` match linked [agents](#agents-optional)
 - `-term` negates a term; `"double quotes"` group words

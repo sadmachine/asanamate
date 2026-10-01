@@ -152,7 +152,7 @@ theme = "dark"
 accent_color = "4"
 
 # Filter applied at startup. Terms: words, section:, project:, assignee:, tag:,
-# is:open, is:done. Prefix a term with "-" to negate it; quote multi-word values.
+# project:<name>[<section>], is:open, is:done. Prefix a term with "-" to negate it; quote multi-word values.
 default_filter = "is:open"
 
 # Ask before "asanamate comment/move/field" writes to Asana.

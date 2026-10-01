@@ -75,12 +75,13 @@ func (m *Model) filterHelpView() string {
 			"Spaces combine terms. " + key("-term") + " excludes.\n" +
 			key(`"two words"`) + " groups words.\n\n" +
 			dimStyle.Render(`is:open section:"in progress"`) + "\n" +
-			dimStyle.Render(`-tag:blocked`) + "\n" +
+			dimStyle.Render(`-tag:blocked project:web[backlog]`) + "\n" +
 			dimStyle.Render("any key closes")
 	}
 	return key("Filters") + "\n\n" +
 		key("words") + " search titles\n" +
 		key("section:  project:  assignee:  tag:") + " match names\n" +
+		key("project:<name>[<section>]") + " matches a section of that project\n" +
 		key("is:open  is:done") + " filter completion\n" +
 		key("agent:any  agent:none  agent:<state>") + " filter linked agents\n" +
 		dimStyle.Render("States: waiting, working, completed, idle, unknown") + "\n\n" +

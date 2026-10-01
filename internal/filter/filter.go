@@ -2,6 +2,7 @@
 //
 // A query is space-separated terms that must all match. Bare words match the
 // title. section:, project:, assignee:, and tag: match names by substring.
+// project:<name>[<section>] matches a section within that project only.
 // is:open and is:done match completion. agent:any, agent:none, and
 // agent:<state> match linked agents. A leading "-" negates a term, and double
 // quotes group words.
@@ -22,6 +23,7 @@ func Keys() []string { return slices.Clone(keys) }
 
 type term struct {
 	key, value string
+	section    string // project:<value>[<section>]; empty matches any section
 	negate     bool
 }
 
@@ -40,12 +42,25 @@ func Parse(query string) Filter {
 		}
 		if k, v, ok := strings.Cut(tok, ":"); ok && slices.Contains(keys, strings.ToLower(k)) {
 			t.key, t.value = strings.ToLower(k), strings.ToLower(v)
+			if t.key == "project" {
+				t.value, t.section = splitSection(t.value)
+			}
 		} else {
 			t.value = strings.ToLower(tok)
 		}
 		f.terms = append(f.terms, t)
 	}
 	return f
+}
+
+// splitSection splits "name[section]" into name and section. Values without a
+// trailing bracketed section are returned whole.
+func splitSection(v string) (name, section string) {
+	i := strings.LastIndex(v, "[")
+	if i < 0 || !strings.HasSuffix(v, "]") {
+		return v, ""
+	}
+	return v[:i], v[i+1 : len(v)-1]
 }
 
 func tokenize(query string) []string {
@@ -135,7 +150,8 @@ func (tm term) match(t asana.Task, agentStates []string) bool {
 		return false
 	case "project":
 		for _, m := range t.Memberships {
-			if contains(m.Project.Name, tm.value) {
+			if contains(m.Project.Name, tm.value) &&
+				(tm.section == "" || m.Section != nil && contains(m.Section.Name, tm.section)) {
 				return true
 			}
 		}

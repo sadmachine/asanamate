@@ -111,6 +111,8 @@ type Model struct {
 	images      map[string]*inlineImage // inline images by attachment gid
 	imageSeq    int                     // inline images requested, for their ids
 	imageCell   kitty.CellSize          // cell size reported by the outer terminal
+	viewImages  []asana.Attachment      // images the attachment viewer steps through
+	viewIndex   int                     // viewImages index of the image in the viewer
 	shownGID    string
 	pinned      *asana.Task    // edited ticket kept listed after a reload drops it, until the selection moves
 	shownAgents string         // agents section rendered for shownGID
@@ -359,8 +361,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, openURL(msg.url)
 		}
 		m.status = ""
-		viewer := kitty.NewViewer(msg.payload, m.deps.InTmux)
-		return m, tea.Exec(viewer, func(err error) tea.Msg { return actionDoneMsg{name: "image viewer", err: err} })
+		viewer := kitty.NewViewer(msg.payload, m.viewIndex, len(m.viewImages), m.deps.InTmux)
+		return m, tea.Exec(viewer, func(err error) tea.Msg { return viewerDoneMsg{step: viewer.Step, err: err} })
+	case viewerDoneMsg:
+		if msg.err != nil || msg.step == 0 {
+			m.status = actionStatus(actionDoneMsg{name: "image viewer", err: msg.err})
+			return m, nil
+		}
+		return m, m.viewImage((m.viewIndex + msg.step + len(m.viewImages)) % len(m.viewImages))
 	case statusMsg:
 		m.status = string(msg)
 	case tea.KeyPressMsg:

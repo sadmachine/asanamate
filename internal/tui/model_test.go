@@ -304,6 +304,33 @@ func TestImageCellSizeChanges(t *testing.T) {
 	}
 }
 
+func TestImageViewerStepsThroughImages(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	m.deps.Images = true
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	atts := []asana.Attachment{
+		{GID: "a", Name: "one.png", Host: "asana"},
+		{GID: "b", Name: "notes.pdf", Host: "asana"},
+		{GID: "c", Name: "two.jpg", Host: "asana"},
+	}
+	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask, Attachments: atts}})
+	m.pickedAttachment(atts[2])
+	if len(m.viewImages) != 2 || m.viewIndex != 1 {
+		t.Fatalf("images = %+v, index = %d; want the two images, at two.jpg", m.viewImages, m.viewIndex)
+	}
+	m.Update(viewerDoneMsg{step: 1})
+	if m.viewIndex != 0 {
+		t.Fatalf("j on the last image: index = %d, want a wrap to 0", m.viewIndex)
+	}
+	m.Update(viewerDoneMsg{step: -1})
+	if m.viewIndex != 1 {
+		t.Fatalf("k on the first image: index = %d, want a wrap to 1", m.viewIndex)
+	}
+	if _, cmd := m.Update(viewerDoneMsg{}); cmd != nil || m.viewIndex != 1 {
+		t.Fatal("a close key must not load another image")
+	}
+}
+
 func TestEditedTicketStaysSelectedAfterReloadDropsIt(t *testing.T) {
 	m, _ := testModel(t, config.Config{})
 	m.Update(tasksMsg{tasks: []asana.Task{openTask, sideTask}})

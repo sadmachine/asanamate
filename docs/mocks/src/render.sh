@@ -14,3 +14,4 @@ shot c-statusline 1100,470
 shot d-whichkey 1100,560
 shot e-list-row 1000,470
 shot f-empty-loading 1300,560
+shot h-image-viewer 1100,560

@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/agents"
@@ -527,5 +528,26 @@ func (m *Model) pickedAttachment(a asana.Attachment) tea.Cmd {
 func (m *Model) viewImage(i int) tea.Cmd {
 	m.viewIndex = i
 	m.status = "loading image…"
-	return loadImage(m.deps.Client, m.viewImages[i], max(m.width, 1), max(m.height-2, 1), m.imageCell, m.deps.InTmux)
+	// The image leaves room for a blank line and the two footer lines.
+	return loadImage(m.deps.Client, m.viewImages[i], max(m.width, 1), max(m.height-3, 1), m.imageCell, m.deps.InTmux)
+}
+
+// viewerFooter is the image viewer's bottom bar, centered like a browser
+// lightbox: the image's name, then its position and the viewer's keys.
+func (m *Model) viewerFooter() string {
+	key := func(k string) string { return m.accentStyle.Bold(true).Render(k) }
+	name := ticket.OneLine(ticket.Clean(m.viewImages[m.viewIndex].Name))
+	count := lipgloss.NewStyle().Bold(true).Reverse(true).Foreground(m.accentStyle.GetForeground()).
+		Render(fmt.Sprintf(" %d / %d ", m.viewIndex+1, len(m.viewImages)))
+	keys := count
+	if len(m.viewImages) > 1 {
+		keys = key("‹ k") + " " + dimStyle.Render("previous") + "   " + count + "   " + dimStyle.Render("next") + " " + key("j ›")
+	}
+	keys += "      " + key("esc") + " " + dimStyle.Render("close")
+	// Only left padding, so the bottom line never fills the last column.
+	center := func(s string) string {
+		s = ansi.Truncate(s, m.width-1, "…")
+		return strings.Repeat(" ", max(m.width-ansi.StringWidth(s), 0)/2) + s
+	}
+	return center(titleStyle.Render(name)) + "\n" + center(keys)
 }

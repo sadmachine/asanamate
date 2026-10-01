@@ -12,9 +12,15 @@ import (
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
-// Inline image ids ride in a 256-color foreground; ids below 16 would be
-// sent as basic colors, which placeholders do not accept.
-const firstImageID, lastImageID = 16, 255
+// Inline image ids carry their low byte in a 256-color foreground, where
+// values below 16 would be sent as basic colors that placeholders do not
+// accept, and their high byte in a diacritic. Other programs in the same
+// terminal, such as another asanamate in a tmux pane, share the id space.
+const (
+	firstImageLow, lastImageLow = 16, 255
+	imageLows                   = lastImageLow - firstImageLow + 1
+	imageIDs                    = imageLows * 256
+)
 
 // inlineImage is an inline image the terminal holds as id, cols x rows cells.
 // id is 0 while it loads or after it fails.
@@ -80,12 +86,13 @@ func (m *Model) loadInlineImages(t ticket.Ticket) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// nextImageID cycles through the inline image ids; after that many images
-// the oldest id is reused.
+// nextImageID cycles through the inline image ids from a random start, so
+// programs sharing the terminal rarely pick the same ids; after that many
+// images the oldest id is reused.
 func (m *Model) nextImageID() int {
-	id := firstImageID + m.imageSeq%(lastImageID-firstImageID+1)
+	n := m.imageSeq % imageIDs
 	m.imageSeq++
-	return id
+	return (n/imageLows)<<24 | (firstImageLow + n%imageLows)
 }
 
 func loadInlineImage(c *asana.Client, gid string, id, cols, rows int, cell kitty.CellSize, inTmux bool) tea.Cmd {

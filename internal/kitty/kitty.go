@@ -148,8 +148,9 @@ func fit(w, h, maxCols, maxRows int, cell CellSize) (cols, rows int) {
 
 // Inline transmits an image as id with a virtual placement no larger than
 // maxCols x maxRows cells, drawn wherever Placeholder text for id is shown.
-// id must be in 16..255, since the placeholder's 256-color foreground carries
-// it. It returns the escape sequences and the placement's size in cells.
+// id's low byte must be in 16..255, since the placeholder's 256-color
+// foreground carries it; a third diacritic carries its high byte. It returns
+// the escape sequences and the placement's size in cells.
 func Inline(data []byte, id, maxCols, maxRows int, cell CellSize, inTmux bool) (seq string, cols, rows int, err error) {
 	data, w, h, err := toPNG(data)
 	if err != nil {
@@ -157,7 +158,10 @@ func Inline(data []byte, id, maxCols, maxRows int, cell CellSize, inTmux bool) (
 	}
 	cols, rows = fit(w, h, maxCols, maxRows, cell)
 	control := fmt.Sprintf("a=T,f=100,q=2,U=1,i=%d,c=%d,r=%d", id, cols, rows)
-	return transmit(data, control, inTmux), cols, rows, nil
+	// Delete any earlier image with this id first: some terminals keep its old
+	// placements when it is retransmitted and size the new image to them.
+	del := wrap(fmt.Sprintf("\x1b_Ga=d,d=I,i=%d,q=2\x1b\\", id), inTmux)
+	return del + transmit(data, control, inTmux), cols, rows, nil
 }
 
 // maxDiacritic is the number of row and column diacritics placeholders can use.
@@ -171,13 +175,14 @@ func Placeholder(id, cols, rows int) string {
 		if r > 0 {
 			b.WriteByte('\n')
 		}
-		fmt.Fprintf(&b, "\x1b[38;5;%dm", id)
+		fmt.Fprintf(&b, "\x1b[38;5;%dm", id&0xff)
 		// Every cell names its row and column so a partial redraw still
 		// places it.
 		for c := range cols {
 			b.WriteRune(ansikitty.Placeholder)
 			b.WriteRune(ansikitty.Diacritic(r))
 			b.WriteRune(ansikitty.Diacritic(c))
+			b.WriteRune(ansikitty.Diacritic(id >> 24))
 		}
 		b.WriteString("\x1b[39m")
 	}

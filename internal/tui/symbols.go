@@ -123,8 +123,8 @@ func (s symbolSet) agent(state agents.State, frame int) string {
 	return s.states[state]
 }
 
-// badge renders agents (already in urgency order) in bold after the robot
-// (the space after it leaves room for wide icons), as one symbol each, or as
+// badge renders agents (already in urgency order) in bold after the robot,
+// which gets a two-cell slot plus a space, as one symbol each, or as
 // grouped counts when there are more than four, padded by one trailing cell.
 // Reversed badges swap each state's colors, to sit inside a selection
 // highlight.
@@ -132,8 +132,18 @@ func (s symbolSet) badge(list []agents.Agent, frame int, reversed bool) string {
 	if len(list) == 0 {
 		return ""
 	}
+	sep := " "
+	if reversed {
+		sep = selectedStyle.Render(sep)
+	}
 	style := func(st agents.State) lipgloss.Style { return stateStyles[st].Bold(true).Reverse(reversed) }
-	parts := []string{lipgloss.NewStyle().Bold(true).Reverse(reversed).Render(s.robot)}
+	// Pad narrow robots outside Render, which trims trailing spaces; terminals
+	// often draw Nerd Font glyphs wider than the one cell they count.
+	robot := lipgloss.NewStyle().Bold(true).Reverse(reversed).Render(s.robot)
+	if lipgloss.Width(s.robot) < 2 {
+		robot += sep
+	}
+	parts := []string{robot}
 	if len(list) <= 4 {
 		for _, a := range list {
 			parts = append(parts, style(a.State).Render(s.agent(a.State, frame)))
@@ -144,10 +154,6 @@ func (s symbolSet) badge(list []agents.Agent, frame int, reversed bool) string {
 				parts = append(parts, style(st).Render(fmt.Sprintf("%s%d", s.agent(st, frame), n)))
 			}
 		}
-	}
-	sep := " "
-	if reversed {
-		sep = selectedStyle.Render(sep)
 	}
 	// Trailing sep pads the badge off the pane's right edge.
 	return strings.Join(parts, sep) + sep

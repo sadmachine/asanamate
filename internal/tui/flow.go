@@ -507,7 +507,7 @@ func (m *Model) pickedAttachment(a asana.Attachment) tea.Cmd {
 	m.modal = nil
 	if m.showsInline(a) {
 		m.status = "loading image…"
-		return loadImage(m.deps.Client, a, max(m.width, 1), max(m.height-3, 1), m.deps.InTmux)
+		return loadImage(m.deps.Client, a, max(m.width, 1), max(m.height-2, 1), m.imageCell, m.deps.InTmux)
 	}
 	return openURL(ticket.AttachmentURL(a))
 }

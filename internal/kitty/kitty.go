@@ -21,6 +21,7 @@ import (
 	"time"
 
 	ansikitty "github.com/charmbracelet/x/ansi/kitty"
+	"github.com/charmbracelet/x/term"
 )
 
 const chunkSize = 4096
@@ -103,18 +104,17 @@ func Download(ctx context.Context, rawURL string) ([]byte, error) {
 	return data, nil
 }
 
-// Encode converts an image to kitty graphics escape sequences sized to fit
-// cols x rows cells, assuming cells are about twice as tall as wide.
-func Encode(data []byte, cols, rows int, inTmux bool) (string, error) {
+// Encode converts an image to kitty graphics escape sequences that draw it
+// near its own size, no larger than maxCols x maxRows cells, centered in that
+// area from the top-left of the screen.
+func Encode(data []byte, maxCols, maxRows int, cell CellSize, inTmux bool) (string, error) {
 	data, w, h, err := toPNG(data)
 	if err != nil {
 		return "", err
 	}
-	size := fmt.Sprintf("r=%d", max(rows, 1))
-	if w*2*rows > cols*h {
-		size = fmt.Sprintf("c=%d", max(cols, 1))
-	}
-	return transmit(data, "a=T,f=100,q=2,"+size, inTmux), nil
+	cols, rows := fit(w, h, maxCols, maxRows, cell)
+	moveTo := fmt.Sprintf("\x1b[%d;%dH", max(maxRows-rows, 0)/2+1, max(maxCols-cols, 0)/2+1)
+	return moveTo + transmit(data, fmt.Sprintf("a=T,f=100,q=2,c=%d,r=%d", cols, rows), inTmux), nil
 }
 
 // CellSize is the terminal's directly reported cell size in pixels.
@@ -137,6 +137,15 @@ func inlineSize(w, h, maxCols, maxRows, cellWidth, cellHeight int) (cols, rows i
 	return cols, rows
 }
 
+// fit sizes a w x h pixel image in cells, using the 8x16 estimate when the
+// cell size is unknown.
+func fit(w, h, maxCols, maxRows int, cell CellSize) (cols, rows int) {
+	if cell.Width <= 0 || cell.Height <= 0 {
+		cell = CellSize{Width: 8, Height: 16}
+	}
+	return inlineSize(w, h, maxCols, maxRows, cell.Width, cell.Height)
+}
+
 // Inline transmits an image as id with a virtual placement no larger than
 // maxCols x maxRows cells, drawn wherever Placeholder text for id is shown.
 // id must be in 16..255, since the placeholder's 256-color foreground carries
@@ -146,10 +155,7 @@ func Inline(data []byte, id, maxCols, maxRows int, cell CellSize, inTmux bool) (
 	if err != nil {
 		return "", 0, 0, err
 	}
-	if cell.Width <= 0 || cell.Height <= 0 {
-		cell = CellSize{Width: 8, Height: 16}
-	}
-	cols, rows = inlineSize(w, h, maxCols, maxRows, cell.Width, cell.Height)
+	cols, rows = fit(w, h, maxCols, maxRows, cell)
 	control := fmt.Sprintf("a=T,f=100,q=2,U=1,i=%d,c=%d,r=%d", id, cols, rows)
 	return transmit(data, control, inTmux), cols, rows, nil
 }
@@ -231,7 +237,7 @@ func wrap(seq string, inTmux bool) string {
 	return "\x1bPtmux;" + strings.ReplaceAll(seq, "\x1b", "\x1b\x1b") + "\x1b\\"
 }
 
-// Viewer shows an encoded image full screen until Enter is pressed.
+// Viewer shows an encoded image until Enter, q, or Esc is pressed.
 // It implements tea.ExecCommand so Bubble Tea releases the terminal first.
 type Viewer struct {
 	payload, clear string
@@ -248,13 +254,36 @@ func (v *Viewer) SetStdin(r io.Reader)  { v.stdin = r }
 func (v *Viewer) SetStdout(w io.Writer) { v.stdout = w }
 func (v *Viewer) SetStderr(io.Writer)   {}
 
-// Run draws the image, waits for Enter, then removes the image.
+// Run draws the image, waits for a close key, then removes the image.
+// A terminal stdin is put in raw mode so single keys arrive unbuffered.
 func (v *Viewer) Run() error {
-	fmt.Fprint(v.stdout, "\x1b[2J\x1b[H", v.payload, "\r\n\r\nPress Enter to return.")
-	_, err := bufio.NewReader(v.stdin).ReadString('\n')
+	if f, ok := v.stdin.(interface{ Fd() uintptr }); ok && term.IsTerminal(f.Fd()) {
+		state, err := term.MakeRaw(f.Fd())
+		if err != nil {
+			return err
+		}
+		defer term.Restore(f.Fd(), state)
+	}
+	// Row 999 clamps to the bottom line.
+	fmt.Fprint(v.stdout, "\x1b[2J", v.payload, "\x1b[999;1HPress Enter, q, or Esc to return.")
+	err := waitForClose(bufio.NewReader(v.stdin))
 	fmt.Fprint(v.stdout, v.clear)
 	if errors.Is(err, io.EOF) {
 		return nil
 	}
 	return err
+}
+
+// waitForClose reads until Enter, q, Esc, or Ctrl+C.
+func waitForClose(r io.ByteReader) error {
+	for {
+		b, err := r.ReadByte()
+		if err != nil {
+			return err
+		}
+		switch b {
+		case '\r', '\n', 'q', 0x1b, 0x03:
+			return nil
+		}
+	}
 }

@@ -71,22 +71,23 @@ func pngBytes(t *testing.T, w, h int, noisy bool) []byte {
 }
 
 func TestEncodeSmall(t *testing.T) {
-	out, err := Encode(pngBytes(t, 10, 400, false), 80, 24, false)
+	// 16x32 pixels is 2x2 cells, centered in 80x24.
+	out, err := Encode(pngBytes(t, 16, 32, false), 80, 24, CellSize{}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(out, "\x1b_Ga=T,f=100,q=2,r=24,m=0;") || !strings.HasSuffix(out, "\x1b\\") {
+	if !strings.HasPrefix(out, "\x1b[12;40H\x1b_Ga=T,f=100,q=2,c=2,r=2,m=0;") || !strings.HasSuffix(out, "\x1b\\") {
 		t.Fatalf("unexpected payload prefix/suffix: %q", out[:40])
 	}
 }
 
 func TestEncodeChunksWideImagesAndWrapsForTmux(t *testing.T) {
-	out, err := Encode(pngBytes(t, 400, 100, true), 80, 24, true)
+	out, err := Encode(pngBytes(t, 1600, 400, true), 80, 24, CellSize{}, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(out, "\x1bPtmux;\x1b\x1b_Ga=T,f=100,q=2,c=80,m=1;") {
-		t.Fatalf("prefix = %q", out[:48])
+	if !strings.HasPrefix(out, "\x1b[8;1H\x1bPtmux;\x1b\x1b_Ga=T,f=100,q=2,c=80,r=10,m=1;") {
+		t.Fatalf("prefix = %q", out[:56])
 	}
 	if strings.Count(out, "\x1bPtmux;") < 2 || !strings.Contains(out, "m=0;") {
 		t.Fatal("want several chunks, the last with m=0")
@@ -94,7 +95,7 @@ func TestEncodeChunksWideImagesAndWrapsForTmux(t *testing.T) {
 }
 
 func TestEncodeRejectsNonImage(t *testing.T) {
-	if _, err := Encode([]byte("not an image"), 80, 24, false); err == nil {
+	if _, err := Encode([]byte("not an image"), 80, 24, CellSize{}, false); err == nil {
 		t.Fatal("expected a decode error")
 	}
 }
@@ -126,13 +127,23 @@ func TestDownload(t *testing.T) {
 func TestViewerWritesPayloadAndClears(t *testing.T) {
 	v := NewViewer("PAYLOAD", false)
 	var out bytes.Buffer
-	v.SetStdin(strings.NewReader("\n"))
+	v.SetStdin(strings.NewReader("q"))
 	v.SetStdout(&out)
 	if err := v.Run(); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "PAYLOAD") || !strings.HasSuffix(out.String(), Clear(false)) {
 		t.Fatalf("out = %q", out.String())
+	}
+}
+
+func TestWaitForCloseStopsAtCloseKey(t *testing.T) {
+	for _, key := range []string{"\r", "\n", "q", "\x1b", "\x03"} {
+		// The key after "x" must stop the wait before "!" is read.
+		in := strings.NewReader("x" + key + "!")
+		if err := waitForClose(in); err != nil || in.Len() != 1 {
+			t.Fatalf("key %q: err = %v, unread = %d", key, err, in.Len())
+		}
 	}
 }
 
@@ -147,7 +158,7 @@ func TestEncodeRejectsHugeDimensions(t *testing.T) {
 	chunk := append([]byte("IHDR"), ihdr...)
 	b.Write(chunk)
 	binary.Write(&b, binary.BigEndian, crc32.ChecksumIEEE(chunk))
-	_, err := Encode(b.Bytes(), 80, 24, false)
+	_, err := Encode(b.Bytes(), 80, 24, CellSize{}, false)
 	if err == nil || !strings.Contains(err.Error(), "too large") {
 		t.Fatalf("err = %v, want a too-large error", err)
 	}

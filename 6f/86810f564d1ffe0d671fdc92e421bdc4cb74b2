@@ -1,0 +1,31 @@
+cmd/asanamate/main.go
+  s_0bbffaf474ec5d::t_2f18dd2fdb747b 45,70,208-220,236,240-249
+  s_0bbffaf474ec5d::t_2f259cce13a31b 250-251
+internal/setup/hook.go
+  s_0bbffaf474ec5d::t_4313e9c2a5eaee 1-3,5-76,82-90,92-128
+  s_0bbffaf474ec5d::t_1f34baa7cd01e5 4,77-81,91
+internal/setup/setup.go
+  s_0bbffaf474ec5d::t_1f34baa7cd01e5 31-34,72
+internal/setup/setup_test.go
+  s_0bbffaf474ec5d::t_897dda52d1bb68 6,176-233
+README.md
+  s_0bbffaf474ec5d::t_04a49f18787c06 29-31,403-416,419-422
+  s_0bbffaf474ec5d::t_256006595a3a91 417-418
+  s_0bbffaf474ec5d::t_76614c58ab6379 423
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6f86810f564d1ffe0d671fdc92e421bdc4cb74b2",
+  "prompts": {},
+  "sessions": {
+    "s_0bbffaf474ec5d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "511798b5-0fff-460c-9c44-d1103bb111d5",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

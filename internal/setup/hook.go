@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"charm.land/lipgloss/v2"
+
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/prompt"
 )
@@ -57,7 +59,7 @@ func OfferCodexHook(o Options) error {
 	if hasCodexHook(hooks) {
 		return nil
 	}
-	fmt.Fprintln(o.Out, codexHookWarning)
+	lipgloss.Fprintln(o.Out, "\n"+warning.Render("Warning: Codex agent status needs a hook")+"\n"+codexHookWarning)
 	install, err := prompt.Confirm(o.In, o.Out, "Add asanamate's Codex hook to "+path+"?")
 	if err != nil {
 		return err
@@ -99,9 +101,14 @@ func OfferCodexHook(o Options) error {
 	return nil
 }
 
-const codexHookWarning = `ccmux can report a busy Codex session as idle. asanamate's Codex hook
-records each session's real state. Without it, agent status for Codex
-sessions will be inaccurate or wrong.`
+// warning highlights the heading of a setup warning. lipgloss.Fprintln drops
+// the color when the output is not a terminal or NO_COLOR is set.
+var warning = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Yellow)
+
+const codexHookWarning = `  Without asanamate's Codex hook, Codex agent status will be
+  inaccurate or wrong: ccmux can show a busy Codex session as idle.
+  The hook records each session's real state.
+`
 
 // hasCodexHook reports whether any hook in hooks runs `asanamate hook codex`.
 func hasCodexHook(hooks map[string]any) bool {

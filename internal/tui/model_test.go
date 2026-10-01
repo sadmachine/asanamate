@@ -304,6 +304,21 @@ func TestImageCellSizeChanges(t *testing.T) {
 	}
 }
 
+func TestNextImageIDKeepsLowByteValid(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	m.imageSeq = imageLows - 1
+	if id := m.nextImageID(); id != lastImageLow {
+		t.Fatalf("id = %#x, want %#x", id, lastImageLow)
+	}
+	if id := m.nextImageID(); id != 1<<24|firstImageLow {
+		t.Fatalf("id = %#x, want the next high byte", id)
+	}
+	m.imageSeq = imageIDs
+	if id := m.nextImageID(); id != firstImageLow {
+		t.Fatalf("id = %#x, want ids to wrap", id)
+	}
+}
+
 func TestEditedTicketStaysSelectedAfterReloadDropsIt(t *testing.T) {
 	m, _ := testModel(t, config.Config{})
 	m.Update(tasksMsg{tasks: []asana.Task{openTask, sideTask}})

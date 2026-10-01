@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
+	ansikitty "github.com/charmbracelet/x/ansi/kitty"
 )
 
 func env(vars map[string]string) func(string) string {
@@ -173,8 +174,9 @@ func TestInlineFitsAndPlaces(t *testing.T) {
 	if cols != 20 || rows != 5 {
 		t.Fatalf("size = %dx%d, want 20x5", cols, rows)
 	}
-	if !strings.HasPrefix(seq, "\x1b_Ga=T,f=100,q=2,U=1,i=42,c=20,r=5,m=0;") {
-		t.Fatalf("prefix = %q", seq[:48])
+	// Deleting the id first drops placements left from an earlier image.
+	if !strings.HasPrefix(seq, "\x1b_Ga=d,d=I,i=42,q=2\x1b\\\x1b_Ga=T,f=100,q=2,U=1,i=42,c=20,r=5,m=0;") {
+		t.Fatalf("prefix = %q", seq[:72])
 	}
 	// Width and height limits shrink it, keeping its shape.
 	if _, cols, rows, _ := Inline(pngBytes(t, 160, 80, false), 42, 10, 24, CellSize{}, false); cols != 10 || rows != 3 {
@@ -225,7 +227,7 @@ func TestRequestCellSize(t *testing.T) {
 }
 
 func TestPlaceholderCells(t *testing.T) {
-	lines := strings.Split(Placeholder(42, 3, 2), "\n")
+	lines := strings.Split(Placeholder(3<<24|42, 3, 2), "\n")
 	if len(lines) != 2 {
 		t.Fatalf("lines = %d, want 2", len(lines))
 	}
@@ -235,6 +237,10 @@ func TestPlaceholderCells(t *testing.T) {
 		}
 		if !strings.HasPrefix(l, "\x1b[38;5;42m") {
 			t.Fatalf("line lacks the id color: %q", l)
+		}
+		// Each cell names its row, column, and the id's high byte.
+		if !strings.HasSuffix(l, string(ansikitty.Diacritic(3))+"\x1b[39m") {
+			t.Fatalf("line lacks the id's high byte: %q", l)
 		}
 	}
 }

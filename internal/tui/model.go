@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image/color"
 	"maps"
+	"math/rand/v2"
 	"os/exec"
 	"slices"
 	"sort"
@@ -109,7 +110,7 @@ type Model struct {
 	renderers   map[rendererKey]*glamour.TermRenderer
 	details     map[string]ticket.Ticket
 	images      map[string]*inlineImage // inline images by attachment gid
-	imageSeq    int                     // inline images requested, for their ids
+	imageSeq    int                     // inline image id sequence, from a random start
 	imageCell   kitty.CellSize          // cell size reported by the outer terminal
 	shownGID    string
 	pinned      *asana.Task    // edited ticket kept listed after a reload drops it, until the selection moves
@@ -162,6 +163,7 @@ func New(d Deps) *Model {
 		renderers:     map[rendererKey]*glamour.TermRenderer{},
 		details:       map[string]ticket.Ticket{},
 		images:        map[string]*inlineImage{},
+		imageSeq:      rand.IntN(imageIDs),
 		projectFields: map[string]map[string]bool{},
 		sym:           newSymbols(d.Symbols, d.Config.Agents.Symbols, d.ReducedMotion),
 		loading:       true,

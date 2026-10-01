@@ -75,11 +75,11 @@ func TestAgentColumnGroupsManyAgents(t *testing.T) {
 func TestSpinnerAnimatesWorkingAgents(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, false)
 	_, cmd := m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "")}})
-	if cmd == nil || !m.spinning || !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⠋ ") {
+	if cmd == nil || !m.spinning || !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⣾ ") {
 		t.Fatalf("spinning = %v, row = %q", m.spinning, ansi.Strip(m.listView(30, 4)))
 	}
 	m.Update(spinnerTickMsg{})
-	if !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⠙ ") {
+	if !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⣽ ") {
 		t.Fatal("spinner did not advance")
 	}
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Idle, "")}})

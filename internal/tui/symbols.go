@@ -38,7 +38,12 @@ const (
 	iconRefresh = "refresh"
 )
 
-var braille = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+// Spinners use dense glyphs, so a working agent stands out at a glance.
+var (
+	braille = []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
+	// Nerd Font (Material Design) circle slices, filling like a clock.
+	pieSlices = []string{"\U000F0A9E", "\U000F0A9F", "\U000F0AA0", "\U000F0AA1", "\U000F0AA2", "\U000F0AA3", "\U000F0AA4", "\U000F0AA5"}
+)
 
 // Each set only sets what it changes: nerd falls back to unicode, unicode to
 // ascii, which defines everything.
@@ -86,7 +91,7 @@ func (s symbolSet) icon(name string) string {
 
 var stateStyles = map[agents.State]lipgloss.Style{
 	agents.Waiting:   warnStyle,
-	agents.Working:   okStyle,
+	agents.Working:   workingStyle,
 	agents.Completed: okStyle,
 	agents.Idle:      dimStyle,
 	agents.Unknown:   dimStyle,

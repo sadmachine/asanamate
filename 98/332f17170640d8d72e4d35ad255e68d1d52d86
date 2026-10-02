@@ -1,0 +1,35 @@
+internal/tui/listonly_test.go
+  s_e818cda0b3895e::t_5852ed4a171873 33,36,46,50
+README.md
+  s_e818cda0b3895e::t_8b13df12cedd50 75,297
+  s_e818cda0b3895e::t_355300ce770e7f 124
+internal/tui/statusline.go
+  s_e818cda0b3895e::t_8b13df12cedd50 44
+internal/tui/model.go
+  s_e818cda0b3895e::t_8b13df12cedd50 432
+internal/tui/keys_test.go
+  s_e818cda0b3895e::t_dac45432d8f2cf 13,66
+  s_e818cda0b3895e::t_5852ed4a171873 39,44-65,67-69
+  s_e818cda0b3895e::t_c54f4b6b1d2910 70-72
+internal/tui/flow_test.go
+  s_e818cda0b3895e::t_2a12d43c980a65 420
+  s_e818cda0b3895e::t_5852ed4a171873 419,421-425
+internal/tui/keys.go
+  s_e818cda0b3895e::t_8b13df12cedd50 119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "98332f17170640d8d72e4d35ad255e68d1d52d86",
+  "prompts": {},
+  "sessions": {
+    "s_e818cda0b3895e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fe2b-8e85-7e82-a4a1-5117205f7ef6",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

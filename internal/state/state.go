@@ -1,5 +1,5 @@
 // Package state stores data asanamate learns while running: repo links, recent
-// projects and tickets, and each project's last list view.
+// projects and tickets, saved views, and each project's last list view.
 package state
 
 import (
@@ -39,6 +39,8 @@ type State struct {
 	RecentTickets []RecentTicket `toml:"recent_tickets"`
 	// Views maps a project gid ("" for My Tasks) to the list view last used there.
 	Views map[string]View `toml:"views"`
+	// SavedViews maps a user-friendly name to a reusable grouping and filter.
+	SavedViews map[string]View `toml:"saved_views"`
 	// TimeProjects holds recent tracker project IDs by provider ID and Asana project GID.
 	// Kept so choices saved by earlier builds can seed the new form field.
 	TimeProjects map[string]map[string][]string `toml:"time_projects"`
@@ -48,7 +50,7 @@ type State struct {
 	path string
 }
 
-// View is a project's list grouping and filter; "" GroupBy is ungrouped.
+// View is a list grouping and filter; "" GroupBy is ungrouped.
 type View struct {
 	GroupBy string `toml:"group_by"`
 	Filter  string `toml:"filter"`
@@ -78,6 +80,9 @@ func Load(path string) (*State, error) {
 	}
 	if s.Views == nil {
 		s.Views = map[string]View{}
+	}
+	if s.SavedViews == nil {
+		s.SavedViews = map[string]View{}
 	}
 	if s.TimeProjects == nil {
 		s.TimeProjects = map[string]map[string][]string{}

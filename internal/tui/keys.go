@@ -146,6 +146,8 @@ func keyBindings() []binding {
 			return m.reload()
 		}},
 		{keys: []string{"v"}, desc: "cards / markdown", group: "View", splitOnly: true, run: do((*Model).toggleReaderView)},
+		{keys: []string{"V"}, desc: "saved views", group: "View", run: do((*Model).openSavedViews)},
+		{keys: []string{"ctrl+s"}, desc: "save current view", group: "View", run: do((*Model).openSaveView)},
 		{keys: []string{"R"}, desc: "auto-update interval", group: "View", run: do((*Model).openRefreshInterval)},
 		{keys: []string{"L"}, desc: "repo links", group: "View", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestProjects(m.openLinks) }},
 		{keys: []string{"s"}, desc: "separators", group: "View", run: do(func(m *Model) { m.separator = !m.separator })},

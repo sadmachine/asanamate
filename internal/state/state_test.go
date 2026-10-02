@@ -12,7 +12,7 @@ func TestLoadMissingIsEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(s.Repos) != 0 || len(s.RecentProjects) != 0 {
+	if len(s.Repos) != 0 || len(s.RecentProjects) != 0 || s.SavedViews == nil || len(s.SavedViews) != 0 {
 		t.Fatalf("want empty state, got %+v", s)
 	}
 }
@@ -22,6 +22,7 @@ func TestSaveRoundTripAndPermissions(t *testing.T) {
 	s, _ := Load(path)
 	s.LinkRepo("123", "/code/web")
 	s.TouchProject("123")
+	s.SavedViews[`Today's "work"`] = View{Filter: `is:open -tag:blocked`, GroupBy: "section"}
 	if err := s.Save(); err != nil {
 		t.Fatal(err)
 	}
@@ -38,6 +39,9 @@ func TestSaveRoundTripAndPermissions(t *testing.T) {
 	}
 	if again.Repos["123"] != "/code/web" || again.RecentProjects[0] != "123" {
 		t.Fatalf("round trip lost data: %+v", again)
+	}
+	if again.SavedViews[`Today's "work"`] != s.SavedViews[`Today's "work"`] {
+		t.Fatalf("round trip lost saved views: %+v", again.SavedViews)
 	}
 }
 

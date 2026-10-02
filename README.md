@@ -80,6 +80,8 @@ key press.
 | `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) |
 | `=` | fit the list pane to its content (also on project, grouping, and filter changes) |
 | `v` | switch the reader between the cards and markdown views |
+| `V` | recall or manage saved views |
+| `ctrl+s` | save the current filter and grouping under a name |
 | `s` | show or hide the lines between tickets |
 | `S` | add or remove the blank lines around group headers |
 | `o` | open the ticket in the browser |
@@ -103,6 +105,18 @@ Space-separated terms, all of which must match:
 
 Example: `is:open section:"in progress" -tag:blocked`. Set the startup filter
 with `default_filter`.
+
+### Saved views
+
+Press `ctrl+s`, type a friendly name, then press `ctrl+s` again to save the
+current filter and grouping. Press `V` to search saved views by name and press
+`enter` to apply one to the current project or My Tasks. Saved views are reusable
+across projects and persist between sessions; they do not switch projects.
+Changing a filter or grouping after recall leaves the saved view unchanged.
+
+Save under the same name to replace a view, with confirmation. The `V` picker
+also offers saving and deletion; deletion requires confirmation. These keys
+work in narrow terminals and list-only mode too.
 
 ## List-only mode and scripting
 
@@ -535,7 +549,7 @@ set -g allow-passthrough on
 
 - Config: `~/.config/asanamate/config.toml`
 - Actions: `~/.config/asanamate/actions/*.toml`
-- State (repo links, saved branches, recent projects, ticket history): `~/.local/state/asanamate/state.toml`
+- State (repo links, saved branches, saved views, recent projects, ticket history): `~/.local/state/asanamate/state.toml`
 - Ticket exports: `~/.local/state/asanamate/tickets/<gid>/`
 - Background action log: `~/.local/state/asanamate/actions.log`
 

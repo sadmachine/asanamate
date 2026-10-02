@@ -526,6 +526,36 @@ Each command asks on the terminal before writing unless `--yes` is given,
 terminal available (for example, a background action), a write that needs
 confirmation is refused.
 
+Comments from the CLI or TUI accept Markdown: `**bold**`, `*italic*`,
+`~~strikethrough~~`, inline code, fenced code blocks, links, lists, and blockquotes.
+Put code fences on their own lines:
+
+````markdown
+Here are the values:
+
+```json
+{"enabled": true}
+```
+````
+
+For multiline CLI comments, use stdin so the shell does not interpret backticks:
+
+```sh
+asanamate comment <gid> - <<'COMMENT'
+**Example**
+
+```json
+{"enabled": true}
+```
+COMMENT
+```
+
+Code and link text do not expand `@Full Name` mentions. Raw HTML stays literal.
+Asana comments do not support headings, images, or tables: headings become bold,
+images retain their alt text, and table syntax stays text. Lists inside quotes
+and code blocks or quotes inside lists are flattened to supported formatting.
+Fenced code blocks preserve whitespace but do not add syntax highlighting.
+
 In a comment (from the CLI or the `e` menu), `@Full Name` mentions a
 workspace user and notifies them, the same as in Asana. Matching ignores case
 and picks the longest name that fits, so `@victoria andersen` tags Victoria

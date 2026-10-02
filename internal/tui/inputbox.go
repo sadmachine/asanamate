@@ -39,11 +39,20 @@ func (b *inputBox) update(msg tea.KeyPressMsg) (res pickResult, cmd tea.Cmd) {
 }
 
 func (b *inputBox) view(width, height int, accent lipgloss.Style) string {
-	b.area.SetWidth(max(width-2, 1))
-	b.area.SetHeight(max(min(height-2, 8), 1))
 	errorLine := ""
+	available := height - 2 // title and keyboard hints
 	if b.err != "" {
 		errorLine = errorStyle.Render(b.err) + "\n"
+		available -= lipgloss.Height(b.err)
+	}
+	available = max(available, 1)
+	if b.area.DynamicHeight {
+		b.area.MaxHeight = min(available, 16)
+	}
+	// SetWidth also recalculates dynamic height, including soft-wrapped lines.
+	b.area.SetWidth(max(width-2, 1))
+	if !b.area.DynamicHeight {
+		b.area.SetHeight(min(available, 8))
 	}
 	return accent.Render(b.title) + "\n" + b.area.View() + "\n" + errorLine +
 		accent.Render("enter") + dimStyle.Render(" newline · ") + accent.Render("ctrl+s") +

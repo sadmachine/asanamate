@@ -866,6 +866,9 @@ func (m *Model) body() string {
 	style := modalStyle.BorderForeground(m.accentStyle.GetForeground())
 	switch {
 	case m.input != nil:
+		if m.input.area.DynamicHeight {
+			w = max(min(m.width-4, 100), 10)
+		}
 		content = m.input.view(w, mh, m.accentStyle)
 	case m.form != nil:
 		content = m.form.view(w, mh, m.accentStyle)

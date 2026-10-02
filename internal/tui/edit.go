@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -67,6 +68,10 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 	switch op {
 	case editComment:
 		m.input = newInputBox("Comment on "+ticket.Clean(t.Name), "comment text")
+		m.input.area.DynamicHeight = true
+		m.input.area.MinHeight = 10
+		// Keep the viewport limit separate from the amount of text accepted.
+		m.input.area.MaxContentHeight = math.MaxInt
 	case editSection:
 		targets := m.sectionTargets(t.Task)
 		switch len(targets) {

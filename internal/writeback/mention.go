@@ -10,14 +10,8 @@ import (
 
 var escapeHTML = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;")
 
-// CommentHTML renders text as Asana rich text, turning each @Name that
-// matches a user's full name (case-insensitively, longest name first) into a
-// mention. An @ inside a word, like an email address, or one that matches no
-// user or two users with the same name stays as typed. mentioned lists the
-// users tagged, in order; when it is empty, post text as plain text instead.
-func CommentHTML(text string, users []asana.Ref) (html string, mentioned []asana.Ref) {
-	var b strings.Builder
-	b.WriteString("<body>")
+// writeMentions escapes text and replaces unambiguous @Full Name references.
+func writeMentions(b *strings.Builder, text string, users []asana.Ref) (mentioned []asana.Ref) {
 	plain := 0
 	for i := 0; i < len(text); i++ {
 		if text[i] != '@' || wordRuneBefore(text, i) {
@@ -34,8 +28,7 @@ func CommentHTML(text string, users []asana.Ref) (html string, mentioned []asana
 		i = plain - 1
 	}
 	b.WriteString(escapeHTML.Replace(text[plain:]))
-	b.WriteString("</body>")
-	return b.String(), mentioned
+	return mentioned
 }
 
 // matchUser finds the user whose longest name starts rest and ends on a word

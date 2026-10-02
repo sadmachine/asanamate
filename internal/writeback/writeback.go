@@ -75,7 +75,7 @@ func (s Service) confirm(question string) error {
 	return nil
 }
 
-// Comment posts text as a comment on the task. Each @Name matching a
+// Comment posts Markdown as a rich-text comment on the task. Each @Name matching a
 // workspace user becomes a mention that notifies them.
 func (s Service) Comment(ctx context.Context, gid, text string) error {
 	text = strings.TrimSpace(text)
@@ -107,10 +107,10 @@ func (s Service) Comment(ctx context.Context, gid, text string) error {
 			return err
 		}
 	}
-	if len(mentioned) > 0 {
-		return s.Client.AddCommentHTML(ctx, gid, html)
+	if html == "<body>"+escapeHTML.Replace(text)+"</body>" {
+		return s.Client.AddComment(ctx, gid, text)
 	}
-	return s.Client.AddComment(ctx, gid, text)
+	return s.Client.AddCommentHTML(ctx, gid, html)
 }
 
 // Move puts the task in the named section of one of its projects.

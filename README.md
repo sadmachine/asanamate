@@ -72,7 +72,7 @@ key press.
 | `p` | switch project (recent first) |
 | `H` | ticket history: the last 10 tickets focused in the reader, most recent first; picking one selects it (pinning it to the list when the view doesn't show it) and focuses the reader |
 | `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project), or give the selected ticket its own repo that overrides its projects' links without changing them |
-| `enter`, `a` | run an action on the selected ticket |
+| `space`, `a` | run an action on the selected ticket |
 | `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), assign it, or set its branch (saved locally, overrides `branch_field`; empty removes it) |
 | `C` | add a comment to the selected ticket, from the list or the reader |
 | `t` | log completed time for the selected ticket (only when time tracking is configured) |
@@ -121,7 +121,7 @@ work in narrow terminals and list-only mode too.
 ## List-only mode and scripting
 
 - `asanamate --no-preview` shows only the ticket list at full width. It is handy
-  in a small popup: pick a ticket, press `enter`, and run an action.
+  in a small popup: pick a ticket, press `space` or `a`, and run an action.
 - `asanamate list` prints tickets for other tools. The default is My Tasks with
   `default_filter` applied.
   - `--project <gid>` lists a project instead. The gid is the number after
@@ -294,7 +294,7 @@ Modes:
 - `exit`: quits asanamate, then runs the command. Best for popups.
 
 Context: an action with `context = "comment"` appears only when a comment is
-highlighted in the cards view, listed before the other actions. Press `enter`
+highlighted in the cards view, listed before the other actions. Press `space`
 or `a` on a comment to open the menu. Its key may repeat a key of an
 everywhere action; the comment action wins while a comment is highlighted.
 

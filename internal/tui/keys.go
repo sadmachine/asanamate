@@ -116,7 +116,7 @@ func keyBindings() []binding {
 			return m.requestProjects(func() tea.Cmd { m.openProjectPicker(); return nil })
 		}},
 		{keys: []string{"H"}, desc: "ticket history", group: "Move", splitOnly: true, run: do((*Model).openHistory)},
-		{keys: []string{"enter", "a"}, desc: "run action", hint: "act", group: "Ticket", run: menu(func(m *Model) func() { return m.openActionMenu })},
+		{keys: []string{"space", "a"}, label: "space/a", desc: "run action", hint: "act", group: "Ticket", run: menu(func(m *Model) func() { return m.openActionMenu })},
 		{keys: []string{"e"}, desc: "edit", hint: "edit", group: "Ticket", run: menu(func(m *Model) func() { return m.openEditMenu })},
 		{keys: []string{"C"}, desc: "add comment", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			return m.requestMenu(func() tea.Cmd { return m.openField(commentKey) })

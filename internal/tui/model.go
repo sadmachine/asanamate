@@ -429,10 +429,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		if m.editableTarget() {
 			return m.openField(m.fieldKey)
 		}
-		// On a comment, enter falls through to the action menu.
-		if !strings.HasPrefix(m.fieldKey, "comment:") {
-			return nil
-		}
+		return nil
 	}
 	if m.focusNav && slices.Contains(navKeys, k) {
 		return m.updateNav(k)

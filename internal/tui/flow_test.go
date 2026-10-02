@@ -416,7 +416,13 @@ func TestCommentActionsListFirstOnHighlightedComment(t *testing.T) {
 	m.modal, m.run = nil, nil
 
 	m.fieldKey = "comment:9"
-	m.openActionMenu()
+	m.focusReader = true
+	m.loading = false
+	m.Update(key("enter"))
+	if m.modal != nil {
+		t.Fatal("Enter on a comment must not open actions")
+	}
+	m.Update(key(" "))
 	if p := m.modal; len(p.items) != 2 || p.items[0].Label != "Reply" {
 		t.Fatalf("on a comment, items = %+v", p.items)
 	}

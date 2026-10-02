@@ -30,10 +30,10 @@ func TestNoPreviewShowsOnlyTheList(t *testing.T) {
 	}
 }
 
-func TestEnterOpensMenuAfterDetailLoads(t *testing.T) {
+func TestSpaceOpensMenuAfterDetailLoads(t *testing.T) {
 	m, _ := testModel(t, config.Config{Actions: []config.Action{{Name: "Go", Key: "x", Mode: config.ModeExit, Command: "true"}}})
 	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
-	_, cmd := m.Update(key("enter"))
+	_, cmd := m.Update(key(" "))
 	if cmd == nil || m.modal != nil || m.menuFor != "1" {
 		t.Fatalf("cmd = %v, modal = %v, menuFor = %q", cmd, m.modal, m.menuFor)
 	}
@@ -43,11 +43,11 @@ func TestEnterOpensMenuAfterDetailLoads(t *testing.T) {
 	}
 }
 
-func TestEnterWithCachedDetailOpensMenuImmediately(t *testing.T) {
+func TestSpaceWithCachedDetailOpensMenuImmediately(t *testing.T) {
 	m, _ := testModel(t, config.Config{Actions: []config.Action{{Name: "Go", Key: "x", Mode: config.ModeExit, Command: "true"}}})
 	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
 	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask}})
-	m.Update(key("enter"))
+	m.Update(key(" "))
 	if m.modal == nil || !strings.HasPrefix(m.modal.title, "Run on: ") {
 		t.Fatalf("modal = %+v", m.modal)
 	}

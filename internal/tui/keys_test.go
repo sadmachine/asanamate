@@ -10,6 +10,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
 func TestKeyBindingsAreUniqueAndDocumented(t *testing.T) {
@@ -35,8 +36,37 @@ func TestHelpAndHintsComeFromTheTable(t *testing.T) {
 			t.Errorf("help lacks %q", b.desc)
 		}
 	}
-	if got := m.keyHints("enter", "?", "nope"); len(got) != 2 || got[0] != [2]string{"enter", "act"} || got[1] != [2]string{"?", "keys"} {
+	if got := m.keyHints("space", "?", "enter", "nope"); len(got) != 2 || got[0] != [2]string{"space", "act"} || got[1] != [2]string{"?", "keys"} {
 		t.Fatalf("hints = %q", got)
+	}
+}
+
+func TestActionMenuKeys(t *testing.T) {
+	for _, target := range []string{"list", "list-only", "markdown", "assignee", "comment:9"} {
+		for _, k := range []string{" ", "a"} {
+			t.Run(target+"/"+k, func(t *testing.T) {
+				m, _ := testModel(t, config.Config{Actions: []config.Action{{Name: "Go", Key: "x", Mode: config.ModeExit, Command: "true"}}})
+				m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+				m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask}})
+				m.deps.NoPreview = target == "list-only"
+				m.focusReader = target != "list" && target != "list-only"
+				if target == "markdown" {
+					m.readerView = config.ViewMarkdown
+				} else if m.focusReader {
+					m.fieldKey = target
+				}
+				if target != "assignee" {
+					m.Update(key("enter"))
+					if m.modal != nil || m.menuFor != "" || m.status != "" {
+						t.Fatal("Enter must not request actions")
+					}
+				}
+				m.Update(key(k))
+				if m.modal == nil || !strings.HasPrefix(m.modal.title, "Run on: ") {
+					t.Fatalf("modal = %+v", m.modal)
+				}
+			})
+		}
 	}
 }
 

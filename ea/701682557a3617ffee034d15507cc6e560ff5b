@@ -1,0 +1,33 @@
+internal/tui/model.go
+  s_8a3a91c5bb8430::t_8c2f837bbcc361 108,163,844
+  s_8a3a91c5bb8430::t_4527e074a1be59 744
+internal/tui/symbols.go
+  s_8a3a91c5bb8430::t_4527e074a1be59 22,52,54,73
+internal/tui/markdown_test.go
+  s_8a3a91c5bb8430::t_4527e074a1be59 36,52-60,62-72,74-81
+  s_8a3a91c5bb8430::t_6e97677a95ff28 31,46
+  s_8a3a91c5bb8430::t_46b5036335f2ab 1-30,32-35,37-45,47-51,82-131
+  s_8a3a91c5bb8430::t_2eaa95e9c20c15 61
+  s_8a3a91c5bb8430::t_b50da146440796 73
+internal/tui/markdown.go
+  s_8a3a91c5bb8430::t_31275351b7aaed 70,118-122
+  s_8a3a91c5bb8430::t_8c2f837bbcc361 1-24,26-27,29-35,38-46,53-61,63-69,78-117,123-131
+  s_8a3a91c5bb8430::t_4527e074a1be59 25,28,36-37,52,62,71-77
+  s_8a3a91c5bb8430::t_46b5036335f2ab 47-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ea701682557a3617ffee034d15507cc6e560ff5b",
+  "prompts": {},
+  "sessions": {
+    "s_8a3a91c5bb8430": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fdc6-fc25-7a73-b293-aad525ff7041",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

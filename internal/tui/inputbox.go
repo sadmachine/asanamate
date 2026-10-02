@@ -26,15 +26,19 @@ func newInputBox(title, placeholder string) *inputBox {
 }
 
 // update returns done with the trimmed text on ctrl+s, or cancelled on esc.
-func (b *inputBox) update(msg tea.KeyPressMsg) (res pickResult, cmd tea.Cmd) {
-	switch msg.String() {
-	case "esc":
-		return pickResult{cancelled: true}, nil
-	case "ctrl+s":
-		return pickResult{done: true, free: strings.TrimSpace(b.area.Value())}, nil
+func (b *inputBox) update(msg tea.Msg) (res pickResult, cmd tea.Cmd) {
+	if key, ok := msg.(tea.KeyPressMsg); ok {
+		switch key.String() {
+		case "esc":
+			return pickResult{cancelled: true}, nil
+		case "ctrl+s":
+			return pickResult{done: true, free: strings.TrimSpace(b.area.Value())}, nil
+		}
+		b.err = ""
+	} else if _, ok := msg.(tea.PasteMsg); ok {
+		b.err = ""
 	}
 	b.area, cmd = b.area.Update(msg)
-	b.err = ""
 	return pickResult{}, cmd
 }
 

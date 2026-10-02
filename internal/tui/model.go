@@ -374,6 +374,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		return m, m.handleKey(msg)
 	}
+	// Editors also receive paste events and asynchronous clipboard results.
+	if m.input != nil {
+		return m, m.updateInput(msg)
+	}
 	return m, nil
 }
 
@@ -455,7 +459,7 @@ func (m *Model) updateModal(msg tea.KeyPressMsg) tea.Cmd {
 	return cmd
 }
 
-func (m *Model) updateInput(msg tea.KeyPressMsg) tea.Cmd {
+func (m *Model) updateInput(msg tea.Msg) tea.Cmd {
 	res, cmd := m.input.update(msg)
 	switch {
 	case res.cancelled:

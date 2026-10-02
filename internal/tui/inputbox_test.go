@@ -1,6 +1,9 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -9,6 +12,63 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/config"
 )
+
+func TestInputBoxPasteMessages(t *testing.T) {
+	const text = "first\nsecond"
+	for _, method := range []string{"terminal", "clipboard"} {
+		t.Run(method, func(t *testing.T) {
+			m := &Model{edit: &pendingEdit{}}
+			m.pickedEdit(editComment)
+			submitted := false
+			m.input.onSubmit = func(value string) tea.Cmd {
+				submitted = true
+				if value != text {
+					t.Fatalf("submitted text = %q, want %q", value, text)
+				}
+				return nil
+			}
+			m.input.err = "invalid input"
+			m.Update(struct{}{})
+			if m.input.err == "" {
+				t.Fatal("unrelated message cleared the validation error")
+			}
+			if method == "clipboard" {
+				if runtime.GOOS != "darwin" {
+					t.Skip("clipboard stub uses macOS pbpaste")
+				}
+				dir := t.TempDir()
+				if err := os.WriteFile(filepath.Join(dir, "pbpaste"), []byte("#!/bin/sh\nprintf 'first\\nsecond'\n"), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+				_, cmd := m.Update(tea.KeyPressMsg{Code: 'v', Mod: tea.ModCtrl})
+				if cmd == nil {
+					t.Fatal("ctrl+v did not request clipboard text")
+				}
+				m.Update(cmd())
+			} else {
+				m.Update(tea.PasteMsg{Content: text})
+			}
+			if got := m.input.area.Value(); got != text {
+				t.Fatalf("pasted text = %q, want %q", got, text)
+			}
+			if submitted {
+				t.Fatal("paste submitted the comment")
+			}
+			if m.input.err != "" {
+				t.Fatal("paste did not clear the validation error")
+			}
+			m.Update(ctrlS)
+			if !submitted {
+				t.Fatal("ctrl+s did not submit the comment")
+			}
+			m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+			if m.input != nil {
+				t.Fatal("esc did not close the editor")
+			}
+		})
+	}
+}
 
 func TestCommentBoxGrowsAndScrolls(t *testing.T) {
 	m := &Model{edit: &pendingEdit{}}

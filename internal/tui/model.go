@@ -16,8 +16,6 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/glamour/v2"
-	"charm.land/glamour/v2/styles"
 	"charm.land/lipgloss/v2"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
@@ -107,7 +105,7 @@ type Model struct {
 	readerView  string // config.ViewCards or config.ViewMarkdown
 	separator   bool   // lines frame each ticket; starts at list.separator
 	spacing     bool   // blank lines around group headers; starts at list.header.spacing
-	renderers   map[rendererKey]*glamour.TermRenderer
+	renderers   map[rendererKey]*markdownRenderer
 	details     map[string]ticket.Ticket
 	images      map[string]*inlineImage // inline images by attachment gid
 	imageSeq    int                     // inline image id sequence, from a random start
@@ -162,7 +160,7 @@ func New(d Deps) *Model {
 		accentStyle:   colorStyle(d.Config.AccentColor),
 		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
 		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),
-		renderers:     map[rendererKey]*glamour.TermRenderer{},
+		renderers:     map[rendererKey]*markdownRenderer{},
 		details:       map[string]ticket.Ticket{},
 		images:        map[string]*inlineImage{},
 		imageSeq:      rand.IntN(imageIDs),
@@ -743,15 +741,7 @@ func (m *Model) glamour(md string, width int, bare bool) string {
 	key := rendererKey{width, bare}
 	r := m.renderers[key]
 	if r == nil {
-		style := *styles.DefaultStyles[m.deps.Config.Theme]
-		if bare {
-			style.Document.Margin = new(uint)
-			style.Document.BlockPrefix, style.Document.BlockSuffix = "", ""
-		}
-		var err error
-		if r, err = glamour.NewTermRenderer(glamour.WithStyles(style), glamour.WithWordWrap(width)); err != nil {
-			return md
-		}
+		r = newMarkdownRenderer(m.deps.Config.Theme, width, bare, m.sym.codeWrap)
 		m.renderers[key] = r
 	}
 	out, err := r.Render(md)
@@ -851,7 +841,7 @@ func (m *Model) layout() {
 	_, readerW, _ := m.paneWidths()
 	widthChanged := readerW != m.reader.Width()
 	if widthChanged {
-		m.renderers = map[rendererKey]*glamour.TermRenderer{}
+		m.renderers = map[rendererKey]*markdownRenderer{}
 	}
 	m.reader.SetWidth(readerW)
 	m.reader.SetHeight(m.paneHeight())

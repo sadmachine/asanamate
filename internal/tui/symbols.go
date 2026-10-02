@@ -19,6 +19,7 @@ type symbolSet struct {
 	robot      string // leads a list row's agent badge
 	barOn      string // a progress bar's done and to-do cells
 	barOff     string
+	codeWrap   string // marks a wrapped code-block continuation
 	states     map[agents.State]string
 	spinner    []string          // frames shown for working agents; nil means static
 	border     lipgloss.Border   // reading pane cards and section rules
@@ -48,9 +49,9 @@ var (
 // Each set only sets what it changes: nerd falls back to unicode, unicode to
 // ascii, which defines everything.
 var (
-	asciiSymbols = symbolSet{open: "[ ]", done: "[x]", cursor: ">", robot: "@", barOn: "#", barOff: "-", border: lipgloss.ASCIIBorder(), states: map[agents.State]string{
+	asciiSymbols = symbolSet{open: "[ ]", done: "[x]", cursor: ">", robot: "@", barOn: "#", barOff: "-", codeWrap: ">", border: lipgloss.ASCIIBorder(), states: map[agents.State]string{
 		agents.Waiting: "(!)", agents.Working: "(~)", agents.Completed: "(+)", agents.Idle: "(-)", agents.Unknown: "(?)"}}
-	unicodeSymbols = asciiSymbols.with(symbolSet{open: "□", done: "✓", cursor: "▌", robot: "🤖", barOn: "▰", barOff: "▱", spinner: braille, border: lipgloss.RoundedBorder(), states: map[agents.State]string{
+	unicodeSymbols = asciiSymbols.with(symbolSet{open: "□", done: "✓", cursor: "▌", robot: "🤖", barOn: "▰", barOff: "▱", codeWrap: "↪", spinner: braille, border: lipgloss.RoundedBorder(), states: map[agents.State]string{
 		agents.Waiting: "⚠", agents.Working: "◐", agents.Completed: "●", agents.Idle: "○", agents.Unknown: "?"}})
 	// Nerd Font (Font Awesome) glyphs; needs a Nerd Font.
 	nerdSymbols = unicodeSymbols.with(symbolSet{open: "", done: "", robot: "󰚩", states: map[agents.State]string{
@@ -69,6 +70,7 @@ func (s symbolSet) with(o symbolSet) symbolSet {
 	s.open, s.done = cmp.Or(o.open, s.open), cmp.Or(o.done, s.done)
 	s.cursor, s.robot = cmp.Or(o.cursor, s.cursor), cmp.Or(o.robot, s.robot)
 	s.barOn, s.barOff = cmp.Or(o.barOn, s.barOn), cmp.Or(o.barOff, s.barOff)
+	s.codeWrap = cmp.Or(o.codeWrap, s.codeWrap)
 	s.border = cmp.Or(o.border, s.border)
 	if o.spinner != nil {
 		s.spinner = o.spinner

@@ -1,0 +1,26 @@
+internal/tui/inputbox.go
+  s_6eba4576c6ff53::t_8c1d968c4af14d 43,46,48
+  s_6eba4576c6ff53::t_26800c0cdc4a4e 47,49-55
+internal/tui/edit.go
+  s_6eba4576c6ff53::t_26800c0cdc4a4e 6,71-74
+internal/tui/inputbox_test.go
+  s_6eba4576c6ff53::t_5f20a94ee923b2 1-78
+internal/tui/model.go
+  s_6eba4576c6ff53::t_26800c0cdc4a4e 869-871
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e599bcad38641cc16ecc6dbc7b9e3533978d7e8e",
+  "prompts": {},
+  "sessions": {
+    "s_6eba4576c6ff53": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fe40-8fdd-78a2-b1a6-4621e12eda11",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

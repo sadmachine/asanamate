@@ -106,7 +106,7 @@ func TestCommentCodeIsLiteralAndMonochrome(t *testing.T) {
 }
 
 func TestMarkdownProseUnchanged(t *testing.T) {
-	const md = "# Heading\n\nNormal **bold**, _italic_, `inline`, and [link](https://example.com).\n\n- one\n- two\n\n> quote\n\n| A | B |\n|---|---|\n| C | D |"
+	const md = "# Heading\n\nNormal **bold**, _italic_, `inline`, and [link](https://example.com).\n\n> quote\n\n| A | B |\n|---|---|\n| C | D |"
 	for _, theme := range []string{"dark", "light"} {
 		for _, bare := range []bool{true, false} {
 			style := *styles.DefaultStyles[theme]
@@ -125,6 +125,48 @@ func TestMarkdownProseUnchanged(t *testing.T) {
 			m, _ := testModel(t, config.Config{Theme: theme})
 			if got := m.glamour(md, 40, bare); got != want {
 				t.Fatalf("%s bare=%v: prose rendering changed", theme, bare)
+			}
+		}
+	}
+}
+
+func TestMarkdownListHangingIndent(t *testing.T) {
+	for _, theme := range []string{"dark", "light"} {
+		for _, bare := range []bool{true, false} {
+			for _, tt := range []struct {
+				name, markdown, prefix string
+			}{
+				{"bullet", "- hello " + strings.Repeat("continuation ", 8), "• hello"},
+				{"number", "9. hello " + strings.Repeat("continuation ", 8), "9. hello"},
+				{"wide number", "10. hello " + strings.Repeat("continuation ", 8), "10. hello"},
+				{"number transition", "9. parent\n10. hello " + strings.Repeat("continuation ", 8), "10. hello"},
+				{"task", "- [x] hello " + strings.Repeat("continuation ", 8), "[✓] hello"},
+				{"styled", "- **hello** " + strings.Repeat("_continuation_ ", 8), "• hello"},
+				{"explicit break", "- hello  \n  continuation", "• hello"},
+				{"nested", "- parent\n  - hello " + strings.Repeat("continuation ", 8), "• hello"},
+				{"quote", "> - hello " + strings.Repeat("continuation ", 8), "• hello"},
+			} {
+				t.Run(fmt.Sprintf("%s/%v/%s", theme, bare, tt.name), func(t *testing.T) {
+					m, _ := testModel(t, config.Config{Theme: theme})
+					out := ansi.Strip(m.glamour(tt.markdown, 32, bare))
+					column, continuations := -1, 0
+					for _, line := range strings.Split(out, "\n") {
+						if ansi.StringWidth(line) > 32 {
+							t.Fatalf("row exceeds width: %q", line)
+						}
+						if index := strings.Index(line, tt.prefix); index >= 0 {
+							column = ansi.StringWidth(line[:index]) + ansi.StringWidth(strings.TrimSuffix(tt.prefix, "hello"))
+						} else if index := strings.Index(line, "continuation"); index >= 0 {
+							continuations++
+							if got := ansi.StringWidth(line[:index]); got != column {
+								t.Fatalf("continuation column = %d, want %d:\n%s", got, column, out)
+							}
+						}
+					}
+					if column < 0 || continuations == 0 {
+						t.Fatalf("missing marker or continuation:\n%s", out)
+					}
+				})
 			}
 		}
 	}

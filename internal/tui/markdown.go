@@ -2,6 +2,8 @@ package tui
 
 import (
 	"bytes"
+	"fmt"
+	"html"
 	"strings"
 
 	glamouransi "charm.land/glamour/v2/ansi"
@@ -10,6 +12,7 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
+	extast "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/text"
@@ -88,28 +91,107 @@ func (r *markdownRenderer) Render(md string) (string, error) {
 		n.SetLines(lines)
 		return ast.WalkSkipChildren, nil
 	})
+	source, err := r.renderLists(source, doc)
+	if err != nil {
+		return "", err
+	}
 	var out bytes.Buffer
-	err := r.markdown.Renderer().Render(&out, source, doc)
+	err = r.markdown.Renderer().Render(&out, source, doc)
 	return out.String(), err
 }
 
-func (r *markdownRenderer) codeWidth(n ast.Node) int {
-	width := r.width - blockInset(r.style.Document, true) - blockInset(r.style.CodeBlock.StyleBlock, false)
+func (r *markdownRenderer) renderLists(source []byte, doc ast.Node) ([]byte, error) {
+	// Lay out each item separately so its marker is a hanging indent rather
+	// than part of the text Glamour wraps at the list's left edge.
+	var lists []*ast.List
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if list, ok := n.(*ast.List); ok && entering {
+			lists = append(lists, list)
+		}
+		return ast.WalkContinue, nil
+	})
+	for i := len(lists) - 1; i >= 0; i-- {
+		list := lists[i]
+		var body strings.Builder
+		body.WriteByte('\n')
+		for item := list.FirstChild(); item != nil; item = item.NextSibling() {
+			prefix := r.listPrefix(item)
+			indent := strings.Repeat(" ", ansi.StringWidth(prefix))
+			itemDoc := ast.NewDocument()
+			var children []ast.Node
+			for child := item.FirstChild(); child != nil; child = item.FirstChild() {
+				children = append(children, child)
+				itemDoc.AppendChild(itemDoc, child)
+			}
+			style := r.style
+			style.Document.Margin = new(uint)
+			style.Document.BlockPrefix, style.Document.BlockSuffix = "", ""
+			var rendered bytes.Buffer
+			itemRenderer := renderer.NewRenderer(renderer.WithNodeRenderers(util.Prioritized(
+				glamouransi.NewRenderer(glamouransi.Options{Styles: style, WordWrap: max(r.contentWidth(list)-len(indent), 1)}), 1000,
+			)))
+			err := itemRenderer.Render(&rendered, source, itemDoc)
+			for _, child := range children {
+				item.AppendChild(item, child)
+			}
+			if err != nil {
+				return nil, err
+			}
+			for row, line := range strings.Split(strings.Trim(rendered.String(), "\n"), "\n") {
+				if row == 0 {
+					body.WriteString(prefix)
+				} else {
+					body.WriteString(indent)
+				}
+				body.WriteString(line)
+				body.WriteByte('\n')
+			}
+		}
+		// Text nodes pass through Glamour's entity and Markdown unescaping.
+		literal := html.EscapeString(strings.ReplaceAll(body.String(), "\\", "\\\\"))
+		start := len(source)
+		source = append(source, literal...)
+		list.Parent().ReplaceChild(list.Parent(), list, ast.NewTextSegment(text.NewSegment(start, len(source))))
+	}
+	return source, nil
+}
+
+func (r *markdownRenderer) listPrefix(item ast.Node) string {
+	if child := item.FirstChild(); child != nil {
+		if checkbox, ok := child.FirstChild().(*extast.TaskCheckBox); ok {
+			if checkbox.IsChecked {
+				return r.style.Task.Ticked
+			}
+			return r.style.Task.Unticked
+		}
+	}
+	if item.Parent().(*ast.List).IsOrdered() {
+		number := item.Parent().(*ast.List).Start
+		for sibling := item.PreviousSibling(); sibling != nil; sibling = sibling.PreviousSibling() {
+			number++
+		}
+		return fmt.Sprint(number) + r.style.Enumeration.BlockPrefix
+	}
+	return r.style.Item.BlockPrefix
+}
+
+func (r *markdownRenderer) contentWidth(n ast.Node) int {
+	width := r.width - blockInset(r.style.Document, true)
 	for parent := n.Parent(); parent != nil; parent = parent.Parent() {
 		switch parent.Kind() {
 		case ast.KindBlockquote:
 			width -= blockInset(r.style.BlockQuote, true)
 		case ast.KindList:
 			width -= blockInset(r.style.List.StyleBlock, true)
-			for ancestor := parent.Parent(); ancestor != nil; ancestor = ancestor.Parent() {
-				if ancestor.Kind() == ast.KindList {
-					width -= int(r.style.List.LevelIndent)
-					break
-				}
-			}
+		case ast.KindListItem:
+			width -= ansi.StringWidth(r.listPrefix(parent))
 		}
 	}
 	return max(width, 1)
+}
+
+func (r *markdownRenderer) codeWidth(n ast.Node) int {
+	return max(r.contentWidth(n)-blockInset(r.style.CodeBlock.StyleBlock, false), 1)
 }
 
 func blockInset(style glamouransi.StyleBlock, bothMargins bool) int {

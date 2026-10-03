@@ -431,3 +431,21 @@ func TestCommentActionsListFirstOnHighlightedComment(t *testing.T) {
 		t.Fatalf("exit command = %+v", cmd)
 	}
 }
+
+func TestRepeatActionRunsLastPicked(t *testing.T) {
+	dir := gitRepo(t)
+	m, st := flowModel(t, web)
+	st.LinkRepo("p1", dir)
+	m.modal, m.run, m.loading = nil, nil, false
+	m.Update(key("."))
+	if m.ExitCommand() != nil || m.status != "no action run yet" {
+		t.Fatalf("repeat before any action: status = %q", m.status)
+	}
+	m.openActionMenu()
+	m.pickedAction(0)
+	m.exitCmd = nil
+	m.Update(key("."))
+	if cmd := m.ExitCommand(); cmd == nil || cmd.Dir != dir {
+		t.Fatalf("repeat did not rerun the action: %+v (status %q)", cmd, m.status)
+	}
+}

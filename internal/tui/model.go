@@ -135,6 +135,7 @@ type Model struct {
 	run             *pendingRun
 	edit            *pendingEdit
 	timeEntry       *pendingTime
+	lastAction      int               // index of the last picked action; -1 for none
 	users           []asana.Ref       // workspace users, loaded on first assign
 	afterProjects   func() tea.Cmd    // runs once projects load
 	linkNames       map[string]string // names of linked projects outside projects
@@ -157,6 +158,7 @@ func New(d Deps) *Model {
 		readerView:    d.Config.Reader.View,
 		separator:     d.Config.List.Separator,
 		spacing:       d.Config.List.Header.Spacing,
+		lastAction:    -1,
 		accentStyle:   colorStyle(d.Config.AccentColor),
 		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
 		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),

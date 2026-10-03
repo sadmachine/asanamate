@@ -121,6 +121,7 @@ func keyBindings() []binding {
 		{keys: []string{"C"}, desc: "add comment", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			return m.requestMenu(func() tea.Cmd { return m.openField(commentKey) })
 		}},
+		{keys: []string{"."}, desc: "repeat last action", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestMenu(m.repeatAction) }},
 		{keys: []string{"d"}, desc: "set due date", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			return m.requestMenu(func() tea.Cmd { return m.openEdit(editDue) })
 		}},

@@ -121,6 +121,15 @@ func keyBindings() []binding {
 		{keys: []string{"C"}, desc: "add comment", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			return m.requestMenu(func() tea.Cmd { return m.openField(commentKey) })
 		}},
+		{keys: []string{"d"}, desc: "set due date", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			return m.requestMenu(func() tea.Cmd { return m.openEdit(editDue) })
+		}},
+		{keys: []string{"m"}, desc: "move to section", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			return m.requestMenu(func() tea.Cmd { return m.openEdit(editSection) })
+		}},
+		{keys: []string{"A"}, desc: "assign", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			return m.requestMenu(func() tea.Cmd { return m.openEdit(editAssignee) })
+		}},
 		{keys: []string{"t"}, desc: "log time", hint: "time", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestMenu(m.openTime) }},
 		{keys: []string{"f"}, desc: "attachments", group: "Ticket", run: menu(func(m *Model) func() { return m.openAttachments })},
 		{keys: []string{"o"}, desc: "open in browser", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {

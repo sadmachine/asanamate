@@ -75,6 +75,7 @@ key press.
 | `space`, `a` | run an action on the selected ticket |
 | `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), assign it, or set its branch (saved locally, overrides `branch_field`; empty removes it) |
 | `C` | add a comment to the selected ticket, from the list or the reader |
+| `d` / `m` / `A` | set the due date / move to a section / assign, skipping the `e` menu |
 | `t` | log completed time for the selected ticket (only when time tracking is configured) |
 | `f` | attachments: view images inline (`j`/`k` step between them) or open in the browser |
 | `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) |

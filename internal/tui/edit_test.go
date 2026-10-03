@@ -166,6 +166,17 @@ func TestEditWrites(t *testing.T) {
 		{"unassign", func(m *Model) {
 			press(m, "e", "a", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee":null}}`},
+		{"due date key", func(m *Model) {
+			press(m, "d")
+			m.input.area.SetValue("2026-10-01")
+			send(m, ctrlS)
+		}, `PUT /tasks/1 {"data":{"due_on":"2026-10-01"}}`},
+		{"move key", func(m *Model) {
+			press(m, "m", "enter", "down", "enter")
+		}, `PUT /tasks/1 {"data":{"assignee_section":"m2"}}`},
+		{"assign key", func(m *Model) {
+			press(m, "A", "down", "down", "enter")
+		}, `PUT /tasks/1 {"data":{"assignee":"u2"}}`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

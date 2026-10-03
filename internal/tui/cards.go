@@ -142,7 +142,7 @@ func (m *Model) summaryLine(t asana.Task, width int) string {
 		}
 	}
 	if rel, style := dueLabel(t.DueOn, m.now()); rel != "" {
-		due, _, _ := dueDays(t.DueOn, m.now())
+		due, _, _ := asana.DueDays(t.DueOn, m.now())
 		chips = append(chips, style.Render(m.sym.icon(iconDue)+shortDate(due, m.now())+" · "+rel))
 	}
 	if branch := action.Branch(t, m.deps.State.TaskBranches[t.GID], m.deps.Config.BranchField, rc.preferred); branch != action.Slug(t.Name) {
@@ -279,7 +279,7 @@ func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
 			case f.Label == "Status" && f.Key == "":
 				value = m.statusBadge(t.Completed)
 			case f.Key == ticket.KeyDue:
-				if due, _, ok := dueDays(t.DueOn, m.now()); ok {
+				if due, _, ok := asana.DueDays(t.DueOn, m.now()); ok {
 					rel, style := dueLabel(t.DueOn, m.now())
 					value = style.Render(shortDate(due, m.now()) + " (" + rel + ")")
 				}

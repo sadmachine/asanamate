@@ -105,6 +105,7 @@ type Model struct {
 	readerView  string // config.ViewCards or config.ViewMarkdown
 	separator   bool   // lines frame each ticket; starts at list.separator
 	spacing     bool   // blank lines around group headers; starts at list.header.spacing
+	savedView   string // saved view [ and ] last applied
 	renderers   map[rendererKey]*markdownRenderer
 	details     map[string]ticket.Ticket
 	images      map[string]*inlineImage // inline images by attachment gid

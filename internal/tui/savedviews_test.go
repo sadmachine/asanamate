@@ -145,3 +145,23 @@ func TestSavedViewWriteFailureRollsBack(t *testing.T) {
 		t.Fatal("failed creation remained in memory")
 	}
 }
+
+func TestSavedViewCycle(t *testing.T) {
+	m, st := testModel(t, config.Config{})
+	m.loading = false
+	m.Update(key("]"))
+	if m.status != "no saved views" {
+		t.Fatalf("status = %q", m.status)
+	}
+	st.SavedViews["b"] = state.View{Filter: "is:done"}
+	st.SavedViews["a"] = state.View{Filter: "is:open", GroupBy: "section"}
+	for _, step := range []struct{ key, filter string }{{"]", "is:open"}, {"]", "is:done"}, {"]", "is:open"}, {"[", "is:done"}} {
+		m.Update(key(step.key))
+		if m.filterInput.Value() != step.filter {
+			t.Fatalf("after %s filter = %q, want %q", step.key, m.filterInput.Value(), step.filter)
+		}
+	}
+	if m.groupBy != "" {
+		t.Fatalf("group = %q", m.groupBy)
+	}
+}

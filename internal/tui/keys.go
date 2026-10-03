@@ -160,6 +160,12 @@ func keyBindings() []binding {
 		{keys: []string{"ctrl+s"}, desc: "save current view", group: "View", run: do((*Model).openSaveView)},
 		{keys: []string{"R"}, desc: "auto-update interval", group: "View", run: do((*Model).openRefreshInterval)},
 		{keys: []string{"L"}, desc: "repo links", group: "View", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestProjects(m.openLinks) }},
+		{keys: []string{"]", "["}, label: "]/[", desc: "next / previous saved view", group: "View", run: func(m *Model, msg tea.KeyPressMsg) tea.Cmd {
+			if msg.String() == "[" {
+				return m.cycleSavedView(-1)
+			}
+			return m.cycleSavedView(1)
+		}},
 		{keys: []string{"s"}, desc: "separators", group: "View", run: do(func(m *Model) { m.separator = !m.separator })},
 		{keys: []string{"S"}, desc: "header spacing", group: "View", run: do(func(m *Model) { m.spacing = !m.spacing })},
 		{keys: []string{"b"}, desc: "group by", group: "View", run: do((*Model).openGroupPicker)},

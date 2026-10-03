@@ -83,6 +83,7 @@ key press.
 | `=` | fit the list pane to its content (also on project, grouping, and filter changes) |
 | `v` | switch the reader between the cards and markdown views |
 | `V` | recall or manage saved views |
+| `]` / `[` | apply the next/previous saved view, in name order |
 | `ctrl+s` | save the current filter and grouping under a name |
 | `s` | show or hide the lines between tickets |
 | `S` | add or remove the blank lines around group headers |

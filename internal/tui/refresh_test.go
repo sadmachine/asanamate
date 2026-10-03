@@ -14,7 +14,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
-func TestRefreshIntervalSessionOverride(t *testing.T) {
+func TestRefreshIntervalOverridePersists(t *testing.T) {
 	cfg := config.Default()
 	cfg.List.RefreshInterval = "1m"
 	m, st := testModel(t, cfg)
@@ -36,12 +36,12 @@ func TestRefreshIntervalSessionOverride(t *testing.T) {
 	if cmd == nil || m.input != nil || m.refreshInterval != 15*time.Second || m.refreshSeq == 0 {
 		t.Fatal("valid interval did not close modal and restart timer")
 	}
-	if !strings.Contains(m.status, "session only") || m.deps.Config.List.RefreshInterval != "1m" {
-		t.Fatal("override changed config or failed to identify session scope")
+	if m.deps.Config.List.RefreshInterval != "1m" {
+		t.Fatal("override changed config")
 	}
-	// Starting another session from the same config and state restores config.
+	// Another session from the same config and state keeps the override.
 	next := New(Deps{Config: m.deps.Config, State: st})
-	if next.refreshInterval != time.Minute {
+	if next.refreshInterval != 15*time.Second {
 		t.Fatalf("new session interval = %s", next.refreshInterval)
 	}
 	m.Update(key("R"))

@@ -85,12 +85,11 @@ key press.
 | `V` | recall or manage saved views |
 | `]` / `[` | apply the next/previous saved view, in name order |
 | `ctrl+s` | save the current filter and grouping under a name |
-| `s` | show or hide the lines between tickets |
-| `S` | add or remove the blank lines around group headers |
+| `s` | settings: separators, header spacing, reader view, and auto-update interval; changes persist between sessions |
 | `o` | open the ticket in the browser |
 | `c` | copy the selected ticket's link to the clipboard (requires terminal OSC 52 support) |
 | `r` | reload |
-| `R` | set the automatic reload interval for this session only |
+| `R` | set the automatic reload interval (persists between sessions) |
 | `?` | show every key |
 | `q` | quit |
 
@@ -103,10 +102,10 @@ Space-separated terms, all of which must match:
 - `project:<name>[<section>]` matches a section within that project, such as
   `project:web[backlog]` or `project:web["in progress"]`
 - `is:open`, `is:done`
-- `agent:any`, `agent:none`, `agent:<state>` match linked [agents](#agents-optional)
-- `-term` negates a term; `"double quotes"` group words
 - `due:overdue`, `due:today`, `due:week` (the next 7 days, today included),
   `due:none`
+- `agent:any`, `agent:none`, `agent:<state>` match linked [agents](#agents-optional)
+- `-term` negates a term; `"double quotes"` group words
 
 Example: `is:open section:"in progress" -tag:blocked`. Set the startup filter
 with `default_filter`.
@@ -157,20 +156,20 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `default_filter` | `"is:open"` | filter applied at startup |
 | `confirm_writes` | `true` | write-back subcommands ask before writing |
 | `list.layout` | `"single"` | `single` (one line per ticket) or `multi` (title, then fields on a second line) |
-| `list.refresh_interval` | `"30s"` | automatic list reload interval, at least `1s`; durations such as `"15s"` or `"1m"`; `R` opens a session-only override, `ctrl+s` applies it; the statusline shows the interval, and an automatic reload marks the list border yellow instead of opening the loading modal |
+| `list.refresh_interval` | `"30s"` | automatic list reload interval, at least `1s`; durations such as `"15s"` or `"1m"`; `R` or the `s` settings menu overrides it and the override persists, `ctrl+s` applies it; the statusline shows the interval, and an automatic reload marks the list border yellow instead of opening the loading modal |
 | `list.fields` | `["section", "due"]` | values shown with the title, in aligned columns (`single` layout); due dates show relative to today and are colored by urgency |
 | `branch_field` | `""` | custom field holding the ticket's git branch (`$ASANAMATE_BRANCH`); empty uses the ticket's ID field, else the title slug |
 | `agents.preset` / `agents.command` | unset (off) | opt-in agent tracking; see [Agents](#agents-optional) |
 | `symbols` | `unicode` on UTF-8, else `ascii` | `unicode`, `nerd`, or `ascii` for ticket markers and agent states |
 | `reduced_motion` | OS setting | `true` shows static agent symbols instead of the spinner |
-| `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one; `s` toggles |
+| `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one; the `s` settings menu toggles it and the choice persists |
 | `list.group_by` | `""` (ungrouped) | starting grouping: any `list.fields` name; `b` picks another |
 | `list.header.style` | `"rule"` | group headers: `rule` (`── Label (n) ───`) or `bar` (reversed bar) |
-| `list.header.spacing` | `false` | `true` adds a blank line above and below each group header; `S` toggles |
+| `list.header.spacing` | `false` | `true` adds a blank line above and below each group header; the `s` settings menu toggles it and the choice persists |
 | `list.header.color` | `accent_color` | group header color, same format as `accent_color` |
 | `list.selection.style` | `"marker"` | selected ticket: `marker` (bold title with a left `▌`) or `bar` (reversed row; agent badges swap colors) |
 | `list.selection.color` | `accent_color` | selection marker color, same format as `accent_color` |
-| `reader.view` | `"cards"` | reader's starting view: `cards` (details card, titled sections, one box per comment) or `markdown` (the rendered ticket Markdown); `v` switches |
+| `reader.view` | `"cards"` | reader's starting view: `cards` (details card, titled sections, one box per comment) or `markdown` (the rendered ticket Markdown); `v` switches and the choice persists |
 | `images.mode` | `"auto"` | kitty graphics: `auto`, `kitty` (force on), or `off` |
 | `images.inline` | `false` | cards view: draw images in descriptions and comments in place of their links (needs `images.mode` on and a terminal with kitty Unicode placeholders, such as kitty or Ghostty) |
 | `reader.max_text_width` | `0` | cards view: wrap description and comment text at this many columns (words are kept whole); `0` wraps at the pane width |

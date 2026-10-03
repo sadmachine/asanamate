@@ -92,6 +92,8 @@ func TestListViewSeparator(t *testing.T) {
 		t.Fatalf("single = %q", got)
 	}
 	single.Update(key("s"))
+	single.Update(key("s"))
+	single.Update(key("esc"))
 	if got := listLines(single, 5, 3); !slices.Equal(got, []string{"□  A", "□  B", "□  C"}) {
 		t.Fatalf("single toggled off = %q", got)
 	}
@@ -169,7 +171,9 @@ func TestListViewGroups(t *testing.T) {
 	if got := listLines(m, 24, 4); got[0] != " Doing (2)" || got[1] != "□  C" {
 		t.Fatalf("first row shown mid-group gets its header: %q", got)
 	}
-	m.Update(key("S"))
+	m.Update(key("s"))
+	m.Update(key("h"))
+	m.Update(key("esc"))
 	m.moveTo(0)
 	got = listLines(m, 24, 10)
 	want = []string{" Doing (2)", "", "□  A", strings.Repeat("─", 24), "□  C", "", " Next (1)", "", "□  B", strings.Repeat("─", 24)}

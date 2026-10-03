@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -34,7 +33,7 @@ func (m *Model) autoRefresh(msg refreshTickMsg) tea.Cmd {
 }
 
 func (m *Model) openRefreshInterval() {
-	b := newInputBox("Auto-update interval (session only; e.g. 15s or 1m)", "")
+	b := newInputBox("Auto-update interval (e.g. 15s or 1m)", "")
 	b.area.SetValue(shortDuration(m.refreshInterval))
 	b.onSubmit = func(value string) tea.Cmd {
 		interval, err := config.ParseRefreshInterval(value)
@@ -45,7 +44,8 @@ func (m *Model) openRefreshInterval() {
 		m.refreshInterval = interval
 		m.refreshSeq++
 		m.input = nil
-		m.status = fmt.Sprintf("auto-update: %s (session only)", shortDuration(interval))
+		m.status = "auto-update: " + shortDuration(interval)
+		m.saveDisplay()
 		return m.scheduleRefresh()
 	}
 	m.input = b

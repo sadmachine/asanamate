@@ -91,7 +91,7 @@ type Model struct {
 	now             func() time.Time // today, for due dates
 	loading         bool             // tasks are loading; the stale view stays frozen under a modal
 	background      bool             // the timer started the loading reload, so it shows no modal
-	refreshInterval time.Duration    // session interval, initialized from config
+	refreshInterval time.Duration    // auto-update interval, from saved settings or config
 	refreshSeq      uint64           // invalidates timers from earlier session intervals
 
 	filterInput textinput.Model
@@ -156,9 +156,9 @@ func New(d Deps) *Model {
 		deps:          d,
 		filterInput:   in,
 		reader:        viewport.New(),
-		readerView:    d.Config.Reader.View,
-		separator:     d.Config.List.Separator,
-		spacing:       d.Config.List.Header.Spacing,
+		readerView:    cmp.Or(d.State.Display.ReaderView, d.Config.Reader.View),
+		separator:     *cmp.Or(d.State.Display.Separator, &d.Config.List.Separator),
+		spacing:       *cmp.Or(d.State.Display.HeaderSpacing, &d.Config.List.Header.Spacing),
 		lastAction:    -1,
 		accentStyle:   colorStyle(d.Config.AccentColor),
 		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
@@ -174,6 +174,9 @@ func New(d Deps) *Model {
 	}
 	m.restoreView()
 	m.refreshInterval, _ = config.ParseRefreshInterval(cmp.Or(d.Config.List.RefreshInterval, config.Default().List.RefreshInterval))
+	if saved, err := config.ParseRefreshInterval(d.State.Display.RefreshInterval); err == nil {
+		m.refreshInterval = saved
+	}
 	return m
 }
 

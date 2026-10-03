@@ -508,7 +508,7 @@ func (m *Model) applyFilter() {
 	if prev, ok := m.selected(); ok {
 		prevGID = prev.GID
 	}
-	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates)
+	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates, m.now())
 	if p := m.pinned; p != nil && !slices.ContainsFunc(visible, func(t asana.Task) bool { return t.GID == p.GID }) {
 		visible = append(visible, *p)
 	}

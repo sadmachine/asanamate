@@ -3,20 +3,22 @@
 // A query is space-separated terms that must all match. Bare words match the
 // title. section:, project:, assignee:, and tag: match names by substring.
 // project:<name>[<section>] matches a section within that project only.
-// is:open and is:done match completion. agent:any, agent:none, and
-// agent:<state> match linked agents. A leading "-" negates a term, and double
+// is:open and is:done match completion. due:overdue, due:today, due:week (the
+// next 7 days, today included), and due:none match the due date. agent:any,
+// agent:none, and agent:<state> match linked agents. A leading "-" negates a term, and double
 // quotes group words.
 package filter
 
 import (
 	"slices"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 )
 
-var keys = []string{"section", "project", "assignee", "tag", "is", "agent"}
+var keys = []string{"section", "project", "assignee", "tag", "is", "due", "agent"}
 
 // Keys returns the filter fields in display order.
 func Keys() []string { return slices.Clone(keys) }
@@ -88,10 +90,10 @@ func tokenize(query string) []string {
 }
 
 // Match reports whether t satisfies every term. agentStates are the states of
-// the agents linked to t.
-func (f Filter) Match(t asana.Task, agentStates []string) bool {
+// the agents linked to t; today places due dates.
+func (f Filter) Match(t asana.Task, agentStates []string, today time.Time) bool {
 	for _, tm := range f.terms {
-		if tm.match(t, agentStates) == tm.negate {
+		if tm.match(t, agentStates, today) == tm.negate {
 			return false
 		}
 	}
@@ -99,22 +101,22 @@ func (f Filter) Match(t asana.Task, agentStates []string) bool {
 }
 
 // Apply returns the tasks that match, in their original order. agentStates
-// may be nil when agents are not tracked.
-func (f Filter) Apply(tasks []asana.Task, agentStates func(asana.Task) []string) []asana.Task {
+// may be nil when agents are not tracked; today places due dates.
+func (f Filter) Apply(tasks []asana.Task, agentStates func(asana.Task) []string, today time.Time) []asana.Task {
 	var out []asana.Task
 	for _, t := range tasks {
 		var states []string
 		if agentStates != nil {
 			states = agentStates(t)
 		}
-		if f.Match(t, states) {
+		if f.Match(t, states, today) {
 			out = append(out, t)
 		}
 	}
 	return out
 }
 
-func (tm term) match(t asana.Task, agentStates []string) bool {
+func (tm term) match(t asana.Task, agentStates []string, today time.Time) bool {
 	switch tm.key {
 	case "agent":
 		switch tm.value {
@@ -137,6 +139,19 @@ func (tm term) match(t asana.Task, agentStates []string) bool {
 			return !t.Completed
 		case "done":
 			return t.Completed
+		}
+		return false
+	case "due":
+		_, days, ok := asana.DueDays(t.DueOn, today)
+		switch tm.value {
+		case "none":
+			return !ok
+		case "overdue":
+			return ok && days < 0
+		case "today":
+			return ok && days == 0
+		case "week":
+			return ok && days >= 0 && days < 7
 		}
 		return false
 	case "assignee":

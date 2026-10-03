@@ -102,6 +102,8 @@ Space-separated terms, all of which must match:
 - `is:open`, `is:done`
 - `agent:any`, `agent:none`, `agent:<state>` match linked [agents](#agents-optional)
 - `-term` negates a term; `"double quotes"` group words
+- `due:overdue`, `due:today`, `due:week` (the next 7 days, today included),
+  `due:none`
 
 Example: `is:open section:"in progress" -tag:blocked`. Set the startup filter
 with `default_filter`.

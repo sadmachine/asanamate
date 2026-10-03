@@ -2,6 +2,7 @@ package filter
 
 import (
 	"testing"
+	"time"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 )
@@ -50,7 +51,7 @@ func TestMatch(t *testing.T) {
 		f := Parse(c.query)
 		got := ""
 		for _, task := range []asana.Task{open, done} {
-			if f.Match(task, nil) {
+			if f.Match(task, nil, time.Time{}) {
 				got += task.GID
 			}
 		}
@@ -61,11 +62,11 @@ func TestMatch(t *testing.T) {
 }
 
 func TestApplyKeepsOrder(t *testing.T) {
-	got := Parse("").Apply([]asana.Task{done, open}, nil)
+	got := Parse("").Apply([]asana.Task{done, open}, nil, time.Time{})
 	if len(got) != 2 || got[0].GID != "b" || got[1].GID != "a" {
 		t.Fatalf("got %+v", got)
 	}
-	if got := Parse("is:done").Apply([]asana.Task{open}, nil); len(got) != 0 {
+	if got := Parse("is:done").Apply([]asana.Task{open}, nil, time.Time{}); len(got) != 0 {
 		t.Fatalf("got %+v", got)
 	}
 }
@@ -79,7 +80,22 @@ func TestAgentTerms(t *testing.T) {
 	}
 	for q, want := range map[string]string{"agent:any": "a", "agent:none": "b", "agent:waiting": "a", "agent:idle": "", "-agent:any": "b"} {
 		got := ""
-		for _, task := range Parse(q).Apply([]asana.Task{open, done}, states) {
+		for _, task := range Parse(q).Apply([]asana.Task{open, done}, states, time.Time{}) {
+			got += task.GID
+		}
+		if got != want {
+			t.Errorf("%q matched %q, want %q", q, got, want)
+		}
+	}
+}
+
+func TestDueTerms(t *testing.T) {
+	today := time.Date(2026, 9, 28, 12, 0, 0, 0, time.Local)
+	due := func(gid, on string) asana.Task { return asana.Task{GID: gid, DueOn: &on} }
+	tasks := []asana.Task{due("o", "2026-09-27"), due("t", "2026-09-28"), due("w", "2026-10-04"), due("l", "2026-10-05"), {GID: "n"}}
+	for q, want := range map[string]string{"due:overdue": "o", "due:today": "t", "due:week": "tw", "due:none": "n", "-due:none": "otwl", "due:bogus": ""} {
+		got := ""
+		for _, task := range Parse(q).Apply(tasks, nil, today) {
 			got += task.GID
 		}
 		if got != want {

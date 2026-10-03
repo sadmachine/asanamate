@@ -91,7 +91,7 @@ type Model struct {
 	now             func() time.Time // today, for due dates
 	loading         bool             // tasks are loading; the stale view stays frozen under a modal
 	background      bool             // the timer started the loading reload, so it shows no modal
-	refreshInterval time.Duration    // session interval, initialized from config
+	refreshInterval time.Duration    // auto-update interval, from saved settings or config
 	refreshSeq      uint64           // invalidates timers from earlier session intervals
 
 	filterInput textinput.Model
@@ -105,6 +105,7 @@ type Model struct {
 	readerView  string // config.ViewCards or config.ViewMarkdown
 	separator   bool   // lines frame each ticket; starts at list.separator
 	spacing     bool   // blank lines around group headers; starts at list.header.spacing
+	savedView   string // saved view [ and ] last applied
 	renderers   map[rendererKey]*markdownRenderer
 	details     map[string]ticket.Ticket
 	images      map[string]*inlineImage // inline images by attachment gid
@@ -135,6 +136,7 @@ type Model struct {
 	run             *pendingRun
 	edit            *pendingEdit
 	timeEntry       *pendingTime
+	lastAction      int               // index of the last picked action; -1 for none
 	users           []asana.Ref       // workspace users, loaded on first assign
 	afterProjects   func() tea.Cmd    // runs once projects load
 	linkNames       map[string]string // names of linked projects outside projects
@@ -154,9 +156,10 @@ func New(d Deps) *Model {
 		deps:          d,
 		filterInput:   in,
 		reader:        viewport.New(),
-		readerView:    d.Config.Reader.View,
-		separator:     d.Config.List.Separator,
-		spacing:       d.Config.List.Header.Spacing,
+		readerView:    cmp.Or(d.State.Display.ReaderView, d.Config.Reader.View),
+		separator:     *cmp.Or(d.State.Display.Separator, &d.Config.List.Separator),
+		spacing:       *cmp.Or(d.State.Display.HeaderSpacing, &d.Config.List.Header.Spacing),
+		lastAction:    -1,
 		accentStyle:   colorStyle(d.Config.AccentColor),
 		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
 		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),
@@ -171,6 +174,9 @@ func New(d Deps) *Model {
 	}
 	m.restoreView()
 	m.refreshInterval, _ = config.ParseRefreshInterval(cmp.Or(d.Config.List.RefreshInterval, config.Default().List.RefreshInterval))
+	if saved, err := config.ParseRefreshInterval(d.State.Display.RefreshInterval); err == nil {
+		m.refreshInterval = saved
+	}
 	return m
 }
 
@@ -508,7 +514,7 @@ func (m *Model) applyFilter() {
 	if prev, ok := m.selected(); ok {
 		prevGID = prev.GID
 	}
-	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates)
+	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates, m.now())
 	if p := m.pinned; p != nil && !slices.ContainsFunc(visible, func(t asana.Task) bool { return t.GID == p.GID }) {
 		visible = append(visible, *p)
 	}

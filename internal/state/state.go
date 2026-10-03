@@ -46,8 +46,20 @@ type State struct {
 	TimeProjects map[string]map[string][]string `toml:"time_projects"`
 	// FormChoices holds recent select IDs by form owner, Asana project, and field.
 	FormChoices map[string]map[string]map[string][]string `toml:"form_choices"`
+	// Display holds display settings changed in the TUI, over their config
+	// defaults.
+	Display Display `toml:"display"`
 
 	path string
+}
+
+// Display is the TUI's saved display settings; nil or "" keeps the config
+// default.
+type Display struct {
+	Separator       *bool  `toml:"separator,omitempty"`
+	HeaderSpacing   *bool  `toml:"header_spacing,omitempty"`
+	ReaderView      string `toml:"reader_view,omitempty"`
+	RefreshInterval string `toml:"refresh_interval,omitempty"`
 }
 
 // View is a list grouping and filter; "" GroupBy is ungrouped.

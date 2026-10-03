@@ -43,11 +43,35 @@ func (m *Model) openSavedViews() {
 			open()
 			return nil
 		}
-		v := m.deps.State.SavedViews[res.item.Value.(string)]
-		m.filterInput.SetValue(v.Filter)
-		m.pinned = nil
-		return m.pickedGroup(v.GroupBy)
+		return m.applySavedView(res.item.Value.(string))
 	}, "Saved views · apply to current project", items)
+}
+
+// applySavedView applies the saved view's filter and grouping.
+func (m *Model) applySavedView(name string) tea.Cmd {
+	v := m.deps.State.SavedViews[name]
+	m.savedView = name
+	m.filterInput.SetValue(v.Filter)
+	m.pinned = nil
+	return m.pickedGroup(v.GroupBy)
+}
+
+// cycleSavedView applies the saved view dir steps from the last one applied,
+// wrapping around.
+func (m *Model) cycleSavedView(dir int) tea.Cmd {
+	items := m.savedViewItems()
+	if len(items) == 0 {
+		m.status = "no saved views"
+		return nil
+	}
+	i := slices.IndexFunc(items, func(it pickItem) bool { return it.Value == m.savedView })
+	if i < 0 && dir < 0 {
+		i = 0
+	}
+	name := items[(i+dir+len(items))%len(items)].Value.(string)
+	cmd := m.applySavedView(name)
+	m.status = "view: " + ticket.OneLine(name)
+	return cmd
 }
 
 // openSaveView captures a snapshot; subsequent filter edits do not change it.

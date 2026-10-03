@@ -3,7 +3,22 @@ package asana
 import (
 	"regexp"
 	"strings"
+	"time"
 )
+
+// DueDays parses a due date (YYYY-MM-DD) and counts the calendar days from
+// today to it, negative when it has passed. ok is false for no or a bad date.
+func DueDays(dueOn *string, today time.Time) (due time.Time, days int, ok bool) {
+	if dueOn == nil {
+		return time.Time{}, 0, false
+	}
+	due, err := time.Parse(time.DateOnly, *dueOn)
+	if err != nil {
+		return time.Time{}, 0, false
+	}
+	day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
+	return due, int(due.Sub(day).Hours() / 24), true
+}
 
 // Ref is a compact Asana object: a gid and a display name.
 type Ref struct {

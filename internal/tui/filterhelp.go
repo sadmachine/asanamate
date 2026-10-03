@@ -68,8 +68,8 @@ func (m *Model) filterHelpView() string {
 			key("section:  project:") + "\n" +
 			key("assignee:  tag:") + " match names\n" +
 			key("is:open  is:done") + "\n" +
-			key("agent:any  agent:none") + "\n" +
-			key("agent:<state>") + "\n" +
+			key("due:") + " overdue today week none\n" +
+			key("agent:any  agent:none  agent:<state>") + "\n" +
 			dimStyle.Render("waiting, working, completed,") + "\n" +
 			dimStyle.Render("idle, unknown") + "\n\n" +
 			"Spaces combine terms. " + key("-term") + " excludes.\n" +
@@ -83,6 +83,7 @@ func (m *Model) filterHelpView() string {
 		key("section:  project:  assignee:  tag:") + " match names\n" +
 		key("project:<name>[<section>]") + " matches a section of that project\n" +
 		key("is:open  is:done") + " filter completion\n" +
+		key("due:overdue  due:today  due:week  due:none") + " filter due dates\n" +
 		key("agent:any  agent:none  agent:<state>") + " filter linked agents\n" +
 		dimStyle.Render("States: waiting, working, completed, idle, unknown") + "\n\n" +
 		"Spaces combine terms. " + key("-term") + " excludes. " + key(`"two words"`) + " groups words.\n\n" +

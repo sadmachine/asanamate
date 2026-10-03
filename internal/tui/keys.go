@@ -121,6 +121,16 @@ func keyBindings() []binding {
 		{keys: []string{"C"}, desc: "add comment", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			return m.requestMenu(func() tea.Cmd { return m.openField(commentKey) })
 		}},
+		{keys: []string{"."}, desc: "repeat last action", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestMenu(m.repeatAction) }},
+		{keys: []string{"d"}, desc: "set due date", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			return m.requestMenu(func() tea.Cmd { return m.openEdit(editDue) })
+		}},
+		{keys: []string{"m"}, desc: "move to section", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			return m.requestMenu(func() tea.Cmd { return m.openEdit(editSection) })
+		}},
+		{keys: []string{"A"}, desc: "assign", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			return m.requestMenu(func() tea.Cmd { return m.openEdit(editAssignee) })
+		}},
 		{keys: []string{"t"}, desc: "log time", hint: "time", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestMenu(m.openTime) }},
 		{keys: []string{"f"}, desc: "attachments", group: "Ticket", run: menu(func(m *Model) func() { return m.openAttachments })},
 		{keys: []string{"o"}, desc: "open in browser", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
@@ -145,13 +155,18 @@ func keyBindings() []binding {
 			m.shownGID = ""
 			return m.reload()
 		}},
-		{keys: []string{"v"}, desc: "cards / markdown", group: "View", splitOnly: true, run: do((*Model).toggleReaderView)},
+		{keys: []string{"v"}, desc: "cards / markdown", group: "View", splitOnly: true, run: do(func(m *Model) { m.toggleReaderView(); m.saveDisplay() })},
 		{keys: []string{"V"}, desc: "saved views", group: "View", run: do((*Model).openSavedViews)},
 		{keys: []string{"ctrl+s"}, desc: "save current view", group: "View", run: do((*Model).openSaveView)},
 		{keys: []string{"R"}, desc: "auto-update interval", group: "View", run: do((*Model).openRefreshInterval)},
 		{keys: []string{"L"}, desc: "repo links", group: "View", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestProjects(m.openLinks) }},
-		{keys: []string{"s"}, desc: "separators", group: "View", run: do(func(m *Model) { m.separator = !m.separator })},
-		{keys: []string{"S"}, desc: "header spacing", group: "View", run: do(func(m *Model) { m.spacing = !m.spacing })},
+		{keys: []string{"]", "["}, label: "]/[", desc: "next / previous saved view", group: "View", run: func(m *Model, msg tea.KeyPressMsg) tea.Cmd {
+			if msg.String() == "[" {
+				return m.cycleSavedView(-1)
+			}
+			return m.cycleSavedView(1)
+		}},
+		{keys: []string{"s"}, desc: "settings", group: "View", run: do(func(m *Model) { m.openSettings(0) })},
 		{keys: []string{"b"}, desc: "group by", group: "View", run: do((*Model).openGroupPicker)},
 		{keys: []string{"="}, desc: "fit list", group: "View", run: do((*Model).fitList)},
 		{keys: []string{"?"}, desc: "this help", hint: "keys", group: "View", run: do(func(m *Model) { m.help = true })},

@@ -123,7 +123,7 @@ func cellValue(t asana.Task, name string, rc rowContext, today time.Time) (strin
 // dueLabel shows a due date relative to today: "3d ago" in red, "today" in
 // yellow, "tomorrow" and the weekday within a week, then a faint date.
 func dueLabel(dueOn *string, today time.Time) (string, lipgloss.Style) {
-	due, days, ok := dueDays(dueOn, today)
+	due, days, ok := asana.DueDays(dueOn, today)
 	switch {
 	case !ok:
 		return "", lipgloss.Style{}

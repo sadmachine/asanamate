@@ -41,12 +41,31 @@ type pendingEdit struct {
 	myTasks bool               // moving within My Tasks, not a project
 }
 
-func (m *Model) openEditMenu() {
+// startEdit begins an edit of the selected ticket, reporting whether its
+// details have loaded.
+func (m *Model) startEdit() bool {
 	t, ok := m.selectedDetail()
 	if !ok {
 		m.status = "ticket details are still loading"
+		return false
+	}
+	m.edit, m.run = &pendingEdit{ticket: t}, nil
+	return true
+}
+
+// openEdit runs op on the selected ticket without the edit menu.
+func (m *Model) openEdit(op editOp) tea.Cmd {
+	if !m.startEdit() {
+		return nil
+	}
+	return m.pickedEdit(op)
+}
+
+func (m *Model) openEditMenu() {
+	if !m.startEdit() {
 		return
 	}
+	t := m.edit.ticket
 	p := newPicker(pickValue(m.pickedEdit), "Edit: "+ticket.Clean(t.Name), []pickItem{
 		{Label: "Add comment", Key: "c", Value: editComment},
 		{Label: "Move to section", Key: "s", Value: editSection},
@@ -59,7 +78,6 @@ func (m *Model) openEditMenu() {
 	})
 	p.keySelect = true
 	m.modal = p
-	m.edit, m.run = &pendingEdit{ticket: t}, nil
 }
 
 func (m *Model) pickedEdit(op editOp) tea.Cmd {

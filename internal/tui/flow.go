@@ -50,20 +50,31 @@ func sharesFieldNames(t asana.Task) bool {
 	return false
 }
 
-func (m *Model) openActionMenu() {
+// startRun begins a run on the selected ticket and its highlighted comment,
+// returning the action context the selection offers. It reports false when
+// the ticket's details have not loaded.
+func (m *Model) startRun() (string, bool) {
 	t, ok := m.selectedDetail()
 	if !ok {
 		m.status = "ticket details are still loading"
-		return
+		return "", false
 	}
+	comment := m.selectedComment(t)
+	m.run, m.edit = &pendingRun{ticket: t, comment: comment}, nil
+	if comment != nil {
+		return config.ContextComment, true
+	}
+	return "", true
+}
+
+func (m *Model) openActionMenu() {
 	if len(m.deps.Config.Actions) == 0 {
 		m.status = "no actions configured; add a .toml file to the actions folder next to config.toml"
 		return
 	}
-	comment := m.selectedComment(t)
-	context := ""
-	if comment != nil {
-		context = config.ContextComment
+	context, ok := m.startRun()
+	if !ok {
+		return
 	}
 	// Actions for the highlighted item come first, so their keys win over
 	// everywhere actions bound to the same key.
@@ -79,13 +90,30 @@ func (m *Model) openActionMenu() {
 	}
 	items := append(first, rest...)
 	if len(items) == 0 {
-		m.status = "no actions for this selection"
+		m.run, m.status = nil, "no actions for this selection"
 		return
 	}
-	p := newPicker(pickValue(m.pickedAction), "Run on: "+ticket.Clean(t.Name), items)
+	p := newPicker(pickValue(m.pickedAction), "Run on: "+ticket.Clean(m.run.ticket.Name), items)
 	p.keySelect = true
 	m.modal = p
-	m.run, m.edit = &pendingRun{ticket: t, comment: comment}, nil
+}
+
+// repeatAction runs the last picked action again on the current selection.
+func (m *Model) repeatAction() tea.Cmd {
+	if m.lastAction < 0 || m.lastAction >= len(m.deps.Config.Actions) {
+		m.status = "no action run yet"
+		return nil
+	}
+	context, ok := m.startRun()
+	if !ok {
+		return nil
+	}
+	a := m.deps.Config.Actions[m.lastAction]
+	if a.Context != "" && a.Context != context {
+		m.run, m.status = nil, a.Name+" needs a highlighted "+a.Context
+		return nil
+	}
+	return m.pickedAction(m.lastAction)
 }
 
 // selectedComment returns the comment highlighted in the reader, or nil.
@@ -115,6 +143,7 @@ func (m *Model) requestMenu(open func() tea.Cmd) tea.Cmd {
 
 func (m *Model) pickedAction(i int) tea.Cmd {
 	m.modal = nil
+	m.lastAction = i
 	m.run.action = m.deps.Config.Actions[i]
 	return m.continueRun()
 }

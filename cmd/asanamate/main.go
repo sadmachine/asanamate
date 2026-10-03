@@ -387,7 +387,7 @@ func runList(args []string) error {
 	if err != nil {
 		return err
 	}
-	return listing.Tasks(os.Stdout, *format, filter.Parse(*query).Apply(tasks, nil), *project)
+	return listing.Tasks(os.Stdout, *format, filter.Parse(*query).Apply(tasks, nil, time.Now()), *project)
 }
 
 func runShow(args []string) error {

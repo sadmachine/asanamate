@@ -1,0 +1,39 @@
+internal/tui/listrow_test.go
+  s_3a5ea3b1429536::t_87e2d2722da268 95-96,174-176
+internal/tui/model.go
+  s_3a5ea3b1429536::t_ccb05159a54639 177
+  s_3a5ea3b1429536::t_10fd7db09193b5 94,159-160,178-179
+  s_3a5ea3b1429536::t_fc52ef7e40d498 161
+internal/tui/settings.go
+  s_3a5ea3b1429536::t_726f0d501a1e66 5-6,17-19,21,25,30-32,47,49-50
+  s_3a5ea3b1429536::t_42f0fc5582a32d 1-4,7-16,20,22-24,26-29,33-46,48,51-57
+internal/tui/settings_test.go
+  s_3a5ea3b1429536::t_fa00ecd4a0e9db 1-36
+internal/tui/keys.go
+  s_3a5ea3b1429536::t_726f0d501a1e66 158,169
+internal/tui/refresh_test.go
+  s_3a5ea3b1429536::t_87e2d2722da268 17,39-40,42,44
+internal/state/state.go
+  s_3a5ea3b1429536::t_10fd7db09193b5 49-51,56-62
+  s_3a5ea3b1429536::t_62622e70e2a52d 63-64
+README.md
+  s_3a5ea3b1429536::t_e1b55cf3a0812e 88,92,107-108,159,165,168,172
+internal/tui/refresh.go
+  s_3a5ea3b1429536::t_c9701f947bddc1 36,47-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6df15648f9aa8b300c14b88dc9bd4ad2d44b5b32",
+  "prompts": {},
+  "sessions": {
+    "s_3a5ea3b1429536": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98bb2860-9f54-4537-9656-bb505b0e7be8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

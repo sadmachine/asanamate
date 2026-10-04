@@ -60,8 +60,12 @@ func (m *Model) statusline() string {
 	}
 	left := pill + " " + strings.Join(segs, sep)
 
-	right := titleStyle.Render(ticket.OneLine(m.status))
-	if m.status == "" {
+	status := m.status
+	if len(m.notices) > 0 {
+		status = m.notices[0]
+	}
+	right := titleStyle.Render(ticket.OneLine(status))
+	if status == "" {
 		parts := make([]string, len(hints))
 		for i, h := range hints {
 			parts[i] = m.accentStyle.Render(h[0]) + " " + dimStyle.Render(h[1])
@@ -71,7 +75,7 @@ func (m *Model) statusline() string {
 	gap := m.width - ansi.StringWidth(left) - ansi.StringWidth(right)
 	if gap < 2 {
 		// Status messages matter more than where the list is.
-		if m.status == "" {
+		if status == "" {
 			return ansi.Truncate(left, m.width, "…")
 		}
 		return ansi.Truncate(pill+" "+right, m.width, "…")

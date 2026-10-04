@@ -73,9 +73,10 @@ type candidatesMsg struct {
 }
 
 type actionDoneMsg struct {
-	name string
-	log  string
-	err  error
+	name   string
+	log    string
+	err    error
+	action bool // false for other Exec callbacks, such as the image viewer
 }
 
 type sectionsMsg struct {

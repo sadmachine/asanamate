@@ -106,7 +106,8 @@ func (m *Model) continueRun() tea.Cmd {
 		list := m.viewAgents(r.ticket.Task)
 		switch len(list) {
 		case 0:
-			m.run, m.status = nil, "no running agent for this ticket"
+			m.run = nil
+			m.showNotice("no running agent for this ticket")
 			return nil
 		case 1:
 			r.agent = &list[0]
@@ -282,12 +283,12 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 	}
 	files, err := action.WriteFiles(m.deps.StateDir, r.ticket)
 	if err != nil {
-		m.status = "writing ticket files: " + err.Error()
+		m.showNotice("writing ticket files: " + err.Error())
 		return nil
 	}
 	if r.inputDone {
 		if err := files.WriteInput(r.input); err != nil {
-			m.status = "writing input: " + err.Error()
+			m.showNotice("writing input: " + err.Error())
 			return nil
 		}
 	}
@@ -310,12 +311,12 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 	name := r.action.Name
 	switch r.action.Mode {
 	case config.ModeForeground:
-		return tea.ExecProcess(cmd, func(err error) tea.Msg { return actionDoneMsg{name: name, err: err} })
+		return tea.ExecProcess(cmd, func(err error) tea.Msg { return actionDoneMsg{name: name, err: err, action: true} })
 	case config.ModeBackground:
 		m.status = name + ": running…"
 		logPath := filepath.Join(m.deps.StateDir, "actions.log")
 		return func() tea.Msg {
-			return actionDoneMsg{name: name, log: logPath, err: action.RunBackground(cmd, logPath)}
+			return actionDoneMsg{name: name, log: logPath, err: action.RunBackground(cmd, logPath), action: true}
 		}
 	default:
 		m.exitCmd = cmd

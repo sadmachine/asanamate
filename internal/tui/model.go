@@ -103,6 +103,7 @@ type Model struct {
 	spinning        bool // a spinner tick is scheduled
 	modal           *picker
 	input           *inputBox // free-text modal for input actions
+	notices         []string  // messages that block input until dismissed
 	run             *pendingRun
 	edit            *pendingEdit
 	users           []asana.Ref       // workspace users, loaded on first assign
@@ -274,7 +275,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case candidatesMsg:
 		m.openRepoPicker(msg)
 	case actionDoneMsg:
-		m.status = actionStatus(msg)
+		status := actionStatus(msg)
+		if msg.action && msg.err != nil {
+			m.showNotice(status)
+		} else {
+			m.status = status
+		}
 	case sectionsMsg:
 		m.openSectionPicker(msg)
 	case usersMsg:
@@ -326,6 +332,12 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	if k == "ctrl+c" {
 		return tea.Quit
 	}
+	if len(m.notices) > 0 {
+		if k == "enter" || k == "esc" {
+			m.notices = m.notices[1:]
+		}
+		return nil
+	}
 	if m.input != nil {
 		return m.updateInput(msg)
 	}
@@ -359,6 +371,11 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return m.scrollReader(msg)
 	}
 	return nil
+}
+
+func (m *Model) showNotice(message string) {
+	m.notices = append(m.notices, message)
+	m.status = message
 }
 
 func (m *Model) updateModal(msg tea.KeyPressMsg) tea.Cmd {
@@ -695,6 +712,10 @@ func (m *Model) body() string {
 	var content string
 	style := modalStyle.BorderForeground(m.accentStyle.GetForeground())
 	switch {
+	case len(m.notices) > 0:
+		content = m.accentStyle.Render("Notice") + "\n\n" + ansi.Wrap(ticket.OneLine(m.notices[0]), w, "") +
+			"\n\n" + m.accentStyle.Render("enter") + dimStyle.Render(" / ") + m.accentStyle.Render("esc") + dimStyle.Render(" dismiss")
+		style = modalStyle.BorderForeground(warnStyle.GetForeground())
 	case m.input != nil:
 		content = m.input.view(w, mh, m.accentStyle)
 	case m.modal != nil:

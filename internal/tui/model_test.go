@@ -361,12 +361,15 @@ func TestEditedTicketStaysSelectedAfterReloadDropsIt(t *testing.T) {
 	m.selectionChanged()
 	m.Update(editDoneMsg{gid: sideTask.GID, what: "assign"})
 	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
-	if got, _ := m.selected(); got.GID != sideTask.GID {
-		t.Fatalf("selected = %q, want the edited ticket", got.GID)
+	if got, _ := m.selected(); got.GID != sideTask.GID || !m.pinnedRow || m.cursor != 0 {
+		t.Fatalf("selected = %q, cursor = %d, pinnedRow = %v; want the edited ticket on top", got.GID, m.cursor, m.pinnedRow)
 	}
-	m.moveTo(0)
+	if !slices.Equal(m.groups, []string{pinnedLabel, ungroupedLabel}) {
+		t.Fatalf("groups = %q, want the pin apart from the ungrouped tickets", m.groups)
+	}
+	m.moveTo(1)
 	m.selectionChanged()
-	if got, _ := m.selected(); got.GID != openTask.GID || len(m.visible) != 1 {
-		t.Fatalf("selected = %q, visible = %+v; want the pin dropped", got.GID, m.visible)
+	if got, _ := m.selected(); got.GID != openTask.GID || len(m.visible) != 1 || m.pinnedRow || m.groups != nil {
+		t.Fatalf("selected = %q, visible = %+v, groups = %q; want the pin dropped", got.GID, m.visible, m.groups)
 	}
 }

@@ -174,7 +174,7 @@ func TestListConfig(t *testing.T) {
 	if err != nil || cfg.List.Layout != LayoutSingle || !slices.Equal(cfg.List.Fields, []string{"section", "due"}) || cfg.Reader.View != ViewCards {
 		t.Fatalf("defaults: %+v, err = %v", cfg.List, err)
 	}
-	if cfg.AccentColor != "4" || cfg.List.Header != (Header{Style: StyleRule}) || cfg.List.Selection != (Selection{Style: StyleMarker}) {
+	if cfg.AccentColor != "4" || cfg.List.Header != (Header{Style: StyleRule}) || cfg.List.Pinned != (Pinned{Color: "208"}) || cfg.List.Selection != (Selection{Style: StyleMarker}) {
 		t.Fatalf("style defaults: %+v", cfg.List)
 	}
 	for _, color := range []string{"0", "255", "#abc", "#A1b2C3"} {
@@ -198,6 +198,7 @@ func TestListConfig(t *testing.T) {
 		"bad color":     "[list.header]\ncolor = \"blue\"\n",
 		"color range":   "[list.header]\ncolor = \"256\"\n",
 		"bad hex":       "[list.header]\ncolor = \"#12345g\"\n",
+		"bad pinned":    "[list.pinned]\ncolor = \"orange\"\n",
 		"bad selection": "[list.selection]\nstyle = \"rule\"\n",
 		"bad marker":    "[list.selection]\ncolor = \"red\"\n",
 		"empty accent":  "accent_color = \"\"\n",

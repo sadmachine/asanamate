@@ -195,6 +195,11 @@ spacing = false
 # Header color; unset uses accent_color.
 # color = "4"
 
+[list.pinned]
+# Header color of the Pinned section, which tops the list with a ticket you
+# edited or opened that the filter would hide; empty uses accent_color.
+color = "208"
+
 [list.selection]
 # Selected ticket: "marker" (bold title with a left marker) or "bar" (reversed row).
 style = "marker"

@@ -81,10 +81,12 @@ type Model struct {
 	tasks           []asana.Task
 	visible         []asana.Task
 	groups          []string       // group label per visible task; nil when ungrouped
+	pinnedRow       bool           // visible[0] is the pinned ticket, under the Pinned header
 	groupBy         string         // list field the list is grouped by; "" for none
 	listW           int            // fitted list pane width; 0 for the default split
 	accentStyle     lipgloss.Style // reader headings
 	headerStyle     lipgloss.Style // group headers
+	pinnedStyle     lipgloss.Style // Pinned header
 	markerStyle     lipgloss.Style // selected ticket marker
 	cursor          int
 	cols            []int            // width of each list field column; 0 when empty
@@ -161,6 +163,7 @@ func New(d Deps) *Model {
 		spacing:       d.Config.List.Header.Spacing,
 		accentStyle:   colorStyle(d.Config.AccentColor),
 		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
+		pinnedStyle:   colorStyle(cmp.Or(d.Config.List.Pinned.Color, d.Config.AccentColor)),
 		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),
 		renderers:     map[rendererKey]*glamour.TermRenderer{},
 		details:       map[string]ticket.Ticket{},
@@ -510,10 +513,18 @@ func (m *Model) applyFilter() {
 		prevGID = prev.GID
 	}
 	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates)
-	if p := m.pinned; p != nil && !slices.ContainsFunc(visible, func(t asana.Task) bool { return t.GID == p.GID }) {
-		visible = append(visible, *p)
-	}
 	m.visible, m.groups = groupTasks(visible, m.groupBy, m.rowContext(), m.now())
+	m.pinnedRow = false
+	if p := m.pinned; p != nil && !slices.ContainsFunc(visible, func(t asana.Task) bool { return t.GID == p.GID }) {
+		// A pinned ticket the filter drops tops the list in its own section,
+		// so ungrouped tickets get a header to set them apart.
+		if m.groups == nil {
+			m.groups = slices.Repeat([]string{ungroupedLabel}, len(m.visible))
+		}
+		m.visible = append([]asana.Task{*p}, m.visible...)
+		m.groups = append([]string{pinnedLabel}, m.groups...)
+		m.pinnedRow = true
+	}
 	m.measureColumns()
 	if prevGID != "" {
 		for i, t := range m.visible {
@@ -1037,7 +1048,7 @@ func (m *Model) listView(width, height int) string {
 		spacing = 1
 	}
 	header := func(i, start int) bool {
-		return m.groups != nil && (i == start || m.groups[i] != m.groups[i-1])
+		return m.groups != nil && (i == start || m.groups[i] != m.groups[i-1] || m.pinnedRow && i == 1)
 	}
 	above := func(i, start int) int {
 		if i == start {
@@ -1087,7 +1098,11 @@ func (m *Model) listView(width, height int) string {
 			for range above(i, start) {
 				lines = append(lines, "")
 			}
-			lines = append(lines, m.groupHeader(m.groups[i], counts[m.groups[i]], width))
+			if m.pinnedRow && i == 0 {
+				lines = append(lines, m.groupHeader(m.pinnedStyle, pinnedLabel, 1, width))
+			} else {
+				lines = append(lines, m.groupHeader(m.headerStyle, m.groups[i], counts[m.groups[i]], width))
+			}
 			for range spacing {
 				lines = append(lines, "")
 			}
@@ -1127,11 +1142,14 @@ func (m *Model) emptyView(width, height int) string {
 	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, block)
 }
 
-// groupCounts returns the number of visible tickets per group label.
+// groupCounts returns the number of visible tickets per group label, leaving
+// out the pinned row so a group sharing its label keeps its own count.
 func (m *Model) groupCounts() map[string]int {
 	counts := map[string]int{}
-	for _, g := range m.groups {
-		counts[g]++
+	for i, g := range m.groups {
+		if !m.pinnedRow || i > 0 {
+			counts[g]++
+		}
 	}
 	return counts
 }
@@ -1265,6 +1283,9 @@ func (m *Model) measureColumns() {
 func (m *Model) fitList() {
 	gutter := ansi.StringWidth(m.marker())
 	w := 0
+	if m.pinnedRow {
+		w = groupHeaderWidth(pinnedLabel, 1)
+	}
 	for label, n := range m.groupCounts() {
 		w = max(w, groupHeaderWidth(label, n))
 	}

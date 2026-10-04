@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/asana"
@@ -23,6 +24,13 @@ const (
 	dueWeek     = "Next 7 days"
 	dueLater    = "Later"
 	dueNone     = "No due date"
+)
+
+// Section labels for a pinned ticket the filter drops and, beside it, the
+// tickets of an ungrouped list.
+const (
+	pinnedLabel    = "Pinned"
+	ungroupedLabel = "Tickets"
 )
 
 // dueBuckets are the due date groups, in display order.
@@ -173,15 +181,15 @@ func groupHeaderWidth(label string, n int) int {
 	return ansi.StringWidth("── " + label + " (" + strconv.Itoa(n) + ") ─")
 }
 
-// groupHeader renders a group's header across width in the header color: a
-// reversed " Label (n)" bar, or a "── Label (n) ───" rule.
-func (m *Model) groupHeader(label string, n, width int) string {
+// groupHeader renders a group's header across width in style: a reversed
+// " Label (n)" bar, or a "── Label (n) ───" rule.
+func (m *Model) groupHeader(style lipgloss.Style, label string, n, width int) string {
 	count := " (" + strconv.Itoa(n) + ")"
 	if m.deps.Config.List.Header.Style == config.StyleRule {
-		rule := m.headerStyle.UnsetBold()
-		head := rule.Render("── ") + m.headerStyle.Render(label) + rule.Render(count+" ")
+		rule := style.UnsetBold()
+		head := rule.Render("── ") + style.Render(label) + rule.Render(count+" ")
 		return ansi.Truncate(head+rule.Render(strings.Repeat("─", max(width-ansi.StringWidth(head), 0))), width, "…")
 	}
 	head := ansi.Truncate(" "+label+count, width, "…")
-	return m.headerStyle.Reverse(true).Render(head + strings.Repeat(" ", max(width-ansi.StringWidth(head), 0)))
+	return style.Reverse(true).Render(head + strings.Repeat(" ", max(width-ansi.StringWidth(head), 0)))
 }

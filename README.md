@@ -167,6 +167,7 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `list.header.style` | `"rule"` | group headers: `rule` (`── Label (n) ───`) or `bar` (reversed bar) |
 | `list.header.spacing` | `false` | `true` adds a blank line above and below each group header; the `s` settings menu toggles it and the choice persists |
 | `list.header.color` | `accent_color` | group header color, same format as `accent_color` |
+| `list.pinned.color` | `"208"` (orange) | header color of the Pinned section, which tops the list with a ticket you edited or opened that the filter would hide; same format as `accent_color`, empty uses it |
 | `list.selection.style` | `"marker"` | selected ticket: `marker` (bold title with a left `▌`) or `bar` (reversed row; agent badges swap colors) |
 | `list.selection.color` | `accent_color` | selection marker color, same format as `accent_color` |
 | `reader.view` | `"cards"` | reader's starting view: `cards` (details card, titled sections, one box per comment) or `markdown` (the rendered ticket Markdown); `v` switches and the choice persists |

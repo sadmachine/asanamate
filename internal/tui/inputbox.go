@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"math"
 	"strings"
 
 	"charm.land/bubbles/v2/textarea"
@@ -10,10 +11,13 @@ import (
 
 // inputBox is a modal for free-form, multi-line text.
 type inputBox struct {
-	title    string
-	area     textarea.Model
-	err      string
-	onSubmit func(string) tea.Cmd // optional handler outside ticket actions and edits
+	title          string
+	help           string // optional persistent description above keyboard hints
+	helpIcon       string // resolved symbol set's info icon
+	area           textarea.Model
+	err            string
+	onSubmit       func(string) tea.Cmd // optional handler outside ticket actions and edits
+	sanitizedPaste bool                 // tracks content changed by the textarea during paste
 }
 
 func newInputBox(title, placeholder string) *inputBox {
@@ -35,8 +39,13 @@ func (b *inputBox) update(msg tea.Msg) (res pickResult, cmd tea.Cmd) {
 			return pickResult{done: true, free: strings.TrimSpace(b.area.Value())}, nil
 		}
 		b.err = ""
-	} else if _, ok := msg.(tea.PasteMsg); ok {
+	} else if paste, ok := msg.(tea.PasteMsg); ok {
 		b.err = ""
+		// Use the widget's sanitizer rather than duplicating its conversion rules.
+		probe := textarea.New()
+		probe.MaxContentHeight = math.MaxInt
+		probe.SetValue(paste.Content)
+		b.sanitizedPaste = b.sanitizedPaste || probe.Value() != paste.Content
 	}
 	b.area, cmd = b.area.Update(msg)
 	return pickResult{}, cmd
@@ -45,6 +54,11 @@ func (b *inputBox) update(msg tea.Msg) (res pickResult, cmd tea.Cmd) {
 func (b *inputBox) view(width, height int, accent lipgloss.Style) string {
 	errorLine := ""
 	available := height - 2 // title and keyboard hints
+	help := ""
+	if b.help != "" {
+		help = modalHelp(b.help, b.helpIcon, width, min(2, max(height-4, 1))) + "\n"
+		available -= lipgloss.Height(strings.TrimSuffix(help, "\n"))
+	}
 	if b.err != "" {
 		errorLine = errorStyle.Render(b.err) + "\n"
 		available -= lipgloss.Height(b.err)
@@ -58,7 +72,7 @@ func (b *inputBox) view(width, height int, accent lipgloss.Style) string {
 	if !b.area.DynamicHeight {
 		b.area.SetHeight(min(available, 8))
 	}
-	return accent.Render(b.title) + "\n" + b.area.View() + "\n" + errorLine +
+	return accent.Render(b.title) + "\n" + b.area.View() + "\n" + errorLine + help +
 		accent.Render("enter") + dimStyle.Render(" newline · ") + accent.Render("ctrl+s") +
 		dimStyle.Render(" submit · ") + accent.Render("esc") + dimStyle.Render(" cancel")
 }

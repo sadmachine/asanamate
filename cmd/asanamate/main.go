@@ -320,7 +320,12 @@ func runTUI(args []string) error {
 	if err != nil {
 		return err
 	}
+	configPath, err := config.Path()
+	if err != nil {
+		return err
+	}
 	m := tui.New(tui.Deps{
+		ConfigPath:    configPath,
 		Config:        cfg,
 		State:         st,
 		Client:        client,

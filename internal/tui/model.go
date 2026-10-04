@@ -56,12 +56,13 @@ const listGutter = 1
 
 // Deps are the services the TUI uses.
 type Deps struct {
-	Config   config.Config
-	State    *state.State
-	Client   *asana.Client
-	StateDir string
-	Images   bool
-	InTmux   bool
+	Config     config.Config
+	ConfigPath string // configuration path; empty uses config.Path
+	State      *state.State
+	Client     *asana.Client
+	StateDir   string
+	Images     bool
+	InTmux     bool
 	// Symbols is the resolved symbol set: unicode, nerd, or ascii.
 	Symbols string
 	// ReducedMotion shows static symbols instead of the working spinner.
@@ -136,7 +137,8 @@ type Model struct {
 	frame           int  // spinner frame
 	spinning        bool // a spinner tick is scheduled
 	modal           *picker
-	input           *inputBox  // free-text modal for input actions
+	input           *inputBox // free-text modal for input actions
+	builder         *actionBuilder
 	form            *formModal // shared action and time-entry controls
 	notices         []string   // messages that block input until dismissed
 	run             *pendingRun
@@ -393,6 +395,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleKey(msg)
 	}
 	// Editors also receive paste events and asynchronous clipboard results.
+	if m.builder != nil {
+		return m, m.updateActionBuilder(msg)
+	}
 	if m.input != nil {
 		return m, m.updateInput(msg)
 	}
@@ -421,6 +426,9 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			m.notices = m.notices[1:]
 		}
 		return nil
+	}
+	if m.builder != nil {
+		return m.updateActionBuilder(msg)
 	}
 	if m.input != nil {
 		return m.updateInput(msg)
@@ -910,6 +918,8 @@ func (m *Model) body() string {
 		content = m.accentStyle.Render("Notice") + "\n\n" + ansi.Wrap(ticket.OneLine(m.notices[0]), w, "") +
 			"\n\n" + m.accentStyle.Render("enter") + dimStyle.Render(" / ") + m.accentStyle.Render("esc") + dimStyle.Render(" dismiss")
 		style = modalStyle.BorderForeground(warnStyle.GetForeground())
+	case m.builder != nil:
+		content = m.builder.view(w, mh, m.accentStyle)
 	case m.input != nil:
 		if m.input.area.DynamicHeight {
 			w = max(min(m.width-4, 100), 10)

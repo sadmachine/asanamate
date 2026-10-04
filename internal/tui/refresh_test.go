@@ -168,6 +168,7 @@ func TestAutoRefreshSkipsBusyUI(t *testing.T) {
 		"picker":       func(m *Model) { m.modal = &picker{} },
 		"input":        func(m *Model) { m.input = newInputBox("input", "") },
 		"form":         func(m *Model) { m.form = &formModal{} },
+		"builder":      func(m *Model) { m.builder = &actionBuilder{} },
 		"action":       func(m *Model) { m.run = &pendingRun{} },
 		"edit":         func(m *Model) { m.edit = &pendingEdit{} },
 		"time":         func(m *Model) { m.timeEntry = &pendingTime{} },

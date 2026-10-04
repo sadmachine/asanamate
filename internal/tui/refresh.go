@@ -23,7 +23,7 @@ func (m *Model) autoRefresh(msg refreshTickMsg) tea.Cmd {
 		return nil
 	}
 	next := m.scheduleRefresh()
-	if m.loading || m.filtering || m.help || m.modal != nil || m.input != nil || m.form != nil ||
+	if m.loading || m.filtering || m.help || m.modal != nil || m.input != nil || m.form != nil || m.builder != nil ||
 		m.run != nil || m.edit != nil || m.timeEntry != nil || m.menuFor != "" {
 		return next
 	}

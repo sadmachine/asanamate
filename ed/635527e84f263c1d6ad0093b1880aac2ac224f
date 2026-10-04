@@ -1,0 +1,185 @@
+internal/tui/refresh.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-74
+go.mod
+  s_26fc971b6f9d1f::t_884598340d5fc3 11,13,15-17
+internal/setup/update.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 23,80,103-104,108,194-195,198,200-201
+internal/asana/types.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 3-21,50-60,129-142
+  s_26fc971b6f9d1f::t_f4c757178d8320 143
+internal/tui/flow_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 15,296-451
+internal/form/form_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-30
+internal/tui/links.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 17-18,54-61,63,69,71,73,79-80,82,85-86,88-92,94,97-98,101,109
+internal/tui/model_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 11,16,140-212,234-372
+internal/timetracking/hrvst.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-205
+internal/agents/live.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-167
+internal/setup/hook.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-135
+internal/config/config_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 21-34,36-37,40-41,45,65-66,77-128,211-233,245-284
+  s_26fc971b6f9d1f::t_0b19e1ee7886c5 285
+internal/tui/listrow.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 35,65-66,70,126
+internal/tui/model.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 7,9,20,40-49,53-56,78-95,108-109,111-115,117,119-123,134-135,139-140,146-147,160-163,167,169-170,177-180,193,195,202-203,210,212-214,229,247,250-252,259-266,271,274,323,342-345,359-362,368-369,376-383,389-392,422-428,447-454,478,485,491-493,504-506,510,523,534-537,551-565,609-614,623,626,649-657,676,687-735,738,740-741,744-745,768,806,843,845,847,856,858,866-868,873-874,886-890,900-902,904-905,909-913,915,942-943,947,956-972,1102-1103,1118,1170-1172,1218,1222-1223,1231-1266,1268-1269,1272,1275,1284-1285,1293,1305
+  s_26fc971b6f9d1f::t_6b8318e6ecb1c2 136,337
+internal/tui/agents_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 48,78,82
+internal/setup/setup.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 31-34,67-72,135,155,163-164,174-176,212-218,242-247,254,256-260,263-264,267-268,273-284,286-301
+internal/kitty/kitty_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 16-18,75-76,80,86,90-91,99,129,131,139-164,178,183-262
+internal/repo/repo_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 77-85
+internal/form/form.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-116
+internal/tui/inputbox_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-138
+internal/filter/filter_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 5,38-42,54,65,69,83-98
+internal/state/state_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 15,25,43-45,67-83,93-123
+internal/tui/cmds.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 71-78,110-115,148,152,202-203,250,253,257
+  s_26fc971b6f9d1f::t_6b8318e6ecb1c2 82-84
+internal/writeback/mention.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 13-14,31
+internal/tui/listrow_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 47,71,91,95-97,103,174-176,285-286,311
+internal/tui/group.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 87,105-108,117-122,125-126,128-136
+internal/tui/savedviews_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-167
+internal/tui/statusline.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 12,32-35,37-40,44,63,121
+internal/tui/markdown.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-213
+internal/tui/savedviews.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-141
+internal/tui/edit_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 169-179,203-213,215-216,244,246-248,250-265,269-275,280-292,299,304-306,309,316,319,321-332,334,337,345-350,368,386-413
+  s_26fc971b6f9d1f::t_d04ca9991dedcc 414
+internal/tui/time.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-140
+internal/setup/setup_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 6,66-91,132,161-233
+internal/tui/keys_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 8,10-13,35,39,44-72,83-176
+docs/mocks/src/render.sh
+  s_26fc971b6f9d1f::t_884598340d5fc3 17
+internal/tui/keys.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 34,44-88,93-95,98-105,109,112,115-119,121-134,158-161,163-169,180,222-223,229,233-234,236-238,240,243-249,251
+internal/tui/flow.go
+  s_26fc971b6f9d1f::t_6b8318e6ecb1c2 455,460
+  s_26fc971b6f9d1f::t_884598340d5fc3 4,7,12,32,35-37,53-56,60,62-70,72,75-81,83-94,96,99-126,131,137,146,163-165,190-198,217-218,226-248,295,314-326,329,335-347,349,352-370,380-395,404-409,411-412,435,446,449-450,540-552,554-582
+internal/repo/repo.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 24-38
+internal/tui/listonly_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 28,33,36,46,50
+internal/writeback/writeback.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 78,110-111,113
+internal/tui/filterhelp.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-92
+internal/tui/form.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-150
+internal/action/action_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 47-67
+internal/writeback/markdown_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-89
+internal/agents/agents.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 14,16,64-66,74-76,80,118-122,127,130,141-144,152-155,165-171,190-215
+  s_26fc971b6f9d1f::t_9e4c407af384ad 216
+internal/tui/settings_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-36
+internal/tui/history.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-76
+internal/timetracking/provider.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-89
+AGENTS.md
+  s_26fc971b6f9d1f::t_884598340d5fc3 29-42
+internal/config/config.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 12,17,30-32,67-85,134-141,170-177,183-184,186-193,195-196,206-208,210-211,215,235-288,295-300,303,321-323,340-347,349,432-435
+  s_26fc971b6f9d1f::t_d17913226b118e 436
+internal/tui/settings.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-57
+internal/tui/refresh_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-223
+internal/agents/agents_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 5,10,103-115,119-124,132-137,147,160-213
+internal/state/state.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 2,11,23-25,30-35,38-39,42-51,56-65,71-77,87-92,96-104,108-140,171-179,190-208,223-224,226-228
+internal/tui/markdown_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-173
+internal/asana/api.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 11-12
+internal/timetracking/hrvst_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-102
+docs/mocks/src/h-image-viewer.html
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-16
+internal/tui/cards.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 6,14,16,24-25,28,34-39,42,52,54-58,65,67-73,76-81,83,85,87-90,92-93,100,102-104,108,110-115,118-125,145,148-149,154-184,214,222-230,257-258,261-264,275-279,281-282,301,306-317,348,352-356,360-363,365-366,429-436
+internal/action/action.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 9,51-52,57-60,63-72,75-79,82,127-129,131-159,165-174
+internal/tui/form_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-67
+internal/tui/images.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-167
+internal/tui/nav.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 10,64,88-93,95,97-99,103-109,126-134,144,175-185
+  s_26fc971b6f9d1f::t_52156a8ac47002 186-187
+internal/tui/statusline_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 4,60,69,71-133
+internal/tui/styles.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 11-12
+internal/tui/symbols.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 22,31-39,42-47,52,54,59,73,96,128-129,137-140,142-148
+internal/kitty/kitty.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 22-24,107-194,197,200,204,209,213-217,226,228,230,232,245-246,249-254,257-260,267-268,270-281,288-306
+internal/filter/filter.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 5-8,13,15,21-24,28,45,47-49,58-67,93-94,96,104-105,112,119,144-156,168-169
+internal/timetracking/provider_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-58
+internal/tui/edit.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 5-6,13,29,44-46,50-65,68,77,89-92,121-122,127-155,288-289,291-295,302,305-307,309-311,313-317,329-331,335-350
+  s_26fc971b6f9d1f::t_5198587fe66a86 351
+internal/ticket/markdown.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 5-7,10-14,86-96,186,192-270
+internal/tui/inputbox.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 13-16,29-39,46-56,58-61
+internal/tui/time_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-96
+internal/writeback/markdown.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 1-176
+README.md
+  s_26fc971b6f9d1f::t_884598340d5fc3 28-31,40,45-47,62-68,71,73-81,85-88,92,102-103,105-106,113-124,128,159,161,165,168,172-174,177,209-250,253-258,260,265,284,287,290,300-314,322,334-358,370-373,378,384,386-387,427-447,449-450,459-461,499,506,508-509,533-562,585-586
+internal/ticket/ticket_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 9,64-76,143-160
+internal/tui/nav_test.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 48
+cmd/asanamate/main.go
+  s_26fc971b6f9d1f::t_884598340d5fc3 32,45,54-56,70,87-103,118-128,208-220,236,240-251,326,390,440,455,474,477
+go.sum
+  s_26fc971b6f9d1f::t_1d8a8d9db7ac3b 15-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ed635527e84f263c1d6ad0093b1880aac2ac224f",
+  "prompts": {},
+  "sessions": {
+    "s_26fc971b6f9d1f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0ee5b-ebd5-74a1-a967-4d8542e28a4f",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

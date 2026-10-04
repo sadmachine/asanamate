@@ -37,7 +37,8 @@ import (
 var version = "dev"
 
 const usage = `usage:
-  asanamate [--no-preview]                         open the TUI (--no-preview: list only)
+  asanamate [--no-preview] [--exit-on-action]      open the TUI (--no-preview: list only;
+                                                   --exit-on-action: quit before background actions)
   asanamate list [--project <gid>] [--filter <query>] [--format tsv|jsonl]
                                                    print tickets (tsv: gid, section, due, title, url)
   asanamate show [--format md|json] <gid>          print one ticket
@@ -296,6 +297,7 @@ func runConfigUpdate(args []string) error {
 func runTUI(args []string) error {
 	fs := flag.NewFlagSet("asanamate", flag.ContinueOnError)
 	noPreview := fs.Bool("no-preview", false, "show only the ticket list")
+	exitOnAction := fs.Bool("exit-on-action", false, "quit before running background actions, as exit mode does")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -326,6 +328,7 @@ func runTUI(args []string) error {
 		Images:        kitty.Supported(cfg.Images.Mode, os.Getenv, kitty.TmuxPassthrough),
 		InTmux:        os.Getenv("TMUX") != "",
 		NoPreview:     *noPreview,
+		ExitOnAction:  *exitOnAction,
 		Symbols:       cfg.SymbolSet(os.Getenv),
 		ReducedMotion: reducedMotion(cfg),
 	})

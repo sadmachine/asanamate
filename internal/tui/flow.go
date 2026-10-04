@@ -449,8 +449,11 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		Comment:       r.comment,
 		FormValues:    r.formValues,
 	})
-	name := r.action.Name
-	switch r.action.Mode {
+	name, mode := r.action.Name, r.action.Mode
+	if m.deps.ExitOnAction && mode == config.ModeBackground {
+		mode = config.ModeExit
+	}
+	switch mode {
 	case config.ModeForeground:
 		return tea.ExecProcess(cmd, func(err error) tea.Msg { return actionDoneMsg{name: name, err: err} })
 	case config.ModeBackground:

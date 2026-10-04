@@ -126,6 +126,9 @@ work in narrow terminals and list-only mode too.
 
 - `asanamate --no-preview` shows only the ticket list at full width. It is handy
   in a small popup: pick a ticket, press `space` or `a`, and run an action.
+- `--exit-on-action` runs `background` actions like `exit` ones: asanamate
+  quits, then runs the action, so a popup closes once the action finishes.
+  `foreground` actions still return to the list.
 - `asanamate list` prints tickets for other tools. The default is My Tasks with
   `default_filter` applied.
   - `--project <gid>` lists a project instead. The gid is the number after
@@ -573,7 +576,7 @@ matches no one or two people with the same name, stays as plain text.
 # Popup (pair with exit-mode actions)
 bind-key A display-popup -E -w 90% -h 90% asanamate
 # Quick-pick popup: list only
-bind-key T display-popup -E -w 60% -h 60% "asanamate --no-preview"
+bind-key T display-popup -E -w 60% -h 60% "asanamate --no-preview --exit-on-action"
 # Pane (pair with background actions)
 bind-key a split-window -h asanamate
 # Needed for inline images inside tmux

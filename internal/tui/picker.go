@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"cmp"
 	"strings"
 
 	"charm.land/bubbles/v2/textinput"
@@ -12,6 +13,7 @@ import (
 type pickItem struct {
 	Label string
 	Hint  string
+	Help  string // optional description shown below the list when selected
 	Key   string
 	Value any
 }
@@ -28,17 +30,20 @@ type pickResult struct {
 // selects by each item's Key. With allowFree, typed text can be returned as is.
 // With multi, enter toggles items and ctrl+s returns the checked ones.
 type picker struct {
-	onPick    func(pickResult) tea.Cmd // runs on the returned choice
-	title     string
-	items     []pickItem
-	matches   []int
-	cursor    int
-	input     textinput.Model
-	keySelect bool
-	allowFree bool
-	multi     bool
-	checked   map[int]bool
-	err       string
+	onPick      func(pickResult) tea.Cmd // runs on the returned choice
+	title       string
+	items       []pickItem
+	matches     []int
+	cursor      int
+	input       textinput.Model
+	keySelect   bool
+	browseFirst bool // optional j/k navigation; / activates filtering
+	searching   bool
+	helpIcon    string // resolved symbol set's info icon; empty uses (i)
+	allowFree   bool
+	multi       bool
+	checked     map[int]bool
+	err         string
 }
 
 // newPicker returns a picker that calls onPick with the choice.
@@ -98,6 +103,34 @@ func (p *picker) freeText() (pickResult, bool) {
 }
 
 func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
+	if p.browseFirst {
+		if p.searching && msg.String() == "esc" {
+			selected := -1
+			if len(p.matches) > 0 {
+				selected = p.matches[p.cursor]
+			}
+			p.searching = false
+			p.input.Blur()
+			p.input.SetValue("")
+			p.refilter()
+			if selected >= 0 {
+				p.cursor = selected
+			}
+			return pickResult{}, nil
+		}
+		if !p.searching {
+			switch msg.String() {
+			case "/":
+				p.searching = true
+				p.input.Prompt = "/ "
+				return pickResult{}, p.input.Focus()
+			case "j":
+				msg = tea.KeyPressMsg{Code: tea.KeyDown}
+			case "k":
+				msg = tea.KeyPressMsg{Code: tea.KeyUp}
+			}
+		}
+	}
 	switch msg.String() {
 	case "esc":
 		return pickResult{cancelled: true}, nil
@@ -143,6 +176,9 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 		}
 		return pickResult{}, nil
 	}
+	if p.browseFirst && !p.searching {
+		return pickResult{}, nil
+	}
 	var cmd tea.Cmd
 	p.input, cmd = p.input.Update(msg)
 	p.err = ""
@@ -153,14 +189,25 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 func (p *picker) view(width, height int, accent lipgloss.Style) string {
 	var b strings.Builder
 	b.WriteString(accent.Render(p.title) + "\n")
-	if !p.keySelect {
+	if !p.keySelect && (!p.browseFirst || p.searching) {
 		styles := p.input.Styles()
 		styles.Focused.Prompt = accent
 		p.input.SetStyles(styles)
 		p.input.SetWidth(max(width-2, 1))
 		b.WriteString(p.input.View() + "\n")
 	}
-	rows := max(height-4, 1)
+	help := ""
+	for _, item := range p.items {
+		if item.Help != "" {
+			text := ""
+			if len(p.matches) > 0 {
+				text = p.items[p.matches[p.cursor]].Help
+			}
+			help = modalHelp(text, p.helpIcon, width, min(2, max(height-6, 1)))
+			break
+		}
+	}
+	rows := max(height-4-lipgloss.Height(help), 1)
 	start := max(p.cursor-rows+1, 0)
 	if len(p.matches) == 0 {
 		b.WriteString(dimStyle.Render("no matches") + "\n")
@@ -191,7 +238,17 @@ func (p *picker) view(width, height int, accent lipgloss.Style) string {
 	if p.err != "" {
 		b.WriteString(errorStyle.Render(p.err) + "\n")
 	}
+	if help != "" {
+		b.WriteString(help + "\n")
+	}
 	hint := accent.Render("enter") + dimStyle.Render(" select · ") + accent.Render("esc") + dimStyle.Render(" cancel")
+	if p.browseFirst {
+		if p.searching {
+			hint = accent.Render("enter") + dimStyle.Render(" select · ") + accent.Render("esc") + dimStyle.Render(" clear search")
+		} else {
+			hint = accent.Render("j/k") + dimStyle.Render(" move · ") + accent.Render("/") + dimStyle.Render(" search · ") + hint
+		}
+	}
 	if p.multi {
 		hint = accent.Render("enter") + dimStyle.Render(" toggle · ") + accent.Render("ctrl+s") +
 			dimStyle.Render(" save · ") + accent.Render("esc") + dimStyle.Render(" cancel")
@@ -201,4 +258,22 @@ func (p *picker) view(width, height int, accent lipgloss.Style) string {
 	}
 	b.WriteString(hint)
 	return b.String()
+}
+
+// modalHelp reserves a stable footer height while wrapping the selected
+// description. Long descriptions are clipped to keep controls visible.
+func modalHelp(text, icon string, width, rows int) string {
+	width = max(width-2, 1)
+	if text != "" {
+		text = cmp.Or(icon, asciiSymbols.info) + " " + text
+	}
+	lines := strings.Split(ansi.Wrap(text, width, ""), "\n")
+	if len(lines) > rows {
+		lines = lines[:rows]
+		lines[rows-1] = ansi.Truncate(lines[rows-1], max(width-1, 0), "") + "…"
+	}
+	for len(lines) < rows {
+		lines = append(lines, "")
+	}
+	return dimStyle.Render(strings.Join(lines, "\n"))
 }

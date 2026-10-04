@@ -73,6 +73,7 @@ key press.
 | `H` | ticket history: the last 10 tickets focused in the reader, most recent first; picking one selects it (pinning it to the list when the view doesn't show it) and focuses the reader |
 | `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project), or give the selected ticket its own repo that overrides its projects' links without changing them |
 | `space`, `a` | run an action on the selected ticket |
+| `ctrl+a` | create or edit action files (also available in Settings) |
 | `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), assign it, or set its branch (saved locally, overrides `branch_field`; empty removes it) |
 | `C` | add a comment to the selected ticket, from the list or the reader |
 | `d` / `m` / `A` | set the due date / move to a section / assign, skipping the `e` menu |
@@ -249,6 +250,30 @@ only after creating entry. Failed logs are never retried automatically. Use a
 different provider `id` when changing trackers so saved choices stay separate.
 
 ## Actions
+
+Press `ctrl+a`, or choose **Build / edit actions** in Settings (`s`, then `a`).
+Choose **Create action** or an existing action. The builder provides every
+standard action setting, including ordered form fields and select options.
+Use j/k, arrows, or Tab to move, Enter to edit, and Ctrl+S to accept a text
+edit. Press `/` to search the current menu; Escape clears search and returns
+to navigation. Outside search, Escape returns or discards the draft.
+Help below the list starts with `nf-fa-circle_info` (`\uf05a`) for Nerd Font
+symbols, or `(i)` for Unicode/ASCII, and describes the selected setting. It
+stays visible in text editors. In particular, leaving **Input title** blank
+disables free-text input.
+The command editor supports multiple lines. Escape cancels a text edit or
+returns from a nested form; changes remain in the draft. At the action form,
+Ctrl+S or **Save action** validates and saves; Escape discards the draft.
+
+New filenames must end in `.toml` and stay inside the actions directory.
+Existing filenames stay fixed. Saved actions become available immediately.
+The builder rejects duplicate shortcuts within a context and files changed
+externally since opening. Saves from multiple builder sessions are serialized;
+retry if another session is saving. Edits rewrite TOML formatting and comments,
+but preserve the complete original in a unique `<filename>.*.bak` file beside
+it. Backups are ignored by action loading. Opening and accepting an unchanged
+command preserves its original text. Editing commands with tabs or control
+characters requires acknowledging the text editor's whitespace conversion.
 
 Each action is its own file in `~/.config/asanamate/actions/`, next to
 `config.toml`. Every `*.toml` file there loads in file name order, so prefixes

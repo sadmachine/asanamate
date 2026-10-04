@@ -1,12 +1,17 @@
 package config
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
+
+	"github.com/sadmachine/asanamate/internal/form"
 )
 
 func writeFile(t *testing.T, body string) string {
@@ -318,5 +323,149 @@ func TestSymbolSet(t *testing.T) {
 		if got := (Config{Symbols: c.set}).SymbolSet(env(c.vars)); got != c.want {
 			t.Errorf("SymbolSet(%q, %v) = %q, want %q", c.set, c.vars, got, c.want)
 		}
+	}
+}
+
+func TestSaveActionFileRoundTripAndBackup(t *testing.T) {
+	dir := t.TempDir()
+	no := false
+	original := ActionFile{Name: "20-deploy.toml", Action: Action{
+		Name: "Deploy", Key: "D", Mode: ModeBackground, Repo: true, Agent: true,
+		Context: ContextComment, Command: "printf '%s\\n' \"$ASANAMATE_INPUT_FILE\"\n# next line\n", Input: "Notes", ConfirmWrites: &no,
+		Form: form.Spec{Fields: []form.Field{
+			{ID: "target", Label: "Target", Type: form.Select, Remember: true, Options: []form.Option{{ID: "prod", Name: "Production"}}},
+			{ID: "hours", Label: "Hours", Type: form.Hours},
+		}},
+	}}
+	actions, err := SaveActionFile(dir, original)
+	if err != nil || len(actions) != 1 || !reflect.DeepEqual(actions[0], original.Action) {
+		t.Fatalf("round trip: %+v, %v", actions, err)
+	}
+	files, err := LoadActionFiles(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	edited := files[0]
+	edited.Action.Name = "Deploy edited"
+	edited.Action.ConfirmWrites = nil
+	if _, err := SaveActionFile(dir, edited); err != nil {
+		t.Fatal(err)
+	}
+	backups, _ := filepath.Glob(filepath.Join(dir, "*.bak"))
+	if len(backups) != 1 {
+		t.Fatalf("backups: %v", backups)
+	}
+	data, err := os.ReadFile(backups[0])
+	if err != nil || !bytes.Equal(data, edited.Original) {
+		t.Fatalf("backup: %q, %v", data, err)
+	}
+	files, err = LoadActionFiles(dir)
+	if err != nil || files[0].Action.Name != "Deploy edited" || files[0].Action.ConfirmWrites != nil {
+		t.Fatalf("edit: %+v, %v", files, err)
+	}
+	info, err := os.Stat(filepath.Join(dir, edited.Name))
+	if err != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("permissions: %v, %v", info, err)
+	}
+}
+
+func TestSaveActionFileRejectsUnsafeWrites(t *testing.T) {
+	dir := t.TempDir()
+	file := ActionFile{Name: "20-existing.toml", Action: Action{Name: "Existing", Key: "e", Mode: ModeForeground, Command: "true"}}
+	if _, err := SaveActionFile(dir, file); err != nil {
+		t.Fatal(err)
+	}
+	files, err := LoadActionFiles(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := files[0].Original
+	for _, name := range []string{"../outside.toml", "nested/file.toml", "wrong.example", ".toml", ""} {
+		bad := file
+		bad.Name = name
+		if _, err := SaveActionFile(dir, bad); err == nil {
+			t.Fatalf("accepted filename %q", name)
+		}
+	}
+	if _, err := SaveActionFile(dir, file); err == nil {
+		t.Fatal("overwrote existing file")
+	}
+	duplicate := file
+	duplicate.Name = "10-duplicate.toml"
+	if _, err := SaveActionFile(dir, duplicate); err == nil {
+		t.Fatal("accepted duplicate key")
+	}
+	duplicate.Action.Context = ContextComment
+	actions, err := SaveActionFile(dir, duplicate)
+	if err != nil || len(actions) != 2 || actions[0].Context != ContextComment {
+		t.Fatalf("cross-context key / order: %+v, %v", actions, err)
+	}
+	invalid := file
+	invalid.Name = "bad.toml"
+	invalid.Action.Form.Fields = []form.Field{{ID: "hours", Label: "Hours", Type: form.Hours, Remember: true}}
+	if _, err := SaveActionFile(dir, invalid); err == nil {
+		t.Fatal("accepted invalid form")
+	}
+	edited := files[0]
+	edited.Action.Name = "Changed"
+	changed := append(append([]byte{}, original...), []byte("\n# External edit\n")...)
+	if err := os.WriteFile(filepath.Join(dir, file.Name), changed, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SaveActionFile(dir, edited); err == nil {
+		t.Fatal("overwrote external edit")
+	}
+	data, err := os.ReadFile(filepath.Join(dir, file.Name))
+	if err != nil || !bytes.Equal(data, changed) {
+		t.Fatal("failed save changed original")
+	}
+	if err := os.Remove(filepath.Join(dir, file.Name)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(dir, duplicate.Name), filepath.Join(dir, file.Name)); err != nil {
+		t.Fatal(err)
+	}
+	edited.Action.Key = "x"
+	if _, err := SaveActionFile(dir, edited); err == nil {
+		t.Fatal("replaced symlink")
+	}
+}
+
+func TestSaveActionFileCoordinatesBuilderSessions(t *testing.T) {
+	dir := t.TempDir()
+	file := ActionFile{Name: "action.toml", Action: Action{Name: "Action", Key: "a", Mode: ModeForeground, Command: "true"}}
+	lock, err := os.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Close()
+	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SaveActionFile(dir, file); err == nil || !strings.Contains(err.Error(), "busy") {
+		t.Fatalf("concurrent save: %v", err)
+	}
+	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_UN); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SaveActionFile(dir, file); err != nil {
+		t.Fatal(err)
+	}
+	files, err := LoadActionFiles(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, second := files[0], files[0]
+	first.Action.Name = "First session"
+	second.Action.Name = "Second session"
+	if _, err := SaveActionFile(dir, first); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SaveActionFile(dir, second); err == nil || !strings.Contains(err.Error(), "changed outside") {
+		t.Fatalf("stale session save: %v", err)
+	}
+	files, err = LoadActionFiles(dir)
+	if err != nil || files[0].Action.Name != "First session" {
+		t.Fatalf("first save lost: %+v, %v", files, err)
 	}
 }

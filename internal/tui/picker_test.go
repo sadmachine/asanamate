@@ -4,6 +4,9 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
+	"strings"
 )
 
 func key(s string) tea.KeyPressMsg {
@@ -103,5 +106,76 @@ func TestPickerMultiTogglesAndSaves(t *testing.T) {
 	res, _ := p.update(tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl})
 	if !res.done || len(res.items) != 1 || res.items[0].Label != "B" {
 		t.Fatalf("res = %+v", res)
+	}
+}
+
+func TestPickerHelpUsesFilteredSelectionAndFitsModal(t *testing.T) {
+	p := newPicker(nil, "Settings", []pickItem{
+		{Label: "Name", Help: "Required menu name."},
+		{Label: "Input title", Help: "Leave blank to skip free-text input. Set a title to ask for notes before running."},
+	})
+	style := lipgloss.NewStyle()
+	initial := p.view(40, 10, style)
+	p.update(key("down"))
+	selected := p.view(40, 10, style)
+	if lipgloss.Height(initial) != lipgloss.Height(selected) {
+		t.Fatal("help changed modal height")
+	}
+	typeText(p, "input")
+	view := ansi.Strip(p.view(40, 10, style))
+	if !strings.Contains(view, "Leave blank") || strings.Contains(view, "Required menu name.") {
+		t.Fatal("help used unfiltered cursor")
+	}
+	if lipgloss.Height(view) > 10 || !strings.Contains(view, "enter select") {
+		t.Fatal("help hid controls")
+	}
+	for _, line := range strings.Split(ansi.Strip(modalHelp(p.items[1].Help, "(i)", 40, 2)), "\n") {
+		if ansi.StringWidth(line) > 40 {
+			t.Fatalf("line wider than modal: %q", line)
+		}
+	}
+	typeText(p, "missing")
+	view = ansi.Strip(p.view(40, 10, style))
+	if !strings.Contains(view, "no matches") || strings.Contains(view, "Leave blank") {
+		t.Fatal("empty filter retained stale help")
+	}
+}
+
+func TestBrowsePickerRequiresSlashBeforeFiltering(t *testing.T) {
+	p := newPicker(nil, "Settings", items("Name", "Key", "Input title"))
+	p.browseFirst = true
+	p.input.Blur()
+	p.update(key("j"))
+	if p.cursor != 1 || p.input.Value() != "" {
+		t.Fatal("j filtered instead of navigating")
+	}
+	p.update(key("k"))
+	if p.cursor != 0 {
+		t.Fatal("k did not navigate")
+	}
+	p.update(key("x"))
+	if p.input.Value() != "" || len(p.matches) != 3 {
+		t.Fatal("browse accepted search text")
+	}
+	if strings.Contains(ansi.Strip(p.view(80, 12, lipgloss.NewStyle())), "> ") {
+		t.Fatal("browse showed search input")
+	}
+	p.update(key("/"))
+	if !p.searching || !p.input.Focused() {
+		t.Fatal("slash did not start search")
+	}
+	typeText(p, "k")
+	if p.input.Value() != "k" || len(p.matches) != 1 || p.items[p.matches[0]].Label != "Key" {
+		t.Fatal("k navigated while searching")
+	}
+	view := ansi.Strip(p.view(80, 12, lipgloss.NewStyle()))
+	if !strings.Contains(view, "/ k") || !strings.Contains(view, "clear search") {
+		t.Fatal("search mode not visible")
+	}
+	if res, _ := p.update(key("esc")); res.cancelled || p.searching || p.input.Value() != "" || p.cursor != 1 {
+		t.Fatal("esc did not return to selected browse row")
+	}
+	if res, _ := p.update(key("esc")); !res.cancelled {
+		t.Fatal("browse esc did not cancel")
 	}
 }

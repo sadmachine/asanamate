@@ -239,30 +239,13 @@ func Load(path string) (Config, error) {
 // loadActions reads every *.toml file in dir, in file name order. A missing
 // dir means no actions.
 func loadActions(dir string) ([]Action, error) {
-	files, err := filepath.Glob(filepath.Join(dir, "*.toml"))
+	documents, err := LoadActionFiles(dir)
 	if err != nil {
 		return nil, err
 	}
 	var actions []Action
-	keys := map[[2]string]string{} // context and action key -> file that binds it
-	for _, file := range files {
-		a := Action{Mode: ModeForeground}
-		md, err := toml.DecodeFile(file, &a)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", file, err)
-		}
-		if undecoded := md.Undecoded(); len(undecoded) > 0 {
-			return nil, fmt.Errorf("%s: unknown keys: %v", file, undecoded)
-		}
-		if err := a.validate(); err != nil {
-			return nil, fmt.Errorf("%s: %w", file, err)
-		}
-		k := [2]string{a.Context, a.Key}
-		if other, ok := keys[k]; ok {
-			return nil, fmt.Errorf("%s: key %q is already used by %s", file, a.Key, other)
-		}
-		keys[k] = file
-		actions = append(actions, a)
+	for _, document := range documents {
+		actions = append(actions, document.Action)
 	}
 	return actions, nil
 }

@@ -68,6 +68,9 @@ type Deps struct {
 	ReducedMotion bool
 	// NoPreview hides the reading pane and gives the list the full width.
 	NoPreview bool
+	// ExitOnAction runs background actions as exit actions, so asanamate
+	// quits first. It suits popups, which close when asanamate exits.
+	ExitOnAction bool
 }
 
 // Model is the Bubble Tea model for asanamate.

@@ -52,3 +52,19 @@ func TestSpaceWithCachedDetailOpensMenuImmediately(t *testing.T) {
 		t.Fatalf("modal = %+v", m.modal)
 	}
 }
+
+func TestExitOnActionQuitsForBackgroundActions(t *testing.T) {
+	for mode, wantExit := range map[string]bool{config.ModeBackground: true, config.ModeForeground: false} {
+		t.Run(mode, func(t *testing.T) {
+			m, _ := testModel(t, config.Config{Actions: []config.Action{{Name: "Go", Key: "x", Mode: mode, Command: "true"}}})
+			m.deps.ExitOnAction = true
+			m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+			m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask}})
+			m.openActionMenu()
+			m.pickedAction(0)
+			if got := m.ExitCommand() != nil; got != wantExit {
+				t.Fatalf("exit = %v, want %v", got, wantExit)
+			}
+		})
+	}
+}

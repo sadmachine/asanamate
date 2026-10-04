@@ -44,6 +44,27 @@ func TestEnvIncludesTicketFields(t *testing.T) {
 	}
 }
 
+func TestEnvIncludesComment(t *testing.T) {
+	c := &asana.Story{GID: "9", CreatedAt: "2026-09-20T10:00:00Z", CreatedBy: &asana.Ref{GID: "5", Name: "Sam"}, HTMLText: "<body>Looks <strong>good</strong></body>"}
+	env := Env(Context{Comment: c})
+	for _, want := range []string{"ASANAMATE_COMMENT_GID=9", "ASANAMATE_COMMENT_AUTHOR=Sam", "ASANAMATE_COMMENT_AUTHOR_GID=5",
+		"ASANAMATE_COMMENT_DATE=2026-09-20T10:00:00Z", "ASANAMATE_COMMENT_TEXT=Looks **good**"} {
+		if !slices.Contains(env, want) {
+			t.Errorf("env missing %q", want)
+		}
+	}
+	if env := Env(Context{}); !slices.Contains(env, "ASANAMATE_COMMENT_GID=") {
+		t.Error("want an empty COMMENT_GID without a comment")
+	}
+}
+
+func TestEnvIncludesFormValues(t *testing.T) {
+	env := Env(Context{FormValues: map[string]string{"target": "prod", "hours": "1.25"}})
+	if !slices.Contains(env, "ASANAMATE_PARAM_TARGET=prod") || !slices.Contains(env, "ASANAMATE_PARAM_HOURS=1.25") {
+		t.Fatalf("form values missing: %v", env)
+	}
+}
+
 func TestSlug(t *testing.T) {
 	cases := map[string]string{
 		"Fix Login!":              "fix-login",

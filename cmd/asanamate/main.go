@@ -29,6 +29,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/setup"
 	"github.com/sadmachine/asanamate/internal/state"
 	"github.com/sadmachine/asanamate/internal/ticket"
+	"github.com/sadmachine/asanamate/internal/timetracking"
 	"github.com/sadmachine/asanamate/internal/tui"
 	"github.com/sadmachine/asanamate/internal/writeback"
 )
@@ -41,6 +42,7 @@ const usage = `usage:
                                                    print tickets (tsv: gid, section, due, title, url)
   asanamate show [--format md|json] <gid>          print one ticket
   asanamate setup                                  create the config file
+  asanamate setup hooks                            add the agent status hook to Codex
   asanamate config                                 edit the config file in $VISUAL or $EDITOR
   asanamate config update [--yes]                  refresh the config's comments and new defaults,
                                                    keeping your values (old file saved as .bak)
@@ -49,6 +51,9 @@ const usage = `usage:
   asanamate field   [--yes] [--project <gid>] <gid> <field> <value>
                                                    set a custom field ("" clears it)
   asanamate doctor [<gid>]                         show agents and why they link (or not) to a ticket
+  asanamate time-provider hrvst --task-id <id>     serve time tracking provider requests on stdin
+  asanamate hook codex                             record a Codex hook event read on stdin
+                                                   (installed by setup)
   asanamate version
 `
 
@@ -62,7 +67,7 @@ func run(args []string) int {
 	var err error
 	switch name {
 	case "setup":
-		err = runSetup()
+		err = runSetup(args[1:])
 	case "config":
 		err = runConfig(args[1:])
 	case "comment", "move", "field":
@@ -79,6 +84,23 @@ func run(args []string) int {
 		err = runShow(args[1:])
 	case "doctor":
 		err = runDoctor(args[1:])
+	case "hook":
+		runHook(args[1:])
+		return 0
+	case "time-provider":
+		if len(args) < 2 || args[1] != "hrvst" {
+			err = fmt.Errorf("usage: asanamate time-provider hrvst --task-id <id>")
+		} else {
+			fs := flag.NewFlagSet("time-provider hrvst", flag.ContinueOnError)
+			taskID := fs.String("task-id", "", "default Harvest task ID")
+			if err = fs.Parse(args[2:]); err == nil {
+				if len(fs.Args()) != 0 {
+					err = fmt.Errorf("unexpected time-provider arguments: %v", fs.Args())
+				} else {
+					err = timetracking.RunHarvest(context.Background(), os.Stdin, os.Stdout, *taskID)
+				}
+			}
+		}
 	default:
 		if name != "" && !strings.HasPrefix(name, "-") {
 			fmt.Fprint(os.Stderr, usage)
@@ -91,6 +113,17 @@ func run(args []string) int {
 		return 1
 	}
 	return 0
+}
+
+// runHook records an agent hook event. It never fails: an agent runs it on
+// every event, and a hook error must not get in the agent's way.
+func runHook(args []string) {
+	if len(args) != 1 || args[0] != "codex" {
+		return
+	}
+	if stateDir, err := config.StateDir(); err == nil {
+		_ = agents.WriteHook(os.Stdin, agents.HookDir(stateDir))
+	}
 }
 
 func currentVersion() string {
@@ -172,7 +205,19 @@ func writeCommand(name string, args []string) error {
 	}
 }
 
-func runSetup() error {
+func runSetup(args []string) error {
+	codexHome, err := setup.CodexHome()
+	if err != nil {
+		return err
+	}
+	if len(args) > 0 {
+		if len(args) != 1 || args[0] != "hooks" {
+			return fmt.Errorf("usage: asanamate setup [hooks]")
+		}
+		return setup.OfferCodexHook(setup.Options{
+			In: bufio.NewReader(os.Stdin), Out: os.Stdout, CodexHome: codexHome, Executable: hookExecutable(),
+		})
+	}
 	client, err := newClient()
 	if err != nil {
 		return err
@@ -188,7 +233,20 @@ func runSetup() error {
 	return setup.Run(context.Background(), setup.Options{
 		In: bufio.NewReader(os.Stdin), Out: os.Stdout, Client: client,
 		ConfigPath: configPath, StatePath: filepath.Join(stateDir, state.FileName),
+		CodexHome: codexHome, Executable: hookExecutable(),
 	})
+}
+
+// hookExecutable is the asanamate path agent hooks run: the one on PATH,
+// which survives upgrades, else this binary.
+func hookExecutable() string {
+	if path, err := exec.LookPath("asanamate"); err == nil {
+		if abs, err := filepath.Abs(path); err == nil {
+			return abs
+		}
+	}
+	path, _ := os.Executable()
+	return path
 }
 
 // runConfig opens the config file in the user's editor, then checks that it
@@ -265,7 +323,7 @@ func runTUI(args []string) error {
 		State:         st,
 		Client:        client,
 		StateDir:      stateDir,
-		Images:        kitty.Supported(cfg.Images, os.Getenv, kitty.TmuxPassthrough),
+		Images:        kitty.Supported(cfg.Images.Mode, os.Getenv, kitty.TmuxPassthrough),
 		InTmux:        os.Getenv("TMUX") != "",
 		NoPreview:     *noPreview,
 		Symbols:       cfg.SymbolSet(os.Getenv),
@@ -329,7 +387,7 @@ func runList(args []string) error {
 	if err != nil {
 		return err
 	}
-	return listing.Tasks(os.Stdout, *format, filter.Parse(*query).Apply(tasks, nil), *project)
+	return listing.Tasks(os.Stdout, *format, filter.Parse(*query).Apply(tasks, nil, time.Now()), *project)
 }
 
 func runShow(args []string) error {
@@ -379,7 +437,7 @@ func runDoctor(args []string) error {
 	w := os.Stdout
 	fmt.Fprintf(w, "config        %s\n", path)
 	if cfg.BranchField == "" {
-		fmt.Fprintln(w, "branch_field  unset: tickets use their title slug as the branch")
+		fmt.Fprintln(w, "branch_field  unset: tickets use their ID field or title slug as the branch")
 	} else {
 		fmt.Fprintf(w, "branch_field  %q\n", cfg.BranchField)
 	}
@@ -394,7 +452,7 @@ func runDoctor(args []string) error {
 		} else {
 			fmt.Fprintf(w, "agents        command %q\n", cfg.Agents.Command)
 		}
-		if list, err = agents.Fetch(ctx, cfg.Agents.Preset, cfg.Agents.Command, cfg.Agents.States); err != nil {
+		if list, err = agents.Fetch(ctx, cfg.Agents.Preset, cfg.Agents.Command, cfg.Agents.States, stateDir); err != nil {
 			return err
 		}
 		fmt.Fprintf(w, "\n%d running:\n", len(list))
@@ -413,10 +471,10 @@ func runDoctor(args []string) error {
 	if err != nil {
 		return err
 	}
-	branch := action.Branch(t.Task, cfg.BranchField, nil)
+	branch := action.Branch(t.Task, st.TaskBranches[t.GID], cfg.BranchField, nil)
 	repos := st.LinkedRepos(t.Task)
 	fmt.Fprintf(w, "\nticket  %s\nbranch  %s\n", ticket.OneLine(t.Name), branch)
-	if warn := action.BranchWarning(t.Task, cfg.BranchField, nil); warn != "" {
+	if warn := action.BranchWarning(t.Task, st.TaskBranches[t.GID], cfg.BranchField, nil); warn != "" {
 		fmt.Fprintf(w, "warning %s\n", warn)
 	}
 	if len(repos) == 0 {

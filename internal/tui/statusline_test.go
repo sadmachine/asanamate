@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -56,7 +57,7 @@ func TestStatusMessageReplacesHints(t *testing.T) {
 func TestHelpOpensAndAnyKeyCloses(t *testing.T) {
 	m := splitModel(t)
 	m.Update(key("?"))
-	if !m.help || !strings.Contains(ansi.Strip(m.body()), "1/esc  list") {
+	if !m.help || !regexp.MustCompile(`1/esc +list`).MatchString(ansi.Strip(m.body())) {
 		t.Fatalf("help = %v, body = %q", m.help, ansi.Strip(m.body()))
 	}
 	m.Update(key("j"))
@@ -65,11 +66,71 @@ func TestHelpOpensAndAnyKeyCloses(t *testing.T) {
 	}
 }
 
-func TestPanelTitlesShowViewAndCount(t *testing.T) {
+func TestFilterGuideLayout(t *testing.T) {
 	m := splitModel(t)
-	top := strings.Split(ansi.Strip(m.body()), "\n")[0]
-	if !strings.Contains(top, "[1] Tickets · My Tasks") || !strings.Contains(top, " 2/2 ") || !strings.Contains(top, "[2] Ticket") {
-		t.Fatalf("top = %q", top)
+	m.Update(key("/"))
+	for _, size := range []tea.WindowSizeMsg{
+		{Width: 120, Height: 20},
+		{Width: 45, Height: 20},
+		{Width: 45, Height: 7},
+	} {
+		m.Update(size)
+		hints := m.filterHints()
+		plain := ansi.Strip(strings.Join(hints, " "))
+		for _, want := range []string{"section:", "project:", "assignee:", "tag:", "is:", "agent:", "? guide"} {
+			if !strings.Contains(plain, want) {
+				t.Errorf("%dx%d guide lacks %q: %q", size.Width, size.Height, want, plain)
+			}
+		}
+		for _, line := range hints {
+			if width := ansi.StringWidth(line); width > size.Width {
+				t.Errorf("%dx%d guide line width = %d", size.Width, size.Height, width)
+			}
+		}
+		if !strings.Contains(ansi.Strip(m.body()), "? guide") {
+			t.Errorf("%dx%d body lacks guide", size.Width, size.Height)
+		}
+	}
+	m.Update(key("esc"))
+	if m.filtering || len(m.filterHints()) != 0 || strings.Contains(ansi.Strip(m.body()), "FILTER BY") {
+		t.Fatal("filter guide remains after editing")
+	}
+}
+
+func TestFilterHelpReturnsToEditing(t *testing.T) {
+	m := splitModel(t)
+	m.Update(tea.WindowSizeMsg{Width: 45, Height: 20})
+	m.filterInput.SetValue("is:open")
+	m.applyFilter()
+	m.Update(key("/"))
+	m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
+	m.Update(key("?"))
+	if !m.help || !m.filtering || m.filterInput.Value() != "is:open" || !strings.Contains(ansi.Strip(m.body()), "agent:any") {
+		t.Fatal("filter help did not open over the current query")
+	}
+	for _, line := range strings.Split(m.filterHelpView(), "\n") {
+		if width := ansi.StringWidth(line); width > m.width-6 {
+			t.Errorf("filter help line too wide: %d cells: %q", width, ansi.Strip(line))
+		}
+	}
+	if height := strings.Count(m.filterHelpView(), "\n") + 3; height > m.bodyHeight() {
+		t.Errorf("filter help height = %d, body height = %d", height, m.bodyHeight())
+	}
+	m.Update(key("j"))
+	if m.help || !m.filtering || m.filterInput.Value() != "is:open" || m.cursor != 0 {
+		t.Fatal("closing filter help changed the query or selection")
+	}
+	m.Update(key("x"))
+	if got := m.filterInput.Value(); got != "is:opexn" {
+		t.Fatalf("filter cursor moved while help was open: %q", got)
+	}
+	m.Update(key("enter"))
+	if m.filtering || m.filterInput.Value() != "is:opexn" {
+		t.Fatal("filter editing did not finish with the query intact")
+	}
+	m.Update(key("?"))
+	if !m.help || !strings.Contains(ansi.Strip(m.body()), "Keys") {
+		t.Fatal("key help did not open outside filter editing")
 	}
 }
 

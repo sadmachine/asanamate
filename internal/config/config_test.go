@@ -18,17 +18,31 @@ func writeFile(t *testing.T, body string) string {
 	return path
 }
 
+// writeActions writes each body to its named file in path's actions dir.
+func writeActions(t *testing.T, path string, files map[string]string) {
+	t.Helper()
+	dir := ActionsDir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestLoadAppliesDefaults(t *testing.T) {
-	cfg, err := Load(writeFile(t, `workspace = "123"
-[[actions]]
-name = "View"
+	path := writeFile(t, `workspace = "123"`)
+	writeActions(t, path, map[string]string{"view.toml": `name = "View"
 key = "v"
 command = "less \"$ASANAMATE_TICKET_MD\""
-`))
+`})
+	cfg, err := Load(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Theme != "dark" || cfg.Images != "auto" || cfg.DefaultFilter != "is:open" || !cfg.ConfirmWrites {
+	if cfg.Theme != "dark" || cfg.Images.Mode != "auto" || cfg.Images.Inline || cfg.DefaultFilter != "is:open" || !cfg.ConfirmWrites {
 		t.Fatalf("defaults not applied: %+v", cfg)
 	}
 	if cfg.Actions[0].Mode != ModeForeground {
@@ -48,11 +62,8 @@ func TestLoadRejectsInvalid(t *testing.T) {
 		"unknown key":   "workspace = \"1\"\nworkspaec = \"2\"\n",
 		"no workspace":  "theme = \"dark\"\n",
 		"bad theme":     "workspace = \"1\"\ntheme = \"blue\"\n",
-		"bad images":    "workspace = \"1\"\nimages = \"sixel\"\n",
-		"bad mode":      "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"a\"\nmode = \"later\"\ncommand = \"true\"\n",
-		"long key":      "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"ab\"\ncommand = \"true\"\n",
-		"duplicate key": "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"x\"\ncommand = \"true\"\n[[actions]]\nname = \"b\"\nkey = \"x\"\ncommand = \"true\"\n",
-		"no command":    "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"a\"\n",
+		"bad images":    "workspace = \"1\"\n[images]\nmode = \"sixel\"\n",
+		"inline action": "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"a\"\ncommand = \"true\"\n",
 	}
 	for name, body := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -60,6 +71,58 @@ func TestLoadRejectsInvalid(t *testing.T) {
 				t.Fatal("expected an error")
 			}
 		})
+	}
+}
+
+func TestLoadRejectsInvalidActions(t *testing.T) {
+	cases := map[string]map[string]string{
+		"unknown key":   {"a.toml": "name = \"a\"\nkey = \"a\"\ncommand = \"true\"\nkye = \"b\"\n"},
+		"bad mode":      {"a.toml": "name = \"a\"\nkey = \"a\"\nmode = \"later\"\ncommand = \"true\"\n"},
+		"long key":      {"a.toml": "name = \"a\"\nkey = \"ab\"\ncommand = \"true\"\n"},
+		"no command":    {"a.toml": "name = \"a\"\nkey = \"a\"\n"},
+		"duplicate key": {"a.toml": "name = \"a\"\nkey = \"x\"\ncommand = \"true\"\n", "b.toml": "name = \"b\"\nkey = \"x\"\ncommand = \"true\"\n"},
+		"bad context":   {"a.toml": "name = \"a\"\nkey = \"a\"\ncontext = \"subtask\"\ncommand = \"true\"\n"},
+	}
+	for name, files := range cases {
+		t.Run(name, func(t *testing.T) {
+			path := writeFile(t, `workspace = "1"`)
+			writeActions(t, path, files)
+			_, err := Load(path)
+			if err == nil || !strings.Contains(err.Error(), "a.toml") && !strings.Contains(err.Error(), "b.toml") {
+				t.Fatalf("err = %v, want an error naming the action file", err)
+			}
+		})
+	}
+}
+
+func TestLoadActionsInFileNameOrder(t *testing.T) {
+	path := writeFile(t, `workspace = "1"`)
+	writeActions(t, path, map[string]string{
+		"20-b.toml":      "name = \"b\"\nkey = \"b\"\ncommand = \"true\"\n",
+		"10-a.toml":      "name = \"a\"\nkey = \"a\"\ncommand = \"true\"\n",
+		"c.toml.example": "not toml",
+	})
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Actions) != 2 || cfg.Actions[0].Name != "a" || cfg.Actions[1].Name != "b" {
+		t.Fatalf("actions = %+v", cfg.Actions)
+	}
+}
+
+func TestLoadActionsAllowKeyReuseAcrossContexts(t *testing.T) {
+	path := writeFile(t, `workspace = "1"`)
+	writeActions(t, path, map[string]string{
+		"a.toml": "name = \"a\"\nkey = \"r\"\ncommand = \"true\"\n",
+		"b.toml": "name = \"b\"\nkey = \"r\"\ncontext = \"comment\"\ncommand = \"true\"\n",
+	})
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Actions) != 2 || cfg.Actions[1].Context != ContextComment {
+		t.Fatalf("actions = %+v", cfg.Actions)
 	}
 }
 
@@ -145,6 +208,29 @@ func TestListConfig(t *testing.T) {
 	}
 }
 
+func TestRefreshIntervalConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
+	if err != nil || cfg.List.RefreshInterval != "30s" {
+		t.Fatalf("default interval = %q, err = %v", cfg.List.RefreshInterval, err)
+	}
+	for _, value := range []string{"1s", "15s", "1m", "1m30s"} {
+		t.Run(value, func(t *testing.T) {
+			cfg, err := Load(writeFile(t, "workspace = \"1\"\n[list]\nrefresh_interval = \""+value+"\"\n"))
+			if err != nil || cfg.List.RefreshInterval != value {
+				t.Fatalf("interval = %q, err = %v", cfg.List.RefreshInterval, err)
+			}
+		})
+	}
+	for _, value := range []string{"", "15", "0s", "-1s", "500ms", "999999999999999999999h"} {
+		t.Run("invalid "+value, func(t *testing.T) {
+			_, err := Load(writeFile(t, "workspace = \"1\"\n[list]\nrefresh_interval = \""+value+"\"\n"))
+			if err == nil || !strings.Contains(err.Error(), "list.refresh_interval") {
+				t.Fatalf("want dotted config key in error, got %v", err)
+			}
+		})
+	}
+}
+
 func TestAgentsOffByDefault(t *testing.T) {
 	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
 	if err != nil || cfg.AgentsEnabled() || cfg.BranchField != "" {
@@ -153,6 +239,47 @@ func TestAgentsOffByDefault(t *testing.T) {
 	cfg, err = Load(writeFile(t, "workspace = \"1\"\nbranch_field = \"Branch Name\"\n[agents]\ncommand = \"ccmux show --json\"\n"))
 	if err != nil || !cfg.AgentsEnabled() || cfg.BranchField != "Branch Name" {
 		t.Fatalf("enabled: %+v, err = %v", cfg, err)
+	}
+}
+
+func TestTimeTrackingConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
+	if err != nil || cfg.TimeTrackingEnabled() {
+		t.Fatalf("default time tracking = %+v, err = %v", cfg.TimeTracking, err)
+	}
+	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[time_tracking]\nid = \"hrvst\"\ncommand = \"asanamate time-provider hrvst\"\n"))
+	if err != nil || !cfg.TimeTrackingEnabled() {
+		t.Fatalf("configured time tracking = %+v, err = %v", cfg.TimeTracking, err)
+	}
+	for _, body := range []string{"id = \"hrvst\"", "command = \"provider\"", "id = \"hrvst\"\ncommand = \"  \""} {
+		if _, err := Load(writeFile(t, "workspace = \"1\"\n[time_tracking]\n"+body+"\n")); err == nil || !strings.Contains(err.Error(), "time_tracking") {
+			t.Fatalf("config %q error = %v", body, err)
+		}
+	}
+}
+
+func TestActionFormConfig(t *testing.T) {
+	path := writeFile(t, `workspace = "1"`)
+	body := `name = "Deploy"
+key = "d"
+command = "deploy"
+[[form.fields]]
+id = "target"
+label = "Target"
+type = "select"
+remember = true
+[[form.fields.options]]
+id = "prod"
+name = "Production"
+`
+	writeActions(t, path, map[string]string{"deploy.toml": body})
+	cfg, err := Load(path)
+	if err != nil || len(cfg.Actions) != 1 || len(cfg.Actions[0].Form.Fields) != 1 || cfg.Actions[0].Form.Fields[0].Options[0].ID != "prod" {
+		t.Fatalf("action form = %+v, err = %v", cfg.Actions, err)
+	}
+	writeActions(t, path, map[string]string{"deploy.toml": strings.Replace(body, `type = "select"`, `type = "unknown"`, 1)})
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), `action "Deploy" form`) {
+		t.Fatalf("invalid action form error = %v", err)
 	}
 }
 

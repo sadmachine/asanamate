@@ -25,15 +25,15 @@ func TestNoPreviewShowsOnlyTheList(t *testing.T) {
 	if m.shownGID != "1" || !strings.Contains(body, "Fix login") || strings.Contains(body, "Loading") {
 		t.Fatalf("shown = %q, body = %q", m.shownGID, body)
 	}
-	if strings.Contains(m.helpView(), "next field") || strings.Contains(m.helpView(), "views panel") {
+	if strings.Contains(m.helpView(), "next / previous pane") || strings.Contains(m.helpView(), "views panel") {
 		t.Fatal("key help must not advertise the reader in list-only mode")
 	}
 }
 
-func TestEnterOpensMenuAfterDetailLoads(t *testing.T) {
+func TestSpaceOpensMenuAfterDetailLoads(t *testing.T) {
 	m, _ := testModel(t, config.Config{Actions: []config.Action{{Name: "Go", Key: "x", Mode: config.ModeExit, Command: "true"}}})
 	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
-	_, cmd := m.Update(key("enter"))
+	_, cmd := m.Update(key(" "))
 	if cmd == nil || m.modal != nil || m.menuFor != "1" {
 		t.Fatalf("cmd = %v, modal = %v, menuFor = %q", cmd, m.modal, m.menuFor)
 	}
@@ -43,11 +43,11 @@ func TestEnterOpensMenuAfterDetailLoads(t *testing.T) {
 	}
 }
 
-func TestEnterWithCachedDetailOpensMenuImmediately(t *testing.T) {
+func TestSpaceWithCachedDetailOpensMenuImmediately(t *testing.T) {
 	m, _ := testModel(t, config.Config{Actions: []config.Action{{Name: "Go", Key: "x", Mode: config.ModeExit, Command: "true"}}})
 	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
 	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask}})
-	m.Update(key("enter"))
+	m.Update(key(" "))
 	if m.modal == nil || !strings.HasPrefix(m.modal.title, "Run on: ") {
 		t.Fatalf("modal = %+v", m.modal)
 	}

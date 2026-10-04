@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/agents"
+	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -28,14 +29,19 @@ func (m *Model) mode() (name string, pill color.Color, hints [][2]string) {
 		return "NORMAL", m.accentStyle.GetForeground(), [][2]string{{"q", "quit"}}
 	case m.filtering:
 		return "FILTER", filterColor, [][2]string{{"enter", "apply"}, {"esc", "done"}}
-	case m.focusReader && m.fieldKey != "":
-		return "EDIT", editColor, [][2]string{{"tab", "next field"}, {"enter", "edit"}, {"esc", "list"}}
+	case m.focusReader && m.fieldKey == commentKey:
+		return "EDIT", editColor, [][2]string{{"j/k", "targets"}, {"enter", "add comment"}, {"↑/↓", "scroll"}, {"esc", "list"}}
+	case m.focusReader && m.editableTarget():
+		return "EDIT", editColor, [][2]string{{"j/k", "targets"}, {"enter", "edit"}, {"↑/↓", "scroll"}, {"esc", "list"}}
 	case m.focusReader:
-		return "READ", readColor, [][2]string{{"j/k", "scroll"}, {"tab", "fields"}, {"esc", "list"}, {"?", "keys"}}
+		if m.readerView != config.ViewMarkdown {
+			return "READ", readColor, [][2]string{{"j/k", "targets"}, {"↑/↓", "scroll"}, {"tab", "pane"}, {"esc", "list"}}
+		}
+		return "READ", readColor, [][2]string{{"j/k", "scroll"}, {"tab", "pane"}, {"esc", "list"}}
 	case m.focusNav:
 		return "VIEWS", m.accentStyle.GetForeground(), [][2]string{{"j/k", "move"}, {"enter", "open"}, {"esc", "list"}, {"?", "keys"}}
 	}
-	return "NORMAL", m.accentStyle.GetForeground(), m.keyHints("enter", "e", "c", "/", "p", "?")
+	return "NORMAL", m.accentStyle.GetForeground(), m.keyHints("space", "e", "t", "c", "/", "p", "?")
 }
 
 // statusline is the bottom bar: a mode pill, where the list is and what it
@@ -54,7 +60,7 @@ func (m *Model) statusline() string {
 	if m.groupBy != "" {
 		segs = append(segs, m.sym.icon(iconGroup)+m.groupBy)
 	}
-	segs = append(segs, fmt.Sprintf("%d/%d", len(m.visible), len(m.tasks)))
+	segs = append(segs, fmt.Sprintf("%d/%d", len(m.visible), len(m.tasks)), m.refreshLabel())
 	if s := m.sym.summary(m.linkedAgents(), m.frame); s != "" {
 		segs = append(segs, s)
 	}
@@ -112,7 +118,7 @@ func (m *Model) helpView() string {
 	var shown []binding
 	keyW := 0
 	for _, b := range keyBindings() {
-		if !b.splitOnly || !m.deps.NoPreview {
+		if (!b.splitOnly || !m.deps.NoPreview) && (b.keys[0] != "t" || m.deps.Config.TimeTrackingEnabled()) {
 			shown = append(shown, b)
 			keyW = max(keyW, ansi.StringWidth(b.helpLabel()))
 		}

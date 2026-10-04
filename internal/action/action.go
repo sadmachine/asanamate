@@ -6,6 +6,7 @@
 package action
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -47,28 +48,38 @@ type Context struct {
 	Preferred map[string]bool
 	// BranchField names the custom field holding the ticket's git branch.
 	BranchField string
+	// Branch overrides the ticket's git branch when set.
+	Branch string
 	// Agent is the running agent the action is about, if any.
 	Agent *agents.Agent
 	// Agents are all running agents linked to the ticket, most urgent first.
 	Agents []agents.Agent
+	// Comment is the highlighted comment for comment context actions, if any.
+	Comment *asana.Story
+	// FormValues are selected action parameters, exposed as ASANAMATE_PARAM_*.
+	FormValues map[string]string
 }
 
-// Branch returns the ticket's git branch: the value of branchField when set,
-// otherwise the title slug.
-func Branch(t asana.Task, branchField string, preferred map[string]bool) string {
-	if v := fieldBranch(t, branchField, preferred); v != "" {
-		return v
-	}
-	return Slug(t.Name)
+// Branch returns the ticket's git branch: saved, the branch typed for it, when
+// set, then the value of branchField, otherwise DefaultBranch.
+func Branch(t asana.Task, saved, branchField string, preferred map[string]bool) string {
+	return cmp.Or(saved, fieldBranch(t, branchField, preferred), DefaultBranch(t))
 }
 
-// BranchWarning explains a Branch that fell back to the title slug even though
-// branchField is set, or returns "" when there is nothing to warn about.
-func BranchWarning(t asana.Task, branchField string, preferred map[string]bool) string {
-	if branchField == "" || fieldBranch(t, branchField, preferred) != "" {
+// DefaultBranch is the branch of a ticket without a branch field value: its
+// ID field's value, otherwise the title slug.
+func DefaultBranch(t asana.Task) string {
+	return cmp.Or(t.CustomID(), Slug(t.Name))
+}
+
+// BranchWarning explains a Branch that fell back to DefaultBranch even though
+// branchField is set, or returns "" when there is nothing to warn about. A
+// saved branch leaves nothing to warn about.
+func BranchWarning(t asana.Task, saved, branchField string, preferred map[string]bool) string {
+	if saved != "" || branchField == "" || fieldBranch(t, branchField, preferred) != "" {
 		return ""
 	}
-	return fmt.Sprintf("%q is empty, so the branch is the title slug %q", branchField, Slug(t.Name))
+	return fmt.Sprintf("%q is empty, so the branch is %q", branchField, DefaultBranch(t))
 }
 
 func fieldBranch(t asana.Task, branchField string, preferred map[string]bool) string {
@@ -113,35 +124,53 @@ func (f *Files) WriteInput(text string) error {
 // Env returns the ASANAMATE_* variables for an action run, sorted.
 func Env(c Context) []string {
 	t := c.Ticket
+	if c.Branch == "" {
+		c.Branch = Branch(t.Task, "", c.BranchField, c.Preferred)
+	}
 	vars := map[string]string{
-		"GID":            t.GID,
-		"TITLE":          t.Name,
-		"URL":            t.PermalinkURL,
-		"SLUG":           Slug(t.Name),
-		"COMPLETED":      strconv.FormatBool(t.Completed),
-		"REPO":           c.Repo,
-		"WORKTREE":       c.Worktree,
-		"TICKET_JSON":    c.Files.JSON,
-		"TICKET_MD":      c.Files.Markdown,
-		"INPUT_FILE":     c.Files.Input,
-		"CONFIRM_WRITES": "0",
-		"ASSIGNEE":       "",
-		"DUE":            "",
-		"MY_SECTION":     "",
-		"PROJECT":        "",
-		"PROJECT_GID":    "",
-		"SECTION":        "",
-		"BRANCH":         Branch(t.Task, c.BranchField, c.Preferred),
-		"AGENT_STATUS":   "",
-		"AGENT_STATE":    "",
-		"AGENT_TITLE":    "",
-		"AGENT_TARGETS":  agentTargets(c.Agents),
-		"AGENT_PATH":     "",
-		"AGENT_TARGET":   "",
+		"GID":                t.GID,
+		"TITLE":              t.Name,
+		"URL":                t.PermalinkURL,
+		"SLUG":               Slug(t.Name),
+		"COMPLETED":          strconv.FormatBool(t.Completed),
+		"REPO":               c.Repo,
+		"WORKTREE":           c.Worktree,
+		"TICKET_JSON":        c.Files.JSON,
+		"TICKET_MD":          c.Files.Markdown,
+		"INPUT_FILE":         c.Files.Input,
+		"CONFIRM_WRITES":     "0",
+		"ASSIGNEE":           "",
+		"DUE":                "",
+		"MY_SECTION":         "",
+		"PROJECT":            "",
+		"PROJECT_GID":        "",
+		"SECTION":            "",
+		"BRANCH":             c.Branch,
+		"AGENT_STATUS":       "",
+		"AGENT_STATE":        "",
+		"AGENT_TITLE":        "",
+		"AGENT_TARGETS":      agentTargets(c.Agents),
+		"AGENT_PATH":         "",
+		"AGENT_TARGET":       "",
+		"COMMENT_GID":        "",
+		"COMMENT_TEXT":       "",
+		"COMMENT_AUTHOR":     "",
+		"COMMENT_AUTHOR_GID": "",
+		"COMMENT_DATE":       "",
 	}
 	if c.Agent != nil {
 		vars["AGENT_STATUS"], vars["AGENT_PATH"], vars["AGENT_TARGET"] = c.Agent.Status, c.Agent.Path, c.Agent.Target
 		vars["AGENT_STATE"], vars["AGENT_TITLE"] = string(c.Agent.State), c.Agent.Title
+	}
+	if cm := c.Comment; cm != nil {
+		vars["COMMENT_GID"], vars["COMMENT_DATE"] = cm.GID, cm.CreatedAt
+		vars["COMMENT_TEXT"], vars["COMMENT_AUTHOR"] = ticket.HTMLToMarkdown(cm.HTMLText), ticket.Author(*cm)
+		if cm.CreatedBy != nil {
+			vars["COMMENT_AUTHOR_GID"] = cm.CreatedBy.GID
+		}
+	}
+	for id, value := range c.FormValues {
+		vars["PARAM_"+strings.ToUpper(id)] = value
 	}
 	if c.ConfirmWrites {
 		vars["CONFIRM_WRITES"] = "1"

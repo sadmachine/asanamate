@@ -1,6 +1,24 @@
 package asana
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+	"time"
+)
+
+// DueDays parses a due date (YYYY-MM-DD) and counts the calendar days from
+// today to it, negative when it has passed. ok is false for no or a bad date.
+func DueDays(dueOn *string, today time.Time) (due time.Time, days int, ok bool) {
+	if dueOn == nil {
+		return time.Time{}, 0, false
+	}
+	due, err := time.Parse(time.DateOnly, *dueOn)
+	if err != nil {
+		return time.Time{}, 0, false
+	}
+	day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
+	return due, int(due.Sub(day).Hours() / 24), true
+}
 
 // Ref is a compact Asana object: a gid and a display name.
 type Ref struct {
@@ -29,14 +47,17 @@ const (
 
 // CustomField is a custom field value on a task.
 type CustomField struct {
-	GID             string       `json:"gid"`
-	Name            string       `json:"name"`
-	ResourceSubtype string       `json:"resource_subtype"`
-	DisplayValue    *string      `json:"display_value"`
-	EnumOptions     []EnumOption `json:"enum_options,omitempty"`
-	MultiEnumValues []EnumOption `json:"multi_enum_values,omitempty"`
-	PeopleValue     []Ref        `json:"people_value,omitempty"`
-	DateValue       *DateValue   `json:"date_value,omitempty"`
+	GID                string       `json:"gid"`
+	Name               string       `json:"name"`
+	ResourceSubtype    string       `json:"resource_subtype"`
+	RepresentationType string       `json:"representation_type,omitempty"` // refines ResourceSubtype: custom_id, formula
+	DisplayValue       *string      `json:"display_value"`
+	IsValueReadOnly    bool         `json:"is_value_read_only,omitempty"`
+	IsFormulaField     bool         `json:"is_formula_field,omitempty"`
+	EnumOptions        []EnumOption `json:"enum_options,omitempty"`
+	MultiEnumValues    []EnumOption `json:"multi_enum_values,omitempty"`
+	PeopleValue        []Ref        `json:"people_value,omitempty"`
+	DateValue          *DateValue   `json:"date_value,omitempty"`
 }
 
 // DateValue is a date custom field's value.
@@ -103,6 +124,21 @@ func (t Task) Field(name string, preferred map[string]bool) (CustomField, bool) 
 		return CustomField{}, false
 	}
 	return PickField(matches, preferred), true
+}
+
+// idValue matches an ID field's value: its prefix, a dash, and a number.
+var idValue = regexp.MustCompile(`^\S+-\d+$`)
+
+// CustomID returns the value of the task's first ID field, or "". Task
+// responses omit representation_type, so an ID field is a read-only,
+// non-formula field holding a value such as "ENG-123".
+func (t Task) CustomID() string {
+	for _, f := range t.CustomFields {
+		if v := f.Value(); f.IsValueReadOnly && !f.IsFormulaField && idValue.MatchString(v) {
+			return v
+		}
+	}
+	return ""
 }
 
 // FieldsNamed returns the task's custom fields with the given name, ignoring

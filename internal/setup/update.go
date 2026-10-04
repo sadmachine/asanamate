@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	headerLine    = regexp.MustCompile(`^(\[\[?)([a-z_.]+)\]\]?$`)
+	headerLine    = regexp.MustCompile(`^\[([a-z_.]+)\]$`)
 	keyLine       = regexp.MustCompile(`^(# )?([a-z_]+) = `)
 	workspaceName = regexp.MustCompile(`(?m)^# Asana workspace: (.+)$`)
 )
@@ -77,8 +77,7 @@ defaults, so copy any of your own back from the backup.
 
 // Merge renders the current template with the values set in old: template
 // keys take the user's value when set (commented-out keys are uncommented),
-// and tables the template doesn't define, such as actions and agents, are
-// appended. It returns the new file and the template keys old didn't set.
+// and tables the template doesn't define, such as agents, are appended. It returns the new file and the template keys old didn't set.
 func Merge(old string) (string, []string, error) {
 	var user map[string]any
 	md, err := toml.Decode(old, &user)
@@ -99,25 +98,14 @@ func Merge(old string) (string, []string, error) {
 	used := map[string]bool{} // dotted keys taken from the user's file
 	live := map[string]bool{} // tables the template defines
 	var table []string
-	inArray, skip := false, false
 	for _, line := range strings.Split(Render(asana.Ref{GID: gid, Name: name}, root), "\n") {
 		if m := headerLine.FindStringSubmatch(line); m != nil {
-			table, inArray = strings.Split(m[2], "."), m[1] == "[["
-			if !inArray {
-				live[m[2]] = true
-			} else if skip = md.IsDefined(table...); skip {
-				continue // the user's own array replaces the template's entries
-			} else {
-				added = append(added, m[2])
-			}
+			table = strings.Split(m[1], ".")
+			live[m[1]] = true
 			out = append(out, line)
 			continue
 		}
-		if skip {
-			skip = strings.TrimSpace(line) != ""
-			continue // drop the entry and the blank line after it
-		}
-		if m := keyLine.FindStringSubmatch(line); m != nil && !inArray {
+		if m := keyLine.FindStringSubmatch(line); m != nil {
 			key := append(slices.Clone(table), m[2])
 			dotted := strings.Join(key, ".")
 			if md.IsDefined(key...) {
@@ -203,27 +191,14 @@ func checkUsed(t map[string]any, path []string, used map[string]bool) error {
 }
 
 func isTable(v any) bool {
-	switch v.(type) {
-	case map[string]any, []map[string]any:
-		return true
-	}
-	return false
+	_, ok := v.(map[string]any)
+	return ok
 }
 
-// writeTable appends v, a table or an array of tables, under path.
+// writeTable appends the table v under path.
 func writeTable(b *strings.Builder, md toml.MetaData, path []string, v any) error {
-	header := strings.Join(path, ".")
-	if t, ok := v.(map[string]any); ok {
-		fmt.Fprintf(b, "\n[%s]\n", header)
-		return writeKeys(b, md, path, t)
-	}
-	for _, t := range v.([]map[string]any) {
-		fmt.Fprintf(b, "\n[[%s]]\n", header)
-		if err := writeKeys(b, md, path, t); err != nil {
-			return err
-		}
-	}
-	return nil
+	fmt.Fprintf(b, "\n[%s]\n", strings.Join(path, "."))
+	return writeKeys(b, md, path, v.(map[string]any))
 }
 
 // writeKeys appends t's values in file order, then its sub-tables.

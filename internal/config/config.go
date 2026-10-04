@@ -9,10 +9,12 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 
 	"github.com/sadmachine/asanamate/internal/agents"
+	"github.com/sadmachine/asanamate/internal/form"
 )
 
 // TokenEnv names the environment variable that holds the Asana personal access token.
@@ -24,6 +26,9 @@ const (
 	ModeBackground = "background"
 	ModeExit       = "exit"
 )
+
+// ContextComment limits an action to a highlighted comment.
+const ContextComment = "comment"
 
 // List layouts.
 const (
@@ -52,7 +57,6 @@ type Config struct {
 	Workspace     string     `toml:"workspace"`
 	Theme         string     `toml:"theme"`
 	AccentColor   string     `toml:"accent_color"`
-	Images        string     `toml:"images"`
 	DefaultFilter string     `toml:"default_filter"`
 	ConfirmWrites bool       `toml:"confirm_writes"`
 	BranchField   string     `toml:"branch_field"`
@@ -60,9 +64,25 @@ type Config struct {
 	ReducedMotion *bool      `toml:"reduced_motion"`
 	RepoSource    RepoSource `toml:"repo_source"`
 	Agents        Agents     `toml:"agents"`
-	List          List       `toml:"list"`
-	Reader        Reader     `toml:"reader"`
-	Actions       []Action   `toml:"actions"`
+	// TimeTracking is disabled until both its provider ID and command are set.
+	TimeTracking TimeTracking `toml:"time_tracking"`
+	List         List         `toml:"list"`
+	Reader       Reader       `toml:"reader"`
+	Images       Images       `toml:"images"`
+	// Actions come from the *.toml files in ActionsDir, not from config.toml.
+	Actions []Action `toml:"-"`
+}
+
+// TimeTracking configures an optional JSON command provider.
+type TimeTracking struct {
+	// ID separates saved project choices for different providers.
+	ID string `toml:"id"`
+	// Command reads a JSON request from stdin and returns a form spec as JSON.
+	Command string `toml:"command"`
+}
+
+func (c Config) TimeTrackingEnabled() bool {
+	return c.TimeTracking.ID != "" && c.TimeTracking.Command != ""
 }
 
 // Agents links tickets to running coding agents. It is off unless Preset or
@@ -111,12 +131,14 @@ func (c Config) SymbolSet(getenv func(string) string) string {
 // completed, or any custom field name. Separator frames each ticket with lines; neighbours share one.
 // GroupBy groups tickets under a header per value of one such field; "" is ungrouped.
 type List struct {
-	Layout    string    `toml:"layout"`
-	Fields    []string  `toml:"fields"`
-	Separator bool      `toml:"separator"`
-	GroupBy   string    `toml:"group_by"`
-	Header    Header    `toml:"header"`
-	Selection Selection `toml:"selection"`
+	// RefreshInterval is the automatic list reload interval, at least one second.
+	RefreshInterval string    `toml:"refresh_interval"`
+	Layout          string    `toml:"layout"`
+	Fields          []string  `toml:"fields"`
+	Separator       bool      `toml:"separator"`
+	GroupBy         string    `toml:"group_by"`
+	Header          Header    `toml:"header"`
+	Selection       Selection `toml:"selection"`
 }
 
 // Header configures group headers. Style draws them as a reversed bar or a
@@ -145,19 +167,33 @@ type Reader struct {
 	MaxTextWidth int    `toml:"max_text_width"`
 }
 
+// Images configures kitty graphics. Mode is "auto" (detect kitty-protocol
+// terminals), "kitty" (force on), or "off". Inline draws images in ticket
+// descriptions and comments in place of their links, in the cards view.
+type Images struct {
+	Mode   string `toml:"mode"`
+	Inline bool   `toml:"inline"`
+}
+
 // RepoSource configures where repo picker candidates come from.
 type RepoSource struct {
 	Command string `toml:"command"`
 }
 
-// Action is a user-defined command run against the selected ticket.
+// Action is a user-defined command run against the selected ticket. Each
+// action is its own file in ActionsDir, with these keys at the top level.
 type Action struct {
-	Name    string `toml:"name"`
-	Key     string `toml:"key"`
-	Mode    string `toml:"mode"`
-	Repo    bool   `toml:"repo"`
-	Agent   bool   `toml:"agent"`
+	Name  string `toml:"name"`
+	Key   string `toml:"key"`
+	Mode  string `toml:"mode"`
+	Repo  bool   `toml:"repo"`
+	Agent bool   `toml:"agent"`
+	// Context limits the action to a highlighted item, such as ContextComment,
+	// where it is listed first; "" shows it everywhere.
+	Context string `toml:"context"`
 	Command string `toml:"command"`
+	// Form optionally asks for select or hours values before running the command.
+	Form form.Spec `toml:"form"`
 	// Input, when set, is the title of a text box shown before the action
 	// runs; the typed text reaches the command as $ASANAMATE_INPUT_FILE.
 	Input         string `toml:"input"`
@@ -167,12 +203,16 @@ type Action struct {
 // Default returns the values used for keys the config file omits.
 func Default() Config {
 	return Config{
-		Theme: "dark", AccentColor: "4", Images: "auto", DefaultFilter: "is:open", ConfirmWrites: true,
+		Theme: "dark", AccentColor: "4", DefaultFilter: "is:open", ConfirmWrites: true,
+		TimeTracking: TimeTracking{},
+		Actions:      nil,
 		List: List{
-			Layout: LayoutSingle, Fields: []string{"section", "due"},
+			RefreshInterval: "30s",
+			Layout:          LayoutSingle, Fields: []string{"section", "due"},
 			Header: Header{Style: StyleRule}, Selection: Selection{Style: StyleMarker},
 		},
 		Reader: Reader{View: ViewCards},
+		Images: Images{Mode: "auto"},
 	}
 }
 
@@ -189,24 +229,78 @@ func Load(path string) (Config, error) {
 	if undecoded := md.Undecoded(); len(undecoded) > 0 {
 		return cfg, fmt.Errorf("%s: unknown keys: %v", path, undecoded)
 	}
-	for i := range cfg.Actions {
-		if cfg.Actions[i].Mode == "" {
-			cfg.Actions[i].Mode = ModeForeground
-		}
-	}
 	if err := cfg.validate(); err != nil {
 		return cfg, fmt.Errorf("%s: %w", path, err)
 	}
-	return cfg, nil
+	cfg.Actions, err = loadActions(ActionsDir(path))
+	return cfg, err
+}
+
+// loadActions reads every *.toml file in dir, in file name order. A missing
+// dir means no actions.
+func loadActions(dir string) ([]Action, error) {
+	files, err := filepath.Glob(filepath.Join(dir, "*.toml"))
+	if err != nil {
+		return nil, err
+	}
+	var actions []Action
+	keys := map[[2]string]string{} // context and action key -> file that binds it
+	for _, file := range files {
+		a := Action{Mode: ModeForeground}
+		md, err := toml.DecodeFile(file, &a)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", file, err)
+		}
+		if undecoded := md.Undecoded(); len(undecoded) > 0 {
+			return nil, fmt.Errorf("%s: unknown keys: %v", file, undecoded)
+		}
+		if err := a.validate(); err != nil {
+			return nil, fmt.Errorf("%s: %w", file, err)
+		}
+		k := [2]string{a.Context, a.Key}
+		if other, ok := keys[k]; ok {
+			return nil, fmt.Errorf("%s: key %q is already used by %s", file, a.Key, other)
+		}
+		keys[k] = file
+		actions = append(actions, a)
+	}
+	return actions, nil
+}
+
+func (a Action) validate() error {
+	if a.Name == "" || a.Command == "" {
+		return errors.New("name and command are required")
+	}
+	if err := oneOf("mode", a.Mode, ModeForeground, ModeBackground, ModeExit); err != nil {
+		return err
+	}
+	if err := oneOf("context", a.Context, "", ContextComment); err != nil {
+		return err
+	}
+	if len([]rune(a.Key)) != 1 {
+		return errors.New("key must be a single character")
+	}
+	if len(a.Form.Fields) > 0 {
+		if err := a.Form.Validate(); err != nil {
+			return fmt.Errorf("action %q form: %w", a.Name, err)
+		}
+	}
+	return nil
 }
 
 func (c Config) validate() error {
 	if c.Workspace == "" {
 		return errors.New("workspace is required; run `asanamate setup`")
 	}
+	if (c.TimeTracking.ID == "") != (c.TimeTracking.Command == "") || (c.TimeTracking.ID != "" && strings.TrimSpace(c.TimeTracking.Command) == "") {
+		return errors.New("time_tracking.id and time_tracking.command must both be set")
+	}
+	if strings.TrimSpace(c.TimeTracking.ID) != c.TimeTracking.ID {
+		return errors.New("time_tracking.id must not have surrounding whitespace")
+	}
 	for _, e := range []error{
 		oneOf("theme", c.Theme, "dark", "light"),
-		oneOf("images", c.Images, "auto", "kitty", "off"),
+		oneOf("images.mode", c.Images.Mode, "auto", "kitty", "off"),
 		oneOf("list.layout", c.List.Layout, LayoutSingle, LayoutMulti),
 		oneOf("reader.view", c.Reader.View, ViewCards, ViewMarkdown),
 		oneOf("list.header.style", c.List.Header.Style, StyleBar, StyleRule),
@@ -224,6 +318,9 @@ func (c Config) validate() error {
 	if c.Reader.MaxTextWidth < 0 {
 		return fmt.Errorf("reader.max_text_width must be 0 (no limit) or more, got %d", c.Reader.MaxTextWidth)
 	}
+	if _, err := ParseRefreshInterval(c.List.RefreshInterval); err != nil {
+		return fmt.Errorf("list.refresh_interval: %w", err)
+	}
 	for _, f := range c.List.Fields {
 		switch name := strings.TrimSpace(f); {
 		case name == "":
@@ -240,28 +337,16 @@ func (c Config) validate() error {
 	if strings.EqualFold(strings.TrimSpace(c.List.GroupBy), "title") {
 		return errors.New("list.group_by can't be the title; use a field such as section or due")
 	}
-	if err := c.Agents.validate(); err != nil {
-		return err
+	return c.Agents.validate()
+}
+
+// ParseRefreshInterval validates a duration used by config and session overrides.
+func ParseRefreshInterval(value string) (time.Duration, error) {
+	d, err := time.ParseDuration(value)
+	if err != nil || d < time.Second {
+		return 0, errors.New("must be a duration of at least 1s, such as 15s or 1m")
 	}
-	keys := map[string]string{}
-	for _, a := range c.Actions {
-		if a.Name == "" || a.Command == "" {
-			return errors.New("every action needs a name and a command")
-		}
-		switch a.Mode {
-		case ModeForeground, ModeBackground, ModeExit:
-		default:
-			return fmt.Errorf("action %q: mode must be foreground, background, or exit", a.Name)
-		}
-		if len([]rune(a.Key)) != 1 {
-			return fmt.Errorf("action %q: key must be a single character", a.Name)
-		}
-		if other, ok := keys[a.Key]; ok {
-			return fmt.Errorf("actions %q and %q share key %q", other, a.Name, a.Key)
-		}
-		keys[a.Key] = a.Name
-	}
-	return nil
+	return d, nil
 }
 
 // validColor reports whether s is an ANSI color number or a #rgb/#rrggbb hex color.
@@ -342,6 +427,11 @@ func Path() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, "config.toml"), nil
+}
+
+// ActionsDir returns the directory of action files next to the config file.
+func ActionsDir(configPath string) string {
+	return filepath.Join(filepath.Dir(configPath), "actions")
 }
 
 // StateDir returns the directory for files asanamate writes itself.

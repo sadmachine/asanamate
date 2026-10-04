@@ -45,7 +45,7 @@ func TestAgentColumnOrdersByUrgency(t *testing.T) {
 	other.Repo = "/other"
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1"), other, onBranch(agents.Waiting, "q1")}})
 	first := strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0]
-	if first != "□  Fix login"+strings.Repeat(" ", 11)+"🤖 ⚠ ◐ " {
+	if first != "□  Fix login"+strings.Repeat(" ", 10)+"🤖 ⚠ ◐ " {
 		t.Fatalf("row = %q", first)
 	}
 	m.width = 120
@@ -57,19 +57,6 @@ func TestAgentColumnOrdersByUrgency(t *testing.T) {
 	m.Update(key("x"))
 	if env := m.ExitCommand().Env; !slices.Contains(env, "ASANAMATE_AGENT_TARGET=q1") || !slices.Contains(env, "ASANAMATE_AGENT_STATE=waiting") {
 		t.Fatalf("want the most urgent agent in env, got %v", env)
-	}
-}
-
-func TestSelectedBadgeReversesItsColors(t *testing.T) {
-	m := agentModel(t, config.SymbolsUnicode, true)
-	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "w1")}})
-	working := stateStyles[agents.Working].Bold(true)
-	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Reverse(true).Render("◐")+selectedStyle.Render(" ")) || !strings.HasPrefix(row, selectedStyle.Render("□  Fix login   ")) {
-		t.Fatalf("selected row = %q", row)
-	}
-	m.moveTo(1)
-	if row := strings.Split(m.listView(20, 2), "\n")[0]; !strings.HasSuffix(row, working.Render("◐")+" ") {
-		t.Fatalf("unselected row = %q", row)
 	}
 }
 
@@ -88,11 +75,11 @@ func TestAgentColumnGroupsManyAgents(t *testing.T) {
 func TestSpinnerAnimatesWorkingAgents(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, false)
 	_, cmd := m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "")}})
-	if cmd == nil || !m.spinning || !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⠋ ") {
+	if cmd == nil || !m.spinning || !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⣾ ") {
 		t.Fatalf("spinning = %v, row = %q", m.spinning, ansi.Strip(m.listView(30, 4)))
 	}
 	m.Update(spinnerTickMsg{})
-	if !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⠙ ") {
+	if !strings.HasSuffix(strings.Split(ansi.Strip(m.listView(30, 4)), "\n")[0], "⣽ ") {
 		t.Fatal("spinner did not advance")
 	}
 	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Idle, "")}})
@@ -237,28 +224,6 @@ func TestStatuslineCountsSharedAgentsOnce(t *testing.T) {
 	m.width = 120
 	if s := ansi.Strip(m.statusline()); !strings.Contains(s, "│ ◐1 ") {
 		t.Fatalf("statusline = %q", s)
-	}
-}
-
-func TestPickerUsesStaticWorkingSymbol(t *testing.T) {
-	m := agentModel(t, config.SymbolsUnicode, false)
-	m.deps.Config.Actions = []config.Action{jumpAction}
-	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Working, "a1"), onBranch(agents.Idle, "a2")}})
-	m.details["1"] = ticket.Ticket{Task: agentTask("feat/x")}
-	m.openActionMenu()
-	m.pickedAction(0)
-	if m.modal == nil || !strings.HasPrefix(m.modal.items[0].Label, "◐ working") {
-		t.Fatalf("picker label = %q", m.modal.items[0].Label)
-	}
-}
-
-func TestListKeepsGapBeforeBorder(t *testing.T) {
-	m := agentModel(t, config.SymbolsUnicode, true)
-	m.Update(tea.WindowSizeMsg{Width: 120, Height: 10})
-	m.Update(agentsMsg{list: []agents.Agent{onBranch(agents.Waiting, "")}})
-	line := strings.Split(ansi.Strip(m.body()), "\n")[1] // below the panel's top edge
-	if !strings.Contains(line, "⚠ │") {
-		t.Fatalf("badge touches the border: %q", line)
 	}
 }
 

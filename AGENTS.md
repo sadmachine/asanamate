@@ -26,3 +26,17 @@ The config is TOML, decoded into the structs in `internal/config/config.go`.
   file. Under semver that means the minor version while on `v0`, the major from
   `v1` on. A `v2` or later tag also requires the module path in `go.mod` to end
   in `/v2`.
+
+## Local config migration
+
+When a task changes what lives in `~/.config/asanamate` (a config key or
+value, an action key, a new file, or a new layout), finish the task, then ask
+the user whether to migrate their local config to it. On yes:
+
+- Copy each file you will change to a `.bak` sibling first.
+- Bring `config.toml` and `actions/` onto the new shape, keeping every value
+  the user set. `asanamate config update` handles new template keys in
+  `config.toml`; everything else is a hand edit.
+- Validate with the branch's build: `go run ./cmd/asanamate doctor` loads the
+  config and actions and names the first bad file or key. Done when it runs
+  clean; then report what changed and where the backups are.

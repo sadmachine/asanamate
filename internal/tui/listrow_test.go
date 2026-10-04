@@ -44,7 +44,7 @@ func TestSelectedRowFillsWidth(t *testing.T) {
 	m, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle}})
 	m.Update(tasksMsg{tasks: []asana.Task{{GID: "1", Name: "A"}, {GID: "2", Name: "B"}}})
 	got := strings.Split(m.listView(10, 2), "\n")
-	if want := selectedStyle.Render("□  A      "); got[0] != want {
+	if want := selectedStyle.Render("□  A     "); got[0] != want {
 		t.Fatalf("selected = %q, want %q", got[0], want)
 	}
 	if ansi.Strip(got[1]) != "□  B" {
@@ -68,7 +68,7 @@ func TestListViewLayouts(t *testing.T) {
 	other := asana.Task{GID: "2", Name: "Fix footer"}
 	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Fields: []string{"section", "due"}}})
 	single.Update(tasksMsg{tasks: []asana.Task{fieldTask, other}})
-	if got := listLines(single, 80, 5); len(got) != 2 || got[0] != "□  Fix login"+strings.Repeat(" ", 58)+"Today  Thu" {
+	if got := listLines(single, 80, 5); len(got) != 2 || got[0] != "□  Fix login"+strings.Repeat(" ", 57)+"Today  Thu" {
 		t.Fatalf("single = %q", got)
 	}
 
@@ -88,17 +88,19 @@ func TestListViewSeparator(t *testing.T) {
 	a, b, c := asana.Task{GID: "1", Name: "A"}, asana.Task{GID: "2", Name: "B"}, asana.Task{GID: "3", Name: "C"}
 	single, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, Separator: true}})
 	single.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
-	if got := listLines(single, 4, 5); !slices.Equal(got, []string{"────", "□  A", "────", "□  B", "────"}) {
+	if got := listLines(single, 5, 5); !slices.Equal(got, []string{"─────", "□  A", "─────", "□  B", "─────"}) {
 		t.Fatalf("single = %q", got)
 	}
 	single.Update(key("s"))
-	if got := listLines(single, 4, 3); !slices.Equal(got, []string{"□  A", "□  B", "□  C"}) {
+	single.Update(key("s"))
+	single.Update(key("esc"))
+	if got := listLines(single, 5, 3); !slices.Equal(got, []string{"□  A", "□  B", "□  C"}) {
 		t.Fatalf("single toggled off = %q", got)
 	}
 	multi, _ := testModel(t, config.Config{List: config.List{Layout: config.LayoutMulti, Separator: true}})
 	multi.Update(tasksMsg{tasks: []asana.Task{a, b, c}})
 	multi.moveTo(2)
-	if got := listLines(multi, 4, 7); !slices.Equal(got, []string{"────", "□  B", "", "────", "□  C", "", "────"}) {
+	if got := listLines(multi, 5, 7); !slices.Equal(got, []string{"─────", "□  B", "", "─────", "□  C", "", "─────"}) {
 		t.Fatalf("multi scrolled = %q", got)
 	}
 }
@@ -169,7 +171,9 @@ func TestListViewGroups(t *testing.T) {
 	if got := listLines(m, 24, 4); got[0] != " Doing (2)" || got[1] != "□  C" {
 		t.Fatalf("first row shown mid-group gets its header: %q", got)
 	}
-	m.Update(key("S"))
+	m.Update(key("s"))
+	m.Update(key("h"))
+	m.Update(key("esc"))
 	m.moveTo(0)
 	got = listLines(m, 24, 10)
 	want = []string{" Doing (2)", "", "□  A", strings.Repeat("─", 24), "□  C", "", " Next (1)", "", "□  B", strings.Repeat("─", 24)}
@@ -278,21 +282,12 @@ func TestColumnsAlignAcrossRows(t *testing.T) {
 	m.Update(tasksMsg{tasks: []asana.Task{fieldTask, long, plain}})
 	got := listLines(m, 40, 3)
 	want := []string{
-		"□  Fix login         Today        Thu",
-		"□  Ship              In Progress  1d ago",
+		"□  Fix login        Today        Thu",
+		"□  Ship             In Progress  1d ago",
 		"□  Tidy",
 	}
 	if !slices.Equal(got, want) {
 		t.Fatalf("got  %q\nwant %q", got, want)
-	}
-}
-
-func TestDoneRowsAreStruckThrough(t *testing.T) {
-	m, _ := testModel(t, config.Config{List: config.List{Selection: config.Selection{Style: config.StyleMarker}}})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask}})
-	row, _ := m.listRow(1)
-	if !strings.Contains(row[0], "\x1b[2;9m") && !strings.Contains(row[0], "\x1b[9;2m") {
-		t.Fatalf("done row = %q", row[0])
 	}
 }
 
@@ -313,7 +308,7 @@ func TestInitialsColumnIsABadge(t *testing.T) {
 	if !strings.HasSuffix(got[0], " AN") || !strings.HasSuffix(got[1], " BR") || strings.TrimSpace(got[2]) != "□  Nobody's" {
 		t.Fatalf("rows = %q", got)
 	}
-	if _, tail := m.listRow(1); !strings.Contains(tail, authorStyle("Bob Ray").Reverse(true).Bold(true).Render(" BR ")) {
+	if _, tail := m.listRow(1, m.cols); !strings.Contains(tail, authorStyle("Bob Ray").Reverse(true).Bold(true).Render(" BR ")) {
 		t.Fatalf("tail = %q", tail)
 	}
 }

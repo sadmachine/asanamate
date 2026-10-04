@@ -2,7 +2,6 @@ package tui
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -69,14 +68,20 @@ type linkNamesMsg struct{ names map[string]string }
 type candidatesMsg struct {
 	paths []string
 	err   error
-	link  *asana.Ref // project whose link is being edited, outside a run
+	link  *linkTarget // link being edited, outside a run
+}
+
+// linkTarget is a project whose repo link is edited, or with ticket set, a
+// ticket's own repo that overrides its projects' links.
+type linkTarget struct {
+	ref    asana.Ref
+	ticket bool
 }
 
 type actionDoneMsg struct {
-	name   string
-	log    string
-	err    error
-	action bool // false for other Exec callbacks, such as the image viewer
+	name string
+	log  string
+	err  error
 }
 
 type sectionsMsg struct {
@@ -100,6 +105,12 @@ type imageMsg struct {
 	payload string
 	url     string
 	err     error
+}
+
+// viewerDoneMsg reports the image viewer closing; step is kitty.Viewer.Step.
+type viewerDoneMsg struct {
+	step int
+	err  error
 }
 
 type statusMsg string
@@ -134,11 +145,11 @@ func loadTasks(c *asana.Client, workspace string, project *asana.Ref) tea.Cmd {
 	})
 }
 
-func loadAgents(cfg config.Agents) tea.Cmd {
+func loadAgents(cfg config.Agents, stateDir string) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), agentRefresh*2)
 		defer cancel()
-		list, err := agents.Fetch(ctx, cfg.Preset, cfg.Command, cfg.States)
+		list, err := agents.Fetch(ctx, cfg.Preset, cfg.Command, cfg.States, stateDir)
 		return agentsMsg{list: list, err: err}
 	}
 }
@@ -188,8 +199,8 @@ func loadLinkNames(c *asana.Client, gids []string) tea.Cmd {
 }
 
 // loadCandidates loads the repo picker's paths; link is set when editing a
-// project's link from the repo links picker.
-func loadCandidates(command string, link *asana.Ref) tea.Cmd {
+// link from the repo links picker.
+func loadCandidates(command string, link *linkTarget) tea.Cmd {
 	return request(func(ctx context.Context) tea.Msg {
 		paths, err := repo.Candidates(ctx, command)
 		return candidatesMsg{paths: paths, err: err, link: link}
@@ -236,21 +247,14 @@ func openURL(url string) tea.Cmd {
 	}
 }
 
-func loadImage(c *asana.Client, a asana.Attachment, cols, rows int, inTmux bool) tea.Cmd {
+func loadImage(c *asana.Client, a asana.Attachment, cols, rows int, cell kitty.CellSize, inTmux bool) tea.Cmd {
 	url := ticket.AttachmentURL(a)
 	return request(func(ctx context.Context) tea.Msg {
-		fresh, err := c.Attachment(ctx, a.GID)
+		data, err := fetchImage(ctx, c, a.GID)
 		if err != nil {
 			return imageMsg{url: url, err: err}
 		}
-		if fresh.DownloadURL == nil {
-			return imageMsg{url: url, err: errors.New("attachment has no download URL")}
-		}
-		data, err := kitty.Download(ctx, *fresh.DownloadURL)
-		if err != nil {
-			return imageMsg{url: url, err: err}
-		}
-		payload, err := kitty.Encode(data, cols, rows, inTmux)
+		payload, err := kitty.Encode(data, cols, rows, cell, inTmux)
 		return imageMsg{payload: payload, url: url, err: err}
 	})
 }

@@ -1,12 +1,15 @@
 package tui
 
 import (
+	"cmp"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/agents"
@@ -26,9 +29,12 @@ type pendingRun struct {
 	repo           string // resolved repo, kept while input or project fields are pending
 	awaitingFields bool
 	agent          *agents.Agent // chosen agent for agent = true actions
+	comment        *asana.Story  // highlighted comment, set when the menu opened
 	input          string        // text typed for an input action
 	inputDone      bool
-	branchOK       bool // user chose to run despite the branch falling back to the slug
+	formValues     map[string]string
+	formDone       bool
+	branch         string // branch typed when the branch field is empty
 }
 
 // sharesFieldNames reports whether two of the task's custom fields share a
@@ -44,36 +50,91 @@ func sharesFieldNames(t asana.Task) bool {
 	return false
 }
 
-func (m *Model) openActionMenu() {
+// startRun begins a run on the selected ticket and its highlighted comment,
+// returning the action context the selection offers. It reports false when
+// the ticket's details have not loaded.
+func (m *Model) startRun() (string, bool) {
 	t, ok := m.selectedDetail()
 	if !ok {
 		m.status = "ticket details are still loading"
-		return
+		return "", false
 	}
+	comment := m.selectedComment(t)
+	m.run, m.edit = &pendingRun{ticket: t, comment: comment}, nil
+	if comment != nil {
+		return config.ContextComment, true
+	}
+	return "", true
+}
+
+func (m *Model) openActionMenu() {
 	if len(m.deps.Config.Actions) == 0 {
-		m.status = "no actions configured; add [[actions]] to config.toml"
+		m.status = "no actions configured; add a .toml file to the actions folder next to config.toml"
 		return
 	}
-	items := make([]pickItem, len(m.deps.Config.Actions))
-	for i, a := range m.deps.Config.Actions {
-		items[i] = pickItem{Label: a.Name, Hint: a.Mode, Key: a.Key, Value: i}
+	context, ok := m.startRun()
+	if !ok {
+		return
 	}
-	p := newPicker(pickValue(m.pickedAction), "Run on: "+ticket.Clean(t.Name), items)
+	// Actions for the highlighted item come first, so their keys win over
+	// everywhere actions bound to the same key.
+	var first, rest []pickItem
+	for i, a := range m.deps.Config.Actions {
+		item := pickItem{Label: a.Name, Hint: a.Mode, Key: a.Key, Value: i}
+		switch a.Context {
+		case "":
+			rest = append(rest, item)
+		case context:
+			first = append(first, item)
+		}
+	}
+	items := append(first, rest...)
+	if len(items) == 0 {
+		m.run, m.status = nil, "no actions for this selection"
+		return
+	}
+	p := newPicker(pickValue(m.pickedAction), "Run on: "+ticket.Clean(m.run.ticket.Name), items)
 	p.keySelect = true
 	m.modal = p
-	m.run, m.edit = &pendingRun{ticket: t}, nil
+}
+
+// repeatAction runs the last picked action again on the current selection.
+func (m *Model) repeatAction() tea.Cmd {
+	if m.lastAction < 0 || m.lastAction >= len(m.deps.Config.Actions) {
+		m.status = "no action run yet"
+		return nil
+	}
+	context, ok := m.startRun()
+	if !ok {
+		return nil
+	}
+	a := m.deps.Config.Actions[m.lastAction]
+	if a.Context != "" && a.Context != context {
+		m.run, m.status = nil, a.Name+" needs a highlighted "+a.Context
+		return nil
+	}
+	return m.pickedAction(m.lastAction)
+}
+
+// selectedComment returns the comment highlighted in the reader, or nil.
+func (m *Model) selectedComment(t ticket.Ticket) *asana.Story {
+	for i, c := range t.Comments {
+		if m.fieldKey == commentTarget(c, i) {
+			return &t.Comments[i]
+		}
+	}
+	return nil
 }
 
 // requestMenu runs open, first fetching the selected ticket's details if
 // they have not arrived yet.
-func (m *Model) requestMenu(open func()) tea.Cmd {
+func (m *Model) requestMenu(open func() tea.Cmd) tea.Cmd {
 	t, ok := m.selected()
 	if !ok {
 		return nil
 	}
 	if _, cached := m.details[t.GID]; cached {
-		open()
-		return nil
+		return open()
 	}
 	m.menuFor, m.menuOpen = t.GID, open
 	m.status = "loading ticket…"
@@ -82,6 +143,7 @@ func (m *Model) requestMenu(open func()) tea.Cmd {
 
 func (m *Model) pickedAction(i int) tea.Cmd {
 	m.modal = nil
+	m.lastAction = i
 	m.run.action = m.deps.Config.Actions[i]
 	return m.continueRun()
 }
@@ -98,8 +160,9 @@ func (m *Model) pickedTicketProject(ref asana.Ref) tea.Cmd {
 	return m.continueRun()
 }
 
-// continueRun advances the run: choose the project, use its linked repo if
-// still valid, otherwise load candidates for the repo picker.
+// continueRun advances the run: use the ticket's own repo if still valid,
+// otherwise choose the project, use its linked repo if still valid, otherwise
+// load candidates for the repo picker.
 func (m *Model) continueRun() tea.Cmd {
 	r := m.run
 	if r.action.Agent && r.agent == nil {
@@ -124,6 +187,15 @@ func (m *Model) continueRun() tea.Cmd {
 		r.project = action.DefaultProject(r.ticket.Task, gidOf(m.viewProject))
 		return m.execute("")
 	}
+	if path, ok := m.deps.State.TaskRepos[r.ticket.GID]; ok {
+		if isRepoRoot(path) {
+			if !r.projectChosen {
+				r.project = action.DefaultProject(r.ticket.Task, gidOf(m.viewProject))
+			}
+			return m.execute(path)
+		}
+		m.status = fmt.Sprintf("ticket repo %s is no longer a git repository; using the project's", path)
+	}
 	if !r.projectChosen {
 		switch len(r.ticket.Memberships) {
 		case 0:
@@ -142,15 +214,36 @@ func (m *Model) continueRun() tea.Cmd {
 	}
 	if r.project != nil {
 		if path, ok := m.deps.State.Repos[r.project.GID]; ok {
-			// Links are saved as top-level paths; a different result means the
-			// directory is no longer its own repo (it may sit inside a parent one).
-			if resolved, err := repo.Resolve(path); err == nil && resolved == path {
-				return m.execute(resolved)
+			if isRepoRoot(path) {
+				return m.execute(path)
 			}
 			m.status = fmt.Sprintf("linked repo %s is no longer a git repository; pick again", path)
 		}
 	}
 	return loadCandidates(m.deps.Config.RepoSource.Command, nil)
+}
+
+// isRepoRoot reports whether a saved link still names a repo. Links are saved
+// as top-level paths; a different result means the directory is no longer its
+// own repo (it may sit inside a parent one).
+func isRepoRoot(path string) bool {
+	resolved, err := repo.Resolve(path)
+	return err == nil && resolved == path
+}
+
+// effectiveRepo returns the repo a repo = true action on t runs in without
+// asking, as continueRun picks it: t's own repo, else its only project's link.
+// own reports the former; path is "" when the action would ask.
+func (m *Model) effectiveRepo(t asana.Task) (path string, own bool) {
+	if p, ok := m.deps.State.TaskRepos[t.GID]; ok && isRepoRoot(p) {
+		return p, true
+	}
+	if len(t.Memberships) == 1 {
+		if p, ok := m.deps.State.Repos[t.Memberships[0].Project.GID]; ok && isRepoRoot(p) {
+			return p, false
+		}
+	}
+	return "", false
 }
 
 func (m *Model) openRepoPicker(msg candidatesMsg) {
@@ -199,7 +292,7 @@ func (m *Model) pickedRepo(path string) tea.Cmd {
 		return nil
 	}
 	if p := m.run.project; p != nil {
-		m.saveLink(p.GID, resolved)
+		m.saveLink(linkTarget{ref: *p}, resolved)
 	}
 	return m.execute(resolved)
 }
@@ -218,34 +311,63 @@ func (m *Model) resolvePicked(path string) (string, bool) {
 	return resolved, true
 }
 
-// saveLink links the project to path, or unlinks it when path is empty, and
-// saves the state.
-func (m *Model) saveLink(projectGID, path string) {
-	if path == "" {
-		m.deps.State.UnlinkRepo(projectGID)
-	} else {
-		m.deps.State.LinkRepo(projectGID, path)
+// saveLink links target to path, or unlinks it when path is empty, and saves
+// the state.
+func (m *Model) saveLink(target linkTarget, path string) {
+	gid, st := target.ref.GID, m.deps.State
+	switch {
+	case target.ticket && path == "":
+		st.UnlinkTaskRepo(gid)
+	case target.ticket:
+		st.LinkTaskRepo(gid, path)
+	case path == "":
+		st.UnlinkRepo(gid)
+	default:
+		st.LinkRepo(gid, path)
 	}
 	m.linked = nil
+	m.renderDetail(true)
 	if err := m.deps.State.Save(); err != nil {
 		m.status = "saving repo link: " + err.Error()
 	}
 }
 
-func (m *Model) pickedBranchFallback(run bool) tea.Cmd {
-	m.modal = nil
-	if !run {
-		m.run = nil
-		return nil
-	}
-	m.run.branchOK = true
-	return m.execute(m.run.repo)
-}
-
+// typedInput takes the input box's text: the action's input, or, once that
+// is done, the branch for a ticket whose branch field is empty. A branch
+// other than the fallback is saved for the ticket, so agents on it link.
 func (m *Model) typedInput(text string) tea.Cmd {
 	m.input = nil
-	m.run.input, m.run.inputDone = text, true
-	return m.execute(m.run.repo)
+	r := m.run
+	if r.action.Input != "" && !r.inputDone {
+		r.input, r.inputDone = text, true
+	} else {
+		r.branch = cmp.Or(text, action.DefaultBranch(r.ticket.Task))
+		if r.branch != action.DefaultBranch(r.ticket.Task) {
+			m.saveBranch(r.ticket.GID, r.branch)
+		}
+	}
+	return m.execute(r.repo)
+}
+
+func (m *Model) typedActionForm(values map[string]string) tea.Cmd {
+	m.form = nil
+	r := m.run
+	r.formValues, r.formDone = values, true
+	if r.project != nil {
+		remembered := false
+		for _, field := range r.action.Form.Fields {
+			if field.Remember {
+				m.deps.State.TouchFormChoice("action:"+r.action.Key, r.project.GID, field.ID, values[field.ID])
+				remembered = true
+			}
+		}
+		if remembered {
+			if err := m.deps.State.Save(); err != nil {
+				m.status = "saving action choices: " + err.Error()
+			}
+		}
+	}
+	return m.execute(r.repo)
 }
 
 func (m *Model) execute(repoPath string) tea.Cmd {
@@ -253,6 +375,22 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 	if r.action.Input != "" && !r.inputDone {
 		r.repo = repoPath
 		m.input = newInputBox(r.action.Input, "optional; leave empty to skip")
+		return nil
+	}
+	if len(r.action.Form.Fields) > 0 && !r.formDone {
+		r.repo = repoPath
+		defaults := map[string]string{}
+		if r.project != nil {
+			for _, field := range r.action.Form.Fields {
+				for _, id := range m.deps.State.RecentFormChoices("action:"+r.action.Key, r.project.GID, field.ID) {
+					if field.HasOption(id) {
+						defaults[field.ID] = id
+						break
+					}
+				}
+			}
+		}
+		m.form = newFormModal(r.action.Name, r.action.Form, defaults, m.typedActionForm)
 		return nil
 	}
 	if p := r.project; p != nil && sharesFieldNames(r.ticket.Task) {
@@ -263,15 +401,15 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		}
 	}
 	preferred := m.projectFields[gidOf(r.project)]
-	if !r.branchOK && strings.Contains(r.action.Command, "ASANAMATE_BRANCH") {
-		if w := action.BranchWarning(r.ticket.Task, m.deps.Config.BranchField, preferred); w != "" {
+	branch := r.branch
+	if branch == "" {
+		saved := m.deps.State.TaskBranches[r.ticket.GID]
+		branch = action.Branch(r.ticket.Task, saved, m.deps.Config.BranchField, preferred)
+		if strings.Contains(r.action.Command, "ASANAMATE_BRANCH") &&
+			action.BranchWarning(r.ticket.Task, saved, m.deps.Config.BranchField, preferred) != "" {
 			r.repo = repoPath
-			p := newPicker(pickValue(m.pickedBranchFallback), "Branch falls back to the title slug", []pickItem{
-				{Label: "Run anyway", Key: "y", Value: true},
-				{Label: "Cancel", Key: "n", Value: false},
-			})
-			p.keySelect, p.err = true, w
-			m.modal = p
+			m.input = newInputBox(fmt.Sprintf("Branch (%q is empty)", m.deps.Config.BranchField), "empty uses the ID field or title slug")
+			m.input.area.SetValue(branch)
 			return nil
 		}
 	}
@@ -294,7 +432,7 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 	}
 	var worktree string
 	if repoPath != "" {
-		worktree = repo.Worktree(repoPath, action.Branch(r.ticket.Task, m.deps.Config.BranchField, preferred))
+		worktree = repo.Worktree(repoPath, branch)
 	}
 	cmd := action.Command(r.action, action.Context{
 		Ticket:        r.ticket,
@@ -305,18 +443,21 @@ func (m *Model) execute(repoPath string) tea.Cmd {
 		Files:         files,
 		Preferred:     preferred,
 		BranchField:   m.deps.Config.BranchField,
+		Branch:        branch,
 		Agent:         agent,
 		Agents:        linked,
+		Comment:       r.comment,
+		FormValues:    r.formValues,
 	})
 	name := r.action.Name
 	switch r.action.Mode {
 	case config.ModeForeground:
-		return tea.ExecProcess(cmd, func(err error) tea.Msg { return actionDoneMsg{name: name, err: err, action: true} })
+		return tea.ExecProcess(cmd, func(err error) tea.Msg { return actionDoneMsg{name: name, err: err} })
 	case config.ModeBackground:
 		m.status = name + ": running…"
 		logPath := filepath.Join(m.deps.StateDir, "actions.log")
 		return func() tea.Msg {
-			return actionDoneMsg{name: name, log: logPath, err: action.RunBackground(cmd, logPath), action: true}
+			return actionDoneMsg{name: name, log: logPath, err: action.RunBackground(cmd, logPath)}
 		}
 	default:
 		m.exitCmd = cmd
@@ -396,9 +537,47 @@ func (m *Model) showsInline(a asana.Attachment) bool {
 
 func (m *Model) pickedAttachment(a asana.Attachment) tea.Cmd {
 	m.modal = nil
-	if m.showsInline(a) {
-		m.status = "loading image…"
-		return loadImage(m.deps.Client, a, max(m.width, 1), max(m.height-3, 1), m.deps.InTmux)
+	if !m.showsInline(a) {
+		return openURL(ticket.AttachmentURL(a))
 	}
-	return openURL(ticket.AttachmentURL(a))
+	t, _ := m.selectedDetail()
+	m.viewImages = nil
+	for _, other := range t.Attachments {
+		if m.showsInline(other) {
+			m.viewImages = append(m.viewImages, other)
+		}
+	}
+	m.viewIndex = slices.IndexFunc(m.viewImages, func(b asana.Attachment) bool { return b.GID == a.GID })
+	if m.viewIndex < 0 {
+		m.viewImages, m.viewIndex = []asana.Attachment{a}, 0
+	}
+	return m.viewImage(m.viewIndex)
+}
+
+// viewImage loads viewImages[i] for the attachment viewer.
+func (m *Model) viewImage(i int) tea.Cmd {
+	m.viewIndex = i
+	m.status = "loading image…"
+	// The image leaves room for a blank line and the two footer lines.
+	return loadImage(m.deps.Client, m.viewImages[i], max(m.width, 1), max(m.height-3, 1), m.imageCell, m.deps.InTmux)
+}
+
+// viewerFooter is the image viewer's bottom bar, centered like a browser
+// lightbox: the image's name, then its position and the viewer's keys.
+func (m *Model) viewerFooter() string {
+	key := func(k string) string { return m.accentStyle.Bold(true).Render(k) }
+	name := ticket.OneLine(ticket.Clean(m.viewImages[m.viewIndex].Name))
+	count := lipgloss.NewStyle().Bold(true).Reverse(true).Foreground(m.accentStyle.GetForeground()).
+		Render(fmt.Sprintf(" %d / %d ", m.viewIndex+1, len(m.viewImages)))
+	keys := count
+	if len(m.viewImages) > 1 {
+		keys = key("‹ k") + " " + dimStyle.Render("previous") + "   " + count + "   " + dimStyle.Render("next") + " " + key("j ›")
+	}
+	keys += "      " + key("esc") + " " + dimStyle.Render("close")
+	// Only left padding, so the bottom line never fills the last column.
+	center := func(s string) string {
+		s = ansi.Truncate(s, m.width-1, "…")
+		return strings.Repeat(" ", max(m.width-ansi.StringWidth(s), 0)/2) + s
+	}
+	return center(titleStyle.Render(name)) + "\n" + center(keys)
 }

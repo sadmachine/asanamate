@@ -82,23 +82,9 @@ func groupLabel(t asana.Task, by string, rc rowContext, today time.Time) string 
 	return noneLabel(by)
 }
 
-// dueDays parses a due date (YYYY-MM-DD) and counts the calendar days from
-// today to it, negative when it has passed. ok is false for no or a bad date.
-func dueDays(dueOn *string, today time.Time) (due time.Time, days int, ok bool) {
-	if dueOn == nil {
-		return time.Time{}, 0, false
-	}
-	due, err := time.Parse(time.DateOnly, *dueOn)
-	if err != nil {
-		return time.Time{}, 0, false
-	}
-	day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
-	return due, int(due.Sub(day).Hours() / 24), true
-}
-
 // dueBucket places a due date (YYYY-MM-DD) relative to today's calendar date.
 func dueBucket(dueOn *string, today time.Time) string {
-	_, days, ok := dueDays(dueOn, today)
+	_, days, ok := asana.DueDays(dueOn, today)
 	if !ok {
 		return dueNone
 	}
@@ -116,9 +102,10 @@ func dueBucket(dueOn *string, today time.Time) string {
 	}
 }
 
-// openGroupPicker offers the groupings: none, the built-in fields, then the
-// configured list fields and group_by, and the custom fields on loaded tickets.
-func (m *Model) openGroupPicker() {
+// groupings lists the fields the list can group by: none, the built-in
+// fields, then the configured list fields and group_by, and the custom fields
+// on loaded tickets.
+func (m *Model) groupings() []string {
 	names := append([]string{""}, builtinFields...)
 	names = append(names, m.deps.Config.List.Fields...)
 	names = append(names, m.deps.Config.List.GroupBy)
@@ -127,13 +114,26 @@ func (m *Model) openGroupPicker() {
 			names = append(names, f.Name)
 		}
 	}
-	var items []pickItem
-	current := 0
+	return uniqueFold(names)
+}
+
+// uniqueFold trims names and drops repeats, ignoring case.
+func uniqueFold(names []string) []string {
+	var out []string
 	for _, n := range names {
 		n = strings.TrimSpace(n)
-		if slices.ContainsFunc(items, func(it pickItem) bool { return strings.EqualFold(it.Value.(string), n) }) {
-			continue
+		if !slices.ContainsFunc(out, func(o string) bool { return strings.EqualFold(o, n) }) {
+			out = append(out, n)
 		}
+	}
+	return out
+}
+
+// openGroupPicker offers the groupings.
+func (m *Model) openGroupPicker() {
+	var items []pickItem
+	current := 0
+	for _, n := range m.groupings() {
 		it := pickItem{Label: cmp.Or(ticket.OneLine(n), "None"), Value: n}
 		if strings.EqualFold(n, m.groupBy) {
 			it.Hint, current = "current", len(items)

@@ -4,7 +4,9 @@ package tui
 import (
 	"cmp"
 	"fmt"
+	"image/color"
 	"maps"
+	"math/rand/v2"
 	"os/exec"
 	"slices"
 	"sort"
@@ -14,9 +16,8 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/glamour/v2"
-	"charm.land/glamour/v2/styles"
 	"charm.land/lipgloss/v2"
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/agents"
@@ -36,8 +37,22 @@ const maxColW = 24
 // minPaneW is the narrowest a fitted list or its reader gets.
 const minPaneW = 30
 
+// minTitleW is the title room a list row keeps before its field columns hide.
+const minTitleW = 30
+
+// The reader aims for readerIdealW columns in the default split. A fitted
+// list grows into the reader down to readerMinW, then truncates its titles.
+const (
+	readerIdealW = 120
+	readerMinW   = 80
+)
+
 // panelFrame is the cells a panel's border takes across and down.
 const panelFrame = 2
+
+// listGutter is the blank columns kept right of the list's rows; group
+// headers and separators still run the full width.
+const listGutter = 1
 
 // Deps are the services the TUI uses.
 type Deps struct {
@@ -60,20 +75,24 @@ type Model struct {
 	deps          Deps
 	width, height int
 
-	viewProject *asana.Ref
-	tasks       []asana.Task
-	visible     []asana.Task
-	groups      []string       // group label per visible task; nil when ungrouped
-	groupBy     string         // list field the list is grouped by; "" for none
-	listW       int            // fitted list pane width; 0 for the default split
-	accentStyle lipgloss.Style // reader headings
-	headerStyle lipgloss.Style // group headers
-	markerStyle lipgloss.Style // selected ticket marker
-	cursor      int
-	cols        []int            // width of each list field column; 0 when empty
-	badgeW      int              // width of the widest agent badge
-	now         func() time.Time // today, for due dates
-	loading     bool             // tasks are loading; the stale view stays frozen under a modal
+	viewProject     *asana.Ref
+	tasks           []asana.Task
+	visible         []asana.Task
+	groups          []string       // group label per visible task; nil when ungrouped
+	groupBy         string         // list field the list is grouped by; "" for none
+	listW           int            // fitted list pane width; 0 for the default split
+	accentStyle     lipgloss.Style // reader headings
+	headerStyle     lipgloss.Style // group headers
+	markerStyle     lipgloss.Style // selected ticket marker
+	cursor          int
+	cols            []int            // width of each list field column; 0 when empty
+	badgeW          int              // width of the widest agent badge
+	titleW          int              // width of the widest ticket title
+	now             func() time.Time // today, for due dates
+	loading         bool             // tasks are loading; the stale view stays frozen under a modal
+	background      bool             // the timer started the loading reload, so it shows no modal
+	refreshInterval time.Duration    // auto-update interval, from saved settings or config
+	refreshSeq      uint64           // invalidates timers from earlier session intervals
 
 	filterInput textinput.Model
 	filtering   bool
@@ -86,12 +105,22 @@ type Model struct {
 	readerView  string // config.ViewCards or config.ViewMarkdown
 	separator   bool   // lines frame each ticket; starts at list.separator
 	spacing     bool   // blank lines around group headers; starts at list.header.spacing
-	renderers   map[rendererKey]*glamour.TermRenderer
+	savedView   string // saved view [ and ] last applied
+	renderers   map[rendererKey]*markdownRenderer
 	details     map[string]ticket.Ticket
+	images      map[string]*inlineImage // inline images by attachment gid
+	imageSeq    int                     // inline image id sequence, from a random start
+	imageCell   kitty.CellSize          // cell size reported by the outer terminal
+	viewImages  []asana.Attachment      // images the attachment viewer steps through
+	viewIndex   int                     // viewImages index of the image in the viewer
 	shownGID    string
+	pinned      *asana.Task    // edited ticket kept listed after a reload drops it, until the selection moves
 	shownAgents string         // agents section rendered for shownGID
-	fieldKey    string         // cards view row tabbed to; "" for none
-	fieldLines  map[string]int // reader line of each cards view row, by key
+	fieldKey    string         // selected cards view target; "" for none
+	showEmpty   bool           // the cards view lists empty custom fields; resets per ticket
+	fieldLines  map[string]int // reader line of each cards view target, by key
+	fieldEnds   map[string]int // last reader line of multi-line targets, by key
+	cardTargets []string       // cards view targets in reading order
 
 	projects        []asana.Project
 	projectFields   map[string]map[string]bool // project gid -> its custom field gids
@@ -102,16 +131,20 @@ type Model struct {
 	frame           int  // spinner frame
 	spinning        bool // a spinner tick is scheduled
 	modal           *picker
-	input           *inputBox // free-text modal for input actions
-	notices         []string  // messages that block input until dismissed
+	input           *inputBox  // free-text modal for input actions
+	form            *formModal // shared action and time-entry controls
+	notices         []string   // messages that block input until dismissed
 	run             *pendingRun
 	edit            *pendingEdit
+	timeEntry       *pendingTime
+	lastAction      int               // index of the last picked action; -1 for none
 	users           []asana.Ref       // workspace users, loaded on first assign
 	afterProjects   func() tea.Cmd    // runs once projects load
 	linkNames       map[string]string // names of linked projects outside projects
 	loadingProjects bool              // projects are loading
 	menuFor         string            // gid whose menu opens once its details arrive
-	menuOpen        func()            // opens that menu
+	menuOpen        func() tea.Cmd    // opens that menu
+	openGID         string            // history ticket to show once its details arrive
 	status          string
 	exitCmd         *exec.Cmd
 }
@@ -124,20 +157,27 @@ func New(d Deps) *Model {
 		deps:          d,
 		filterInput:   in,
 		reader:        viewport.New(),
-		readerView:    d.Config.Reader.View,
-		separator:     d.Config.List.Separator,
-		spacing:       d.Config.List.Header.Spacing,
+		readerView:    cmp.Or(d.State.Display.ReaderView, d.Config.Reader.View),
+		separator:     *cmp.Or(d.State.Display.Separator, &d.Config.List.Separator),
+		spacing:       *cmp.Or(d.State.Display.HeaderSpacing, &d.Config.List.Header.Spacing),
+		lastAction:    -1,
 		accentStyle:   colorStyle(d.Config.AccentColor),
 		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
 		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),
-		renderers:     map[rendererKey]*glamour.TermRenderer{},
+		renderers:     map[rendererKey]*markdownRenderer{},
 		details:       map[string]ticket.Ticket{},
+		images:        map[string]*inlineImage{},
+		imageSeq:      rand.IntN(imageIDs),
 		projectFields: map[string]map[string]bool{},
 		sym:           newSymbols(d.Symbols, d.Config.Agents.Symbols, d.ReducedMotion),
 		loading:       true,
 		now:           time.Now,
 	}
 	m.restoreView()
+	m.refreshInterval, _ = config.ParseRefreshInterval(cmp.Or(d.Config.List.RefreshInterval, config.Default().List.RefreshInterval))
+	if saved, err := config.ParseRefreshInterval(d.State.Display.RefreshInterval); err == nil {
+		m.refreshInterval = saved
+	}
 	return m
 }
 
@@ -150,23 +190,28 @@ func colorStyle(color string) lipgloss.Style {
 func (m *Model) ExitCommand() *exec.Cmd { return m.exitCmd }
 
 func (m *Model) Init() tea.Cmd {
-	cmd := tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject), m.startSpinner())
+	cmd := tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject), m.startSpinner(), m.scheduleRefresh())
 	if m.deps.Config.AgentsEnabled() {
-		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents))
+		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents, m.deps.StateDir))
 	}
 	return cmd
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case refreshTickMsg:
+		return m, m.autoRefresh(msg)
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		m.layout()
 		// The views panel lists recent projects by name.
 		if m.showNav() && m.projects == nil && !m.loadingProjects && m.deps.Client != nil {
 			m.loadingProjects = true
-			return m, loadProjects(m.deps.Client, m.deps.Config.Workspace)
+			return m, tea.Batch(loadProjects(m.deps.Client, m.deps.Config.Workspace), m.requestImageCellSize())
 		}
+		return m, m.requestImageCellSize()
+	case uv.CellSizeEvent:
+		return m, m.imageCellSizeChanged(kitty.CellSize{Width: msg.Width, Height: msg.Height})
 	case tasksMsg:
 		if !sameProject(msg.project, m.viewProject) {
 			return m, nil
@@ -181,6 +226,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		prev, _ := m.selected()
 		m.tasks, m.linked = msg.tasks, nil
+		m.refreshPinned(msg.tasks...)
 		m.applyFilter()
 		// A reload that drops the selected ticket starts from the top.
 		if t, _ := m.selected(); t.GID != prev.GID {
@@ -198,8 +244,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t, ok := m.selected()
 		isSelected := ok && t.GID == msg.gid
 		if msg.err != nil {
-			if isSelected {
+			if isSelected || m.openGID == msg.gid {
 				m.status = "loading ticket: " + msg.err.Error()
+			}
+			if m.openGID == msg.gid {
+				m.openGID = ""
 			}
 			if m.menuFor == msg.gid {
 				m.menuFor = ""
@@ -207,13 +256,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.details[msg.gid], m.linked = msg.ticket, nil
+		if m.refreshPinned(msg.ticket.Task) {
+			m.applyFilter()
+		}
+		images := m.loadInlineImages(msg.ticket)
+		if m.openGID == msg.gid {
+			m.openGID, m.status = "", ""
+			return m, tea.Batch(images, m.showTicket(msg.ticket.Task))
+		}
 		if isSelected {
 			m.renderDetail(false)
 			if m.menuFor == msg.gid {
 				m.menuFor = ""
-				m.menuOpen()
+				return m, tea.Batch(images, m.menuOpen())
 			}
 		}
+		return m, images
 	case projectsMsg:
 		m.loadingProjects = false
 		if msg.err != nil {
@@ -262,7 +320,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.frame++
 		return m, scheduleSpinner()
 	case agentTickMsg:
-		return m, loadAgents(m.deps.Config.Agents)
+		return m, loadAgents(m.deps.Config.Agents, m.deps.StateDir)
 	case projectFieldsMsg:
 		if msg.err != nil {
 			m.status = "loading project fields: " + msg.err.Error()
@@ -276,11 +334,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.openRepoPicker(msg)
 	case actionDoneMsg:
 		status := actionStatus(msg)
-		if msg.action && msg.err != nil {
+		if msg.err != nil {
 			m.showNotice(status)
 		} else {
 			m.status = status
 		}
+	case timeFormMsg:
+		m.gotTimeForm(msg)
+	case timeDoneMsg:
+		m.finishTime(msg)
 	case sectionsMsg:
 		m.openSectionPicker(msg)
 	case usersMsg:
@@ -294,23 +356,39 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.status = msg.what + ": done"
+		// Keep the edited ticket shown even if the reload drops it from the view.
+		if t, ok := m.selected(); ok && t.GID == msg.gid {
+			m.pinned = &t
+		}
 		delete(m.details, msg.gid)
 		if m.shownGID == msg.gid {
 			m.shownGID = ""
 		}
 		return m, m.reload()
+	case inlineImageMsg:
+		return m, m.inlineImageLoaded(msg)
 	case imageMsg:
 		if msg.err != nil {
 			m.status = "image: " + msg.err.Error() + "; opening in browser"
 			return m, openURL(msg.url)
 		}
 		m.status = ""
-		viewer := kitty.NewViewer(msg.payload, m.deps.InTmux)
-		return m, tea.Exec(viewer, func(err error) tea.Msg { return actionDoneMsg{name: "image viewer", err: err} })
+		viewer := kitty.NewViewer(msg.payload, m.viewerFooter(), len(m.viewImages) > 1, m.deps.InTmux)
+		return m, tea.Exec(viewer, func(err error) tea.Msg { return viewerDoneMsg{step: viewer.Step, err: err} })
+	case viewerDoneMsg:
+		if msg.err != nil || msg.step == 0 {
+			m.status = actionStatus(actionDoneMsg{name: "image viewer", err: msg.err})
+			return m, nil
+		}
+		return m, m.viewImage((m.viewIndex + msg.step + len(m.viewImages)) % len(m.viewImages))
 	case statusMsg:
 		m.status = string(msg)
 	case tea.KeyPressMsg:
 		return m, m.handleKey(msg)
+	}
+	// Editors also receive paste events and asynchronous clipboard results.
+	if m.input != nil {
+		return m, m.updateInput(msg)
 	}
 	return m, nil
 }
@@ -341,6 +419,13 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	if m.input != nil {
 		return m.updateInput(msg)
 	}
+	if m.form != nil {
+		cancelled, cmd := m.form.update(msg)
+		if cancelled {
+			m.form, m.run, m.timeEntry = nil, nil, nil
+		}
+		return cmd
+	}
 	if m.modal != nil {
 		return m.updateModal(msg)
 	}
@@ -359,7 +444,14 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return m.updateFilter(msg)
 	}
 	if k == "enter" && m.focusReader && m.fieldKey != "" {
-		return m.openField(m.fieldKey)
+		if m.fieldKey == emptyFieldsKey {
+			m.showEmptyFields()
+			return nil
+		}
+		if m.editableTarget() {
+			return m.openField(m.fieldKey)
+		}
+		return nil
 	}
 	if m.focusNav && slices.Contains(navKeys, k) {
 		return m.updateNav(k)
@@ -383,19 +475,22 @@ func (m *Model) updateModal(msg tea.KeyPressMsg) tea.Cmd {
 	res, cmd := p.update(msg)
 	switch {
 	case res.cancelled:
-		m.modal, m.run, m.edit = nil, nil, nil
+		m.modal, m.run, m.edit, m.timeEntry = nil, nil, nil, nil
 	case res.done:
 		return tea.Batch(cmd, p.onPick(res))
 	}
 	return cmd
 }
 
-func (m *Model) updateInput(msg tea.KeyPressMsg) tea.Cmd {
+func (m *Model) updateInput(msg tea.Msg) tea.Cmd {
 	res, cmd := m.input.update(msg)
 	switch {
 	case res.cancelled:
 		m.input, m.run, m.edit = nil, nil, nil
 	case res.done:
+		if m.input.onSubmit != nil {
+			return tea.Batch(cmd, m.input.onSubmit(res.free))
+		}
 		if m.run == nil {
 			return tea.Batch(cmd, m.typedEdit(res.free))
 		}
@@ -406,9 +501,13 @@ func (m *Model) updateInput(msg tea.KeyPressMsg) tea.Cmd {
 
 func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
 	switch msg.String() {
+	case "?":
+		m.help = true
+		return nil
 	case "enter", "esc":
 		m.filtering = false
 		m.filterInput.Blur()
+		m.reader.SetHeight(m.paneHeight())
 		m.saveView()
 		m.fitList()
 		return nil
@@ -421,7 +520,7 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
 
 // reload refetches the tasks, keeping the current view until they land.
 func (m *Model) reload() tea.Cmd {
-	m.loading = true
+	m.loading, m.background = true, false
 	return tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject), m.startSpinner())
 }
 
@@ -432,7 +531,10 @@ func (m *Model) applyFilter() {
 	if prev, ok := m.selected(); ok {
 		prevGID = prev.GID
 	}
-	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates)
+	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates, m.now())
+	if p := m.pinned; p != nil && !slices.ContainsFunc(visible, func(t asana.Task) bool { return t.GID == p.GID }) {
+		visible = append(visible, *p)
+	}
 	m.visible, m.groups = groupTasks(visible, m.groupBy, m.rowContext(), m.now())
 	m.measureColumns()
 	if prevGID != "" {
@@ -444,6 +546,21 @@ func (m *Model) applyFilter() {
 		}
 	}
 	m.moveTo(m.cursor)
+}
+
+// refreshPinned replaces the pinned ticket with its copy among tasks, if any,
+// and reports whether it did.
+func (m *Model) refreshPinned(tasks ...asana.Task) bool {
+	if m.pinned == nil {
+		return false
+	}
+	for _, t := range tasks {
+		if t.GID == m.pinned.GID {
+			m.pinned = &t
+			return true
+		}
+	}
+	return false
 }
 
 // animating reports whether anything shown uses the spinner.
@@ -489,6 +606,12 @@ func (m *Model) selectedDetail() (ticket.Ticket, bool) {
 
 func (m *Model) selectionChanged() tea.Cmd {
 	t, ok := m.selected()
+	if m.pinned != nil && (!ok || t.GID != m.pinned.GID) {
+		// Moving off the pinned ticket drops it unless the view still lists it.
+		m.pinned = nil
+		m.applyFilter()
+		t, ok = m.selected()
+	}
 	if !ok {
 		m.shownGID = ""
 		m.reader.SetContent("")
@@ -497,10 +620,10 @@ func (m *Model) selectionChanged() tea.Cmd {
 	if t.GID == m.shownGID {
 		return nil
 	}
-	m.fieldKey = ""
+	m.fieldKey, m.showEmpty = "", false
 	if _, cached := m.details[t.GID]; cached {
 		m.renderDetail(false)
-		return nil
+		return m.loadInlineImages(m.details[t.GID])
 	}
 	m.shownGID = ""
 	m.reader.SetContent(dimStyle.Render("Loading " + ticket.Clean(t.Name) + "…"))
@@ -523,7 +646,15 @@ func (m *Model) renderDetail(keepScroll bool) {
 	offset := m.reader.YOffset()
 	width := max(readerW-2, 20)
 	if m.readerView == config.ViewMarkdown {
-		m.reader.SetContent(m.glamour(t.MarkdownWith(section), width, false))
+		extra := section
+		if path, own := m.effectiveRepo(t.Task); path != "" {
+			repo := "`" + path + "`"
+			if own {
+				repo += " (this ticket only)"
+			}
+			extra = "\n## Local repo\n\n" + repo + "\n" + extra
+		}
+		m.reader.SetContent(m.glamour(t.MarkdownWith(extra), width, false))
 	} else {
 		m.reader.SetContent(lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width)))
 	}
@@ -542,7 +673,7 @@ func (m *Model) stepField(dir int) bool {
 	if !ok || m.readerView == config.ViewMarkdown {
 		return false
 	}
-	keys := fieldTargets(t)
+	keys := m.fieldTargets(t)
 	i := slices.Index(keys, m.fieldKey)
 	switch {
 	case i < 0 && dir < 0:
@@ -553,15 +684,66 @@ func (m *Model) stepField(dir int) bool {
 		i = (i + dir + len(keys)) % len(keys)
 	}
 	m.fieldKey = keys[i]
+	m.showTarget()
+	return true
+}
+
+// stepCardTarget moves through fields, section headings, and comments.
+func (m *Model) stepCardTarget(dir int) bool {
+	if _, ok := m.selectedDetail(); !ok || m.readerView == config.ViewMarkdown || len(m.cardTargets) == 0 {
+		return false
+	}
+	i := slices.Index(m.cardTargets, m.fieldKey)
+	switch {
+	case i < 0 && dir < 0:
+		i = len(m.cardTargets) - 1
+	case i < 0:
+		i = 0
+	default:
+		i = (i + dir + len(m.cardTargets)) % len(m.cardTargets)
+	}
+	m.fieldKey = m.cardTargets[i]
+	m.showTarget()
+	return true
+}
+
+// jumpReader scrolls the reader to its top or bottom, selecting the cards
+// view's first or last target.
+func (m *Model) jumpReader(top bool) {
+	if _, ok := m.selectedDetail(); ok && m.readerView != config.ViewMarkdown && len(m.cardTargets) > 0 {
+		m.fieldKey = m.cardTargets[len(m.cardTargets)-1]
+		if top {
+			m.fieldKey = m.cardTargets[0]
+		}
+		m.renderDetail(true)
+	}
+	if top {
+		m.reader.GotoTop()
+	} else {
+		m.reader.GotoBottom()
+	}
+}
+
+func (m *Model) editableTarget() bool {
+	t, ok := m.selectedDetail()
+	return ok && m.readerView != config.ViewMarkdown && slices.Contains(m.fieldTargets(t), m.fieldKey)
+}
+
+// showTarget redraws the highlight and brings the whole target into view, or
+// its first line when it is taller than the reader. A target that fits on
+// screen with the ticket's top scrolls to the top, so the head stays reachable.
+func (m *Model) showTarget() {
 	m.renderDetail(true)
 	line, top, h := m.fieldLines[m.fieldKey], m.reader.YOffset(), m.reader.Height()
+	last := max(m.fieldEnds[m.fieldKey], line)
 	switch {
+	case line < top && last < h:
+		m.reader.GotoTop()
 	case line < top:
 		m.reader.SetYOffset(line)
-	case line >= top+h:
-		m.reader.SetYOffset(line - h + 1)
+	case last >= top+h:
+		m.reader.SetYOffset(min(line, last-h+1))
 	}
-	return true
 }
 
 // clearField drops the cards view's tabbed-to row.
@@ -583,15 +765,7 @@ func (m *Model) glamour(md string, width int, bare bool) string {
 	key := rendererKey{width, bare}
 	r := m.renderers[key]
 	if r == nil {
-		style := *styles.DefaultStyles[m.deps.Config.Theme]
-		if bare {
-			style.Document.Margin = new(uint)
-			style.Document.BlockPrefix, style.Document.BlockSuffix = "", ""
-		}
-		var err error
-		if r, err = glamour.NewTermRenderer(glamour.WithStyles(style), glamour.WithWordWrap(width)); err != nil {
-			return md
-		}
+		r = newMarkdownRenderer(m.deps.Config.Theme, width, bare, m.sym.codeWrap)
 		m.renderers[key] = r
 	}
 	out, err := r.Render(md)
@@ -629,7 +803,7 @@ func (m *Model) openProjectPicker() {
 
 func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {
 	m.modal = nil
-	m.viewProject, m.linked = ref, nil
+	m.viewProject, m.linked, m.pinned = ref, nil, nil
 	m.restoreView()
 	if ref != nil {
 		m.deps.State.TouchProject(ref.GID)
@@ -666,10 +840,11 @@ func (m *Model) paneWidths() (listW, readerW int, split bool) {
 		return m.width, m.width, false
 	}
 	room := m.width - m.navWidth()
-	outer := room * 2 / 5
+	outer := min(room*2/5, room-readerIdealW-panelFrame)
 	if m.listW > 0 {
-		outer = min(max(m.listW, minPaneW), room-minPaneW)
+		outer = min(m.listW, room-readerMinW-panelFrame)
 	}
+	outer = min(max(outer, minPaneW), room-minPaneW)
 	return outer - panelFrame, room - outer - panelFrame, true
 }
 
@@ -678,9 +853,9 @@ func (m *Model) bodyHeight() int { return max(m.height-1, 1) }
 // paneHeight is the height of the panes' content.
 func (m *Model) paneHeight() int {
 	if _, _, split := m.paneWidths(); split {
-		return max(m.bodyHeight()-panelFrame, 1)
+		return max(m.bodyHeight()-m.filterHintHeight()-panelFrame, 1)
 	}
-	return m.bodyHeight()
+	return max(m.bodyHeight()-m.filterHintHeight(), 1)
 }
 
 func (m *Model) layout() {
@@ -688,14 +863,15 @@ func (m *Model) layout() {
 		m.focusNav = false
 	}
 	_, readerW, _ := m.paneWidths()
-	if readerW != m.reader.Width() {
-		m.renderers = map[rendererKey]*glamour.TermRenderer{}
+	widthChanged := readerW != m.reader.Width()
+	if widthChanged {
+		m.renderers = map[rendererKey]*markdownRenderer{}
 	}
 	m.reader.SetWidth(readerW)
 	m.reader.SetHeight(m.paneHeight())
 	m.filterInput.SetWidth(max(m.width/3, 10))
-	if m.shownGID != "" {
-		m.renderDetail(false)
+	if t, ok := m.selected(); widthChanged && ok && t.GID == m.shownGID {
+		m.renderDetail(true)
 	}
 }
 
@@ -707,7 +883,11 @@ func (m *Model) View() tea.View {
 
 func (m *Model) body() string {
 	h := m.bodyHeight()
-	panes := m.panes(h)
+	hints := m.filterHints()
+	panes := m.panes(max(h-len(hints), 1))
+	if len(hints) > 0 {
+		panes += "\n" + strings.Join(hints, "\n")
+	}
 	w, mh := max(min(m.width-4, 80), 10), max(h-2, 3)
 	var content string
 	style := modalStyle.BorderForeground(m.accentStyle.GetForeground())
@@ -717,13 +897,22 @@ func (m *Model) body() string {
 			"\n\n" + m.accentStyle.Render("enter") + dimStyle.Render(" / ") + m.accentStyle.Render("esc") + dimStyle.Render(" dismiss")
 		style = modalStyle.BorderForeground(warnStyle.GetForeground())
 	case m.input != nil:
+		if m.input.area.DynamicHeight {
+			w = max(min(m.width-4, 100), 10)
+		}
 		content = m.input.view(w, mh, m.accentStyle)
+	case m.form != nil:
+		content = m.form.view(w, mh, m.accentStyle)
 	case m.modal != nil:
 		content = m.modal.view(w, mh, m.accentStyle)
 	case m.help:
-		content = m.helpView()
+		if m.filtering {
+			content = m.filterHelpView()
+		} else {
+			content = m.helpView()
+		}
 		style = style.Padding(0, 2)
-	case m.loading && m.tasks != nil:
+	case m.loading && m.tasks != nil && !m.background:
 		content = "Loading tasks…"
 		if m.sym.spinner != nil {
 			content = m.sym.spinner[m.frame%len(m.sym.spinner)] + " " + content
@@ -750,18 +939,35 @@ func (m *Model) panes(h int) string {
 	case split:
 		inner := m.paneHeight()
 		title, count := m.listTitle()
-		list := m.panel(title, count, m.listView(listW, inner), listW+panelFrame, h, !m.focusReader && !m.focusNav)
-		reader := m.panel("[2] Ticket", m.readerView, m.reader.View(), readerW+panelFrame, h, m.focusReader)
+		list := m.panel(title, count, m.listView(listW, inner), listW+panelFrame, h, m.listHighlight())
+		reader := m.panel("[2] Ticket", m.readerView, m.reader.View(), readerW+panelFrame, h, m.focusColor(m.focusReader))
 		if !m.showNav() {
 			return lipgloss.JoinHorizontal(lipgloss.Top, list, reader)
 		}
-		nav := m.panel("[0] Views", "", m.navView(navW-panelFrame, inner), navW, h, m.focusNav)
+		nav := m.panel("[0] Views", "", m.navView(navW-panelFrame, inner), navW, h, m.focusColor(m.focusNav))
 		return lipgloss.JoinHorizontal(lipgloss.Top, nav, list, reader)
 	case m.focusReader:
 		return m.reader.View()
 	default:
 		return lipgloss.NewStyle().Width(listW).Height(h).Render(m.listView(listW, h))
 	}
+}
+
+// focusColor is the accent color for a focused panel, or nil.
+func (m *Model) focusColor(focused bool) color.Color {
+	if focused {
+		return m.accentStyle.GetForeground()
+	}
+	return nil
+}
+
+// listHighlight marks the list panel in the warning color while the timer
+// refreshes it, since that refresh shows no modal.
+func (m *Model) listHighlight() color.Color {
+	if m.loading && m.background {
+		return warnStyle.GetForeground()
+	}
+	return m.focusColor(!m.focusReader && !m.focusNav)
 }
 
 // listTitle is the list panel's title and its right-hand count, or a
@@ -893,7 +1099,8 @@ func (m *Model) listView(width, height int) string {
 		}
 		cursor = cursorStyle.Render(cursor)
 	}
-	rowW := max(width-ansi.StringWidth(gutter), 1)
+	rowW := max(width-ansi.StringWidth(gutter)-listGutter, 1)
+	cols := m.rowCols(rowW)
 	var lines []string
 	for i := start; i < end; i++ {
 		switch {
@@ -908,7 +1115,7 @@ func (m *Model) listView(width, height int) string {
 		case sepH > 0:
 			lines = append(lines, sep)
 		}
-		row, rowTail := m.listRow(i)
+		row, rowTail := m.listRow(i, cols)
 		for j, line := range row {
 			tail := ""
 			if j == 0 {
@@ -960,9 +1167,9 @@ func (m *Model) marker() string {
 }
 
 // listRow returns the lines of visible ticket i's row and the tail
-// right-aligned on its first line: the single layout's field columns and
-// agent badge, or the multi layout's badge.
-func (m *Model) listRow(i int) (row []string, tail string) {
+// right-aligned on its first line: the single layout's field columns sized by
+// cols and agent badge, or the multi layout's badge.
+func (m *Model) listRow(i int, cols []int) (row []string, tail string) {
 	t := m.visible[i]
 	mark := m.sym.open
 	if t.Completed {
@@ -1008,12 +1215,12 @@ func (m *Model) listRow(i int) (row []string, tail string) {
 	}
 	var cells []string
 	for j, name := range m.deps.Config.List.Fields {
-		if m.cols[j] == 0 {
+		if cols[j] == 0 {
 			continue
 		}
 		v, style := cellValue(t, name, rc, today)
-		v = ansi.Truncate(v, m.cols[j], "…")
-		cells = append(cells, pad(style.Render(v), m.cols[j]))
+		v = ansi.Truncate(v, cols[j], "…")
+		cells = append(cells, pad(style.Render(v), cols[j]))
 	}
 	if m.badgeW > 0 {
 		cells = append(cells, badge+pad("", m.badgeW-ansi.StringWidth(badge)))
@@ -1021,13 +1228,51 @@ func (m *Model) listRow(i int) (row []string, tail string) {
 	return []string{title}, strings.Join(cells, pad("", 2))
 }
 
+// rowCols returns the field column widths for rows width wide, hiding columns
+// until titles get minTitleW, or the widest title if shorter: other fields
+// from the right, then due. The agent badge always stays.
+func (m *Model) rowCols(width int) []int {
+	cols := slices.Clone(m.cols)
+	names := m.deps.Config.List.Fields
+	// The title line also holds the check mark and the two spaces after it.
+	room := min(m.titleW, minTitleW) + ansi.StringWidth(m.sym.open) + 2
+	var order, due []int
+	for j := len(cols) - 1; j >= 0; j-- {
+		if isDue(strings.TrimSpace(names[j])) {
+			due = append(due, j)
+		} else {
+			order = append(order, j)
+		}
+	}
+	for _, j := range append(order, due...) {
+		if width-tailWidth(cols, m.badgeW)-1 >= room {
+			break
+		}
+		cols[j] = 0
+	}
+	return cols
+}
+
+// tailWidth is the width of a row tail with these field columns and badge.
+func tailWidth(cols []int, badgeW int) int {
+	w, n := badgeW, min(badgeW, 1)
+	for _, c := range cols {
+		if c > 0 {
+			w, n = w+c, n+1
+		}
+	}
+	return w + 2*max(n-1, 0)
+}
+
 // measureColumns sizes each list field column to its widest visible value,
-// up to maxColW, and the badge column to the widest agent badge.
+// up to maxColW, the badge column to the widest agent badge, and titleW to
+// the widest title.
 func (m *Model) measureColumns() {
 	names := m.deps.Config.List.Fields
-	m.cols, m.badgeW = make([]int, len(names)), 0
+	m.cols, m.badgeW, m.titleW = make([]int, len(names)), 0, 0
 	rc, today := m.rowContext(), m.now()
 	for _, t := range m.visible {
+		m.titleW = max(m.titleW, ansi.StringWidth(ticket.OneLine(t.Name)))
 		for j, name := range names {
 			v, _ := cellValue(t, name, rc, today)
 			m.cols[j] = min(max(m.cols[j], ansi.StringWidth(v)), maxColW)
@@ -1036,8 +1281,8 @@ func (m *Model) measureColumns() {
 	}
 }
 
-// fitList sizes the list pane to its widest row or group header, leaving the
-// reader at least minPaneW columns.
+// fitList sizes the list pane to its widest row or group header. paneWidths
+// caps it to leave the reader readerMinW columns.
 func (m *Model) fitList() {
 	gutter := ansi.StringWidth(m.marker())
 	w := 0
@@ -1045,7 +1290,7 @@ func (m *Model) fitList() {
 		w = max(w, groupHeaderWidth(label, n))
 	}
 	for i := range m.visible {
-		row, tail := m.listRow(i)
+		row, tail := m.listRow(i, m.cols)
 		for j, line := range row {
 			lineW := gutter + ansi.StringWidth(line)
 			if j == 0 && tail != "" {
@@ -1057,6 +1302,6 @@ func (m *Model) fitList() {
 	// The title needs its corners, the spaces around it and the count, and
 	// one rule cell between them.
 	title, count := m.listTitle()
-	m.listW = max(w+panelFrame, ansi.StringWidth(title)+ansi.StringWidth(count)+8)
+	m.listW = max(w+listGutter+panelFrame, ansi.StringWidth(title)+ansi.StringWidth(count)+8)
 	m.layout()
 }

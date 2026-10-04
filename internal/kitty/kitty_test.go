@@ -13,6 +13,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
+	ansikitty "github.com/charmbracelet/x/ansi/kitty"
 )
 
 func env(vars map[string]string) func(string) string {
@@ -69,22 +72,23 @@ func pngBytes(t *testing.T, w, h int, noisy bool) []byte {
 }
 
 func TestEncodeSmall(t *testing.T) {
-	out, err := Encode(pngBytes(t, 10, 400, false), 80, 24, false)
+	// 16x32 pixels is 2x2 cells, centered in 80x24.
+	out, err := Encode(pngBytes(t, 16, 32, false), 80, 24, CellSize{}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(out, "\x1b_Ga=T,f=100,q=2,r=24,m=0;") || !strings.HasSuffix(out, "\x1b\\") {
+	if !strings.HasPrefix(out, "\x1b[12;40H\x1b_Ga=T,f=100,q=2,c=2,r=2,m=0;") || !strings.HasSuffix(out, "\x1b\\") {
 		t.Fatalf("unexpected payload prefix/suffix: %q", out[:40])
 	}
 }
 
 func TestEncodeChunksWideImagesAndWrapsForTmux(t *testing.T) {
-	out, err := Encode(pngBytes(t, 400, 100, true), 80, 24, true)
+	out, err := Encode(pngBytes(t, 1600, 400, true), 80, 24, CellSize{}, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(out, "\x1bPtmux;\x1b\x1b_Ga=T,f=100,q=2,c=80,m=1;") {
-		t.Fatalf("prefix = %q", out[:48])
+	if !strings.HasPrefix(out, "\x1b[8;1H\x1bPtmux;\x1b\x1b_Ga=T,f=100,q=2,c=80,r=10,m=1;") {
+		t.Fatalf("prefix = %q", out[:56])
 	}
 	if strings.Count(out, "\x1bPtmux;") < 2 || !strings.Contains(out, "m=0;") {
 		t.Fatal("want several chunks, the last with m=0")
@@ -92,7 +96,7 @@ func TestEncodeChunksWideImagesAndWrapsForTmux(t *testing.T) {
 }
 
 func TestEncodeRejectsNonImage(t *testing.T) {
-	if _, err := Encode([]byte("not an image"), 80, 24, false); err == nil {
+	if _, err := Encode([]byte("not an image"), 80, 24, CellSize{}, false); err == nil {
 		t.Fatal("expected a decode error")
 	}
 }
@@ -122,15 +126,41 @@ func TestDownload(t *testing.T) {
 }
 
 func TestViewerWritesPayloadAndClears(t *testing.T) {
-	v := NewViewer("PAYLOAD", false)
+	v := NewViewer("PAYLOAD", "NAME\nKEYS", true, false)
 	var out bytes.Buffer
-	v.SetStdin(strings.NewReader("\n"))
+	v.SetStdin(strings.NewReader("k"))
 	v.SetStdout(&out)
 	if err := v.Run(); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "PAYLOAD") || !strings.HasSuffix(out.String(), Clear(false)) {
 		t.Fatalf("out = %q", out.String())
+	}
+	if !strings.Contains(out.String(), "\x1b[999;1H\x1b[1A\rNAME\r\nKEYS") || v.Step != -1 {
+		t.Fatalf("step = %d, out = %q", v.Step, out.String())
+	}
+}
+
+func TestWaitForKey(t *testing.T) {
+	cases := []struct {
+		key      string
+		stepping bool
+		want     int
+	}{
+		{"\r", true, 0}, {"\n", true, 0}, {"q", true, 0}, {"\x1b", true, 0}, {"\x03", true, 0},
+		{"j", true, 1}, {"k", true, -1},
+	}
+	for _, c := range cases {
+		// The key after "x" must stop the wait before "!" is read.
+		in := strings.NewReader("x" + c.key + "!")
+		if step, err := waitForKey(in, c.stepping); err != nil || step != c.want || in.Len() != 1 {
+			t.Fatalf("key %q: step = %d, err = %v, unread = %d", c.key, step, err, in.Len())
+		}
+	}
+	// A single image ignores j and k.
+	in := strings.NewReader("jkq!")
+	if step, err := waitForKey(in, false); err != nil || step != 0 || in.Len() != 1 {
+		t.Fatalf("single image: step = %d, err = %v, unread = %d", step, err, in.Len())
 	}
 }
 
@@ -145,8 +175,88 @@ func TestEncodeRejectsHugeDimensions(t *testing.T) {
 	chunk := append([]byte("IHDR"), ihdr...)
 	b.Write(chunk)
 	binary.Write(&b, binary.BigEndian, crc32.ChecksumIEEE(chunk))
-	_, err := Encode(b.Bytes(), 80, 24, false)
+	_, err := Encode(b.Bytes(), 80, 24, CellSize{}, false)
 	if err == nil || !strings.Contains(err.Error(), "too large") {
 		t.Fatalf("err = %v, want a too-large error", err)
+	}
+}
+
+func TestInlineFitsAndPlaces(t *testing.T) {
+	// 160x80 px is 20x5 cells at the assumed scale.
+	seq, cols, rows, err := Inline(pngBytes(t, 160, 80, false), 42, 80, 24, CellSize{}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cols != 20 || rows != 5 {
+		t.Fatalf("size = %dx%d, want 20x5", cols, rows)
+	}
+	// Deleting the id first drops placements left from an earlier image.
+	if !strings.HasPrefix(seq, "\x1b_Ga=d,d=I,i=42,q=2\x1b\\\x1b_Ga=T,f=100,q=2,U=1,i=42,c=20,r=5,m=0;") {
+		t.Fatalf("prefix = %q", seq[:72])
+	}
+	// Width and height limits shrink it, keeping its shape.
+	if _, cols, rows, _ := Inline(pngBytes(t, 160, 80, false), 42, 10, 24, CellSize{}, false); cols != 10 || rows != 3 {
+		t.Fatalf("width-capped size = %dx%d, want 10x3", cols, rows)
+	}
+	if _, cols, rows, _ := Inline(pngBytes(t, 160, 80, false), 42, 80, 2, CellSize{}, false); cols != 8 || rows != 2 {
+		t.Fatalf("height-capped size = %dx%d, want 8x2", cols, rows)
+	}
+}
+
+func TestInlineSize(t *testing.T) {
+	cases := []struct {
+		name                              string
+		w, h, maxCols, maxRows            int
+		cellWidth, cellHeight, cols, rows int
+	}{
+		{"fallback", 160, 80, 80, 24, 8, 16, 20, 5},
+		{"taller cells", 160, 80, 80, 24, 8, 24, 20, 4},
+		{"retina cells", 320, 160, 80, 24, 16, 36, 40, 9},
+		{"task first image", 872, 684, 77, 36, 8, 18, 77, 27},
+		{"task first image retina", 872, 684, 77, 36, 16, 36, 77, 27},
+		{"task second image", 654, 336, 77, 36, 8, 18, 77, 18},
+		{"task second image retina", 654, 336, 77, 36, 16, 36, 77, 18},
+		{"width limit", 160, 80, 10, 24, 8, 24, 10, 2},
+		{"height limit", 160, 80, 80, 2, 8, 24, 12, 2},
+		{"fractional height limit", 160, 80, 10, 2, 8, 16, 8, 2},
+		{"tiny image", 1, 1, 80, 24, 8, 24, 1, 1},
+		{"invalid limits", 160, 80, 0, 0, 8, 24, 1, 1},
+		{"diacritic limit", 10000, 10000, 1000, 1000, 8, 16, 297, 149},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cols, rows := inlineSize(tc.w, tc.h, tc.maxCols, tc.maxRows, tc.cellWidth, tc.cellHeight)
+			if cols != tc.cols || rows != tc.rows {
+				t.Fatalf("size = %dx%d, want %dx%d", cols, rows, tc.cols, tc.rows)
+			}
+		})
+	}
+}
+
+func TestRequestCellSize(t *testing.T) {
+	if got := RequestCellSize(false); got != "\x1b[16t" {
+		t.Fatalf("query = %q", got)
+	}
+	if got := RequestCellSize(true); got != "\x1bPtmux;\x1b\x1b[16t\x1b\\" {
+		t.Fatalf("tmux query = %q", got)
+	}
+}
+
+func TestPlaceholderCells(t *testing.T) {
+	lines := strings.Split(Placeholder(3<<24|42, 3, 2), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("lines = %d, want 2", len(lines))
+	}
+	for _, l := range lines {
+		if w := ansi.StringWidth(l); w != 3 {
+			t.Fatalf("width = %d, want 3: %q", w, l)
+		}
+		if !strings.HasPrefix(l, "\x1b[38;5;42m") {
+			t.Fatalf("line lacks the id color: %q", l)
+		}
+		// Each cell names its row, column, and the id's high byte.
+		if !strings.HasSuffix(l, string(ansikitty.Diacritic(3))+"\x1b[39m") {
+			t.Fatalf("line lacks the id's high byte: %q", l)
+		}
 	}
 }

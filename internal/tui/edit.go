@@ -2,12 +2,15 @@ package tui
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/ticket"
 	"github.com/sadmachine/asanamate/internal/writeback"
@@ -23,6 +26,7 @@ const (
 	editDue
 	editAddProject
 	editRemoveProject
+	editBranch
 )
 
 // myTasks stands for the My Tasks list among a ticket's projects.
@@ -37,12 +41,31 @@ type pendingEdit struct {
 	myTasks bool               // moving within My Tasks, not a project
 }
 
-func (m *Model) openEditMenu() {
+// startEdit begins an edit of the selected ticket, reporting whether its
+// details have loaded.
+func (m *Model) startEdit() bool {
 	t, ok := m.selectedDetail()
 	if !ok {
 		m.status = "ticket details are still loading"
+		return false
+	}
+	m.edit, m.run = &pendingEdit{ticket: t}, nil
+	return true
+}
+
+// openEdit runs op on the selected ticket without the edit menu.
+func (m *Model) openEdit(op editOp) tea.Cmd {
+	if !m.startEdit() {
+		return nil
+	}
+	return m.pickedEdit(op)
+}
+
+func (m *Model) openEditMenu() {
+	if !m.startEdit() {
 		return
 	}
+	t := m.edit.ticket
 	p := newPicker(pickValue(m.pickedEdit), "Edit: "+ticket.Clean(t.Name), []pickItem{
 		{Label: "Add comment", Key: "c", Value: editComment},
 		{Label: "Move to section", Key: "s", Value: editSection},
@@ -51,10 +74,10 @@ func (m *Model) openEditMenu() {
 		{Label: "Set due date", Key: "d", Value: editDue},
 		{Label: "Add to project", Key: "p", Value: editAddProject},
 		{Label: "Remove from project", Key: "r", Value: editRemoveProject},
+		{Label: "Set branch", Key: "b", Value: editBranch},
 	})
 	p.keySelect = true
 	m.modal = p
-	m.edit, m.run = &pendingEdit{ticket: t}, nil
 }
 
 func (m *Model) pickedEdit(op editOp) tea.Cmd {
@@ -63,6 +86,10 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 	switch op {
 	case editComment:
 		m.input = newInputBox("Comment on "+ticket.Clean(t.Name), "comment text")
+		m.input.area.DynamicHeight = true
+		m.input.area.MinHeight = 10
+		// Keep the viewport limit separate from the amount of text accepted.
+		m.input.area.MaxContentHeight = math.MaxInt
 	case editSection:
 		targets := m.sectionTargets(t.Task)
 		switch len(targets) {
@@ -91,8 +118,39 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 		return m.requestProjects(func() tea.Cmd { m.openAddProjectPicker(); return nil })
 	case editRemoveProject:
 		m.openRemoveProjectPicker()
+	case editBranch:
+		m.openBranchInput(t.Task)
 	}
 	return nil
+}
+
+// openBranchInput edits the branch saved for t, which overrides its branch
+// field and fallback. Submitting it empty removes the saved branch.
+func (m *Model) openBranchInput(t asana.Task) {
+	fallback := action.Branch(t, "", m.deps.Config.BranchField, m.projectFields[gidOf(m.viewProject)])
+	b := newInputBox("Branch", fmt.Sprintf("empty uses %q", fallback))
+	b.area.SetValue(m.deps.State.TaskBranches[t.GID])
+	b.onSubmit = func(value string) tea.Cmd {
+		m.input, m.edit = nil, nil
+		m.saveBranch(t.GID, value)
+		return nil
+	}
+	m.input = b
+}
+
+// saveBranch saves branch for the task, or removes its saved branch when
+// branch is "", and relinks agents.
+func (m *Model) saveBranch(gid, branch string) {
+	m.deps.State.SetTaskBranch(gid, branch)
+	m.linked = nil
+	m.renderDetail(true)
+	m.status = "branch saved"
+	if branch == "" {
+		m.status = "branch cleared"
+	}
+	if err := m.deps.State.Save(); err != nil {
+		m.status = "saving branch: " + err.Error()
+	}
 }
 
 func (m *Model) openAddProjectPicker() {
@@ -227,24 +285,36 @@ func (m *Model) openFieldPicker() {
 	m.modal = newPicker(pickValue(m.pickedField), "Set which field?", items)
 }
 
-// editable reports whether the edit flow can set custom field f.
+// editable reports whether the edit flow can set custom field f. ID and
+// formula fields are read-only text and number fields.
 func editable(f asana.CustomField) bool {
-	switch f.ResourceSubtype {
+	kind := f.RepresentationType
+	if kind == "" {
+		kind = f.ResourceSubtype
+	}
+	switch kind {
 	case asana.FieldText, asana.FieldNumber, asana.FieldEnum, asana.FieldMultiEnum, asana.FieldDate, asana.FieldPeople:
 		return true
 	}
 	return false
 }
 
-// commentKey is the field key of the cards view's Comments heading, which
-// adds a comment.
+// commentKey is the field key of the cards view's Add comment row.
 const commentKey = "comment"
 
+// emptyFieldsKey is the field key of the cards view's Show empty fields row.
+const emptyFieldsKey = "empty_fields"
+
 // fieldTargets are the keys of the rows the cards view can tab to, in the
-// order they render: editable details rows, then the Comments heading.
-func fieldTargets(t ticket.Ticket) []string {
+// order they render: editable details rows, the Show empty fields row while
+// empty fields are hidden, then the Add comment row.
+func (m *Model) fieldTargets(t ticket.Ticket) []string {
 	var keys []string
-	for _, f := range append(t.Meta(), t.FieldValues()...) {
+	rows := append(t.Meta(), t.FieldValues()...)
+	if m.showEmpty {
+		rows = append(rows, t.EmptyFields()...)
+	}
+	for _, f := range rows {
 		if f.Key == "" {
 			continue
 		}
@@ -256,7 +326,27 @@ func fieldTargets(t ticket.Ticket) []string {
 		}
 		keys = append(keys, f.Key)
 	}
+	if !m.showEmpty && len(t.EmptyFields()) > 0 {
+		keys = append(keys, emptyFieldsKey)
+	}
 	return append(keys, commentKey)
+}
+
+// showEmptyFields reveals the selected ticket's empty custom fields and
+// selects the first editable one.
+func (m *Model) showEmptyFields() {
+	t, ok := m.selectedDetail()
+	if !ok {
+		return
+	}
+	m.showEmpty, m.fieldKey = true, ""
+	for _, f := range t.EmptyFields() {
+		if slices.Contains(m.fieldTargets(t), f.Key) {
+			m.fieldKey = f.Key
+			break
+		}
+	}
+	m.showTarget()
 }
 
 // openField starts editing the row with key on the selected ticket, skipping

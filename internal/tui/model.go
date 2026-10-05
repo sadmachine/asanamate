@@ -737,7 +737,7 @@ func (m *Model) renderDetail(keepScroll bool) {
 	if m.readerView == config.ViewMarkdown {
 		extra := section
 		if value := m.timeSummaryValue(t.GID); value != "" {
-			extra += "\n## Time tracked\n\n" + value + "\n"
+			extra += "\n" + m.sym.icon(iconClock) + "**Time tracked:** " + value + "\n\n"
 		}
 		if path, own := m.effectiveRepo(t.Task); path != "" {
 			repo := "`" + path + "`"

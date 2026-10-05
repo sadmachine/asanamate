@@ -176,3 +176,36 @@ func TestTimeSummaryRejectsStaleRepliesAndCachesByTicket(t *testing.T) {
 		t.Fatal("ticket refresh did not refresh time")
 	}
 }
+
+func TestTimeSummaryLivesInHeaderWithClock(t *testing.T) {
+	for _, tc := range []struct {
+		style string
+		clock string
+	}{
+		{config.SymbolsNerd, "\uf017"},
+		{config.SymbolsUnicode, "◷"},
+		{config.SymbolsASCII, "(time)"},
+	} {
+		t.Run(tc.style, func(t *testing.T) {
+			m, _ := timeModel(t)
+			m.sym = newSymbols(tc.style, nil, false)
+			m.timeSummaries = map[string]timeSummaryState{"42": {summary: timetracking.Summary{TotalSeconds: 13500}}}
+			tk := m.details["42"]
+			for _, width := range []int{40, 120} {
+				content := ansi.Strip(m.renderCards(tk, width))
+				timeAt, detailsAt := strings.Index(content, "Time tracked"), strings.Index(content, "Details")
+				if timeAt < 0 || detailsAt < timeAt || strings.Count(content, "Time tracked") != 1 || !strings.Contains(content, tc.clock+" Time tracked") {
+					t.Fatalf("time must appear once in header with clock: %s", content)
+				}
+				for _, line := range strings.Split(content[:detailsAt], "\n") {
+					if ansi.StringWidth(line) > width {
+						t.Fatalf("header exceeds width %d: %q", width, line)
+					}
+				}
+				if strings.Contains(ansi.Strip(m.detailsBody(tk, width-4, 0)), "Time tracked") {
+					t.Fatal("time remains in Details card")
+				}
+			}
+		})
+	}
+}

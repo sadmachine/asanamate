@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
 // binding is one key of the list and reader: the keys that run it, the label
@@ -147,6 +148,18 @@ func keyBindings() []binding {
 				}
 				m.status = "link sent to clipboard"
 				return tea.SetClipboard(t.PermalinkURL)
+			}
+			return nil
+		}},
+		{keys: []string{"y"}, desc: "copy targeted comment", hint: "copy comment", group: "Ticket", splitOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			if !m.focusReader || m.readerView == config.ViewMarkdown {
+				return nil
+			}
+			if t, ok := m.selectedDetail(); ok {
+				if c := m.selectedComment(t); c != nil {
+					m.status = "comment sent to clipboard"
+					return tea.SetClipboard(ticket.HTMLToMarkdown(c.HTMLText))
+				}
 			}
 			return nil
 		}},

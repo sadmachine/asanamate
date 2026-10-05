@@ -70,6 +70,62 @@ func TestActionMenuKeys(t *testing.T) {
 	}
 }
 
+func TestCopyCommentOnlyOnTarget(t *testing.T) {
+	const body = `<body>Hello <a data-asana-type="user" href="https://app.asana.com/0/123/list">@Austin Fishbaugh</a><br><strong>Ready</strong> <a href="https://example.com">docs</a></body>`
+	for _, tt := range []struct {
+		name, target                        string
+		list, markdown, noPreview, noDetail bool
+		want                                string
+	}{
+		{name: "comment", target: "comment:c1", want: "Hello @Austin Fishbaugh  \n**Ready** [docs](https://example.com)"},
+		{name: "comment without GID", target: "comment:index:1", want: "Second comment"},
+		{name: "list", target: "comment:c1", list: true},
+		{name: "markdown", target: "comment:c1", markdown: true},
+		{name: "list only", target: "comment:c1", noPreview: true},
+		{name: "missing details", target: "comment:c1", noDetail: true},
+		{name: "field", target: "assignee"},
+		{name: "section", target: "section:description"},
+		{name: "add comment", target: commentKey},
+		{name: "stale comment", target: "comment:missing"},
+		{name: "no target"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			m, _ := testModel(t, config.Default())
+			m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+			if !tt.noDetail {
+				m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask, Comments: []asana.Story{
+					{GID: "c1", HTMLText: body},
+					{HTMLText: "<body>Second comment</body>"},
+				}}})
+			}
+			m.focusReader, m.fieldKey, m.deps.NoPreview = !tt.list, tt.target, tt.noPreview
+			if tt.markdown {
+				m.readerView = config.ViewMarkdown
+			}
+			_, _, hints := m.mode()
+			if got := slices.Contains(hints, [2]string{"y", "copy comment"}); got != (tt.want != "" && !tt.noPreview) {
+				t.Fatalf("copy hint = %v, hints = %v", got, hints)
+			}
+			_, cmd := m.Update(key("y"))
+			if tt.want == "" {
+				if cmd != nil || m.status != "" {
+					t.Fatalf("non-comment target copied: command present = %v, status = %q", cmd != nil, m.status)
+				}
+				return
+			}
+			if cmd == nil {
+				t.Fatal("comment target did not request clipboard write")
+			}
+			if got, want := cmd(), tea.SetClipboard(tt.want)(); got != want {
+				t.Fatalf("clipboard message = %#v, want %#v", got, want)
+			}
+			if m.status != "comment sent to clipboard" {
+				t.Fatalf("status = %q", m.status)
+			}
+		})
+	}
+}
+
 func TestReaderScrollsWithMoveKeys(t *testing.T) {
 	m := splitModel(t)
 	m.Update(key("2"))

@@ -187,6 +187,13 @@ separator = false
 # "due"; press b to pick another. Empty: ungrouped.
 group_by = ""
 
+[list.sort]
+# Sort within each group, or the whole ungrouped list; B picks another.
+# Any list field or "title". Empty: keep Asana order.
+by = ""
+# "asc": earliest dates / A-Z; "desc": latest dates / Z-A. Missing values last.
+direction = "asc"
+
 [list.header]
 # Group headers: "rule" (── Label (n) ───) or "bar" (reversed bar).
 style = "rule"

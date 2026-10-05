@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/BurntSushi/toml"
 
@@ -137,9 +138,17 @@ type List struct {
 	Fields          []string  `toml:"fields"`
 	Separator       bool      `toml:"separator"`
 	GroupBy         string    `toml:"group_by"`
+	Sort            Sort      `toml:"sort"`
 	Header          Header    `toml:"header"`
 	Pinned          Pinned    `toml:"pinned"`
 	Selection       Selection `toml:"selection"`
+}
+
+// Sort orders tickets within each group, or the whole ungrouped list.
+// By is a list field or title; empty keeps Asana order. Direction is asc or desc.
+type Sort struct {
+	By        string `toml:"by"`
+	Direction string `toml:"direction"`
 }
 
 // Header configures group headers. Style draws them as a reversed bar or a
@@ -215,6 +224,7 @@ func Default() Config {
 		Actions:      nil,
 		List: List{
 			RefreshInterval: "30s",
+			Sort:            Sort{By: "", Direction: "asc"},
 			Layout:          LayoutSingle, Fields: []string{"section", "due"},
 			Header: Header{Style: StyleRule}, Pinned: Pinned{Color: "208"}, Selection: Selection{Style: StyleMarker},
 		},
@@ -326,6 +336,12 @@ func (c Config) validate() error {
 	}
 	if strings.EqualFold(strings.TrimSpace(c.List.GroupBy), "title") {
 		return errors.New("list.group_by can't be the title; use a field such as section or due")
+	}
+	if strings.ContainsFunc(c.List.Sort.By, unicode.IsControl) {
+		return errors.New("list.sort.by must not contain control characters")
+	}
+	if err := oneOf("list.sort.direction", c.List.Sort.Direction, "asc", "desc"); err != nil {
+		return err
 	}
 	return c.Agents.validate()
 }

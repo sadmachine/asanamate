@@ -170,6 +170,7 @@ func keyBindings() []binding {
 		{keys: []string{"ctrl+a"}, desc: "build / edit actions", group: "View", run: do((*Model).openActionBuilder)},
 		{keys: []string{"s"}, desc: "settings", group: "View", run: do(func(m *Model) { m.openSettings(0) })},
 		{keys: []string{"b"}, desc: "group by", group: "View", run: do((*Model).openGroupPicker)},
+		{keys: []string{"B"}, desc: "sort by", group: "View", run: do((*Model).openSortPicker)},
 		{keys: []string{"="}, desc: "fit list", group: "View", run: do((*Model).fitList)},
 		{keys: []string{"?"}, desc: "this help", hint: "keys", group: "View", run: do(func(m *Model) { m.help = true })},
 		{keys: []string{"q"}, desc: "quit", group: "View", run: func(*Model, tea.KeyPressMsg) tea.Cmd { return tea.Quit }},

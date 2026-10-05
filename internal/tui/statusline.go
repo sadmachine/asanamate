@@ -60,6 +60,9 @@ func (m *Model) statusline() string {
 	if m.groupBy != "" {
 		segs = append(segs, m.sym.icon(iconGroup)+m.groupBy)
 	}
+	if m.sortBy.By != "" {
+		segs = append(segs, "sort: "+sortLabel(m.sortBy))
+	}
 	segs = append(segs, fmt.Sprintf("%d/%d", len(m.visible), len(m.tasks)), m.refreshLabel())
 	if s := m.sym.summary(m.linkedAgents(), m.frame); s != "" {
 		segs = append(segs, s)

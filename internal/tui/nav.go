@@ -12,6 +12,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -27,18 +28,19 @@ const maxNavProjects = 8
 // navKeys are the keys the views panel handles while it has focus.
 var navKeys = []string{"j", "k", "down", "up", "g", "G", "home", "end", "enter", "l"}
 
-// navItem is one row of the views panel: a view to open, a grouping to
+// navItem is one row of the views panel: a view to open, a grouping or sort to
 // pick, or, with neither, a heading or an agent count.
 type navItem struct {
 	label, right string
 	project      *asana.Ref // nil with isView means My Tasks
 	isView       bool
+	sort         *config.Sort
 	group        *string
 	heading      bool
 	active       bool
 }
 
-func (it navItem) selectable() bool { return it.isView || it.group != nil }
+func (it navItem) selectable() bool { return it.isView || it.group != nil || it.sort != nil }
 
 // showNav reports whether the layout has room for the views panel.
 func (m *Model) showNav() bool {
@@ -53,7 +55,7 @@ func (m *Model) navWidth() int {
 	return 0
 }
 
-// navItems lists My Tasks and the recent projects, the groupings, and the
+// navItems lists My Tasks and the recent projects, the groupings and sorts, and the
 // linked agents by state.
 func (m *Model) navItems() []navItem {
 	count := fmt.Sprint(len(m.visible))
@@ -108,6 +110,19 @@ func (m *Model) navItems() []navItem {
 	}
 	items = appendMore(items, hidden)
 
+	items = append(items, navItem{label: "Sort by", right: "B", heading: true})
+	sorts := uniqueFold(append([]string{"", "due", "assignee", "title"}, m.deps.Config.List.Sort.By, m.sortBy.By))
+	for _, by := range sorts {
+		sort := config.Sort{By: by, Direction: cmp.Or(m.sortBy.Direction, "asc")}
+		label := cmp.Or(ticket.OneLine(by), "none")
+		active := strings.EqualFold(by, m.sortBy.By)
+		if active && by != "" {
+			label = sortLabel(m.sortBy)
+		}
+		items = append(items, navItem{label: label, sort: &sort, active: active})
+	}
+	items = appendMore(items, len(m.sortings())-len(sorts))
+
 	if m.deps.Config.AgentsEnabled() {
 		items = append(items, navItem{label: "Agents", heading: true})
 		linked := m.linkedAgents()
@@ -136,6 +151,7 @@ func appendMore(items []navItem, hidden int) []navItem {
 func (m *Model) navView(width, height int) string {
 	items := m.navItems()
 	lines := make([]string, 0, len(items))
+	selectedLine := -1
 	for i, it := range items {
 		if it.heading {
 			if i > 0 {
@@ -146,9 +162,9 @@ func (m *Model) navView(width, height int) string {
 		}
 		mark := "  "
 		switch {
-		case it.group != nil && it.active:
+		case (it.group != nil || it.sort != nil) && it.active:
 			mark = m.accentStyle.Render("●") + " "
-		case it.group != nil:
+		case it.group != nil || it.sort != nil:
 			mark = dimStyle.Render("○") + " "
 		case it.isView && it.active:
 			mark = m.accentStyle.Render("▌") + " "
@@ -163,11 +179,13 @@ func (m *Model) navView(width, height int) string {
 		line := mark + label + strings.Repeat(" ", max(width-ansi.StringWidth(mark)-ansi.StringWidth(label)-ansi.StringWidth(it.right), 1)) + right
 		if m.focusNav && i == m.navIndex(items) {
 			line = selectedStyle.Render(ansi.Strip(line))
+			selectedLine = len(lines)
 		}
 		lines = append(lines, line)
 	}
 	if len(lines) > height {
-		lines = lines[:height]
+		start := max(selectedLine-height+1, 0)
+		lines = lines[start : start+height]
 	}
 	return strings.Join(lines, "\n")
 }
@@ -239,6 +257,9 @@ func (m *Model) updateNav(k string) tea.Cmd {
 	case "enter", "l":
 		it := selectable[m.navCursor]
 		m.focusNav = false
+		if it.sort != nil {
+			return m.pickedSort(*it.sort)
+		}
 		if it.group != nil {
 			return m.pickedGroup(*it.group)
 		}

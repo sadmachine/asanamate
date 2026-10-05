@@ -13,6 +13,7 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/config"
 )
 
 // FileName is the state file's name inside the state directory.
@@ -64,10 +65,11 @@ type Display struct {
 	RefreshInterval string `toml:"refresh_interval,omitempty"`
 }
 
-// View is a list grouping and filter; "" GroupBy is ungrouped.
+// View is a list grouping, sort, and filter; "" GroupBy is ungrouped.
 type View struct {
-	GroupBy string `toml:"group_by"`
-	Filter  string `toml:"filter"`
+	GroupBy string      `toml:"group_by"`
+	Sort    config.Sort `toml:"sort"`
+	Filter  string      `toml:"filter"`
 }
 
 // RecentTicket is a ticket in the history, with the names its picker row shows.

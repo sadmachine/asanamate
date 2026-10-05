@@ -470,3 +470,28 @@ func TestSaveActionFileCoordinatesBuilderSessions(t *testing.T) {
 		t.Fatalf("first save lost: %+v, %v", files, err)
 	}
 }
+
+func TestListSortConfig(t *testing.T) {
+	for _, tc := range []struct {
+		name, body string
+		want       Sort
+		bad        string
+	}{
+		{name: "default", want: Sort{Direction: "asc"}},
+		{name: "due", body: "[list.sort]\nby = \"due\"\n", want: Sort{By: "due", Direction: "asc"}},
+		{name: "custom descending", body: "[list.sort]\nby = \"Priority\"\ndirection = \"desc\"\n", want: Sort{By: "Priority", Direction: "desc"}},
+		{name: "bad direction", body: "[list.sort]\ndirection = \"sideways\"\n", bad: "list.sort.direction"},
+		{name: "bad name", body: "[list.sort]\nby = \"due\\n\"\n", bad: "list.sort.by"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := Load(writeFile(t, "workspace = \"1\"\n"+tc.body))
+			if tc.bad != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.bad) {
+					t.Fatalf("error = %v, want %s", err, tc.bad)
+				}
+			} else if err != nil || cfg.List.Sort != tc.want {
+				t.Fatalf("sort = %v, err = %v, want %v", cfg.List.Sort, err, tc.want)
+			}
+		})
+	}
+}

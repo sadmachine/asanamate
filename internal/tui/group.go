@@ -155,8 +155,13 @@ func (m *Model) openGroupPicker() {
 
 // pickedGroup groups the list by the named field, keeping the selected ticket.
 func (m *Model) pickedGroup(by string) tea.Cmd {
-	m.modal = nil
 	m.groupBy = by
+	return m.listViewChanged()
+}
+
+// listViewChanged persists and rebuilds the view while keeping the selected ticket.
+func (m *Model) listViewChanged() tea.Cmd {
+	m.modal = nil
 	m.saveView()
 	m.applyFilter()
 	m.fitList()

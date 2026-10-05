@@ -86,7 +86,7 @@ func TestViewsPanelCursorSurvivesShrinkingRows(t *testing.T) {
 	keys(m, "0", "G")
 	m.groupBy = "" // Priority's row is gone
 	keys(m, "enter")
-	if m.groupBy != "due" {
-		t.Fatalf("groupBy = %q, want the last row, due", m.groupBy)
+	if m.sortBy.By != "title" || m.groupBy != "" {
+		t.Fatalf("sort = %v, group = %q, want the last row, title sort", m.sortBy, m.groupBy)
 	}
 }

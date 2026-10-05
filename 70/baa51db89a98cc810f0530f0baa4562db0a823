@@ -1,0 +1,70 @@
+internal/tui/keys.go
+  s_98c6b54c88ecb8::t_b0b40b38f65ea5 173
+internal/state/state.go
+  s_98c6b54c88ecb8::t_9a28f8ffe96c6e 16,70-72
+  s_98c6b54c88ecb8::t_b0b40b38f65ea5 68
+internal/tui/nav_test.go
+  s_98c6b54c88ecb8::t_e7d3027c3dfaca 89-90
+README.md
+  s_98c6b54c88ecb8::t_0697ece4b0c4fc 85,90,129,132,183-184,210-216
+  s_98c6b54c88ecb8::t_509e56780c6426 49,54,86
+  s_98c6b54c88ecb8::t_77a0656ac2faf6 217
+internal/setup/setup.go
+  s_98c6b54c88ecb8::t_b0b40b38f65ea5 190-196
+internal/tui/group.go
+  s_98c6b54c88ecb8::t_509e56780c6426 159-164
+internal/tui/nav.go
+  s_98c6b54c88ecb8::t_e7d3027c3dfaca 31,58
+  s_98c6b54c88ecb8::t_0697ece4b0c4fc 37,43,125,165,167,187,260-262
+  s_98c6b54c88ecb8::t_9a28f8ffe96c6e 15,113-124,154,182,188
+internal/tui/sort.go
+  s_98c6b54c88ecb8::t_9a28f8ffe96c6e 4-13,19-44,48-60,64-67,71,76-95,100
+  s_98c6b54c88ecb8::t_b6b04254eff455 1-3,14-18,45-47,61-63,68-70,72-75,96-99,102
+  s_98c6b54c88ecb8::t_509e56780c6426 101
+internal/tui/savedviews.go
+  s_98c6b54c88ecb8::t_509e56780c6426 56-57
+  s_98c6b54c88ecb8::t_b0b40b38f65ea5 27,80
+  s_98c6b54c88ecb8::t_e7d3027c3dfaca 15,50
+internal/state/state_test.go
+  s_98c6b54c88ecb8::t_e280029647ca48 128-129,135-145
+  s_98c6b54c88ecb8::t_e7d3027c3dfaca 27
+  s_98c6b54c88ecb8::t_ced064ba42985f 8-9
+  s_98c6b54c88ecb8::t_509e56780c6426 126-127,130-134
+  s_98c6b54c88ecb8::t_b28816332c356c 146
+internal/tui/savedviews_test.go
+  s_98c6b54c88ecb8::t_e7d3027c3dfaca 22,24,42,51
+internal/tui/model.go
+  s_98c6b54c88ecb8::t_b0b40b38f65ea5 568,869,871,877
+  s_98c6b54c88ecb8::t_9a28f8ffe96c6e 89
+  s_98c6b54c88ecb8::t_e7d3027c3dfaca 162,864-865,875
+internal/config/config.go
+  s_98c6b54c88ecb8::t_9a28f8ffe96c6e 150,227
+  s_98c6b54c88ecb8::t_e7d3027c3dfaca 340-341
+  s_98c6b54c88ecb8::t_b0b40b38f65ea5 141,147-149,151-153,342,344-345
+  s_98c6b54c88ecb8::t_509e56780c6426 13,343
+internal/tui/statusline.go
+  s_98c6b54c88ecb8::t_b0b40b38f65ea5 63,65
+  s_98c6b54c88ecb8::t_9a28f8ffe96c6e 64
+internal/config/config_test.go
+  s_98c6b54c88ecb8::t_e7d3027c3dfaca 473-489
+  s_98c6b54c88ecb8::t_063a4f09bd0033 490-497
+internal/tui/sort_test.go
+  s_98c6b54c88ecb8::t_ddb37962d46147 1-109
+  s_98c6b54c88ecb8::t_12a4f3a43a0a52 110-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "70baa51db89a98cc810f0530f0baa4562db0a823",
+  "prompts": {},
+  "sessions": {
+    "s_98c6b54c88ecb8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10d5a-8889-7fd2-9a68-3c8288d75171",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

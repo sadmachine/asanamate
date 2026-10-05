@@ -151,9 +151,8 @@ type Header struct {
 	Color   string `toml:"color"`
 }
 
-// Pinned configures the Pinned section, which tops the list with a ticket
-// kept shown though the filter drops it. Color overrides the accent color for
-// its header when set.
+// Pinned configures the section of explicitly pinned tickets at the top of
+// the list. Color overrides the accent color for its header when set.
 type Pinned struct {
 	Color string `toml:"color"`
 }

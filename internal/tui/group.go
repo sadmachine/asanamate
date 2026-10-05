@@ -26,10 +26,11 @@ const (
 	dueNone     = "No due date"
 )
 
-// Section labels for a pinned ticket the filter drops and, beside it, the
+// Section labels for explicit pins, a viewed ticket outside the filter, and
 // tickets of an ungrouped list.
 const (
 	pinnedLabel    = "Pinned"
+	viewingLabel   = "Viewing"
 	ungroupedLabel = "Tickets"
 )
 

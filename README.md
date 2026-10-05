@@ -70,10 +70,11 @@ key press.
 | `0` / `1` / `2` | focus the views panel (wide screens) / the list / the reader |
 | `/` | edit the filter (available fields appear while editing; `?` opens the filter guide; Enter or Esc to finish) |
 | `p` | switch project (recent first) |
-| `H` | ticket history: the last 10 tickets focused in the reader, most recent first; picking one selects it (pinning it to the list when the view doesn't show it) and focuses the reader |
+| `H` | ticket history: the last 10 tickets focused in the reader, most recent first; picking one selects it (keeping it in the Viewing section when the view doesn't show it) and focuses the reader |
 | `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project), or give the selected ticket its own repo that overrides its projects' links without changing them |
 | `space`, `a` | run an action on the selected ticket |
 | `ctrl+a` | create or edit action files (also available in Settings) |
+| `P` | pin / unpin the selected ticket; pins persist locally per project or My Tasks, above filtered tickets |
 | `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), assign it, or set its branch (saved locally, overrides `branch_field`; empty removes it) |
 | `C` | add a comment to the selected ticket, from the list or the reader |
 | `d` / `m` / `A` | set the due date / move to a section / assign, skipping the `e` menu |
@@ -93,6 +94,16 @@ key press.
 | `R` | set the automatic reload interval (persists between sessions) |
 | `?` | show every key |
 | `q` | quit |
+
+Manually pinned tickets appear in **Pinned**, regardless of the current filter.
+Pins stay local to asanamate, persist across restarts, and belong to the project
+or My Tasks where you pinned them. Pinning does not change the task in Asana.
+Pinned tickets appear only once, even when they match the filter. Completed
+pins remain until you unpin them.
+
+**Viewing** temporarily keeps an edited or opened ticket visible when the
+current view excludes it. Moving to another ticket clears it. Unpinning a
+ticket outside the filter keeps it in Viewing until you move away.
 
 ## Filtering
 
@@ -171,7 +182,7 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `list.header.style` | `"rule"` | group headers: `rule` (`── Label (n) ───`) or `bar` (reversed bar) |
 | `list.header.spacing` | `false` | `true` adds a blank line above and below each group header; the `s` settings menu toggles it and the choice persists |
 | `list.header.color` | `accent_color` | group header color, same format as `accent_color` |
-| `list.pinned.color` | `"208"` (orange) | header color of the Pinned section, which tops the list with a ticket you edited or opened that the filter would hide; same format as `accent_color`, empty uses it |
+| `list.pinned.color` | `"208"` (orange) | header color of the Pinned section for tickets manually pinned with `P`; same format as `accent_color`, empty uses it |
 | `list.selection.style` | `"marker"` | selected ticket: `marker` (bold title with a left `▌`) or `bar` (reversed row; agent badges swap colors) |
 | `list.selection.color` | `accent_color` | selection marker color, same format as `accent_color` |
 | `reader.view` | `"cards"` | reader's starting view: `cards` (details card, titled sections, one box per comment) or `markdown` (the rendered ticket Markdown); `v` switches and the choice persists |

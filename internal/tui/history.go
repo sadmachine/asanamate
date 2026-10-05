@@ -58,12 +58,12 @@ func (m *Model) pickedHistory(rt state.RecentTicket) tea.Cmd {
 	return loadDetail(m.deps.Client, rt.GID)
 }
 
-// showTicket selects t, pinning it to the list when the view doesn't show
+// showTicket selects t, keeping it in the list when the view doesn't show
 // it, and focuses the reader on it.
 func (m *Model) showTicket(t asana.Task) tea.Cmd {
 	byGID := func(v asana.Task) bool { return v.GID == t.GID }
 	if !slices.ContainsFunc(m.visible, byGID) {
-		m.pinned = &t
+		m.viewing = &t
 		m.applyFilter()
 	}
 	m.moveTo(slices.IndexFunc(m.visible, byGID))

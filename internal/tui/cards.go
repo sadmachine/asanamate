@@ -289,7 +289,8 @@ func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
 		for i, f := range fields {
 			if f.Key == addProjectKey {
 				m.fieldLines[f.Key] = line
-				out[i] = lipgloss.NewStyle().Width(width).Render(m.addRow(f.Key, f.Label))
+				label := lipgloss.NewStyle().Width(labelW + 2).Render("")
+				out[i] = lipgloss.JoinHorizontal(lipgloss.Top, label, lipgloss.NewStyle().Width(max(width-labelW-2, 1)).Render(m.addRow(f.Key, f.Label)))
 				line += lipgloss.Height(out[i])
 				continue
 			}

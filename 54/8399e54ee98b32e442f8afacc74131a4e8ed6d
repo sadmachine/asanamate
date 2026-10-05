@@ -1,0 +1,52 @@
+internal/tui/savedviews.go
+  s_526e35e937c6d7::t_d548ec30145e1c 55
+internal/state/state.go
+  s_526e35e937c6d7::t_373a842ff8dffa 2
+  s_526e35e937c6d7::t_d548ec30145e1c 40-41
+internal/tui/model_test.go
+  s_526e35e937c6d7::t_d8e770bfc698ba 368,372-373
+  s_526e35e937c6d7::t_31cec33ceee08b 180,364-365,367
+internal/tui/cmds.go
+  s_526e35e937c6d7::t_7df5eea838a96f 5-7,37-38,132-133,149-163
+internal/tui/model.go
+  s_526e35e937c6d7::t_7df5eea838a96f 84,238,247-249,273,554-563,565,567-573,577-582,1108,1207,1211,1348-1351
+  s_526e35e937c6d7::t_373a842ff8dffa 88,240
+  s_526e35e937c6d7::t_d8e770bfc698ba 1158-1163
+  s_526e35e937c6d7::t_d548ec30145e1c 87,125,203,239,375,544,596,598-599,603-604,654-656,851,1347
+internal/tui/keys.go
+  s_526e35e937c6d7::t_d548ec30145e1c 120
+README.md
+  s_526e35e937c6d7::t_d8e770bfc698ba 185
+  s_526e35e937c6d7::t_02c412c40d770e 73,77,98-107
+internal/tui/pins_test.go
+  s_526e35e937c6d7::t_0b8de067f52a4f 1-22,30-182
+  s_526e35e937c6d7::t_373a842ff8dffa 23-29
+internal/tui/group.go
+  s_526e35e937c6d7::t_d548ec30145e1c 29,33
+internal/tui/history.go
+  s_526e35e937c6d7::t_d548ec30145e1c 61,66
+internal/config/config.go
+  s_526e35e937c6d7::t_1cef3e1b84c88e 154-155
+internal/setup/setup.go
+  s_526e35e937c6d7::t_c9d08bcfe3c7bc 199-200
+internal/tui/pins.go
+  s_526e35e937c6d7::t_c7598f5527d08c 1-89
+internal/tui/savedviews_test.go
+  s_526e35e937c6d7::t_f4cf3d6d04a157 41,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "548399e54ee98b32e442f8afacc74131a4e8ed6d",
+  "prompts": {},
+  "sessions": {
+    "s_526e35e937c6d7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10d16-78e8-7ff0-82c7-a842e08c791e",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -640,6 +640,8 @@ Code and link text do not expand `@Full Name` mentions. Raw HTML stays literal.
 Asana comments do not support headings, images, or tables: headings become bold,
 images retain their alt text, and table syntax stays text. Lists inside quotes
 and code blocks or quotes inside lists are flattened to supported formatting.
+
+User mentions display their names without profile links. Other links stay intact.
 Fenced code blocks preserve whitespace but do not add syntax highlighting.
 
 In a comment (from the CLI or the `e` menu), `@Full Name` mentions a

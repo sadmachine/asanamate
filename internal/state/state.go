@@ -44,6 +44,11 @@ type State struct {
 	Views map[string]View `toml:"views"`
 	// SavedViews maps a user-friendly name to a reusable grouping and filter.
 	SavedViews map[string]View `toml:"saved_views"`
+	// RecentSavedViews holds saved view names, most recently applied or saved first.
+	RecentSavedViews []string `toml:"recent_saved_views,omitempty"`
+	// CurrentSavedViews maps a project gid ("" for My Tasks) to its named view.
+	// The project's settings may have changed since that view was applied.
+	CurrentSavedViews map[string]string `toml:"current_saved_views,omitempty"`
 	// TimeProjects holds recent tracker project IDs by provider ID and Asana project GID.
 	// Kept so choices saved by earlier builds can seed the new form field.
 	TimeProjects map[string]map[string][]string `toml:"time_projects"`
@@ -99,6 +104,9 @@ func Load(path string) (*State, error) {
 	}
 	if s.SavedViews == nil {
 		s.SavedViews = map[string]View{}
+	}
+	if s.CurrentSavedViews == nil {
+		s.CurrentSavedViews = map[string]string{}
 	}
 	if s.TimeProjects == nil {
 		s.TimeProjects = map[string]map[string][]string{}
@@ -178,6 +186,15 @@ func (s *State) TouchTicket(t RecentTicket) {
 	s.RecentTickets = append([]RecentTicket{t}, s.RecentTickets...)
 	if len(s.RecentTickets) > maxRecentTickets {
 		s.RecentTickets = s.RecentTickets[:maxRecentTickets]
+	}
+}
+
+// TouchSavedView moves name to the front of the saved view history.
+func (s *State) TouchSavedView(name string) {
+	s.RecentSavedViews = slices.DeleteFunc(s.RecentSavedViews, func(n string) bool { return n == name })
+	s.RecentSavedViews = append([]string{name}, s.RecentSavedViews...)
+	if len(s.RecentSavedViews) > maxRecent {
+		s.RecentSavedViews = s.RecentSavedViews[:maxRecent]
 	}
 }
 

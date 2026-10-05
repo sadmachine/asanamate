@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/sadmachine/asanamate/internal/config"
@@ -14,7 +15,7 @@ func TestLoadMissingIsEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(s.Repos) != 0 || len(s.RecentProjects) != 0 || s.SavedViews == nil || len(s.SavedViews) != 0 {
+	if len(s.Repos) != 0 || len(s.RecentProjects) != 0 || s.SavedViews == nil || len(s.SavedViews) != 0 || s.CurrentSavedViews == nil || len(s.RecentSavedViews) != 0 {
 		t.Fatalf("want empty state, got %+v", s)
 	}
 }
@@ -25,6 +26,9 @@ func TestSaveRoundTripAndPermissions(t *testing.T) {
 	s.LinkRepo("123", "/code/web")
 	s.TouchProject("123")
 	s.SavedViews[`Today's "work"`] = View{Filter: `is:open -tag:blocked`, GroupBy: "section", Sort: config.Sort{By: "due", Direction: "desc"}}
+	s.TouchSavedView(`Today's "work"`)
+	s.CurrentSavedViews[""] = `Today's "work"`
+	s.CurrentSavedViews["123"] = `Today's "work"`
 	if err := s.Save(); err != nil {
 		t.Fatal(err)
 	}
@@ -44,6 +48,23 @@ func TestSaveRoundTripAndPermissions(t *testing.T) {
 	}
 	if again.SavedViews[`Today's "work"`] != s.SavedViews[`Today's "work"`] {
 		t.Fatalf("round trip lost saved views: %+v", again.SavedViews)
+	}
+	if !slices.Equal(again.RecentSavedViews, s.RecentSavedViews) || again.CurrentSavedViews[""] != `Today's "work"` || again.CurrentSavedViews["123"] != `Today's "work"` {
+		t.Fatalf("round trip lost saved view metadata: %+v", again)
+	}
+}
+
+func TestTouchSavedViewOrdersAndCaps(t *testing.T) {
+	s, _ := Load(filepath.Join(t.TempDir(), FileName))
+	for i := 0; i < maxRecent+5; i++ {
+		s.TouchSavedView(fmt.Sprint(i))
+	}
+	s.TouchSavedView("7")
+	if len(s.RecentSavedViews) != maxRecent || s.RecentSavedViews[0] != "7" || s.RecentSavedViews[1] != fmt.Sprint(maxRecent+4) {
+		t.Fatalf("history = %v", s.RecentSavedViews)
+	}
+	if slices.Contains(s.RecentSavedViews[1:], "7") {
+		t.Fatalf("duplicate in history: %v", s.RecentSavedViews)
 	}
 }
 
@@ -142,5 +163,8 @@ filter = "is:open"
 	view, ok := s.View("project")
 	if !ok || view.GroupBy != "section" || view.Sort != (config.Sort{}) || s.SavedViews["Work"].Sort != (config.Sort{}) {
 		t.Fatalf("legacy state = %+v", s)
+	}
+	if s.CurrentSavedViews == nil || len(s.CurrentSavedViews) != 0 || len(s.RecentSavedViews) != 0 {
+		t.Fatalf("legacy saved view metadata = %+v", s)
 	}
 }

@@ -52,6 +52,9 @@ func (m *Model) statusline() string {
 	pill := lipgloss.NewStyle().Bold(true).Reverse(true).Foreground(pillColor).Render(" " + name + " ")
 	sep := dimStyle.Render(" │ ")
 	segs := []string{m.sym.icon(iconView) + m.viewName()}
+	if _, _, split := m.paneWidths(); !split && len(m.deps.State.SavedViews) > 0 {
+		segs = append(segs, m.savedViewLabel())
+	}
 	if m.filtering {
 		segs = append(segs, m.filterInput.View())
 	} else if f := m.filterInput.Value(); f != "" {

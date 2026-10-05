@@ -115,7 +115,7 @@ type Model struct {
 	readerView  string // config.ViewCards or config.ViewMarkdown
 	separator   bool   // lines frame each ticket; starts at list.separator
 	spacing     bool   // blank lines around group headers; starts at list.header.spacing
-	savedView   string // saved view [ and ] last applied
+	savedView   string // named view associated with the current project's settings
 	renderers   map[rendererKey]*markdownRenderer
 	details     map[string]ticket.Ticket
 	images      map[string]*inlineImage // inline images by attachment gid
@@ -927,11 +927,21 @@ func (m *Model) restoreView() {
 	}
 	m.groupBy, m.sortBy = v.GroupBy, v.Sort
 	m.filterInput.SetValue(v.Filter)
+	m.savedView = m.deps.State.CurrentSavedViews[gidOf(m.viewProject)]
+	if _, exists := m.deps.State.SavedViews[m.savedView]; !exists {
+		m.savedView = ""
+	}
 }
 
 // saveView remembers the viewed project's grouping, sort, and filter.
 func (m *Model) saveView() {
-	m.deps.State.SetView(gidOf(m.viewProject), state.View{GroupBy: m.groupBy, Sort: m.sortBy, Filter: m.filterInput.Value()})
+	gid := gidOf(m.viewProject)
+	m.deps.State.SetView(gid, m.currentView())
+	if m.savedView == "" {
+		delete(m.deps.State.CurrentSavedViews, gid)
+	} else {
+		m.deps.State.CurrentSavedViews[gid] = m.savedView
+	}
 	if err := m.deps.State.Save(); err != nil {
 		m.status = "saving state: " + err.Error()
 	}
@@ -1096,7 +1106,11 @@ func (m *Model) listTitle() (title, count string) {
 			count = m.sym.spinner[m.frame%len(m.sym.spinner)] + " " + count
 		}
 	}
-	return "[1] Tickets · " + m.viewName(), count
+	title = "[1] Tickets · " + m.viewName()
+	if len(m.deps.State.SavedViews) > 0 {
+		title += " · " + m.savedViewLabel()
+	}
+	return title, count
 }
 
 // skeletonWidths are the placeholder rows' title widths, in percent.

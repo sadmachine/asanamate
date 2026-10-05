@@ -2,6 +2,7 @@ package tui
 
 import (
 	"cmp"
+	"maps"
 	"slices"
 	"strings"
 	"unicode"
@@ -12,8 +13,8 @@ import (
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
-// savedViewItems lists presets by name, with their filter, grouping, and sort visible.
-func (m *Model) savedViewItems() []pickItem {
+// savedViewNames lists presets alphabetically for the picker and cycling.
+func (m *Model) savedViewNames() []string {
 	names := make([]string, 0, len(m.deps.State.SavedViews))
 	for name := range m.deps.State.SavedViews {
 		names = append(names, name)
@@ -21,6 +22,52 @@ func (m *Model) savedViewItems() []pickItem {
 	slices.SortFunc(names, func(a, b string) int {
 		return cmp.Or(strings.Compare(strings.ToLower(a), strings.ToLower(b)), strings.Compare(a, b))
 	})
+	return names
+}
+
+// recentSavedViewNames keeps the current view first, then recent views, with
+// alphabetical ordering for views that have never been used.
+func (m *Model) recentSavedViewNames() []string {
+	names := make([]string, 0, len(m.deps.State.SavedViews))
+	add := func(name string) {
+		if _, exists := m.deps.State.SavedViews[name]; exists && !slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+	add(m.savedView)
+	for _, name := range m.deps.State.RecentSavedViews {
+		add(name)
+	}
+	for _, name := range m.savedViewNames() {
+		add(name)
+	}
+	return names
+}
+
+func (m *Model) currentView() state.View {
+	return state.View{Filter: m.filterInput.Value(), GroupBy: m.groupBy, Sort: m.sortBy}
+}
+
+func (m *Model) savedViewModified() bool {
+	v, exists := m.deps.State.SavedViews[m.savedView]
+	return exists && v != m.currentView()
+}
+
+// savedViewLabel names the current preset without implying edits were saved.
+func (m *Model) savedViewLabel() string {
+	if _, exists := m.deps.State.SavedViews[m.savedView]; !exists {
+		return "Custom"
+	}
+	name := ticket.OneLine(m.savedView)
+	if m.savedViewModified() {
+		name += " (modified)"
+	}
+	return name
+}
+
+// savedViewItems lists presets by name, with their filter, grouping, and sort visible.
+func (m *Model) savedViewItems() []pickItem {
+	names := m.savedViewNames()
 	items := make([]pickItem, 0, len(names))
 	for _, name := range names {
 		v := m.deps.State.SavedViews[name]
@@ -49,11 +96,17 @@ func (m *Model) openSavedViews() {
 
 // applySavedView applies the saved view's filter, grouping, and sort.
 func (m *Model) applySavedView(name string) tea.Cmd {
-	v := m.deps.State.SavedViews[name]
+	v, exists := m.deps.State.SavedViews[name]
+	if !exists {
+		m.status = "saved view not found: " + ticket.OneLine(name)
+		return nil
+	}
 	m.savedView = name
+	m.deps.State.TouchSavedView(name)
 	m.filterInput.SetValue(v.Filter)
 	m.viewing = nil
 	m.groupBy, m.sortBy = v.GroupBy, v.Sort
+	m.status = "view: " + ticket.OneLine(name)
 	return m.listViewChanged()
 }
 
@@ -70,14 +123,12 @@ func (m *Model) cycleSavedView(dir int) tea.Cmd {
 		i = 0
 	}
 	name := items[(i+dir+len(items))%len(items)].Value.(string)
-	cmd := m.applySavedView(name)
-	m.status = "view: " + ticket.OneLine(name)
-	return cmd
+	return m.applySavedView(name)
 }
 
 // openSaveView captures a snapshot; subsequent filter edits do not change it.
 func (m *Model) openSaveView() {
-	v := state.View{Filter: m.filterInput.Value(), GroupBy: m.groupBy, Sort: m.sortBy}
+	v := m.currentView()
 	b := newInputBox("Save current view", "view name")
 	b.onSubmit = func(name string) tea.Cmd {
 		name = strings.TrimSpace(name)
@@ -120,10 +171,23 @@ func (m *Model) confirmSavedView(title string, confirm func() tea.Cmd) {
 func (m *Model) storeSavedView(name string, v *state.View) tea.Cmd {
 	s := m.deps.State
 	old, existed := s.SavedViews[name]
+	recent := slices.Clone(s.RecentSavedViews)
+	current := maps.Clone(s.CurrentSavedViews)
+	gid := gidOf(m.viewProject)
+	oldView, hadView := s.View(gid)
 	if v == nil {
 		delete(s.SavedViews, name)
+		s.RecentSavedViews = slices.DeleteFunc(s.RecentSavedViews, func(n string) bool { return n == name })
+		for gid, currentName := range s.CurrentSavedViews {
+			if currentName == name {
+				delete(s.CurrentSavedViews, gid)
+			}
+		}
 	} else {
 		s.SavedViews[name] = *v
+		s.TouchSavedView(name)
+		s.CurrentSavedViews[gid] = name
+		s.SetView(gid, *v)
 	}
 	if err := s.Save(); err != nil {
 		if existed {
@@ -131,12 +195,23 @@ func (m *Model) storeSavedView(name string, v *state.View) tea.Cmd {
 		} else {
 			delete(s.SavedViews, name)
 		}
+		s.RecentSavedViews, s.CurrentSavedViews = recent, current
+		if hadView {
+			s.SetView(gid, oldView)
+		} else {
+			delete(s.Views, gid)
+		}
 		m.status = "saving state: " + err.Error()
 		return nil
 	}
 	m.status = "saved view: " + ticket.OneLine(name)
 	if v == nil {
+		if m.savedView == name {
+			m.savedView = ""
+		}
 		m.status = "deleted view: " + ticket.OneLine(name)
+	} else {
+		m.savedView = name
 	}
 	return nil
 }

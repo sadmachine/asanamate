@@ -27,6 +27,7 @@ const (
 type inlineImage struct{ id, cols, rows int }
 
 type inlineImageMsg struct {
+	generation     uint64
 	gid            string
 	seq            string
 	id, cols, rows int
@@ -81,7 +82,7 @@ func (m *Model) loadInlineImages(t ticket.Ticket) tea.Cmd {
 			continue
 		}
 		m.images[gid] = &inlineImage{}
-		cmds = append(cmds, loadInlineImage(m.deps.Client, gid, m.nextImageID(), cols, rows, m.imageCell, m.deps.InTmux))
+		cmds = append(cmds, loadInlineImage(m.deps.Client, gid, m.nextImageID(), cols, rows, m.imageCell, m.deps.InTmux, m.imageEpoch))
 	}
 	return tea.Batch(cmds...)
 }
@@ -95,14 +96,14 @@ func (m *Model) nextImageID() int {
 	return (n/imageLows)<<24 | (firstImageLow + n%imageLows)
 }
 
-func loadInlineImage(c *asana.Client, gid string, id, cols, rows int, cell kitty.CellSize, inTmux bool) tea.Cmd {
+func loadInlineImage(c *asana.Client, gid string, id, cols, rows int, cell kitty.CellSize, inTmux bool, generation uint64) tea.Cmd {
 	return request(func(ctx context.Context) tea.Msg {
 		data, err := fetchImage(ctx, c, gid)
 		if err != nil {
-			return inlineImageMsg{gid: gid, cell: cell, err: err}
+			return inlineImageMsg{gid: gid, generation: generation, cell: cell, err: err}
 		}
 		seq, cols, rows, err := kitty.Inline(data, id, cols, rows, cell, inTmux)
-		return inlineImageMsg{gid: gid, seq: seq, id: id, cols: cols, rows: rows, cell: cell, err: err}
+		return inlineImageMsg{gid: gid, generation: generation, seq: seq, id: id, cols: cols, rows: rows, cell: cell, err: err}
 	})
 }
 
@@ -122,7 +123,7 @@ func fetchImage(ctx context.Context, c *asana.Client, gid string) ([]byte, error
 // reader with it. A failed image stays a link.
 func (m *Model) inlineImageLoaded(msg inlineImageMsg) tea.Cmd {
 	img := m.images[msg.gid]
-	if img == nil || msg.cell != m.imageCell {
+	if img == nil || msg.generation != m.imageEpoch || msg.cell != m.imageCell {
 		return nil
 	}
 	if msg.err != nil {

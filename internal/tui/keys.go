@@ -163,8 +163,8 @@ func keyBindings() []binding {
 			}
 			return nil
 		}},
-		{keys: []string{"r"}, desc: "reload", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
-			return m.refresh()
+		{keys: []string{"r"}, desc: "reload / clear image cache", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
+			return m.refreshWithImages()
 		}},
 		{keys: []string{"v"}, desc: "cards / markdown", group: "View", splitOnly: true, run: do(func(m *Model) { m.toggleReaderView(); m.saveDisplay() })},
 		{keys: []string{"V"}, desc: "saved views", group: "View", run: do((*Model).openSavedViews)},

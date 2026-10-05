@@ -14,6 +14,86 @@ import (
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
+func TestManualRefreshClearsImagesAndRetriesFailures(t *testing.T) {
+	cfg := config.Default()
+	cfg.Images.Inline = true
+	m, _ := testModel(t, cfg)
+	m.deps.Images = true
+	m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	detail := ticket.Ticket{Task: openTask, Comments: []asana.Story{{
+		HTMLText: `<body><img data-asana-gid="10" alt="comment.png"></body>`,
+	}}}
+	detail.HTMLNotes = `<body><img data-asana-gid="9" alt="description.png"></body>`
+	m.Update(detailMsg{gid: openTask.GID, ticket: detail})
+	m.deps.Client = asana.New("token")
+	loaded := &inlineImage{id: 20, cols: 4, rows: 2}
+	failed := &inlineImage{}
+	m.images["9"], m.images["10"] = loaded, failed
+	m.images["other"] = &inlineImage{id: 21}
+	m.renderDetail(true)
+	m.focusReader = true
+	seq := m.imageSeq
+	_, cmd := m.Update(key("r"))
+	if cmd == nil || !m.loading || !m.background || len(m.images) != 2 {
+		t.Fatal("manual refresh must reload tasks and replace the image cache")
+	}
+	if m.images["9"] == nil || m.images["9"] == loaded || m.images["9"].id != 0 ||
+		m.images["10"] == nil || m.images["10"] == failed || m.imageSeq != seq+2 {
+		t.Fatal("loaded and failed images must both start fresh downloads")
+	}
+	if !m.focusReader || strings.Contains(m.reader.GetContent(), string(rune(0x10EEEE))) {
+		t.Fatal("refresh must retain reader focus and remove old image placeholders")
+	}
+	m.Update(tasksMsg{err: errors.New("offline")})
+	if m.loading || len(m.images) != 2 || m.loadInlineImages(detail) != nil {
+		t.Fatal("task refresh failure must retain pending image downloads without duplicating them")
+	}
+}
+
+func TestManualRefreshRejectsStaleImageResults(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		err  error
+	}{
+		{name: "success"},
+		{name: "failure", err: errors.New("old failure")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m, _ := testModel(t, config.Default())
+			m.loading = false
+			stale := inlineImageMsg{gid: "9", generation: m.imageEpoch, id: 20, cols: 4, rows: 2, seq: "old", err: tc.err}
+			m.Update(key("r"))
+			m.images["9"] = &inlineImage{}
+			m.status = "current"
+			_, cmd := m.Update(stale)
+			if cmd != nil || m.images["9"].id != 0 || m.status != "current" {
+				t.Fatal("stale image result must not transmit, replace an image, or change status")
+			}
+			_, cmd = m.Update(inlineImageMsg{gid: "9", generation: m.imageEpoch, id: 21, cols: 4, rows: 2, seq: "new"})
+			if cmd == nil || m.images["9"].id != 21 {
+				t.Fatal("current image result must still load and transmit")
+			}
+			_, cmd = m.Update(stale)
+			if cmd != nil || m.images["9"].id != 21 || m.status != "current" {
+				t.Fatal("stale result must not replace a completed fresh image")
+			}
+		})
+	}
+}
+
+func TestAutoRefreshKeepsImageCache(t *testing.T) {
+	m, _ := testModel(t, config.Default())
+	m.loading = false
+	loaded, failed := &inlineImage{id: 20}, &inlineImage{}
+	m.images["9"], m.images["10"] = loaded, failed
+	epoch := m.imageEpoch
+	_, cmd := m.Update(refreshTickMsg{seq: m.refreshSeq})
+	if cmd == nil || !m.loading || m.images["9"] != loaded || m.images["10"] != failed || m.imageEpoch != epoch {
+		t.Fatal("automatic refresh must reload tasks without invalidating images")
+	}
+}
+
 func TestRefreshIntervalOverridePersists(t *testing.T) {
 	cfg := config.Default()
 	cfg.List.RefreshInterval = "1m"

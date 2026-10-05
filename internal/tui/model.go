@@ -119,6 +119,7 @@ type Model struct {
 	renderers   map[rendererKey]*markdownRenderer
 	details     map[string]ticket.Ticket
 	images      map[string]*inlineImage // inline images by attachment gid
+	imageEpoch  uint64                  // rejects image results from before a manual refresh
 	imageSeq    int                     // inline image id sequence, from a random start
 	imageCell   kitty.CellSize          // cell size reported by the outer terminal
 	viewImages  []asana.Attachment      // images the attachment viewer steps through

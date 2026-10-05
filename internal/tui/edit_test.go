@@ -335,6 +335,9 @@ func TestInlineAddProjectRow(t *testing.T) {
 				if line != m.fieldLines[last]+1 {
 					t.Fatalf("add row at %d, last project at %d", line, m.fieldLines[last])
 				}
+				if strings.Index(lines[line], "+ Add project") != strings.Index(lines[m.fieldLines[last]], "Web") {
+					t.Fatalf("add row must align with project name: %q", lines[line])
+				}
 			}
 			if (tc.myTasks && line >= m.fieldLines[ticket.KeyMyTasks]) || !m.editableTarget() {
 				t.Fatal("add row must be editable and precede My Tasks")

@@ -50,6 +50,9 @@ groupings, sorting, and running agents: press `0`, move with `j`/`k`, and open o
 with `enter`. In a reader at least 90 columns wide, the cards view puts the
 agents and subtasks beside the details card.
 
+Select `+ Add project` below the ticket's project rows and press `enter` to
+add it to another project. The picker excludes projects already on the ticket.
+
 The bottom bar shows the mode (`NORMAL`, `READ`, `EDIT`, `FILTER`, or
 `VIEWS`), the view, filter, grouping, sorting, ticket count, and agents, with the keys
 for what has focus on the right. Messages take the keys' place until the next

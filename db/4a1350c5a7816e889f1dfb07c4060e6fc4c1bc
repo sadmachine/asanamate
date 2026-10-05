@@ -1,0 +1,19 @@
+internal/tui/keys.go
+  s_b04f7713881c26::t_b8bcf98e3dc211 160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db4a1350c5a7816e889f1dfb07c4060e6fc4c1bc",
+  "prompts": {},
+  "sessions": {
+    "s_b04f7713881c26": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10d9a-4350-76f2-af65-4e5ca796da7e",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

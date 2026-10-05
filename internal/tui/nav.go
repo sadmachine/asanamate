@@ -25,22 +25,28 @@ const navW = 26
 // maxNavProjects caps the recent projects the views panel lists; p finds the rest.
 const maxNavProjects = 8
 
+// maxNavSavedViews caps named views; V offers the full list.
+const maxNavSavedViews = 5
+
 // navKeys are the keys the views panel handles while it has focus.
 var navKeys = []string{"j", "k", "down", "up", "g", "G", "home", "end", "enter", "l"}
 
-// navItem is one row of the views panel: a view to open, a grouping or sort to
+// navItem is one row of the views panel: a project or saved view to open, a grouping or sort to
 // pick, or, with neither, a heading or an agent count.
 type navItem struct {
 	label, right string
 	project      *asana.Ref // nil with isView means My Tasks
 	isView       bool
+	savedView    string
 	sort         *config.Sort
 	group        *string
 	heading      bool
 	active       bool
 }
 
-func (it navItem) selectable() bool { return it.isView || it.group != nil || it.sort != nil }
+func (it navItem) selectable() bool {
+	return it.isView || it.savedView != "" || it.group != nil || it.sort != nil
+}
 
 // showNav reports whether the layout has room for the views panel.
 func (m *Model) showNav() bool {
@@ -55,13 +61,25 @@ func (m *Model) navWidth() int {
 	return 0
 }
 
-// navItems lists My Tasks and the recent projects, the groupings and sorts, and the
+// navItems lists My Tasks, saved views and recent projects, groupings and sorts, and the
 // linked agents by state.
 func (m *Model) navItems() []navItem {
 	count := fmt.Sprint(len(m.visible))
 	items := []navItem{{label: "My Tasks", isView: true, active: m.viewProject == nil}}
 	if m.viewProject == nil {
 		items[0].right = count
+	}
+	named := m.recentSavedViewNames()
+	if len(named) > 0 {
+		items = append(items, navItem{label: "Saved views", right: "V", heading: true})
+		for _, name := range named[:min(len(named), maxNavSavedViews)] {
+			it := navItem{label: ticket.OneLine(name), savedView: name, active: name == m.savedView}
+			if it.active && m.savedViewModified() {
+				it.label += " *"
+			}
+			items = append(items, it)
+		}
+		items = appendMore(items, max(len(named)-maxNavSavedViews, 0))
 	}
 	items = append(items, navItem{label: "Projects", right: "p", heading: true})
 	names := map[string]string{}
@@ -166,7 +184,7 @@ func (m *Model) navView(width, height int) string {
 			mark = m.accentStyle.Render("●") + " "
 		case it.group != nil || it.sort != nil:
 			mark = dimStyle.Render("○") + " "
-		case it.isView && it.active:
+		case (it.isView || it.savedView != "") && it.active:
 			mark = m.accentStyle.Render("▌") + " "
 		}
 		label := it.label
@@ -257,6 +275,9 @@ func (m *Model) updateNav(k string) tea.Cmd {
 	case "enter", "l":
 		it := selectable[m.navCursor]
 		m.focusNav = false
+		if it.savedView != "" {
+			return m.applySavedView(it.savedView)
+		}
 		if it.sort != nil {
 			return m.pickedSort(*it.sort)
 		}

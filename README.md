@@ -134,6 +134,19 @@ current filter, grouping, and sorting. Press `V` to search saved views by name a
 across projects and persist between sessions; they do not switch projects.
 Changing a filter, grouping, or sorting after recall leaves the saved view unchanged.
 
+On wide terminals, the Views panel shows the current saved view and up to four
+other recently used views. Focus it with `0`, select a view with `j`/`k`, then
+press `enter` to apply it to the current project. `V` offers the full list;
+`[` and `]` still cycle in name order. Views that have never been used appear
+alphabetically after recent views.
+
+The ticket list's title shows the current view name, or `Custom` when no saved
+view is associated with the current project. After edits it shows `(modified)`;
+the Views panel marks the name with `*`. Reverting those edits clears the mark.
+In narrow and list-only layouts, the name appears in the status bar instead.
+The view name and its settings are remembered separately for My Tasks and each
+project, while recently used view names are shared across projects.
+
 Save under the same name to replace a view, with confirmation. The `V` picker
 also offers saving and deletion; deletion requires confirmation. These keys
 work in narrow terminals and list-only mode too.

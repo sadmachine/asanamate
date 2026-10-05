@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/state"
 )
 
 func wideModel(t *testing.T, width int) *Model {
@@ -88,5 +90,60 @@ func TestViewsPanelCursorSurvivesShrinkingRows(t *testing.T) {
 	keys(m, "enter")
 	if m.sortBy.By != "title" || m.groupBy != "" {
 		t.Fatalf("sort = %v, group = %q, want the last row, title sort", m.sortBy, m.groupBy)
+	}
+}
+
+func TestViewsPanelSavedViewsOrderAndLimit(t *testing.T) {
+	m := wideModel(t, 220)
+	st := m.deps.State
+	for _, name := range []string{"Current", "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf"} {
+		st.SavedViews[name] = state.View{}
+	}
+	st.RecentSavedViews = []string{"Gone", "Echo", "Delta", "Echo", "Bravo", "Current"}
+	m.savedView = "Current"
+	var names []string
+	for _, it := range m.navItems() {
+		if it.savedView != "" {
+			names = append(names, it.savedView)
+		}
+	}
+	if !slices.Equal(names, []string{"Current", "Echo", "Delta", "Bravo", "Alpha"}) {
+		t.Fatalf("sidebar views = %v", names)
+	}
+	body := ansi.Strip(m.navView(navW-panelFrame, 40))
+	if !strings.Contains(body, "Saved views ─── [V] ─") || !strings.Contains(body, "▌ Current") || !strings.Contains(body, "+3 more") || strings.Contains(body, "Gone") {
+		t.Fatalf("saved views sidebar:\n%s", body)
+	}
+	if strings.Index(body, "Saved views") > strings.Index(body, "Projects") {
+		t.Fatalf("saved views must precede projects:\n%s", body)
+	}
+}
+
+func TestViewsPanelAppliesAndResetsSavedViewWithoutSwitchingProject(t *testing.T) {
+	m := wideModel(t, 220)
+	st := m.deps.State
+	st.SavedViews["Work"] = state.View{Filter: "is:open", GroupBy: "section", Sort: config.Sort{By: "due", Direction: "asc"}}
+	keys(m, "0", "j", "enter") // My Tasks, then Work
+	if m.focusNav || m.viewProject != nil || m.savedViewLabel() != "Work" || m.currentView() != st.SavedViews["Work"] {
+		t.Fatalf("sidebar recall failed: name = %q, view = %+v", m.savedViewLabel(), m.currentView())
+	}
+	m.filterInput.SetValue("is:done")
+	body := ansi.Strip(m.navView(navW-panelFrame, 40))
+	if !strings.Contains(body, "▌ Work *") {
+		t.Fatalf("sidebar lost modified mark:\n%s", body)
+	}
+	keys(m, "0", "j", "enter")
+	if m.savedViewLabel() != "Work" || m.filterInput.Value() != "is:open" {
+		t.Fatalf("active modified view did not reset: %q", m.savedViewLabel())
+	}
+	m.pickedProject(&asana.Ref{GID: "p1", Name: "Web"})
+	m.Update(tasksMsg{project: m.viewProject, tasks: []asana.Task{openTask, doneTask}})
+	keys(m, "0", "g", "j", "enter")
+	if m.viewProject == nil || m.viewProject.GID != "p1" || m.savedViewLabel() != "Work" {
+		t.Fatalf("sidebar recall switched project: %+v", m.viewProject)
+	}
+	keys(m, "0", "g", "enter")
+	if m.viewProject != nil || m.savedViewLabel() != "Work" {
+		t.Fatalf("My Tasks did not restore its view: %q", m.savedViewLabel())
 	}
 }

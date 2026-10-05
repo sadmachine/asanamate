@@ -1,10 +1,14 @@
 package tui
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
@@ -134,6 +138,13 @@ func TestSavedViewWriteFailureRollsBack(t *testing.T) {
 	old := state.View{Filter: "is:open"}
 	newView := state.View{Filter: "is:done"}
 	st.SavedViews["Work"] = old
+	st.RecentSavedViews = []string{"Work", "Other"}
+	st.CurrentSavedViews[""] = "Work"
+	st.CurrentSavedViews["project"] = "Work"
+	st.SetView("", old)
+	m.savedView = "Work"
+	wantRecent := slices.Clone(st.RecentSavedViews)
+	wantCurrent := maps.Clone(st.CurrentSavedViews)
 	m.storeSavedView("Work", &newView)
 	if st.SavedViews["Work"] != old || !strings.HasPrefix(m.status, "saving state:") {
 		t.Fatalf("failed replacement did not roll back: views = %v, status = %q", st.SavedViews, m.status)
@@ -145,6 +156,95 @@ func TestSavedViewWriteFailureRollsBack(t *testing.T) {
 	m.storeSavedView("New", &newView)
 	if _, exists := st.SavedViews["New"]; exists {
 		t.Fatal("failed creation remained in memory")
+	}
+	if !slices.Equal(st.RecentSavedViews, wantRecent) || !maps.Equal(st.CurrentSavedViews, wantCurrent) || st.Views[""] != old || m.savedView != "Work" {
+		t.Fatalf("failed write changed metadata: %+v, name = %q", st, m.savedView)
+	}
+}
+
+func TestSavedViewIdentityAndModifiedSettings(t *testing.T) {
+	m, st := testModel(t, config.Config{})
+	want := state.View{Filter: "is:open", GroupBy: "section", Sort: config.Sort{By: "due", Direction: "asc"}}
+	st.SavedViews["Daily work"] = want
+	if m.savedViewLabel() != "Custom" {
+		t.Fatalf("unassociated view = %q", m.savedViewLabel())
+	}
+	m.applySavedView("Daily work")
+	for _, change := range []func(){
+		func() { m.filterInput.SetValue("is:done") },
+		func() { m.groupBy = "due" },
+		func() { m.sortBy.Direction = "desc" },
+	} {
+		change()
+		if m.savedViewLabel() != "Daily work (modified)" || st.SavedViews["Daily work"] != want {
+			t.Fatalf("modified label = %q, snapshot = %+v", m.savedViewLabel(), st.SavedViews["Daily work"])
+		}
+		m.filterInput.SetValue(want.Filter)
+		m.groupBy, m.sortBy = want.GroupBy, want.Sort
+		if m.savedViewLabel() != "Daily work" {
+			t.Fatalf("reverted label = %q", m.savedViewLabel())
+		}
+	}
+	title, _ := m.listTitle()
+	if !strings.Contains(title, "My Tasks · Daily work") {
+		t.Fatalf("list title = %q", title)
+	}
+	for _, noPreview := range []bool{false, true} {
+		m.width, m.deps.NoPreview = 80, noPreview
+		if !strings.Contains(ansi.Strip(m.statusline()), "Daily work") {
+			t.Fatalf("single-pane status = %q", ansi.Strip(m.statusline()))
+		}
+	}
+}
+
+func TestSavedViewIdentitySurvivesRestartAndProjectSwitch(t *testing.T) {
+	m, st := testModel(t, config.Config{})
+	st.SavedViews["Work"] = state.View{Filter: "is:open"}
+	st.SavedViews["Done"] = state.View{Filter: "is:done"}
+	m.applySavedView("Work")
+	m.filterInput.SetValue("is:open tag:urgent")
+	m.saveView()
+	m.pickedProject(&asana.Ref{GID: "project", Name: "Project"})
+	if m.savedViewLabel() != "Custom" {
+		t.Fatalf("new project inherited name: %q", m.savedViewLabel())
+	}
+	m.applySavedView("Done")
+	m.pickedProject(nil)
+	if m.savedViewLabel() != "Work (modified)" || m.filterInput.Value() != "is:open tag:urgent" {
+		t.Fatalf("My Tasks lost identity: %q, filter = %q", m.savedViewLabel(), m.filterInput.Value())
+	}
+	loaded, err := state.Load(st.Path())
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.deps.State = loaded
+	m.restoreView()
+	if m.savedViewLabel() != "Work (modified)" || !slices.Equal(loaded.RecentSavedViews, []string{"Done", "Work"}) {
+		t.Fatalf("restart lost identity or history: %q, %+v", m.savedViewLabel(), loaded)
+	}
+	m.pickedProject(&asana.Ref{GID: "project", Name: "Project"})
+	if m.savedViewLabel() != "Done" || m.filterInput.Value() != "is:done" {
+		t.Fatalf("project lost identity: %q", m.savedViewLabel())
+	}
+	m.storeSavedView("Done", nil)
+	if m.savedViewLabel() != "Custom" || slices.Contains(loaded.RecentSavedViews, "Done") || loaded.CurrentSavedViews["project"] != "" {
+		t.Fatalf("deletion kept identity or history: %q, %+v", m.savedViewLabel(), loaded)
+	}
+}
+
+func TestSavedViewSaveAssociatesNameAndDeletionClearsAllScopes(t *testing.T) {
+	m, st := testModel(t, config.Config{})
+	m.filterInput.SetValue("is:open")
+	v := m.currentView()
+	m.storeSavedView("Work", &v)
+	loaded, err := state.Load(st.Path())
+	if err != nil || m.savedViewLabel() != "Work" || loaded.CurrentSavedViews[""] != "Work" || loaded.Views[""] != v || !slices.Equal(loaded.RecentSavedViews, []string{"Work"}) {
+		t.Fatalf("save did not associate settings: label = %q, state = %+v, err = %v", m.savedViewLabel(), loaded, err)
+	}
+	st.CurrentSavedViews["project"] = "Work"
+	m.storeSavedView("Work", nil)
+	if m.savedView != "" || len(st.CurrentSavedViews) != 0 || len(st.RecentSavedViews) != 0 || m.currentView() != v {
+		t.Fatalf("deletion lost settings or kept metadata: %+v", st)
 	}
 }
 

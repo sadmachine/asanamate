@@ -86,20 +86,22 @@ func TestCodeWrapMarkerOnlyOnContinuations(t *testing.T) {
 
 func TestCommentCodeIsLiteralAndMonochrome(t *testing.T) {
 	const code = "php8.4 --version\n\\* \\` \\_ \\! \\| \\\\ C:\\path\\file\n&lt;tag&gt; 42 'text'"
-	md := ticket.HTMLToMarkdown("<body><pre>" + code + "</pre></body>")
 	colors := regexp.MustCompile(`\x1b\[([^m]*38;5;\d+[^m]*)m`)
-	for _, theme := range []string{"dark", "light"} {
-		m, _ := testModel(t, config.Config{Theme: theme})
-		out := m.renderBody(md, 80)
-		for _, line := range strings.Split(strings.ReplaceAll(code, "&lt;tag&gt;", "<tag>"), "\n") {
-			if !strings.Contains(ansi.Strip(out), line) {
-				t.Fatalf("lost literal code %q: %q", line, ansi.Strip(out))
+	for _, tag := range []string{"pre", "code"} {
+		md := ticket.HTMLToMarkdown("<body><" + tag + ">" + code + "</" + tag + "></body>")
+		for _, theme := range []string{"dark", "light"} {
+			m, _ := testModel(t, config.Config{Theme: theme})
+			out := m.renderBody(md, 80)
+			for _, line := range strings.Split(strings.ReplaceAll(code, "&lt;tag&gt;", "<tag>"), "\n") {
+				if !strings.Contains(ansi.Strip(out), line) {
+					t.Fatalf("lost literal code %q: %q", line, ansi.Strip(out))
+				}
 			}
-		}
-		for _, match := range colors.FindAllStringSubmatch(out, -1) {
-			want := "38;5;" + *styles.DefaultStyles[theme].Document.Color
-			if !strings.HasPrefix(match[1], want) {
-				t.Fatalf("unexpected code color: %q", match[0])
+			for _, match := range colors.FindAllStringSubmatch(out, -1) {
+				want := "38;5;" + *styles.DefaultStyles[theme].Document.Color
+				if !strings.HasPrefix(match[1], want) {
+					t.Fatalf("unexpected code color: %q", match[0])
+				}
 			}
 		}
 	}

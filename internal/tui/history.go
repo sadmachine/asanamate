@@ -55,7 +55,7 @@ func (m *Model) pickedHistory(rt state.RecentTicket) tea.Cmd {
 	}
 	m.openGID = rt.GID
 	m.status = "loading " + ticket.Clean(rt.Name) + "…"
-	return loadDetail(m.deps.Client, rt.GID)
+	return m.loadDetail(rt.GID)
 }
 
 // showTicket selects t, keeping it in the list when the view doesn't show

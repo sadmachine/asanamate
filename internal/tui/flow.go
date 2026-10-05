@@ -138,7 +138,7 @@ func (m *Model) requestMenu(open func() tea.Cmd) tea.Cmd {
 	}
 	m.menuFor, m.menuOpen = t.GID, open
 	m.status = "loading ticket…"
-	return loadDetail(m.deps.Client, t.GID)
+	return m.loadDetail(t.GID)
 }
 
 func (m *Model) pickedAction(i int) tea.Cmd {

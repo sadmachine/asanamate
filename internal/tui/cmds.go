@@ -56,6 +56,7 @@ type projectFieldsMsg struct {
 type detailTickMsg struct{ gid string }
 
 type detailMsg struct {
+	seq    uint64
 	gid    string
 	ticket ticket.Ticket
 	err    error
@@ -190,10 +191,18 @@ func scheduleDetail(gid string) tea.Cmd {
 	return tea.Tick(detailDelay, func(time.Time) tea.Msg { return detailTickMsg{gid: gid} })
 }
 
-func loadDetail(c *asana.Client, gid string) tea.Cmd {
+// loadDetail prevents an older response from replacing newer ticket data.
+func (m *Model) loadDetail(gid string) tea.Cmd {
+	m.detailSeq++
+	seq := m.detailSeq
+	if m.detailRequests == nil {
+		m.detailRequests = map[string]uint64{}
+	}
+	m.detailRequests[gid] = seq
+	c := m.deps.Client
 	return request(func(ctx context.Context) tea.Msg {
 		t, err := ticket.Fetch(ctx, c, gid)
-		return detailMsg{gid: gid, ticket: t, err: err}
+		return detailMsg{seq: seq, gid: gid, ticket: t, err: err}
 	})
 }
 

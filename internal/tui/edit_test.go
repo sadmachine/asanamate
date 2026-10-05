@@ -271,7 +271,7 @@ func TestTabCyclesPanes(t *testing.T) {
 func cardLines(t *testing.T, m *Model, tk ticket.Ticket, width int) []string {
 	t.Helper()
 	lines := strings.Split(ansi.Strip(m.renderCards(tk, width)), "\n")
-	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Add comment"}
+	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", addProjectKey: "+ Add project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Add comment"}
 	for _, key := range m.fieldTargets(tk) {
 		if l := lines[m.fieldLines[key]]; !strings.Contains(l, labels[key]) {
 			t.Errorf("%s line %d = %q", key, m.fieldLines[key], l)
@@ -306,6 +306,52 @@ func TestWideCardsPutSubtasksBesideDetails(t *testing.T) {
 	}
 }
 
+func TestInlineAddProjectRow(t *testing.T) {
+	for _, tc := range []struct {
+		count   int
+		myTasks bool
+	}{{0, false}, {0, true}, {1, true}, {2, true}} {
+		count := tc.count
+		for _, width := range []int{60, 120} {
+			m, _ := editModel(t)
+			tk := m.details["1"]
+			if !tc.myTasks {
+				tk.AssigneeSection = nil
+			}
+			tk.Memberships = nil
+			for i := 0; i < count; i++ {
+				tk.Memberships = append(tk.Memberships, asana.Membership{Project: asana.Ref{GID: []string{"p1", "p2"}[i], Name: "Web"}})
+			}
+			tk.Subtasks = []asana.Task{{Name: "Patch"}}
+			m.details["1"] = tk
+			m.fieldKey = addProjectKey
+			lines := strings.Split(ansi.Strip(m.renderCards(tk, width)), "\n")
+			line, ok := m.fieldLines[addProjectKey]
+			if !ok || !strings.Contains(lines[line], "+ Add project") {
+				t.Fatalf("%d projects, width %d: add row missing", count, width)
+			}
+			if count > 0 {
+				last := ticket.ProjectKey(tk.Memberships[count-1].Project.GID)
+				if line != m.fieldLines[last]+1 {
+					t.Fatalf("add row at %d, last project at %d", line, m.fieldLines[last])
+				}
+			}
+			if (tc.myTasks && line >= m.fieldLines[ticket.KeyMyTasks]) || !m.editableTarget() {
+				t.Fatal("add row must be editable and precede My Tasks")
+			}
+			keys := m.fieldTargets(tk)
+			index := slices.Index(keys, addProjectKey)
+			if index < 0 || slices.Index(m.cardTargets, addProjectKey) != index {
+				t.Fatal("add row missing from navigation order")
+			}
+			m.openField(addProjectKey)
+			if m.edit == nil || m.afterProjects == nil {
+				t.Fatal("add row must load projects before opening picker")
+			}
+		}
+	}
+}
+
 func TestReaderFieldEdits(t *testing.T) {
 	cases := []struct {
 		name string
@@ -331,16 +377,23 @@ func TestReaderFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"due_on":"2026-10-01"}}`},
 		{"my tasks section", func(m *Model) {
-			press(m, "2", "j", "j", "enter", "down", "enter")
+			press(m, "2", "j", "j", "j", "enter", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee_section":"m2"}}`},
 		{"text field", func(m *Model) {
-			press(m, "2", "j", "j", "j", "enter")
+			press(m, "2", "j", "j", "j", "j", "enter")
 			if got := m.input.area.Value(); got != "old" {
 				t.Errorf("prefill = %q", got)
 			}
 			m.input.area.SetValue("feat/x")
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"custom_fields":{"f1":"feat/x"}}}`},
+		{"add project", func(m *Model) {
+			press(m, "2", "j", "j", "enter")
+			if m.modal == nil || len(m.modal.items) != 1 || m.modal.items[0].Value.(asana.Ref).GID != "p2" {
+				t.Fatalf("add project choices = %v", m.modal)
+			}
+			press(m, "enter")
+		}, `POST /tasks/1/addProject {"data":{"project":"p2"}}`},
 		{"comment", func(m *Model) {
 			press(m, "2", "G", "enter")
 			m.input.area.SetValue("hello")

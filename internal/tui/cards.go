@@ -5,6 +5,7 @@ import (
 	"hash/fnv"
 	"image/color"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -116,12 +117,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		}
 	}
 	heading := m.rule(fmt.Sprintf("Comments %d", len(t.Comments)), width, false)
-	addComment := "+ Add comment"
-	if m.fieldKey == commentKey {
-		addComment = m.fieldStyle().Render(addComment)
-	} else {
-		addComment = m.accentStyle.Render(addComment)
-	}
+	addComment := m.addRow(commentKey, "+ Add comment")
 	blocks = append(blocks, heading+"\n"+addComment+"\n\n"+strings.Join(comments, "\n\n"))
 	return strings.Join(blocks, "\n\n")
 }
@@ -254,23 +250,49 @@ func shortDate(d, today time.Time) string {
 	return d.Format("Jan 2 2006")
 }
 
+// detailMeta inserts the Add project row after the ticket's projects.
+func detailMeta(t ticket.Ticket) []ticket.Field {
+	rows := t.Meta()
+	index := -1
+	for i, f := range rows {
+		if strings.HasPrefix(f.Key, ticket.KeyProject+":") {
+			index = i + 1
+		}
+	}
+	if index < 0 {
+		index = slices.IndexFunc(rows, func(f ticket.Field) bool { return f.Key == ticket.KeyMyTasks })
+		if index < 0 {
+			index = len(rows)
+		}
+	}
+	return slices.Insert(rows, index, ticket.Field{Key: addProjectKey, Label: "+ Add project"})
+}
+
 // detailsBody lists the built-in fields, then any custom fields below a rule,
 // ending with the empty ones or a row that shows them.
 // top is the reader line of its first row, for m.fieldLines.
 func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
-	meta, custom, empty := t.Meta(), t.FieldValues(), t.EmptyFields()
+	meta, custom, empty := detailMeta(t), t.FieldValues(), t.EmptyFields()
 	if m.showEmpty {
 		custom, empty = append(custom, empty...), nil
 	}
 	labelW := 0
 	for _, f := range append(meta, custom...) {
-		labelW = max(labelW, ansi.StringWidth(f.Label))
+		if f.Key != addProjectKey {
+			labelW = max(labelW, ansi.StringWidth(f.Label))
+		}
 	}
 	labelW = min(labelW, width/3)
 	line := top
 	rows := func(fields []ticket.Field) []string {
 		out := make([]string, len(fields))
 		for i, f := range fields {
+			if f.Key == addProjectKey {
+				m.fieldLines[f.Key] = line
+				out[i] = lipgloss.NewStyle().Width(width).Render(m.addRow(f.Key, f.Label))
+				line += lipgloss.Height(out[i])
+				continue
+			}
 			value := f.Value
 			if value == "" {
 				value = dimStyle.Render("—")
@@ -327,6 +349,14 @@ func (m *Model) statusBadge(completed bool) string {
 
 // fieldStyle marks the row the cards view has tabbed to.
 func (m *Model) fieldStyle() lipgloss.Style { return m.markerStyle.Reverse(true) }
+
+// addRow styles an inline add action, highlighting it when selected.
+func (m *Model) addRow(key, label string) string {
+	if m.fieldKey == key {
+		return m.fieldStyle().Render(label)
+	}
+	return m.accentStyle.Render(label)
+}
 
 // rule is a section heading drawn as a full-width line with the title in it,
 // marked when it is the tabbed-to row.

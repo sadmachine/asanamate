@@ -302,6 +302,9 @@ func editable(f asana.CustomField) bool {
 // commentKey is the field key of the cards view's Add comment row.
 const commentKey = "comment"
 
+// addProjectKey is the field key of the cards view's Add project row.
+const addProjectKey = "add_project"
+
 // emptyFieldsKey is the field key of the cards view's Show empty fields row.
 const emptyFieldsKey = "empty_fields"
 
@@ -310,7 +313,7 @@ const emptyFieldsKey = "empty_fields"
 // empty fields are hidden, then the Add comment row.
 func (m *Model) fieldTargets(t ticket.Ticket) []string {
 	var keys []string
-	rows := append(t.Meta(), t.FieldValues()...)
+	rows := append(detailMeta(t), t.FieldValues()...)
 	if m.showEmpty {
 		rows = append(rows, t.EmptyFields()...)
 	}
@@ -365,6 +368,8 @@ func (m *Model) openField(key string) tea.Cmd {
 		return m.pickedEdit(editDue)
 	case commentKey:
 		return m.pickedEdit(editComment)
+	case addProjectKey:
+		return m.pickedEdit(editAddProject)
 	case ticket.KeyMyTasks:
 		return m.pickedEditProject(myTasks)
 	case ticket.KeyProject:

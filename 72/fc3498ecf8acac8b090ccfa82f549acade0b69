@@ -1,0 +1,33 @@
+README.md
+  s_a0a93f9d8049dc::t_6e981a3d057f91 98,103-105
+  s_a0a93f9d8049dc::t_b99f54d1ea3a6f 106
+internal/tui/images.go
+  s_a0a93f9d8049dc::t_6e981a3d057f91 30,99,103,106
+  s_a0a93f9d8049dc::t_0aee2cef2aefe9 85,126
+internal/tui/refresh_test.go
+  s_a0a93f9d8049dc::t_e162b9245f3011 55-62,65,76-79
+  s_a0a93f9d8049dc::t_5e20de64d696ba 17-54,63-64,66-75,80-96
+internal/tui/model.go
+  s_a0a93f9d8049dc::t_c1c554bca4ed66 122
+internal/tui/refresh.go
+  s_a0a93f9d8049dc::t_0aee2cef2aefe9 17
+  s_a0a93f9d8049dc::t_6e981a3d057f91 14-16,18-26
+internal/tui/keys.go
+  s_a0a93f9d8049dc::t_6e981a3d057f91 166-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "72fc3498ecf8acac8b090ccfa82f549acade0b69",
+  "prompts": {},
+  "sessions": {
+    "s_a0a93f9d8049dc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10e49-f787-7950-bd08-ac855686db0d",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

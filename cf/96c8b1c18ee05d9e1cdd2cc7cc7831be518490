@@ -1,0 +1,21 @@
+internal/tui/edit_test.go
+  s_18cb974b40841c::t_d13a6bebd55b25 338-340
+internal/tui/cards.go
+  s_18cb974b40841c::t_d13a6bebd55b25 292-293
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cf96c8b1c18ee05d9e1cdd2cc7cc7831be518490",
+  "prompts": {},
+  "sessions": {
+    "s_18cb974b40841c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10d79-2324-75f3-be30-944d242110a7",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

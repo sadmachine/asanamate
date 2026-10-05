@@ -1,0 +1,31 @@
+internal/tui/edit_test.go
+  s_18cb974b40841c::t_89fc76a1d22a3a 309,315-317,321-322,324-338,340-354
+  s_18cb974b40841c::t_e9782f26da6783 310-314,318-320,323,339
+  s_18cb974b40841c::t_67a84a5a2d0e59 274,380,383,390-396
+internal/tui/edit.go
+  s_18cb974b40841c::t_1785b4061de691 305-307,316,371-372
+internal/tui/keys_test.go
+  s_18cb974b40841c::t_67a84a5a2d0e59 109
+README.md
+  s_18cb974b40841c::t_89fc76a1d22a3a 53-55
+internal/tui/cards.go
+  s_18cb974b40841c::t_1785b4061de691 120,253-270,275,281-283,290-295,353-359
+  s_18cb974b40841c::t_3e09b2517577a3 8
+  s_18cb974b40841c::t_a0834e28382547 360
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a019c1ab849b17fad6ec5cb4dbdb040db7410ed4",
+  "prompts": {},
+  "sessions": {
+    "s_18cb974b40841c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10d79-2324-75f3-be30-944d242110a7",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -95,10 +95,14 @@ key press.
 | `o` | open the ticket in the browser |
 | `c` | copy the selected ticket's link to the clipboard (requires terminal OSC 52 support) |
 | `y` | copy the targeted comment as Markdown in the cards reader (requires terminal OSC 52 support); does nothing on other targets |
-| `r` | reload |
+| `r` | reload tickets and clear the inline image cache (including failed loads) |
 | `R` | set the automatic reload interval (persists between sessions) |
 | `?` | show every key |
 | `q` | quit |
+
+Inline images are cached by attachment for the current session. Manual reload
+downloads the displayed ticket's images again; automatic reload keeps the cache.
+The attachment viewer downloads its image each time it opens.
 
 Manually pinned tickets appear in **Pinned**, regardless of the current filter.
 Pins stay local to asanamate, persist across restarts, and belong to the project

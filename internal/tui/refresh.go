@@ -11,6 +11,19 @@ import (
 
 type refreshTickMsg struct{ seq uint64 }
 
+// refreshWithImages also invalidates loaded and failed inline images. Reload
+// the displayed images immediately, even if the task refresh fails.
+func (m *Model) refreshWithImages() tea.Cmd {
+	m.imageEpoch++
+	m.images = map[string]*inlineImage{}
+	var images tea.Cmd
+	if t, ok := m.selectedDetail(); ok {
+		images = m.loadInlineImages(t)
+		m.renderDetail(true)
+	}
+	return tea.Batch(m.refresh(), images)
+}
+
 // refresh updates the current view without covering it with a loading modal.
 func (m *Model) refresh() tea.Cmd {
 	cmd := m.reload()

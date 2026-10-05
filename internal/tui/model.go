@@ -1031,7 +1031,7 @@ func (m *Model) panes(h int) string {
 		inner := m.paneHeight()
 		title, count := m.listTitle()
 		list := m.panel(title, count, m.listView(listW, inner), listW+panelFrame, h, m.listHighlight())
-		reader := m.panel("[2] Ticket", m.readerView, m.reader.View(), readerW+panelFrame, h, m.focusColor(m.focusReader))
+		reader := m.panel("[2] Ticket", m.readerView, m.reader.View(), readerW+panelFrame, h, m.readerHighlight())
 		if !m.showNav() {
 			return lipgloss.JoinHorizontal(lipgloss.Top, list, reader)
 		}
@@ -1059,6 +1059,16 @@ func (m *Model) listHighlight() color.Color {
 		return warnStyle.GetForeground()
 	}
 	return m.focusColor(!m.focusReader && !m.focusNav)
+}
+
+// readerHighlight marks the selected ticket while its details load, including
+// the list request that precedes a refresh of the displayed ticket.
+func (m *Model) readerHighlight() color.Color {
+	if t, ok := m.selected(); ok && (m.detailRequests[t.GID] != 0 ||
+		m.loading && m.background && t.GID == m.shownGID) {
+		return warnStyle.GetForeground()
+	}
+	return m.focusColor(m.focusReader)
 }
 
 // listTitle is the list panel's title and its right-hand count, or a

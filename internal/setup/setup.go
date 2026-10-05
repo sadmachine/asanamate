@@ -207,6 +207,11 @@ spacing = false
 # empty uses accent_color.
 color = "208"
 
+[list.viewing]
+# Header color of the Viewing section for a ticket kept outside the filter;
+# empty uses accent_color.
+color = "5"
+
 [list.selection]
 # Selected ticket: "marker" (bold title with a left marker) or "bar" (reversed row).
 style = "marker"

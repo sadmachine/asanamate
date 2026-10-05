@@ -251,6 +251,46 @@ func TestHeaderStyles(t *testing.T) {
 	}
 }
 
+func TestViewingHeaderColor(t *testing.T) {
+	for _, style := range []string{config.StyleRule, config.StyleBar} {
+		for _, color := range []string{"5", "#aabbcc", ""} {
+			t.Run(style+"/"+color, func(t *testing.T) {
+				cfg := config.Default()
+				cfg.List.GroupBy = "section"
+				cfg.List.Header.Style = style
+				cfg.List.Header.Color = "2"
+				cfg.List.Viewing.Color = color
+				m, st := testModel(t, cfg)
+				st.PinnedTasks = map[string][]string{"": {doneTask.GID}}
+				regular := openTask
+				regular.AssigneeSection = &asana.Ref{Name: viewingLabel}
+				m.Update(tasksMsg{tasks: []asana.Task{regular, doneTask}})
+				m.showTicket(sideTask)
+				wantColor := color
+				if wantColor == "" {
+					wantColor = cfg.AccentColor
+				}
+				if m.viewingStyle.GetForeground() != lipgloss.Color(wantColor) {
+					t.Fatalf("Viewing color = %v, want %q", m.viewingStyle.GetForeground(), wantColor)
+				}
+				lines := strings.Split(m.listView(50, 20), "\n")
+				for _, header := range []struct{ label, color string }{
+					{pinnedLabel, "208"}, {viewingLabel, wantColor}, {viewingLabel, "2"},
+				} {
+					if len(lines) < 2 {
+						t.Fatalf("missing header %q", header.label)
+					}
+					want := m.groupHeader(colorStyle(header.color), header.label, 1, 50)
+					if lines[0] != want {
+						t.Fatalf("%s header = %q, want %q", header.label, lines[0], want)
+					}
+					lines = lines[2:]
+				}
+			})
+		}
+	}
+}
+
 func TestDueLabel(t *testing.T) {
 	for _, tc := range []struct {
 		due, want string

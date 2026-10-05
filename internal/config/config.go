@@ -141,6 +141,7 @@ type List struct {
 	Sort            Sort      `toml:"sort"`
 	Header          Header    `toml:"header"`
 	Pinned          Pinned    `toml:"pinned"`
+	Viewing         Viewing   `toml:"viewing"`
 	Selection       Selection `toml:"selection"`
 }
 
@@ -163,6 +164,12 @@ type Header struct {
 // Pinned configures the section of explicitly pinned tickets at the top of
 // the list. Color overrides the accent color for its header when set.
 type Pinned struct {
+	Color string `toml:"color"`
+}
+
+// Viewing configures the section that temporarily keeps a ticket visible
+// outside the filter. Color overrides the accent color for its header when set.
+type Viewing struct {
 	Color string `toml:"color"`
 }
 
@@ -226,7 +233,7 @@ func Default() Config {
 			RefreshInterval: "30s",
 			Sort:            Sort{By: "", Direction: "asc"},
 			Layout:          LayoutSingle, Fields: []string{"section", "due"},
-			Header: Header{Style: StyleRule}, Pinned: Pinned{Color: "208"}, Selection: Selection{Style: StyleMarker},
+			Header: Header{Style: StyleRule}, Pinned: Pinned{Color: "208"}, Viewing: Viewing{Color: "5"}, Selection: Selection{Style: StyleMarker},
 		},
 		Reader: Reader{View: ViewCards},
 		Images: Images{Mode: "auto"},
@@ -329,7 +336,7 @@ func (c Config) validate() error {
 			return errors.New("the title is always shown; remove it from list.fields")
 		}
 	}
-	for key, color := range map[string]string{"accent_color": c.AccentColor, "list.header.color": c.List.Header.Color, "list.pinned.color": c.List.Pinned.Color, "list.selection.color": c.List.Selection.Color} {
+	for key, color := range map[string]string{"accent_color": c.AccentColor, "list.header.color": c.List.Header.Color, "list.pinned.color": c.List.Pinned.Color, "list.viewing.color": c.List.Viewing.Color, "list.selection.color": c.List.Selection.Color} {
 		if (key == "accent_color" || color != "") && !validColor(color) {
 			return fmt.Errorf("%s must be an ANSI color number (0-255) or #rrggbb, got %q", key, color)
 		}

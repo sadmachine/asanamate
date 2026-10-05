@@ -179,12 +179,24 @@ func TestListConfig(t *testing.T) {
 	if err != nil || cfg.List.Layout != LayoutSingle || !slices.Equal(cfg.List.Fields, []string{"section", "due"}) || cfg.Reader.View != ViewCards {
 		t.Fatalf("defaults: %+v, err = %v", cfg.List, err)
 	}
-	if cfg.AccentColor != "4" || cfg.List.Header != (Header{Style: StyleRule}) || cfg.List.Pinned != (Pinned{Color: "208"}) || cfg.List.Selection != (Selection{Style: StyleMarker}) {
+	if cfg.AccentColor != "4" || cfg.List.Header != (Header{Style: StyleRule}) || cfg.List.Pinned != (Pinned{Color: "208"}) || cfg.List.Viewing != (Viewing{Color: "5"}) || cfg.List.Selection != (Selection{Style: StyleMarker}) {
 		t.Fatalf("style defaults: %+v", cfg.List)
 	}
 	for _, color := range []string{"0", "255", "#abc", "#A1b2C3"} {
 		if _, err := Load(writeFile(t, "workspace = \"1\"\n[list.header]\ncolor = \""+color+"\"\n")); err != nil {
 			t.Errorf("header.color %q: %v", color, err)
+		}
+	}
+	for _, color := range []string{"", "0", "255", "#abc", "#A1b2C3"} {
+		cfg, err := Load(writeFile(t, "workspace = \"1\"\n[list.viewing]\ncolor = \""+color+"\"\n"))
+		if err != nil || cfg.List.Viewing.Color != color {
+			t.Errorf("viewing.color %q: got %q, err = %v", color, cfg.List.Viewing.Color, err)
+		}
+	}
+	for _, color := range []string{"magenta", "-1", "256", "#12345g"} {
+		_, err := Load(writeFile(t, "workspace = \"1\"\n[list.viewing]\ncolor = \""+color+"\"\n"))
+		if err == nil || !strings.Contains(err.Error(), "list.viewing.color") {
+			t.Errorf("viewing.color %q: expected error naming list.viewing.color, got %v", color, err)
 		}
 	}
 	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[list]\nlayout = \"multi\"\nfields = [\"status\", \"Branch Name\", \"due\"]\n"))

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -98,5 +99,95 @@ func TestHarvestRejectsCreatedEntryWithoutAsanaLink(t *testing.T) {
 	err := createHarvestEntry(context.Background(), credentials, server.URL, "123", "456", 1.25, Asana{TaskGID: "1", ProjectGID: "2", URL: "https://app.asana.com/0/2/1"})
 	if err == nil || !strings.Contains(err.Error(), "without the Asana link") || !strings.Contains(err.Error(), "do not submit again") {
 		t.Fatalf("missing link error = %v", err)
+	}
+}
+
+func TestHarvestSummaryFiltersTicketAndPaginates(t *testing.T) {
+	credentials := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(credentials, []byte(`{"accessToken":"test-token","accountId":"789"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var pages []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.Header.Get("Authorization") != "Bearer test-token" || r.Header.Get("Harvest-Account-ID") != "789" {
+			t.Errorf("unexpected request: %s %+v", r.Method, r.Header)
+		}
+		query := r.URL.Query()
+		if query.Get("external_reference_id") != "42" || query.Get("is_running") != "false" || query.Get("per_page") != "100" || query.Has("project_id") || query.Has("from") || query.Has("user_id") {
+			t.Errorf("summary filter = %v", query)
+		}
+		pages = append(pages, query.Get("page"))
+		switch query.Get("page") {
+		case "1":
+			fmt.Fprint(w, `{"time_entries":[{"hours":1.25,"rounded_hours":2,"is_running":false,"external_reference":{"id":"42","group_id":"1"}},{"hours":99,"is_running":false,"external_reference":{"id":"99"}},{"hours":10,"is_running":true,"external_reference":{"id":"42"}},{"hours":20,"is_running":false,"external_reference":null}],"next_page":2}`)
+		case "2":
+			fmt.Fprint(w, `{"time_entries":[{"hours":2.5,"is_running":false,"external_reference":{"id":"42","group_id":"2"}}],"next_page":null}`)
+		default:
+			t.Errorf("unexpected page: %v", query)
+			http.Error(w, "bad page", 400)
+		}
+	}))
+	defer server.Close()
+	var out bytes.Buffer
+	if err := runHarvest(context.Background(), strings.NewReader(`{"operation":"summary","asana":{"task_gid":"42"}}`), &out, "", credentials, server.URL); err != nil {
+		t.Fatal(err)
+	}
+	if out.String() != "{\"total_seconds\":13500}\n" || strings.Join(pages, ",") != "1,2" {
+		t.Fatalf("summary = %s, pages = %v", out.String(), pages)
+	}
+}
+
+func TestHarvestSummaryRejectsPartialOrInvalidData(t *testing.T) {
+	credentials := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(credentials, []byte(`{"accessToken":"test-token","accountId":"789"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, response := range []string{
+		`{}`, `bad`, `{"time_entries":[]}`,
+		`{"time_entries":[],"next_page":1}`,
+		`{"time_entries":[{"hours":-1,"is_running":false,"external_reference":{"id":"42"}}],"next_page":null}`,
+		`{"time_entries":[{"is_running":false,"external_reference":{"id":"42"}}],"next_page":null}`,
+		`{"time_entries":[{"hours":1,"external_reference":{"id":"42"}}],"next_page":null}`,
+		`{"time_entries":[{"hours":1e100,"is_running":false,"external_reference":{"id":"42"}}],"next_page":null}`,
+	} {
+		t.Run(response, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, response) }))
+			defer server.Close()
+			if _, err := harvestSummary(context.Background(), credentials, server.URL, "42"); err == nil {
+				t.Fatal("invalid response accepted")
+			}
+		})
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("page") == "1" {
+			fmt.Fprint(w, `{"time_entries":[{"hours":1,"is_running":false,"external_reference":{"id":"42"}}],"next_page":2}`)
+		} else {
+			http.Error(w, "denied", http.StatusForbidden)
+		}
+	}))
+	defer server.Close()
+	if _, err := harvestSummary(context.Background(), credentials, server.URL, "42"); err == nil || !strings.Contains(err.Error(), "403") {
+		t.Fatalf("partial result returned: %v", err)
+	}
+}
+
+func TestHarvestSummaryZeroAndUnitConversion(t *testing.T) {
+	credentials := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(credentials, []byte(`{"accessToken":"test-token","accountId":"789"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		response string
+		seconds  int64
+	}{
+		{`{"time_entries":[],"next_page":null}`, 0},
+		{`{"time_entries":[{"hours":0.0002777778,"is_running":false,"external_reference":{"id":"42"}}],"next_page":null}`, 1},
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, tc.response) }))
+		summary, err := harvestSummary(context.Background(), credentials, server.URL, "42")
+		server.Close()
+		if err != nil || summary.TotalSeconds != tc.seconds {
+			t.Fatalf("summary = %+v, err = %v; want %d seconds", summary, err, tc.seconds)
+		}
 	}
 }

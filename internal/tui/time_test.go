@@ -7,11 +7,13 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/form"
 	"github.com/sadmachine/asanamate/internal/state"
 	"github.com/sadmachine/asanamate/internal/ticket"
+	"github.com/sadmachine/asanamate/internal/timetracking"
 )
 
 const timeFormJSON = `{"fields":[{"id":"project_id","label":"Harvest project","type":"select","options":[{"id":"123","name":"Web"},{"id":"789","name":"Other"}],"remember":true},{"id":"task_id","label":"Harvest task","type":"select","options":[{"id":"456","name":"Engineering"}],"remember":true},{"id":"hours","label":"Hours","type":"hours"}]}`
@@ -79,7 +81,10 @@ func TestTimeFormValidationFailureAndSuccess(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("valid form did not call provider")
 	}
-	m.Update(cmd())
+	_, refresh := m.Update(cmd())
+	if refresh == nil || !m.timeSummaries["42"].loading {
+		t.Fatal("successful log did not refresh summary")
+	}
 	if m.form != nil || m.timeEntry != nil || st.RecentFormChoices("time:hrvst", "1", "project_id")[0] != "123" || st.RecentFormChoices("time:hrvst", "1", "task_id")[0] != "456" {
 		t.Fatal("successful log did not save remembered fields")
 	}
@@ -92,5 +97,82 @@ func TestTimeFormCancelKeepsStateUnchanged(t *testing.T) {
 	cancelled, _ := m.form.update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	if !cancelled || len(st.RecentFormChoices("time:hrvst", "1", "project_id")) != 0 {
 		t.Fatal("cancel changed time state")
+	}
+}
+
+func TestTimeSummaryStatesAndReaderViews(t *testing.T) {
+	for _, view := range []string{config.ViewCards, config.ViewMarkdown} {
+		t.Run(view, func(t *testing.T) {
+			m, _ := timeModel(t)
+			m.readerView = view
+			m.Update(tea.WindowSizeMsg{Width: 120, Height: 16})
+			task := m.details["42"].Task
+			task.HTMLNotes = "<body>" + strings.Repeat("<p>line</p>", 40) + "</body>"
+			m.details["42"] = ticket.Ticket{Task: task}
+			m.deps.Config.TimeTracking.Command = "printf '%s' '{\"total_seconds\":13500}'"
+			cmd := m.loadTimeSummary(task)
+			m.renderDetail(false)
+			if !strings.Contains(ansi.Strip(m.reader.GetContent()), "loading") {
+				t.Fatal("loading state missing")
+			}
+			m.Update(cmd())
+			content := ansi.Strip(m.reader.GetContent())
+			if !strings.Contains(content, "Time tracked") || !strings.Contains(content, "3h 45m") || !strings.Contains(content, "visible entries") {
+				t.Fatalf("summary missing: %s", content)
+			}
+			m.reader.SetYOffset(8)
+			offset := m.reader.YOffset()
+			seq := m.timeSummaries["42"].seq
+			m.Update(timeSummaryMsg{gid: "42", seq: seq, summary: timetracking.Summary{TotalSeconds: 0}})
+			if !strings.Contains(ansi.Strip(m.reader.GetContent()), "0m") || m.reader.YOffset() != offset {
+				t.Fatal("zero state missing or scroll lost")
+			}
+			m.Update(timeSummaryMsg{gid: "42", seq: seq, err: errors.New("offline")})
+			if !strings.Contains(m.timeSummaryValue("42"), "unavailable") || strings.Contains(m.timeSummaryValue("42"), "0m") {
+				t.Fatal("failed request shown as zero")
+			}
+			m.Update(timeSummaryMsg{gid: "42", seq: seq, err: timetracking.ErrUnsupported})
+			if !strings.Contains(m.timeSummaryValue("42"), "unsupported") {
+				t.Fatal("unsupported state missing")
+			}
+			m.deps.Config.TimeTracking = config.TimeTracking{}
+			m.renderDetail(true)
+			if strings.Contains(ansi.Strip(m.reader.GetContent()), "Time tracked") || m.loadTimeSummary(task) != nil {
+				t.Fatal("disabled tracker shown or called")
+			}
+		})
+	}
+}
+
+func TestTimeSummaryRejectsStaleRepliesAndCachesByTicket(t *testing.T) {
+	m, _ := timeModel(t)
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})
+	task := m.details["42"].Task
+	m.deps.Config.TimeTracking.Command = "printf '%s' '{\"total_seconds\":60}'"
+	old := m.loadTimeSummary(task)
+	m.deps.Config.TimeTracking.Command = "printf '%s' '{\"total_seconds\":3600}'"
+	latest := m.loadTimeSummary(task)
+	m.Update(latest())
+	m.Update(old())
+	if m.timeSummaries["42"].loading || m.timeSummaries["42"].summary.TotalSeconds != 3600 {
+		t.Fatal("stale reply replaced newest result")
+	}
+	other := asana.Task{GID: "99", Name: "Other"}
+	m.tasks, m.visible = append(m.tasks, other), append(m.visible, other)
+	m.details["99"] = ticket.Ticket{Task: other}
+	otherCmd := m.loadTimeSummary(other)
+	before := m.reader.GetContent()
+	m.Update(otherCmd())
+	if m.reader.GetContent() != before || m.timeSummaries["99"].summary.TotalSeconds != 3600 {
+		t.Fatal("reply for another ticket changed selected reader")
+	}
+	m.shownGID = ""
+	m.selectionChanged()
+	if m.timeSummaries["42"].seq != 2 {
+		t.Fatal("cached selection refetched summary")
+	}
+	m.Update(detailMsg{gid: "42", ticket: ticket.Ticket{Task: task}})
+	if !m.timeSummaries["42"].loading || m.timeSummaries["42"].seq <= 2 {
+		t.Fatal("ticket refresh did not refresh time")
 	}
 }

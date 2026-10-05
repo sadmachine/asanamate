@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -71,6 +72,15 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 			{ID: "task_id", Label: "Harvest task", Type: form.Select, Options: []form.Option{{ID: taskID, Name: "Engineering"}}, Remember: true},
 			{ID: "hours", Label: "Hours", Type: form.Hours},
 		}})
+	case "summary":
+		if req.Asana == nil || !digits(req.Asana.TaskGID) {
+			return errors.New("hrvst summary needs a numeric Asana task GID")
+		}
+		summary, err := harvestSummary(ctx, configPath, endpoint, req.Asana.TaskGID)
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(out).Encode(summary)
 	case "log":
 		if !digits(taskID) {
 			return errors.New("hrvst needs a numeric default task ID (--task-id)")
@@ -96,16 +106,9 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 }
 
 func createHarvestEntry(ctx context.Context, configPath, endpoint, projectID, taskID string, hours float64, asana Asana) error {
-	data, err := os.ReadFile(configPath)
+	credentials, err := loadHarvestCredentials(configPath)
 	if err != nil {
-		return fmt.Errorf("hrvst credentials: %w", err)
-	}
-	var credentials struct {
-		AccessToken string `json:"accessToken"`
-		AccountID   string `json:"accountId"`
-	}
-	if err := json.Unmarshal(data, &credentials); err != nil || credentials.AccessToken == "" || credentials.AccountID == "" {
-		return errors.New("hrvst credentials: missing access token or account ID; run `hrvst login`")
+		return err
 	}
 	body, err := json.Marshal(harvestEntryRequest{
 		ProjectID: projectID, TaskID: taskID, SpentDate: time.Now().Format("2006-01-02"), Hours: hours, Notes: asana.Title,
@@ -114,25 +117,9 @@ func createHarvestEntry(ctx context.Context, configPath, endpoint, projectID, ta
 	if err != nil {
 		return err
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	result, err := credentials.call(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return err
-	}
-	request.Header.Set("Authorization", "Bearer "+credentials.AccessToken)
-	request.Header.Set("Harvest-Account-ID", credentials.AccountID)
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("User-Agent", "asanamate")
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return fmt.Errorf("Harvest time entry: %w", err)
-	}
-	defer response.Body.Close()
-	result, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
-	if err != nil {
-		return fmt.Errorf("Harvest time entry response: %w", err)
-	}
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("Harvest time entry: %s: %s", response.Status, strings.TrimSpace(string(result)))
 	}
 	var entry struct {
 		ID                json.Number `json:"id"`
@@ -202,4 +189,114 @@ func parseAssignments(data []byte) ([]form.Option, error) {
 		}
 	}
 	return projects, nil
+}
+
+// harvestCredentials are shared by entry creation and summary retrieval.
+type harvestCredentials struct {
+	AccessToken string `json:"accessToken"`
+	AccountID   string `json:"accountId"`
+}
+
+func loadHarvestCredentials(configPath string) (harvestCredentials, error) {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return harvestCredentials{}, fmt.Errorf("hrvst credentials: %w", err)
+	}
+	var credentials harvestCredentials
+	if err := json.Unmarshal(data, &credentials); err != nil || credentials.AccessToken == "" || credentials.AccountID == "" {
+		return harvestCredentials{}, errors.New("hrvst credentials: missing access token or account ID; run `hrvst login`")
+	}
+	return credentials, nil
+}
+
+func (credentials harvestCredentials) call(ctx context.Context, method, endpoint string, body io.Reader) ([]byte, error) {
+	request, err := http.NewRequestWithContext(ctx, method, endpoint, body)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("Authorization", "Bearer "+credentials.AccessToken)
+	request.Header.Set("Harvest-Account-ID", credentials.AccountID)
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("User-Agent", "asanamate")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("Harvest time entry: %w", err)
+	}
+	defer response.Body.Close()
+	result, err := io.ReadAll(io.LimitReader(response.Body, (1<<20)+1))
+	if err != nil {
+		return nil, fmt.Errorf("Harvest time entry response: %w", err)
+	}
+	if len(result) > 1<<20 {
+		return nil, errors.New("Harvest response exceeds 1 MiB")
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return nil, fmt.Errorf("Harvest time entry: %s: %s", response.Status, strings.TrimSpace(string(result)))
+	}
+	return result, nil
+}
+
+func harvestSummary(ctx context.Context, configPath, endpoint, gid string) (Summary, error) {
+	credentials, err := loadHarvestCredentials(configPath)
+	if err != nil {
+		return Summary{}, err
+	}
+	base, err := url.Parse(endpoint)
+	if err != nil {
+		return Summary{}, err
+	}
+	var hours float64
+	for page := 1; ; {
+		query := base.Query()
+		query.Set("external_reference_id", gid)
+		query.Set("is_running", "false")
+		query.Set("per_page", "100")
+		query.Set("page", strconv.Itoa(page))
+		base.RawQuery = query.Encode()
+		data, err := credentials.call(ctx, http.MethodGet, base.String(), nil)
+		if err != nil {
+			return Summary{}, err
+		}
+		var result struct {
+			Entries *[]struct {
+				Hours     *float64                  `json:"hours"`
+				Running   *bool                     `json:"is_running"`
+				Reference *harvestExternalReference `json:"external_reference"`
+			} `json:"time_entries"`
+			NextPage json.RawMessage `json:"next_page"`
+		}
+		if err := json.Unmarshal(data, &result); err != nil {
+			return Summary{}, fmt.Errorf("Harvest time summary: %w", err)
+		}
+		if result.Entries == nil {
+			return Summary{}, errors.New("Harvest time summary: missing time_entries")
+		}
+		for _, entry := range *result.Entries {
+			if entry.Reference == nil || entry.Reference.ID != gid {
+				continue
+			}
+			if entry.Running == nil || entry.Hours == nil || *entry.Hours < 0 || math.IsNaN(*entry.Hours) || math.IsInf(*entry.Hours, 0) {
+				return Summary{}, errors.New("Harvest time summary: invalid entry duration or timer state")
+			}
+			if !*entry.Running {
+				hours += *entry.Hours
+			}
+		}
+		var nextPage *int
+		if len(result.NextPage) == 0 || json.Unmarshal(result.NextPage, &nextPage) != nil {
+			return Summary{}, errors.New("Harvest time summary: missing or invalid next_page")
+		}
+		if nextPage == nil {
+			break
+		}
+		if *nextPage <= page {
+			return Summary{}, errors.New("Harvest time summary: invalid next_page")
+		}
+		page = *nextPage
+	}
+	seconds := math.Round(hours * 3600)
+	if math.IsInf(seconds, 0) || seconds >= float64(math.MaxInt64) {
+		return Summary{}, errors.New("Harvest time summary: duration overflow")
+	}
+	return Summary{TotalSeconds: int64(seconds)}, nil
 }

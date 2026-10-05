@@ -259,6 +259,15 @@ are remembered per Asana project after a successful log; hours starts empty.
 Harvest notes contain ticket title; external reference links to Asana ticket
 and chosen Asana project.
 
+The ticket's Details card shows **Time tracked**; the Markdown reader shows
+an equivalent summary. This is all-time, unrounded time from stopped entries
+linked to that exact ticket, across projects and visible to your authenticated
+account. Harvest permissions may limit this to your own entries. Running timers
+and older entries without the ticket's external reference are excluded. The
+summary refreshes with ticket details and after a successful log. Loading,
+zero logged time, unsupported retrieval, and unavailable retrieval are distinct;
+a lookup failure does not prevent reading the ticket or logging time.
+
 Other trackers can implement same command protocol. Command runs through
 `/bin/sh -c` and reads one JSON request from stdin. For `{"operation":"form"}`
 return a form spec, such as:
@@ -277,6 +286,23 @@ one `hours` field. The `log` request contains `values` keyed by field ID and
 an `asana` object with `task_gid`, `project_gid`, `title`, and `url`. Exit zero
 only after creating entry. Failed logs are never retried automatically. Use a
 different provider `id` when changing trackers so saved choices stay separate.
+
+Providers can also handle an optional `summary` operation. The request contains
+`asana.task_gid` and `asana.url`; no project selection or form values are needed:
+
+```json
+{"operation":"summary","asana":{"task_gid":"123","url":"https://app.asana.com/0/1/123"}}
+```
+
+Return `{"total_seconds":13500}` for 3 hours 45 minutes, or
+`{"total_seconds":0}` when no linked stopped entries exist. `total_seconds`
+must be a nonnegative integer representing all-time, unrounded duration from
+stopped entries visible to the account, across projects for the exact ticket.
+Normalize provider units to seconds; do not match by ticket title. Retrieve
+all pages before returning a total. On retrieval failure, exit nonzero; never
+return a partial total. Providers without retrieval can return
+`{"unsupported":true}`. Older providers that reject `summary` show unavailable
+time while their existing form and logging operations continue to work.
 
 ## Actions
 

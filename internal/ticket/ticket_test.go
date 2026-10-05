@@ -74,6 +74,30 @@ func TestHTMLToMarkdownAutolinksURLText(t *testing.T) {
 	}
 }
 
+func TestHTMLToMarkdownCodeBlocks(t *testing.T) {
+	for _, tt := range []struct {
+		name, html, want string
+	}{
+		{"standalone after prose", "Before\n\n<code>[fees] ; early = [&quot;ED&quot;]</code>", "Before\n\n```\n[fees] ; early = [\"ED\"]\n```"},
+		{"standalone before prose", "<code>x</code>\n\nAfter", "```\nx\n```\n\nAfter"},
+		{"multiline", "<code>one\n  two\n\nthree</code>", "```\none\n  two\n\nthree\n```"},
+		{"paragraph", "<p><code>x</code></p>", "```\nx\n```"},
+		{"line breaks", "Before<br><code>x</code><br>After", "Before\n\n```\nx\n```\n\nAfter"},
+		{"nested pre", "<pre><code>one\n  two</code></pre>", "```\none\n  two\n```"},
+		{"embedded fence", "<code>```\nx\n```</code>", "````\n```\nx\n```\n````"},
+		{"inline", "Use <code>x</code> now.", "Use `x` now."},
+		{"inline at start", "<code>x</code> now.", "`x` now."},
+		{"inline at end", "Use <code>x</code>", "Use `x`"},
+		{"formatted inline", "Use <strong><code>x</code></strong> now.", "Use **`x`** now."},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HTMLToMarkdown("<body>" + tt.html + "</body>"); got != tt.want {
+				t.Fatalf("HTMLToMarkdown(%q) = %q, want %q", tt.html, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestJSONFlattensTaskAndIncludesExtras(t *testing.T) {
 	b, err := json.Marshal(sample())
 	if err != nil {

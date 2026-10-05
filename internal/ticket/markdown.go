@@ -12,6 +12,7 @@ import (
 	"github.com/JohannesKaufmann/html-to-markdown/v2/plugin/base"
 	"github.com/JohannesKaufmann/html-to-markdown/v2/plugin/commonmark"
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 )
@@ -200,7 +201,58 @@ func newMarkdownConverter() *converter.Converter {
 		commonmark.NewCommonmarkPlugin(),
 	))
 	conv.Register.RendererFor("a", converter.TagTypeInline, renderAutolink, converter.PriorityEarly)
+	conv.Register.PreRenderer(normalizeCodeBlocks, converter.PriorityEarly)
 	return conv
+}
+
+// Asana also uses bare code tags for blocks. Promote them before whitespace
+// cleanup so CommonMark preserves their content and renders a fenced block.
+func normalizeCodeBlocks(ctx converter.Context, n *html.Node) {
+	if n.Type == html.ElementNode {
+		if n.Data == "pre" {
+			return
+		}
+		if n.Data == "code" {
+			parentType, _ := ctx.GetTagType(n.Parent.Data)
+			blockParent := n.Parent.Data == "body" || parentType == converter.TagTypeBlock
+			if strings.ContainsAny(dom.CollectText(n), "\r\n") ||
+				(blockParent && codeBoundary(ctx, n.PrevSibling, true) && codeBoundary(ctx, n.NextSibling, false)) {
+				n.Data, n.DataAtom = "pre", atom.Pre
+			}
+			return
+		}
+	}
+	for child := n.FirstChild; child != nil; child = child.NextSibling {
+		normalizeCodeBlocks(ctx, child)
+	}
+}
+
+// codeBoundary reports whether code starts or ends its own line or block.
+func codeBoundary(ctx converter.Context, n *html.Node, before bool) bool {
+	for n != nil {
+		switch n.Type {
+		case html.TextNode:
+			if before {
+				if i := strings.LastIndexAny(n.Data, "\r\n"); i >= 0 {
+					return strings.TrimSpace(n.Data[i+1:]) == ""
+				}
+			} else if i := strings.IndexAny(n.Data, "\r\n"); i >= 0 {
+				return strings.TrimSpace(n.Data[:i]) == ""
+			}
+			if strings.TrimSpace(n.Data) != "" {
+				return false
+			}
+		case html.ElementNode:
+			tagType, _ := ctx.GetTagType(n.Data)
+			return n.Data == "br" || tagType == converter.TagTypeBlock
+		}
+		if before {
+			n = n.PrevSibling
+		} else {
+			n = n.NextSibling
+		}
+	}
+	return true
 }
 
 func renderAutolink(_ converter.Context, w converter.Writer, n *html.Node) converter.RenderStatus {

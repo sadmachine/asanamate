@@ -11,6 +11,13 @@ import (
 
 type refreshTickMsg struct{ seq uint64 }
 
+// refresh updates the current view without covering it with a loading modal.
+func (m *Model) refresh() tea.Cmd {
+	cmd := m.reload()
+	m.background = true
+	return cmd
+}
+
 func (m *Model) scheduleRefresh() tea.Cmd {
 	seq := m.refreshSeq
 	return tea.Tick(m.refreshInterval, func(time.Time) tea.Msg { return refreshTickMsg{seq: seq} })
@@ -23,12 +30,11 @@ func (m *Model) autoRefresh(msg refreshTickMsg) tea.Cmd {
 		return nil
 	}
 	next := m.scheduleRefresh()
-	if m.loading || m.filtering || m.help || m.modal != nil || m.input != nil || m.form != nil || m.builder != nil ||
+	if m.loading || len(m.detailRequests) > 0 || m.filtering || m.help || m.modal != nil || m.input != nil || m.form != nil || m.builder != nil ||
 		m.run != nil || m.edit != nil || m.timeEntry != nil || m.menuFor != "" {
 		return next
 	}
-	cmd := m.reload()
-	m.background = true
+	cmd := m.refresh()
 	return tea.Batch(next, cmd)
 }
 

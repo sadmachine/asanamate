@@ -130,6 +130,9 @@ type Model struct {
 	fieldEnds   map[string]int // last reader line of multi-line targets, by key
 	cardTargets []string       // cards view targets in reading order
 
+	detailSeq      uint64            // identifies the newest detail request per ticket
+	detailRequests map[string]uint64 // in-flight detail requests by ticket gid
+
 	projects        []asana.Project
 	projectFields   map[string]map[string]bool // project gid -> its custom field gids
 	agents          []agents.Agent
@@ -226,6 +229,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !sameProject(msg.project, m.viewProject) {
 			return m, nil
 		}
+		refreshing := m.loading
 		m.loading = false
 		if msg.err != nil {
 			m.status = "loading tasks: " + msg.err.Error()
@@ -247,14 +251,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.warning != "" {
 			m.status = msg.warning
 		}
-		return m, m.selectionChanged()
+		cmd := m.selectionChanged()
+		if t, ok := m.selected(); refreshing && ok && t.GID == m.shownGID {
+			return m, tea.Batch(cmd, m.loadDetail(t.GID))
+		}
+		return m, cmd
 	case detailTickMsg:
 		if t, ok := m.selected(); ok && t.GID == msg.gid {
 			if _, cached := m.details[msg.gid]; !cached {
-				return m, loadDetail(m.deps.Client, msg.gid)
+				return m, m.loadDetail(msg.gid)
 			}
 		}
 	case detailMsg:
+		if msg.seq != 0 && m.detailRequests[msg.gid] != msg.seq {
+			return m, nil
+		}
+		delete(m.detailRequests, msg.gid)
 		t, ok := m.selected()
 		isSelected := ok && t.GID == msg.gid
 		if msg.err != nil {
@@ -279,7 +291,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(images, m.showTicket(msg.ticket.Task))
 		}
 		if isSelected {
-			m.renderDetail(false)
+			m.renderDetail(m.shownGID == msg.gid)
 			if m.menuFor == msg.gid {
 				m.menuFor = ""
 				return m, tea.Batch(images, m.menuOpen())
@@ -374,11 +386,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if t, ok := m.selected(); ok && t.GID == msg.gid {
 			m.viewing = &t
 		}
-		delete(m.details, msg.gid)
-		if m.shownGID == msg.gid {
-			m.shownGID = ""
+		if m.shownGID != msg.gid {
+			delete(m.details, msg.gid)
 		}
-		return m, m.reload()
+		return m, m.refresh()
 	case inlineImageMsg:
 		return m, m.inlineImageLoaded(msg)
 	case imageMsg:
@@ -540,6 +551,13 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
 
 // reload refetches the tasks, keeping the current view until they land.
 func (m *Model) reload() tea.Cmd {
+	// Retain the displayed ticket until its replacement arrives. Other cached
+	// tickets must be fetched again when selected after a reload.
+	for gid := range m.details {
+		if gid != m.shownGID {
+			delete(m.details, gid)
+		}
+	}
 	m.loading, m.background = true, false
 	return tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks()), m.startSpinner())
 }
@@ -689,7 +707,23 @@ func (m *Model) renderDetail(keepScroll bool) {
 	_, readerW, _ := m.paneWidths()
 	section := m.agentsSection(t.Task)
 	offset := m.reader.YOffset()
+	anchor, anchorLine := "", -1
+	selectedIndex := slices.Index(m.cardTargets, m.fieldKey)
+	if keepScroll && m.readerView == config.ViewCards {
+		// Keep the content at the viewport's top in place even when earlier
+		// fields change height. Prefer a selected target that is on screen.
+		for _, key := range m.cardTargets {
+			line := m.fieldLines[key]
+			if line <= offset && line > anchorLine {
+				anchor, anchorLine = key, line
+			}
+		}
+		if line, ok := m.fieldLines[m.fieldKey]; ok && line < offset+m.reader.Height() && max(line, m.fieldEnds[m.fieldKey]) >= offset {
+			anchor, anchorLine = m.fieldKey, line
+		}
+	}
 	width := max(readerW-2, 20)
+	var content string
 	if m.readerView == config.ViewMarkdown {
 		extra := section
 		if path, own := m.effectiveRepo(t.Task); path != "" {
@@ -699,11 +733,21 @@ func (m *Model) renderDetail(keepScroll bool) {
 			}
 			extra = "\n## Local repo\n\n" + repo + "\n" + extra
 		}
-		m.reader.SetContent(m.glamour(t.MarkdownWith(extra), width, false))
+		content = m.glamour(t.MarkdownWith(extra), width, false)
 	} else {
-		m.reader.SetContent(lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width)))
+		content = lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width))
+		if keepScroll && selectedIndex >= 0 && !slices.Contains(m.cardTargets, m.fieldKey) {
+			m.fieldKey = m.cardTargets[min(selectedIndex, len(m.cardTargets)-1)]
+			content = lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width))
+		}
+	}
+	if content != m.reader.GetContent() {
+		m.reader.SetContent(content)
 	}
 	if keepScroll {
+		if line, ok := m.fieldLines[anchor]; anchor != "" && ok {
+			offset += line - anchorLine
+		}
 		m.reader.SetYOffset(offset)
 	} else {
 		m.reader.GotoTop()

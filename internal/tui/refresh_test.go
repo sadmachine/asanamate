@@ -109,7 +109,7 @@ func TestAutoRefreshPreservesReader(t *testing.T) {
 				}
 				_, cmd := m.Update(tasksMsg{tasks: []asana.Task{incoming, openTask}})
 				selected, ok := m.selected()
-				if !ok || selected.GID != openTask.GID || len(m.visible) != 2 || m.loading || cmd != nil {
+				if !ok || selected.GID != openTask.GID || len(m.visible) != 2 || m.loading || cmd == nil {
 					t.Fatal("refresh did not update the list while keeping the selected ticket")
 				}
 				if m.reader.YOffset() != 10 || !m.focusReader || m.fieldKey != "description" || !m.showEmpty {
@@ -124,6 +124,125 @@ func TestAutoRefreshPreservesReader(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestTicketRefreshPreservesState(t *testing.T) {
+	for _, view := range []string{config.ViewCards, config.ViewMarkdown} {
+		for _, trigger := range []string{"manual", "save", "automatic"} {
+			t.Run(view+"/"+trigger, func(t *testing.T) {
+				cfg := config.Default()
+				cfg.Reader.View = view
+				m, _ := testModel(t, cfg)
+				m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
+				m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+				detail := ticket.Ticket{Task: openTask}
+				detail.HTMLNotes = "<body>" + strings.Repeat("Reading this ticket.<br>", 100) + "</body>"
+				m.Update(detailMsg{gid: openTask.GID, ticket: detail})
+				m.focusReader = true
+				m.showEmpty = true
+				m.fieldKey = "section:description"
+				m.renderDetail(true)
+				m.reader.SetYOffset(10)
+				before := m.reader.GetContent()
+				switch trigger {
+				case "manual":
+					m.Update(key("r"))
+				case "save":
+					m.Update(editDoneMsg{gid: openTask.GID, what: "description"})
+				case "automatic":
+					m.Update(refreshTickMsg{seq: m.refreshSeq})
+				}
+				if m.reader.GetContent() != before || !m.background {
+					t.Fatal("refresh replaced the ticket or opened a loading modal")
+				}
+				_, cmd := m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+				if cmd == nil || m.reader.GetContent() != before {
+					t.Fatal("refresh must fetch fresh details while retaining old content")
+				}
+				m.Update(detailMsg{gid: openTask.GID, err: errors.New("offline")})
+				if m.reader.GetContent() != before {
+					t.Fatal("failed detail refresh discarded old content")
+				}
+				detail.Comments = []asana.Story{{GID: "new", HTMLText: "<body>New comment</body>"}}
+				m.Update(detailMsg{gid: openTask.GID, ticket: detail})
+				if !strings.Contains(ansi.Strip(m.reader.GetContent()), "New comment") || m.reader.YOffset() != 10 ||
+					!m.focusReader || m.fieldKey != "section:description" || !m.showEmpty {
+					t.Fatalf("fresh details: offset=%d focus=%v field=%q expanded=%v comment=%v", m.reader.YOffset(), m.focusReader, m.fieldKey, m.showEmpty, strings.Contains(ansi.Strip(m.reader.GetContent()), "New comment"))
+				}
+				updated := m.reader.GetContent()
+				m.Update(detailMsg{gid: openTask.GID, ticket: detail})
+				if m.reader.GetContent() != updated || m.reader.YOffset() != 10 {
+					t.Fatal("unchanged details changed the reader")
+				}
+			})
+		}
+	}
+}
+
+func TestDetailRefreshAnchorsCommentAndHandlesRemoval(t *testing.T) {
+	m, _ := testModel(t, config.Default())
+	m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	detail := ticket.Ticket{Task: openTask, Comments: []asana.Story{
+		{GID: "first", HTMLText: "<body>First comment</body>"},
+		{GID: "selected", HTMLText: "<body>Selected comment</body>"},
+		{GID: "last", HTMLText: "<body>" + strings.Repeat("Last comment.<br>", 50) + "</body>"},
+	}}
+	m.Update(detailMsg{gid: openTask.GID, ticket: detail})
+	m.fieldKey = "comment:selected"
+	m.renderDetail(true)
+	m.reader.SetYOffset(m.fieldLines[m.fieldKey] - 2)
+	relative := m.fieldLines[m.fieldKey] - m.reader.YOffset()
+	detail.HTMLNotes = "<body>" + strings.Repeat("New description.<br>", 30) + "</body>"
+	m.Update(detailMsg{gid: openTask.GID, ticket: detail})
+	if m.fieldKey != "comment:selected" || m.fieldLines[m.fieldKey]-m.reader.YOffset() != relative {
+		t.Fatal("content inserted above selected comment moved it on screen")
+	}
+	detail.Comments = append(detail.Comments[:1:1], detail.Comments[2:]...)
+	m.Update(detailMsg{gid: openTask.GID, ticket: detail})
+	if m.fieldKey != "comment:last" {
+		t.Fatalf("removed target must select nearest remaining target, got %q", m.fieldKey)
+	}
+}
+
+func TestDetailRefreshRejectsOlderResponses(t *testing.T) {
+	m, _ := testModel(t, config.Default())
+	m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(detailMsg{gid: openTask.GID, ticket: ticket.Ticket{Task: openTask}})
+	m.loadDetail(openTask.GID)
+	older := m.detailSeq
+	m.loadDetail(openTask.GID)
+	newer := m.detailSeq
+	_, cmd := m.Update(refreshTickMsg{seq: m.refreshSeq})
+	if cmd == nil || m.loading {
+		t.Fatal("automatic refresh must wait for pending details")
+	}
+	fresh := ticket.Ticket{Task: openTask, Comments: []asana.Story{{GID: "new", HTMLText: "<body>Fresh comment</body>"}}}
+	m.Update(detailMsg{gid: openTask.GID, seq: newer, ticket: fresh})
+	before := m.reader.GetContent()
+	m.Update(detailMsg{gid: openTask.GID, seq: older, ticket: ticket.Ticket{Task: openTask}})
+	if m.reader.GetContent() != before || len(m.details[openTask.GID].Comments) != 1 || len(m.detailRequests) != 0 {
+		t.Fatal("older response replaced fresh ticket data")
+	}
+}
+
+func TestRefreshPreservesExpandedFieldAfterSave(t *testing.T) {
+	m, _ := editModel(t)
+	m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
+	m.renderDetail(false)
+	m.showEmpty = true
+	m.fieldKey = ticket.FieldKey("f2")
+	m.renderDetail(true)
+	m.Update(editDoneMsg{gid: "1", what: "custom field"})
+	m.Update(tasksMsg{tasks: m.tasks})
+	detail := m.details["1"]
+	value := "2026-10-05"
+	detail.CustomFields[1].DisplayValue = &value
+	m.Update(detailMsg{gid: "1", ticket: detail})
+	if !m.showEmpty || m.fieldKey != ticket.FieldKey("f2") || !strings.Contains(ansi.Strip(m.reader.GetContent()), value) {
+		t.Fatal("saving an expanded empty field lost expansion, target, or new value")
 	}
 }
 
@@ -149,6 +268,9 @@ func TestAutoRefreshUpdatesReaderWhenTicketRemoved(t *testing.T) {
 				tasks = nil
 			}
 			m.Update(tasksMsg{tasks: tasks})
+			if !empty {
+				m.Update(detailMsg{gid: sideTask.GID, ticket: ticket.Ticket{Task: sideTask}})
+			}
 			if empty {
 				if m.shownGID != "" || strings.Contains(m.reader.View(), openTask.Name) {
 					t.Fatal("empty list retained the removed ticket")
@@ -218,7 +340,7 @@ func TestAutoRefreshShowsNoModal(t *testing.T) {
 	m.Update(key("r")) // keys wait for the refresh
 	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
 	m.Update(key("r"))
-	if !strings.Contains(ansi.Strip(m.body()), "Loading tasks") {
-		t.Fatal("a manual reload must keep the modal")
+	if strings.Contains(ansi.Strip(m.body()), "Loading tasks") || !m.background {
+		t.Fatal("a manual refresh must keep the view without a loading modal")
 	}
 }

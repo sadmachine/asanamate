@@ -86,6 +86,7 @@ type Model struct {
 	groups          []string       // group label per visible task; nil when ungrouped
 	pinnedCount     int            // leading visible rows in the Pinned section
 	viewingRow      bool           // visible[pinnedCount] is the temporary ticket, under Viewing
+	sortBy          config.Sort    // ordering within groups; empty By keeps Asana order
 	groupBy         string         // list field the list is grouped by; "" for none
 	listW           int            // fitted list pane width; 0 for the default split
 	accentStyle     lipgloss.Style // reader headings
@@ -161,7 +162,7 @@ type Model struct {
 	exitCmd         *exec.Cmd
 }
 
-// New returns a model that starts on My Tasks with its last used grouping and filter.
+// New returns a model that starts on My Tasks with its last used grouping, sort, and filter.
 func New(d Deps) *Model {
 	in := textinput.New()
 	in.Prompt = "/"
@@ -582,6 +583,7 @@ func (m *Model) applyFilter() {
 	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates, m.now())
 	visible = slices.DeleteFunc(visible, func(t asana.Task) bool { return slices.Contains(pins, t.GID) })
 	m.visible, m.groups = groupTasks(visible, m.groupBy, m.rowContext(), m.now())
+	sortTasks(m.visible, m.groups, m.sortBy, m.rowContext())
 	m.pinnedCount, m.viewingRow = len(pinned), false
 	var viewing []asana.Task
 	if t := m.viewing; t != nil && !slices.Contains(pins, t.GID) && !slices.ContainsFunc(visible, func(v asana.Task) bool { return v.GID == t.GID }) {
@@ -903,20 +905,20 @@ func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {
 	return m.reload()
 }
 
-// restoreView applies the viewed project's last used grouping and filter, else
-// the configured group_by and default_filter.
+// restoreView applies the viewed project's last used grouping, sort, and filter, else
+// the configured group_by, sort, and default_filter.
 func (m *Model) restoreView() {
 	v, ok := m.deps.State.View(gidOf(m.viewProject))
 	if !ok {
-		v = state.View{GroupBy: strings.TrimSpace(m.deps.Config.List.GroupBy), Filter: m.deps.Config.DefaultFilter}
+		v = state.View{GroupBy: strings.TrimSpace(m.deps.Config.List.GroupBy), Sort: m.deps.Config.List.Sort, Filter: m.deps.Config.DefaultFilter}
 	}
-	m.groupBy = v.GroupBy
+	m.groupBy, m.sortBy = v.GroupBy, v.Sort
 	m.filterInput.SetValue(v.Filter)
 }
 
-// saveView remembers the viewed project's grouping and filter.
+// saveView remembers the viewed project's grouping, sort, and filter.
 func (m *Model) saveView() {
-	m.deps.State.SetView(gidOf(m.viewProject), state.View{GroupBy: m.groupBy, Filter: m.filterInput.Value()})
+	m.deps.State.SetView(gidOf(m.viewProject), state.View{GroupBy: m.groupBy, Sort: m.sortBy, Filter: m.filterInput.Value()})
 	if err := m.deps.State.Save(); err != nil {
 		m.status = "saving state: " + err.Error()
 	}

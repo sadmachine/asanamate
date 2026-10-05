@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/sadmachine/asanamate/internal/config"
 )
 
 func TestLoadMissingIsEmpty(t *testing.T) {
@@ -22,7 +24,7 @@ func TestSaveRoundTripAndPermissions(t *testing.T) {
 	s, _ := Load(path)
 	s.LinkRepo("123", "/code/web")
 	s.TouchProject("123")
-	s.SavedViews[`Today's "work"`] = View{Filter: `is:open -tag:blocked`, GroupBy: "section"}
+	s.SavedViews[`Today's "work"`] = View{Filter: `is:open -tag:blocked`, GroupBy: "section", Sort: config.Sort{By: "due", Direction: "desc"}}
 	if err := s.Save(); err != nil {
 		t.Fatal(err)
 	}
@@ -119,5 +121,26 @@ func TestOldTimeChoiceStillLoads(t *testing.T) {
 	s.TimeProjects["hrvst"] = map[string][]string{"123": {"old"}}
 	if got := s.RecentFormChoices("time:hrvst", "123", "project_id"); len(got) != 1 || got[0] != "old" {
 		t.Fatalf("legacy choice = %v", got)
+	}
+}
+
+func TestLoadViewWithoutSort(t *testing.T) {
+	path := filepath.Join(t.TempDir(), FileName)
+	if err := os.WriteFile(path, []byte(`[views.project]
+group_by = "section"
+filter = "is:open"
+[saved_views.Work]
+group_by = "due"
+filter = "is:open"
+`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, ok := s.View("project")
+	if !ok || view.GroupBy != "section" || view.Sort != (config.Sort{}) || s.SavedViews["Work"].Sort != (config.Sort{}) {
+		t.Fatalf("legacy state = %+v", s)
 	}
 }

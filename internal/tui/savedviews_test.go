@@ -19,8 +19,9 @@ func TestSavedViewSaveAndRecall(t *testing.T) {
 			m.tasks = []asana.Task{openTask, doneTask}
 			m.filterInput.SetValue("is:done")
 			m.groupBy = "section"
+			m.sortBy = config.Sort{By: "due", Direction: "desc"}
 			m.applyFilter()
-			want := state.View{Filter: "is:done", GroupBy: "section"}
+			want := state.View{Filter: "is:done", GroupBy: "section", Sort: m.sortBy}
 			m.Update(key("ctrl+s"))
 			if m.input == nil {
 				t.Fatal("save key did not open the name input")
@@ -38,6 +39,7 @@ func TestSavedViewSaveAndRecall(t *testing.T) {
 			m.viewProject = &asana.Ref{GID: "other", Name: "Other project"}
 			m.filterInput.SetValue("is:open")
 			m.groupBy = ""
+			m.sortBy = config.Sort{}
 			m.viewing = &openTask
 			m.Update(key("V"))
 			if m.modal == nil {
@@ -46,7 +48,7 @@ func TestSavedViewSaveAndRecall(t *testing.T) {
 			m.modal.input.SetValue("finished")
 			m.modal.refilter()
 			m.Update(key("enter"))
-			if m.modal != nil || m.viewProject.GID != "other" || m.viewing != nil || m.groupBy != want.GroupBy || m.filterInput.Value() != want.Filter {
+			if m.modal != nil || m.viewProject.GID != "other" || m.viewing != nil || m.groupBy != want.GroupBy || m.sortBy != want.Sort || m.filterInput.Value() != want.Filter {
 				t.Fatalf("recall did not apply to current project: project = %v, filter = %q, group = %q", m.viewProject, m.filterInput.Value(), m.groupBy)
 			}
 			if len(m.visible) != 1 || m.visible[0].GID != doneTask.GID {

@@ -12,7 +12,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
-// savedViewItems lists presets by name, with their filter and grouping visible.
+// savedViewItems lists presets by name, with their filter, grouping, and sort visible.
 func (m *Model) savedViewItems() []pickItem {
 	names := make([]string, 0, len(m.deps.State.SavedViews))
 	for name := range m.deps.State.SavedViews {
@@ -24,7 +24,7 @@ func (m *Model) savedViewItems() []pickItem {
 	items := make([]pickItem, 0, len(names))
 	for _, name := range names {
 		v := m.deps.State.SavedViews[name]
-		hint := cmp.Or(v.Filter, "all tickets") + " · group: " + cmp.Or(v.GroupBy, "none")
+		hint := cmp.Or(v.Filter, "all tickets") + " · group: " + cmp.Or(v.GroupBy, "none") + " · sort: " + sortLabel(v.Sort)
 		items = append(items, pickItem{Label: ticket.OneLine(name), Hint: ticket.OneLine(hint), Value: name})
 	}
 	return items
@@ -47,13 +47,14 @@ func (m *Model) openSavedViews() {
 	}, "Saved views · apply to current project", items)
 }
 
-// applySavedView applies the saved view's filter and grouping.
+// applySavedView applies the saved view's filter, grouping, and sort.
 func (m *Model) applySavedView(name string) tea.Cmd {
 	v := m.deps.State.SavedViews[name]
 	m.savedView = name
 	m.filterInput.SetValue(v.Filter)
 	m.viewing = nil
-	return m.pickedGroup(v.GroupBy)
+	m.groupBy, m.sortBy = v.GroupBy, v.Sort
+	return m.listViewChanged()
 }
 
 // cycleSavedView applies the saved view dir steps from the last one applied,
@@ -76,7 +77,7 @@ func (m *Model) cycleSavedView(dir int) tea.Cmd {
 
 // openSaveView captures a snapshot; subsequent filter edits do not change it.
 func (m *Model) openSaveView() {
-	v := state.View{Filter: m.filterInput.Value(), GroupBy: m.groupBy}
+	v := state.View{Filter: m.filterInput.Value(), GroupBy: m.groupBy, Sort: m.sortBy}
 	b := newInputBox("Save current view", "view name")
 	b.onSubmit = func(name string) tea.Cmd {
 		name = strings.TrimSpace(name)

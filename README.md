@@ -46,12 +46,12 @@ bordered panels; the focused one has an accent-colored border. The list widens
 to fit full ticket titles, but leaves the reader at least 80 columns and cuts
 titles that no longer fit. At 160 columns
 and wider, a views panel on the left lists My Tasks, recent projects, the
-groupings, and running agents: press `0`, move with `j`/`k`, and open one
+groupings, sorting, and running agents: press `0`, move with `j`/`k`, and open one
 with `enter`. In a reader at least 90 columns wide, the cards view puts the
 agents and subtasks beside the details card.
 
 The bottom bar shows the mode (`NORMAL`, `READ`, `EDIT`, `FILTER`, or
-`VIEWS`), the view, filter, grouping, ticket count, and agents, with the keys
+`VIEWS`), the view, filter, grouping, sorting, ticket count, and agents, with the keys
 for what has focus on the right. Messages take the keys' place until the next
 key press.
 
@@ -82,11 +82,12 @@ key press.
 | `t` | log completed time for the selected ticket (only when time tracking is configured) |
 | `f` | attachments: view images inline (`j`/`k` step between them) or open in the browser |
 | `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) |
-| `=` | fit the list pane to its content (also on project, grouping, and filter changes) |
+| `B` | sort by field and direction, or restore Asana order |
+| `=` | fit the list pane to its content (also on project, grouping, sorting, and filter changes) |
 | `v` | switch the reader between the cards and markdown views |
 | `V` | recall or manage saved views |
 | `]` / `[` | apply the next/previous saved view, in name order |
-| `ctrl+s` | save the current filter and grouping under a name |
+| `ctrl+s` | save the current filter, grouping, and sorting under a name |
 | `s` | settings: separators, header spacing, reader view, and auto-update interval; changes persist between sessions |
 | `o` | open the ticket in the browser |
 | `c` | copy the selected ticket's link to the clipboard (requires terminal OSC 52 support) |
@@ -125,10 +126,10 @@ with `default_filter`.
 ### Saved views
 
 Press `ctrl+s`, type a friendly name, then press `ctrl+s` again to save the
-current filter and grouping. Press `V` to search saved views by name and press
+current filter, grouping, and sorting. Press `V` to search saved views by name and press
 `enter` to apply one to the current project or My Tasks. Saved views are reusable
 across projects and persist between sessions; they do not switch projects.
-Changing a filter or grouping after recall leaves the saved view unchanged.
+Changing a filter, grouping, or sorting after recall leaves the saved view unchanged.
 
 Save under the same name to replace a view, with confirmation. The `V` picker
 also offers saving and deletion; deletion requires confirmation. These keys
@@ -179,6 +180,8 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `reduced_motion` | OS setting | `true` shows static agent symbols instead of the spinner |
 | `list.separator` | `false` | frame each ticket with lines above and below; neighbours share one; the `s` settings menu toggles it and the choice persists |
 | `list.group_by` | `""` (ungrouped) | starting grouping: any `list.fields` name; `b` picks another |
+| `list.sort.by` | `""` (Asana order) | starting sort: any list field or `title`; `B` picks a field and direction; applies within groups or across an ungrouped list |
+| `list.sort.direction` | `"asc"` | `asc` (earliest dates / A–Z) or `desc` (latest dates / Z–A); missing values always last |
 | `list.header.style` | `"rule"` | group headers: `rule` (`── Label (n) ───`) or `bar` (reversed bar) |
 | `list.header.spacing` | `false` | `true` adds a blank line above and below each group header; the `s` settings menu toggles it and the choice persists |
 | `list.header.color` | `accent_color` | group header color, same format as `accent_color` |
@@ -203,6 +206,14 @@ a value for it.
 each group. Groups keep Asana's order (first seen), with tickets missing
 the value last. `due` groups into Overdue, Today, Tomorrow, Next 7 days, Later,
 and No due date.
+
+`list.sort.by` sorts tickets within each group without changing group order,
+or the whole list when ungrouped. Press `B` to pick a field and direction,
+or choose one from the wide terminal's Sort by section. Due dates sort
+chronologically; other fields sort alphabetically, ignoring case. Equal
+values keep Asana order. Missing or invalid due dates sort last in both
+directions. Pinned tickets keep their own order at the top. Sorting persists
+per project and is included in saved views.
 
 Custom fields are separate Asana objects, so two can share a name (for example
 one per project). When that happens, asanamate uses the one attached to the

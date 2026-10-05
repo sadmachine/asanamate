@@ -74,6 +74,35 @@ func TestHTMLToMarkdownAutolinksURLText(t *testing.T) {
 	}
 }
 
+func TestHTMLToMarkdownUserMentions(t *testing.T) {
+	for _, tt := range []struct {
+		name, html, want string
+	}{
+		{"user mention", `<a data-asana-type="user" data-asana-gid="123" href="https://app.asana.com/0/123/list">@Austin Fishbaugh</a>`, "@Austin Fishbaugh"},
+		{"formatted name", `<a data-asana-type="user" href="https://app.asana.com/0/123/list"><strong>@Austin &amp; Sam</strong></a>`, "**@Austin & Sam**"},
+		{"ordinary profile link", `<a href="https://app.asana.com/0/123/list">@Austin Fishbaugh</a>`, "[@Austin Fishbaugh](https://app.asana.com/0/123/list)"},
+		{"task mention", `<a data-asana-type="task" data-asana-gid="123" href="https://app.asana.com/0/0/123">Task</a>`, "[Task](https://app.asana.com/0/0/123)"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HTMLToMarkdown("<body>" + tt.html + "</body>"); got != tt.want {
+				t.Fatalf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+
+	// Both reader views share the converter, including the inline-image path.
+	body := `<body>Hello <a data-asana-type="user" href="https://app.asana.com/0/123/list">@Austin Fishbaugh</a>, see <a href="https://example.com">docs</a>.</body>`
+	want := "Hello @Austin Fishbaugh, see [docs](https://example.com)."
+	tk := sample()
+	tk.Comments[0].HTMLText = body
+	if md := tk.Markdown(); !strings.Contains(md, want) || strings.Contains(md, "https://app.asana.com/0/123/list") {
+		t.Fatalf("comment Markdown = %q", md)
+	}
+	if parts := SplitImages(body); len(parts) != 1 || parts[0].Markdown != want {
+		t.Fatalf("comment parts = %+v", parts)
+	}
+}
+
 func TestHTMLToMarkdownCodeBlocks(t *testing.T) {
 	for _, tt := range []struct {
 		name, html, want string

@@ -193,14 +193,14 @@ func HTMLToMarkdown(html string) string {
 
 var markdownConverter = newMarkdownConverter()
 
-// newMarkdownConverter returns the CommonMark converter, rendering a link
-// whose text is its URL as an autolink so it shows the URL once.
+// newMarkdownConverter returns the CommonMark converter, rendering user
+// mentions as text and a link whose text is its URL as an autolink.
 func newMarkdownConverter() *converter.Converter {
 	conv := converter.NewConverter(converter.WithPlugins(
 		base.NewBasePlugin(),
 		commonmark.NewCommonmarkPlugin(),
 	))
-	conv.Register.RendererFor("a", converter.TagTypeInline, renderAutolink, converter.PriorityEarly)
+	conv.Register.RendererFor("a", converter.TagTypeInline, renderLink, converter.PriorityEarly)
 	conv.Register.PreRenderer(normalizeCodeBlocks, converter.PriorityEarly)
 	return conv
 }
@@ -255,7 +255,11 @@ func codeBoundary(ctx converter.Context, n *html.Node, before bool) bool {
 	return true
 }
 
-func renderAutolink(_ converter.Context, w converter.Writer, n *html.Node) converter.RenderStatus {
+func renderLink(ctx converter.Context, w converter.Writer, n *html.Node) converter.RenderStatus {
+	if dom.GetAttributeOr(n, "data-asana-type", "") == "user" {
+		ctx.RenderChildNodes(ctx, w, n)
+		return converter.RenderSuccess
+	}
 	href := strings.TrimSpace(dom.GetAttributeOr(n, "href", ""))
 	u, err := url.Parse(href)
 	if err != nil || u.Scheme == "" || strings.ContainsAny(href, " <>") ||

@@ -92,6 +92,7 @@ type Model struct {
 	accentStyle     lipgloss.Style // reader headings
 	headerStyle     lipgloss.Style // group headers
 	pinnedStyle     lipgloss.Style // Pinned header
+	viewingStyle    lipgloss.Style // Viewing header
 	markerStyle     lipgloss.Style // selected ticket marker
 	cursor          int
 	cols            []int            // width of each list field column; 0 when empty
@@ -177,6 +178,7 @@ func New(d Deps) *Model {
 		accentStyle:   colorStyle(d.Config.AccentColor),
 		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
 		pinnedStyle:   colorStyle(cmp.Or(d.Config.List.Pinned.Color, d.Config.AccentColor)),
+		viewingStyle:  colorStyle(cmp.Or(d.Config.List.Viewing.Color, d.Config.AccentColor)),
 		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),
 		renderers:     map[rendererKey]*markdownRenderer{},
 		details:       map[string]ticket.Ticket{},
@@ -1212,7 +1214,7 @@ func (m *Model) listView(width, height int) string {
 				lines = append(lines, "")
 			}
 			if label, n := m.retainedSection(i); label != "" {
-				style := m.headerStyle
+				style := m.viewingStyle
 				if i < m.pinnedCount {
 					style = m.pinnedStyle
 				}

@@ -23,8 +23,9 @@ import (
 const sideBySideW = 90
 
 // renderCards renders t as the reading pane's cards view: the name, a
-// summary line, and the local repo line, a details card with the agents and subtasks beside it (or
-// below, when narrow), titled sections, and the comments as a timeline, all
+// summary line, local repo and time lines, a details card with the agents and
+// subtasks beside it (or below, when narrow), titled sections, and the comments
+// as a timeline, all
 // width columns wide. It records the line of each editable row in
 // m.fieldLines, and the last line of each multi-line one in m.fieldEnds.
 func (m *Model) renderCards(t ticket.Ticket, width int) string {
@@ -34,6 +35,10 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	}
 	if line := m.repoLine(t.Task, width); line != "" {
 		head += "\n" + line
+	}
+	if value := m.timeSummaryValue(t.GID); value != "" {
+		line := m.sym.icon(iconClock) + "Time tracked · " + value
+		head += "\n" + dimStyle.Render(ansi.Truncate(line, width, "…"))
 	}
 	m.fieldLines, m.fieldEnds = map[string]int{}, map[string]int{}
 	fields := m.fieldTargets(t)
@@ -273,9 +278,6 @@ func detailMeta(t ticket.Ticket) []ticket.Field {
 // top is the reader line of its first row, for m.fieldLines.
 func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
 	meta, custom, empty := detailMeta(t), t.FieldValues(), t.EmptyFields()
-	if value := m.timeSummaryValue(t.GID); value != "" {
-		meta = append(meta, ticket.Field{Label: "Time tracked", Value: value})
-	}
 	if m.showEmpty {
 		custom, empty = append(custom, empty...), nil
 	}

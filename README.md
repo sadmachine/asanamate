@@ -260,9 +260,10 @@ are remembered per Asana project after a successful log; hours starts empty.
 Harvest notes contain ticket title; external reference links to Asana ticket
 and chosen Asana project.
 
-The ticket's Details card shows **Time tracked**; the Markdown reader shows
-an equivalent summary. This is all-time, unrounded time from stopped entries
-linked to that exact ticket, across projects and visible to your authenticated
+The ticket's header shows **Time tracked** with a clock icon below the local
+repo information; the Markdown reader shows an equivalent summary. This is
+all-time, unrounded time from stopped entries linked to that exact ticket,
+across projects and visible to your authenticated
 account. Harvest permissions may limit this to your own entries. Running timers
 and older entries without the ticket's external reference are excluded. The
 summary refreshes with ticket details and after a successful log. Loading,

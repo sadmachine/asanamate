@@ -2,6 +2,9 @@ package tui
 
 import (
 	"context"
+	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -31,6 +34,8 @@ func scheduleSpinner() tea.Cmd {
 type tasksMsg struct {
 	project *asana.Ref
 	tasks   []asana.Task
+	pins    []asana.Task // explicitly pinned tasks absent from the normal list
+	warning string
 	fields  map[string]bool // the project's custom field gids, when known
 	err     error
 }
@@ -124,7 +129,8 @@ func request(fn func(ctx context.Context) tea.Msg) tea.Cmd {
 	}
 }
 
-func loadTasks(c *asana.Client, workspace string, project *asana.Ref) tea.Cmd {
+func loadTasks(c *asana.Client, workspace string, project *asana.Ref, pins []string) tea.Cmd {
+	pins = slices.Clone(pins)
 	return request(func(ctx context.Context) tea.Msg {
 		msg := tasksMsg{project: project}
 		var fields map[string]bool
@@ -140,6 +146,21 @@ func loadTasks(c *asana.Client, workspace string, project *asana.Ref) tea.Cmd {
 		<-done
 		if msg.err == nil {
 			msg.fields = fields
+			var failed []string
+			for _, gid := range pins {
+				if slices.ContainsFunc(msg.tasks, func(t asana.Task) bool { return t.GID == gid }) {
+					continue
+				}
+				t, err := c.Task(ctx, gid)
+				if err != nil {
+					failed = append(failed, fmt.Sprintf("%s: %v", gid, err))
+					continue
+				}
+				msg.pins = append(msg.pins, t)
+			}
+			if len(failed) > 0 {
+				msg.warning = "loading pinned tickets: " + strings.Join(failed, "; ")
+			}
 		}
 		return msg
 	})

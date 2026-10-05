@@ -1,5 +1,5 @@
 // Package state stores data asanamate learns while running: repo links, recent
-// projects and tickets, saved views, and each project's last list view.
+// projects and tickets, explicit pins, saved views, and each project's last list view.
 package state
 
 import (
@@ -37,6 +37,8 @@ type State struct {
 	RecentProjects []string `toml:"recent_projects"`
 	// RecentTickets holds the tickets last focused in the reader, most recent first.
 	RecentTickets []RecentTicket `toml:"recent_tickets"`
+	// PinnedTasks maps a project gid ("" for My Tasks) to explicitly pinned task gids.
+	PinnedTasks map[string][]string `toml:"pinned_tasks"`
 	// Views maps a project gid ("" for My Tasks) to the list view last used there.
 	Views map[string]View `toml:"views"`
 	// SavedViews maps a user-friendly name to a reusable grouping and filter.

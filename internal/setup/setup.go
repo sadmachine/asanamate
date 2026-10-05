@@ -196,8 +196,8 @@ spacing = false
 # color = "4"
 
 [list.pinned]
-# Header color of the Pinned section, which tops the list with a ticket you
-# edited or opened that the filter would hide; empty uses accent_color.
+# Header color of the Pinned section for tickets manually pinned with P;
+# empty uses accent_color.
 color = "208"
 
 [list.selection]

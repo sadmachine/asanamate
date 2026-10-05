@@ -38,7 +38,7 @@ func TestSavedViewSaveAndRecall(t *testing.T) {
 			m.viewProject = &asana.Ref{GID: "other", Name: "Other project"}
 			m.filterInput.SetValue("is:open")
 			m.groupBy = ""
-			m.pinned = &openTask
+			m.viewing = &openTask
 			m.Update(key("V"))
 			if m.modal == nil {
 				t.Fatal("recall key did not open saved views")
@@ -46,7 +46,7 @@ func TestSavedViewSaveAndRecall(t *testing.T) {
 			m.modal.input.SetValue("finished")
 			m.modal.refilter()
 			m.Update(key("enter"))
-			if m.modal != nil || m.viewProject.GID != "other" || m.pinned != nil || m.groupBy != want.GroupBy || m.filterInput.Value() != want.Filter {
+			if m.modal != nil || m.viewProject.GID != "other" || m.viewing != nil || m.groupBy != want.GroupBy || m.filterInput.Value() != want.Filter {
 				t.Fatalf("recall did not apply to current project: project = %v, filter = %q, group = %q", m.viewProject, m.filterInput.Value(), m.groupBy)
 			}
 			if len(m.visible) != 1 || m.visible[0].GID != doneTask.GID {

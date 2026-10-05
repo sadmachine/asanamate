@@ -117,6 +117,7 @@ func keyBindings() []binding {
 		}},
 		{keys: []string{"H"}, desc: "ticket history", group: "Move", splitOnly: true, run: do((*Model).openHistory)},
 		{keys: []string{"space", "a"}, label: "space/a", desc: "run action", hint: "act", group: "Ticket", run: menu(func(m *Model) func() { return m.openActionMenu })},
+		{keys: []string{"P"}, desc: "pin / unpin", group: "Ticket", run: (*Model).togglePin},
 		{keys: []string{"e"}, desc: "edit", hint: "edit", group: "Ticket", run: menu(func(m *Model) func() { return m.openEditMenu })},
 		{keys: []string{"C"}, desc: "add comment", group: "Ticket", run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			return m.requestMenu(func() tea.Cmd { return m.openField(commentKey) })

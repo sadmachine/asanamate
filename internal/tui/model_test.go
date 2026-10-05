@@ -177,7 +177,7 @@ func TestPickingHistoryShowsTicket(t *testing.T) {
 	st.TouchTicket(state.RecentTicket{GID: "3", Name: "Fix footer"})
 	st.TouchTicket(state.RecentTicket{GID: "9", Name: "Elsewhere", Project: "Other"})
 
-	// A ticket the view never had loads, then is pinned and focused.
+	// A ticket the view never had loads, then is kept visible and focused.
 	m.Update(key("H"))
 	if m.modal == nil || m.modal.title != "Ticket history" {
 		t.Fatalf("modal = %+v", m.modal)
@@ -361,15 +361,15 @@ func TestEditedTicketStaysSelectedAfterReloadDropsIt(t *testing.T) {
 	m.selectionChanged()
 	m.Update(editDoneMsg{gid: sideTask.GID, what: "assign"})
 	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
-	if got, _ := m.selected(); got.GID != sideTask.GID || !m.pinnedRow || m.cursor != 0 {
-		t.Fatalf("selected = %q, cursor = %d, pinnedRow = %v; want the edited ticket on top", got.GID, m.cursor, m.pinnedRow)
+	if got, _ := m.selected(); got.GID != sideTask.GID || !m.viewingRow || m.cursor != 0 {
+		t.Fatalf("selected = %q, cursor = %d, viewingRow = %v; want the edited ticket on top", got.GID, m.cursor, m.viewingRow)
 	}
-	if !slices.Equal(m.groups, []string{pinnedLabel, ungroupedLabel}) {
-		t.Fatalf("groups = %q, want the pin apart from the ungrouped tickets", m.groups)
+	if !slices.Equal(m.groups, []string{viewingLabel, ungroupedLabel}) {
+		t.Fatalf("groups = %q, want Viewing apart from the ungrouped tickets", m.groups)
 	}
 	m.moveTo(1)
 	m.selectionChanged()
-	if got, _ := m.selected(); got.GID != openTask.GID || len(m.visible) != 1 || m.pinnedRow || m.groups != nil {
-		t.Fatalf("selected = %q, visible = %+v, groups = %q; want the pin dropped", got.GID, m.visible, m.groups)
+	if got, _ := m.selected(); got.GID != openTask.GID || len(m.visible) != 1 || m.viewingRow || m.groups != nil {
+		t.Fatalf("selected = %q, visible = %+v, groups = %q; want Viewing dropped", got.GID, m.visible, m.groups)
 	}
 }

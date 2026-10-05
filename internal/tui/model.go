@@ -81,9 +81,11 @@ type Model struct {
 
 	viewProject     *asana.Ref
 	tasks           []asana.Task
+	pinExtras       []asana.Task // pinned tickets absent from the normal list
 	visible         []asana.Task
 	groups          []string       // group label per visible task; nil when ungrouped
-	pinnedRow       bool           // visible[0] is the pinned ticket, under the Pinned header
+	pinnedCount     int            // leading visible rows in the Pinned section
+	viewingRow      bool           // visible[pinnedCount] is the temporary ticket, under Viewing
 	groupBy         string         // list field the list is grouped by; "" for none
 	listW           int            // fitted list pane width; 0 for the default split
 	accentStyle     lipgloss.Style // reader headings
@@ -120,7 +122,7 @@ type Model struct {
 	viewImages  []asana.Attachment      // images the attachment viewer steps through
 	viewIndex   int                     // viewImages index of the image in the viewer
 	shownGID    string
-	pinned      *asana.Task    // edited ticket kept listed after a reload drops it, until the selection moves
+	viewing     *asana.Task    // edited ticket kept listed after a reload drops it, until the selection moves
 	shownAgents string         // agents section rendered for shownGID
 	fieldKey    string         // selected cards view target; "" for none
 	showEmpty   bool           // the cards view lists empty custom fields; resets per ticket
@@ -198,7 +200,7 @@ func colorStyle(color string) lipgloss.Style {
 func (m *Model) ExitCommand() *exec.Cmd { return m.exitCmd }
 
 func (m *Model) Init() tea.Cmd {
-	cmd := tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject), m.startSpinner(), m.scheduleRefresh())
+	cmd := tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks()), m.startSpinner(), m.scheduleRefresh())
 	if m.deps.Config.AgentsEnabled() {
 		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents, m.deps.StateDir))
 	}
@@ -233,14 +235,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.projectFields[msg.project.GID] = msg.fields
 		}
 		prev, _ := m.selected()
-		m.tasks, m.linked = msg.tasks, nil
-		m.refreshPinned(msg.tasks...)
+		m.tasks, m.pinExtras, m.linked = msg.tasks, msg.pins, nil
+		m.refreshViewing(msg.tasks...)
+		m.refreshViewing(msg.pins...)
 		m.applyFilter()
 		// A reload that drops the selected ticket starts from the top.
 		if t, _ := m.selected(); t.GID != prev.GID {
 			m.cursor = 0
 		}
 		m.fitList()
+		if msg.warning != "" {
+			m.status = msg.warning
+		}
 		return m, m.selectionChanged()
 	case detailTickMsg:
 		if t, ok := m.selected(); ok && t.GID == msg.gid {
@@ -264,7 +270,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.details[msg.gid], m.linked = msg.ticket, nil
-		if m.refreshPinned(msg.ticket.Task) {
+		if m.refreshRetained(msg.ticket.Task) {
 			m.applyFilter()
 		}
 		images := m.loadInlineImages(msg.ticket)
@@ -366,7 +372,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status = msg.what + ": done"
 		// Keep the edited ticket shown even if the reload drops it from the view.
 		if t, ok := m.selected(); ok && t.GID == msg.gid {
-			m.pinned = &t
+			m.viewing = &t
 		}
 		delete(m.details, msg.gid)
 		if m.shownGID == msg.gid {
@@ -535,7 +541,7 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
 // reload refetches the tasks, keeping the current view until they land.
 func (m *Model) reload() tea.Cmd {
 	m.loading, m.background = true, false
-	return tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject), m.startSpinner())
+	return tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks()), m.startSpinner())
 }
 
 // applyFilter recomputes the visible tasks and their groups, keeping the
@@ -545,18 +551,35 @@ func (m *Model) applyFilter() {
 	if prev, ok := m.selected(); ok {
 		prevGID = prev.GID
 	}
+	pins := m.pinnedTasks()
+	var pinned []asana.Task
+	for _, gid := range pins {
+		for _, tasks := range [][]asana.Task{m.tasks, m.pinExtras} {
+			if i := slices.IndexFunc(tasks, func(t asana.Task) bool { return t.GID == gid }); i >= 0 {
+				pinned = append(pinned, tasks[i])
+				break
+			}
+		}
+	}
 	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates, m.now())
+	visible = slices.DeleteFunc(visible, func(t asana.Task) bool { return slices.Contains(pins, t.GID) })
 	m.visible, m.groups = groupTasks(visible, m.groupBy, m.rowContext(), m.now())
-	m.pinnedRow = false
-	if p := m.pinned; p != nil && !slices.ContainsFunc(visible, func(t asana.Task) bool { return t.GID == p.GID }) {
-		// A pinned ticket the filter drops tops the list in its own section,
-		// so ungrouped tickets get a header to set them apart.
+	m.pinnedCount, m.viewingRow = len(pinned), false
+	var viewing []asana.Task
+	if t := m.viewing; t != nil && !slices.Contains(pins, t.GID) && !slices.ContainsFunc(visible, func(v asana.Task) bool { return v.GID == t.GID }) {
+		viewing = []asana.Task{*t}
+		m.viewingRow = true
+	}
+	if len(pinned)+len(viewing) > 0 {
 		if m.groups == nil {
 			m.groups = slices.Repeat([]string{ungroupedLabel}, len(m.visible))
 		}
-		m.visible = append([]asana.Task{*p}, m.visible...)
-		m.groups = append([]string{pinnedLabel}, m.groups...)
-		m.pinnedRow = true
+		labels := slices.Repeat([]string{pinnedLabel}, len(pinned))
+		if m.viewingRow {
+			labels = append(labels, viewingLabel)
+		}
+		m.visible = append(append(pinned, viewing...), m.visible...)
+		m.groups = append(labels, m.groups...)
 	}
 	m.measureColumns()
 	if prevGID != "" {
@@ -570,15 +593,15 @@ func (m *Model) applyFilter() {
 	m.moveTo(m.cursor)
 }
 
-// refreshPinned replaces the pinned ticket with its copy among tasks, if any,
+// refreshViewing replaces the viewed ticket with its copy among tasks, if any,
 // and reports whether it did.
-func (m *Model) refreshPinned(tasks ...asana.Task) bool {
-	if m.pinned == nil {
+func (m *Model) refreshViewing(tasks ...asana.Task) bool {
+	if m.viewing == nil {
 		return false
 	}
 	for _, t := range tasks {
-		if t.GID == m.pinned.GID {
-			m.pinned = &t
+		if t.GID == m.viewing.GID {
+			m.viewing = &t
 			return true
 		}
 	}
@@ -628,9 +651,9 @@ func (m *Model) selectedDetail() (ticket.Ticket, bool) {
 
 func (m *Model) selectionChanged() tea.Cmd {
 	t, ok := m.selected()
-	if m.pinned != nil && (!ok || t.GID != m.pinned.GID) {
-		// Moving off the pinned ticket drops it unless the view still lists it.
-		m.pinned = nil
+	if m.viewing != nil && (!ok || t.GID != m.viewing.GID) {
+		// Moving off the viewed ticket drops it unless the view still lists it.
+		m.viewing = nil
 		m.applyFilter()
 		t, ok = m.selected()
 	}
@@ -825,7 +848,7 @@ func (m *Model) openProjectPicker() {
 
 func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {
 	m.modal = nil
-	m.viewProject, m.linked, m.pinned = ref, nil, nil
+	m.viewProject, m.linked, m.viewing = ref, nil, nil
 	m.restoreView()
 	if ref != nil {
 		m.deps.State.TouchProject(ref.GID)
@@ -1082,7 +1105,7 @@ func (m *Model) listView(width, height int) string {
 		spacing = 1
 	}
 	header := func(i, start int) bool {
-		return m.groups != nil && (i == start || m.groups[i] != m.groups[i-1] || m.pinnedRow && i == 1)
+		return m.groups != nil && (i == start || m.groups[i] != m.groups[i-1] || i == m.pinnedCount || m.viewingRow && i == m.pinnedCount+1)
 	}
 	above := func(i, start int) int {
 		if i == start {
@@ -1132,8 +1155,12 @@ func (m *Model) listView(width, height int) string {
 			for range above(i, start) {
 				lines = append(lines, "")
 			}
-			if m.pinnedRow && i == 0 {
-				lines = append(lines, m.groupHeader(m.pinnedStyle, pinnedLabel, 1, width))
+			if label, n := m.retainedSection(i); label != "" {
+				style := m.headerStyle
+				if i < m.pinnedCount {
+					style = m.pinnedStyle
+				}
+				lines = append(lines, m.groupHeader(style, label, n, width))
 			} else {
 				lines = append(lines, m.groupHeader(m.headerStyle, m.groups[i], counts[m.groups[i]], width))
 			}
@@ -1177,11 +1204,11 @@ func (m *Model) emptyView(width, height int) string {
 }
 
 // groupCounts returns the number of visible tickets per group label, leaving
-// out the pinned row so a group sharing its label keeps its own count.
+// out retained rows so a group sharing their label keeps its own count.
 func (m *Model) groupCounts() map[string]int {
 	counts := map[string]int{}
 	for i, g := range m.groups {
-		if !m.pinnedRow || i > 0 {
+		if label, _ := m.retainedSection(i); label == "" {
 			counts[g]++
 		}
 	}
@@ -1317,8 +1344,11 @@ func (m *Model) measureColumns() {
 func (m *Model) fitList() {
 	gutter := ansi.StringWidth(m.marker())
 	w := 0
-	if m.pinnedRow {
-		w = groupHeaderWidth(pinnedLabel, 1)
+	if m.viewingRow {
+		w = groupHeaderWidth(viewingLabel, 1)
+	}
+	if m.pinnedCount > 0 {
+		w = max(w, groupHeaderWidth(pinnedLabel, m.pinnedCount))
 	}
 	for label, n := range m.groupCounts() {
 		w = max(w, groupHeaderWidth(label, n))

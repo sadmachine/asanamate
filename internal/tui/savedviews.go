@@ -52,7 +52,7 @@ func (m *Model) applySavedView(name string) tea.Cmd {
 	v := m.deps.State.SavedViews[name]
 	m.savedView = name
 	m.filterInput.SetValue(v.Filter)
-	m.pinned = nil
+	m.viewing = nil
 	return m.pickedGroup(v.GroupBy)
 }
 

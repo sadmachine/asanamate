@@ -2,8 +2,10 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -114,15 +116,15 @@ func (m *Model) submitTimeForm(values map[string]string) tea.Cmd {
 	})
 }
 
-func (m *Model) finishTime(msg timeDoneMsg) {
+func (m *Model) finishTime(msg timeDoneMsg) tea.Cmd {
 	if m.timeEntry != msg.entry {
-		return
+		return nil
 	}
 	if msg.err != nil {
 		m.form.busy = false
 		m.form.err = msg.err.Error()
 		m.status = "logging time: " + msg.err.Error()
-		return
+		return nil
 	}
 	entry := m.timeEntry
 	owner := "time:" + m.deps.Config.TimeTracking.ID
@@ -137,4 +139,86 @@ func (m *Model) finishTime(msg timeDoneMsg) {
 		m.status = "time logged"
 	}
 	m.form, m.timeEntry = nil, nil
+	cmd := m.loadTimeSummary(entry.ticket.Task)
+	if t, ok := m.selected(); ok && t.GID == entry.ticket.GID {
+		m.renderDetail(true)
+	}
+	return cmd
+}
+
+// timeSummaryState stays separate from Asana details so provider failures do
+// not prevent ticket loading. Each request owns one generation per ticket.
+type timeSummaryState struct {
+	seq     uint64
+	loading bool
+	summary timetracking.Summary
+	err     error
+}
+
+type timeSummaryMsg struct {
+	gid     string
+	seq     uint64
+	summary timetracking.Summary
+	err     error
+}
+
+func (m *Model) loadTimeSummary(t asana.Task) tea.Cmd {
+	if !m.deps.Config.TimeTrackingEnabled() {
+		return nil
+	}
+	if m.timeSummaries == nil {
+		m.timeSummaries = map[string]timeSummaryState{}
+	}
+	m.timeSummarySeq++
+	seq := m.timeSummarySeq
+	m.timeSummaries[t.GID] = timeSummaryState{seq: seq, loading: true}
+	provider := timetracking.Provider{Command: m.deps.Config.TimeTracking.Command}
+	return request(func(ctx context.Context) tea.Msg {
+		summary, err := provider.Summary(ctx, timetracking.Asana{TaskGID: t.GID, URL: t.PermalinkURL})
+		return timeSummaryMsg{gid: t.GID, seq: seq, summary: summary, err: err}
+	})
+}
+
+func (m *Model) gotTimeSummary(msg timeSummaryMsg) {
+	state, ok := m.timeSummaries[msg.gid]
+	if !ok || state.seq != msg.seq {
+		return
+	}
+	state.loading, state.summary, state.err = false, msg.summary, msg.err
+	m.timeSummaries[msg.gid] = state
+	if t, ok := m.selected(); ok && t.GID == msg.gid {
+		m.renderDetail(true)
+	}
+}
+
+func (m *Model) timeSummaryValue(gid string) string {
+	if !m.deps.Config.TimeTrackingEnabled() {
+		return ""
+	}
+	state, ok := m.timeSummaries[gid]
+	value := "loading…"
+	switch {
+	case !ok || state.loading:
+	case errors.Is(state.err, timetracking.ErrUnsupported):
+		value = "unsupported"
+	case state.err != nil:
+		value = "unavailable"
+	default:
+		seconds := state.summary.TotalSeconds
+		parts := []string{}
+		if seconds >= 3600 {
+			parts = append(parts, fmt.Sprintf("%dh", seconds/3600))
+		}
+		if minutes := seconds / 60 % 60; minutes > 0 {
+			parts = append(parts, fmt.Sprintf("%dm", minutes))
+		}
+		if remainder := seconds % 60; remainder > 0 {
+			parts = append(parts, fmt.Sprintf("%ds", remainder))
+		}
+		if len(parts) == 0 {
+			parts = append(parts, "0m")
+		}
+		value = strings.Join(parts, " ") + " (visible entries)"
+	}
+	return value + " · " + ticket.OneLine(m.deps.Config.TimeTracking.ID)
 }

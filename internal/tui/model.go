@@ -150,6 +150,8 @@ type Model struct {
 	notices         []string   // messages that block input until dismissed
 	run             *pendingRun
 	edit            *pendingEdit
+	timeSummaries   map[string]timeSummaryState
+	timeSummarySeq  uint64
 	timeEntry       *pendingTime
 	lastAction      int               // index of the last picked action; -1 for none
 	users           []asana.Ref       // workspace users, loaded on first assign
@@ -288,7 +290,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.refreshRetained(msg.ticket.Task) {
 			m.applyFilter()
 		}
-		images := m.loadInlineImages(msg.ticket)
+		images := tea.Batch(m.loadInlineImages(msg.ticket), m.loadTimeSummary(msg.ticket.Task))
 		if m.openGID == msg.gid {
 			m.openGID, m.status = "", ""
 			return m, tea.Batch(images, m.showTicket(msg.ticket.Task))
@@ -371,7 +373,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case timeFormMsg:
 		m.gotTimeForm(msg)
 	case timeDoneMsg:
-		m.finishTime(msg)
+		return m, m.finishTime(msg)
+	case timeSummaryMsg:
+		m.gotTimeSummary(msg)
 	case sectionsMsg:
 		m.openSectionPicker(msg)
 	case usersMsg:
@@ -690,7 +694,11 @@ func (m *Model) selectionChanged() tea.Cmd {
 	m.fieldKey, m.showEmpty = "", false
 	if _, cached := m.details[t.GID]; cached {
 		m.renderDetail(false)
-		return m.loadInlineImages(m.details[t.GID])
+		images := m.loadInlineImages(m.details[t.GID])
+		if _, cached := m.timeSummaries[t.GID]; !cached {
+			return tea.Batch(images, m.loadTimeSummary(m.details[t.GID].Task))
+		}
+		return images
 	}
 	m.shownGID = ""
 	m.reader.SetContent(dimStyle.Render("Loading " + ticket.Clean(t.Name) + "…"))
@@ -730,6 +738,9 @@ func (m *Model) renderDetail(keepScroll bool) {
 	var content string
 	if m.readerView == config.ViewMarkdown {
 		extra := section
+		if value := m.timeSummaryValue(t.GID); value != "" {
+			extra += "\n## Time tracked\n\n" + value + "\n"
+		}
 		if path, own := m.effectiveRepo(t.Task); path != "" {
 			repo := "`" + path + "`"
 			if own {

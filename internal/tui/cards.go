@@ -273,6 +273,9 @@ func detailMeta(t ticket.Ticket) []ticket.Field {
 // top is the reader line of its first row, for m.fieldLines.
 func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
 	meta, custom, empty := detailMeta(t), t.FieldValues(), t.EmptyFields()
+	if value := m.timeSummaryValue(t.GID); value != "" {
+		meta = append(meta, ticket.Field{Label: "Time tracked", Value: value})
+	}
 	if m.showEmpty {
 		custom, empty = append(custom, empty...), nil
 	}

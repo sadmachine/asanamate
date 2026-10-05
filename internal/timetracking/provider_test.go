@@ -2,6 +2,7 @@ package timetracking
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,5 +55,42 @@ func TestProviderRejectsBadDataAndFailures(t *testing.T) {
 	spec := form.Spec{Fields: []form.Field{{ID: "hours", Label: "Hours", Type: form.Hours}}}
 	if err := provider.Log(context.Background(), spec, map[string]string{"hours": "0"}, Asana{}); err == nil {
 		t.Fatal("zero hours accepted")
+	}
+}
+
+func TestSummaryProtocol(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "request.json")
+	provider := Provider{Command: "cat > '" + path + "'; printf '%s' '{\"total_seconds\":13500}'"}
+	summary, err := provider.Summary(context.Background(), Asana{TaskGID: "42", URL: "https://app.asana.com/0/1/42"})
+	if err != nil || summary.TotalSeconds != 13500 {
+		t.Fatalf("summary = %+v, err = %v", summary, err)
+	}
+	request, _ := os.ReadFile(path)
+	if !strings.Contains(string(request), `"operation":"summary"`) || !strings.Contains(string(request), `"task_gid":"42"`) || strings.Contains(string(request), `"values"`) {
+		t.Fatalf("request = %s", request)
+	}
+}
+
+func TestSummaryRejectsInvalidResponses(t *testing.T) {
+	for _, response := range []string{`{}`, `null`, `bad`, `{"total_seconds":null}`, `{"total_seconds":-1}`, `{"total_seconds":1.5}`, `{"total_seconds":9223372036854775808}`} {
+		provider := Provider{Command: "printf '%s' '" + response + "'"}
+		if _, err := provider.Summary(context.Background(), Asana{TaskGID: "42"}); err == nil {
+			t.Fatalf("invalid summary accepted: %s", response)
+		}
+	}
+	provider := Provider{Command: "printf '%s' '{\"total_seconds\":0}'"}
+	if summary, err := provider.Summary(context.Background(), Asana{TaskGID: "42"}); err != nil || summary.TotalSeconds != 0 {
+		t.Fatalf("zero summary = %+v, err = %v", summary, err)
+	}
+	if _, err := provider.Summary(context.Background(), Asana{}); err == nil {
+		t.Fatal("missing ticket accepted")
+	}
+	provider.Command = "printf '%s' '{\"unsupported\":true}'"
+	if _, err := provider.Summary(context.Background(), Asana{TaskGID: "42"}); !errors.Is(err, ErrUnsupported) {
+		t.Fatalf("unsupported error = %v", err)
+	}
+	provider.Command = "echo unknown operation >&2; exit 1"
+	if _, err := provider.Summary(context.Background(), Asana{TaskGID: "42"}); err == nil {
+		t.Fatal("legacy provider failure treated as zero")
 	}
 }

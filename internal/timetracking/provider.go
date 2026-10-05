@@ -1,5 +1,5 @@
 // Package timetracking calls an optional command provider for a time-entry
-// form and completed entries.
+// form, completed entries, and ticket totals.
 package timetracking
 
 import (
@@ -32,6 +32,40 @@ type Request struct {
 // Provider executes the configured command. Data goes through stdin, never
 // into user-authored shell text.
 type Provider struct{ Command string }
+
+// Summary contains all-time, unrounded time from stopped entries visible to
+// the authenticated account, across projects for one exact ticket.
+type Summary struct {
+	TotalSeconds int64 `json:"total_seconds"`
+}
+
+// ErrUnsupported means the provider does not offer ticket summaries.
+var ErrUnsupported = errors.New("time summary unsupported")
+
+// Summary fetches a ticket total. Missing totals must not become zero.
+func (p Provider) Summary(ctx context.Context, asana Asana) (Summary, error) {
+	if asana.TaskGID == "" {
+		return Summary{}, errors.New("time summary needs an Asana task")
+	}
+	out, err := p.call(ctx, Request{Operation: "summary", Asana: &asana})
+	if err != nil {
+		return Summary{}, err
+	}
+	var response struct {
+		TotalSeconds *int64 `json:"total_seconds"`
+		Unsupported  bool   `json:"unsupported"`
+	}
+	if err := json.Unmarshal(out, &response); err != nil {
+		return Summary{}, fmt.Errorf("time summary: %w", err)
+	}
+	if response.Unsupported {
+		return Summary{}, ErrUnsupported
+	}
+	if response.TotalSeconds == nil || *response.TotalSeconds < 0 {
+		return Summary{}, errors.New("time summary needs nonnegative integer total_seconds")
+	}
+	return Summary{TotalSeconds: *response.TotalSeconds}, nil
+}
 
 func (p Provider) call(ctx context.Context, req Request) ([]byte, error) {
 	input, err := json.Marshal(req)

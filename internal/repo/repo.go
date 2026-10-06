@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/sadmachine/asanamate/internal/config"
 )
 
 // ExpandHome replaces a leading "~" with the user's home directory.
@@ -36,13 +38,14 @@ func CollapseHome(p string) string {
 	return p
 }
 
-// Candidates returns the repo picker's paths: one per output line of command,
-// run with /bin/sh, or when command is empty the repos directly inside root.
-func Candidates(ctx context.Context, command, root string) ([]string, error) {
-	if strings.TrimSpace(command) == "" {
-		return List(root)
+// Candidates returns the repo picker's paths: one per output line of
+// src.Command, run with /bin/sh, or when it is empty the repos directly
+// inside src.Root.
+func Candidates(ctx context.Context, src config.RepoSource) ([]string, error) {
+	if strings.TrimSpace(src.Command) == "" {
+		return List(src.Root)
 	}
-	out, err := exec.CommandContext(ctx, "/bin/sh", "-c", command).Output()
+	out, err := exec.CommandContext(ctx, "/bin/sh", "-c", src.Command).Output()
 	if err != nil {
 		return nil, fmt.Errorf("repo_source command failed: %w", err)
 	}

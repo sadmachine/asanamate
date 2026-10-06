@@ -8,11 +8,13 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/sadmachine/asanamate/internal/config"
 )
 
 func TestCandidatesExpandsAndDedupes(t *testing.T) {
 	t.Setenv("HOME", "/home/u")
-	got, err := Candidates(context.Background(), `printf '~/a\n/b\n/b\n\n  /c  \n'`, "/ignored")
+	got, err := Candidates(context.Background(), config.RepoSource{Root: "/ignored", Command: `printf '~/a\n/b\n/b\n\n  /c  \n'`})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +24,7 @@ func TestCandidatesExpandsAndDedupes(t *testing.T) {
 }
 
 func TestCandidatesReportsFailure(t *testing.T) {
-	if _, err := Candidates(context.Background(), "exit 3", ""); err == nil {
+	if _, err := Candidates(context.Background(), config.RepoSource{Command: "exit 3"}); err == nil {
 		t.Fatal("expected an error")
 	}
 }
@@ -38,7 +40,7 @@ func TestListFindsDirectChildRepos(t *testing.T) {
 	os.MkdirAll(filepath.Join(root, "group", "nested", ".git"), 0o755)
 	os.MkdirAll(filepath.Join(root, "plain"), 0o755)
 	os.WriteFile(filepath.Join(root, "file"), nil, 0o644)
-	for _, got := range [][]string{must(List(root)), must(Candidates(context.Background(), " ", root))} {
+	for _, got := range [][]string{must(List(root)), must(Candidates(context.Background(), config.RepoSource{Root: root, Command: " "}))} {
 		if want := []string{clone, worktree}; !slices.Equal(got, want) {
 			t.Errorf("got %v, want %v", got, want)
 		}

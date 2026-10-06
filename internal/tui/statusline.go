@@ -125,21 +125,30 @@ func (m *Model) linkedAgents() []agents.Agent {
 // helpView renders the key help in one column per help group.
 func (m *Model) helpView() string {
 	all := m.bindings
-	partner := map[string]binding{}
+	partner, byName := map[string]binding{}, map[string]binding{}
 	for _, b := range all {
 		if b.Pair != "" {
 			partner[b.Pair] = b
 		}
+		byName[b.Name] = b
 	}
 	type row struct{ label, desc, group string }
 	var rows []row
 	keyW := 0
 	for _, b := range all {
-		if b.Pair != "" || !m.available(b) {
+		// A paired binding shares its partner's row, or takes the partner's
+		// place in its group when the partner is unbound.
+		if !m.available(b) {
 			continue
 		}
+		if p, ok := byName[b.Pair]; ok {
+			if m.available(p) {
+				continue
+			}
+			b.Group = p.Group
+		}
 		label := keymap.Label(b.keys...)
-		if p, ok := partner[b.Name]; ok && len(p.keys) > 0 {
+		if p, ok := partner[b.Name]; ok && m.available(p) {
 			label = keymap.Label(b.keys[0], p.keys[0])
 		}
 		rows = append(rows, row{label, b.Desc, b.Group})

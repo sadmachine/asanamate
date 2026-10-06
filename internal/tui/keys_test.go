@@ -68,6 +68,18 @@ func TestReboundKeyRunsItsBinding(t *testing.T) {
 	}
 }
 
+func TestPairedBindingShowsAloneWhenItsPartnerIsUnbound(t *testing.T) {
+	cfg := config.Config{}
+	var err error
+	if cfg.Keymap, err = keymap.Resolve(map[string]map[string][]string{"main": {"half_page_down": {}}}); err != nil {
+		t.Fatal(err)
+	}
+	m, _ := testModel(t, cfg)
+	if help := ansi.Strip(m.helpView()); !strings.Contains(help, "ctrl+u") || !strings.Contains(help, "half page up") {
+		t.Fatalf("help lacks half_page_up:\n%s", help)
+	}
+}
+
 func TestEnterOpensTheReader(t *testing.T) {
 	m := splitModel(t)
 	m.Update(key("enter"))

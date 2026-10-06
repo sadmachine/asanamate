@@ -160,20 +160,20 @@ key press.
 | `g`/`G` | first/last ticket; in the reader, jump to its top or bottom (in cards view, selecting the first or last field, section, or comment) |
 | `ctrl+d`/`ctrl+u` | half page down/up in the list, or scroll the reader half a page |
 | `ctrl+f`/`ctrl+b` (or pgdown/pgup) | page down/up in the list, or scroll the reader a page |
-| `tab` / `shift+tab` | focus the next/previous pane: the views panel (wide screens), the list, and the reader; in the cards view, entering the reader selects its first editable row |
-| `enter` (reader, editable row selected) | edit the selected row, skipping the `e` menu; Add comment opens the comment editor |
-| `esc` (reader) | return focus to the list |
+| `tab`/`shift+tab`, `l`/`h` | focus the next/previous pane: the views panel (wide screens), the list, and the reader; in the cards view, entering the reader selects its first editable row |
+| `enter` | in the list, open the ticket in the reader; in the reader, edit the selected row (Add comment opens the comment editor) |
+| `esc` | return focus to the list |
 | `0` / `1` / `2` | focus the views panel (wide screens) / the list / the reader |
-| `/` | edit the filter (available fields appear while editing; `?` opens the filter guide; Enter or Esc to finish) |
+| `/` | edit the filter (available fields appear while editing; `ctrl+/` opens the filter guide; `enter` keeps the filter, `esc` restores the previous one) |
 | `p` | switch project (recent first) |
 | `H` | ticket history: the last 10 tickets focused in the reader, most recent first; picking one selects it (keeping it in the Viewing section when the view doesn't show it) and focuses the reader |
 | `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project), or give the selected ticket its own repo that overrides its projects' links without changing them |
 | `space`, `a` | run an action on the selected ticket |
-| `ctrl+a` | create or edit action files (also available in Settings) |
+| `A` | create or edit action files (also available in Settings) |
 | `P` | pin / unpin the selected ticket; pins persist locally per project or My Tasks, above filtered tickets |
 | `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), assign it, or set its branch (saved locally, overrides `branch_field`; empty removes it) |
-| `C` | add a comment to the selected ticket, from the list or the reader |
-| `d` / `m` / `A` | set the due date / move to a section / assign, skipping the `e` menu |
+| `c` | add a comment to the selected ticket, from the list or the reader |
+| `d` / `m` / `@` | set the due date / move to a section / assign, skipping the `e` menu |
 | `.` | run the last picked action again on the selected ticket |
 | `t` | log completed time for the selected ticket (only when time tracking is configured) |
 | `f` | attachments: view images inline (`j`/`k` step between them) or open in the browser |
@@ -186,12 +186,21 @@ key press.
 | `ctrl+s` | save the current filter, grouping, and sorting under a name |
 | `s` | settings: separators, header spacing, reader view, and auto-update interval; changes persist between sessions |
 | `o` | open the ticket in the browser |
-| `c` | copy the selected ticket's link to the clipboard (requires terminal OSC 52 support) |
-| `y` | copy the targeted comment as Markdown in the cards reader (requires terminal OSC 52 support); does nothing on other targets |
+| `y` | copy the selected ticket's link to the clipboard (requires terminal OSC 52 support) |
+| `Y` | copy the targeted comment as Markdown in the cards reader (requires terminal OSC 52 support); does nothing on other targets |
 | `r` | reload tickets and clear the inline image cache (including failed loads) |
 | `R` | set the automatic reload interval (persists between sessions) |
 | `?` | show every key |
 | `q` | quit |
+
+Pickers start in browse mode: `j`/`k` move, `/` searches, `enter` picks, and
+`esc` stops searching or closes. Multi-select pickers check items with `space`
+or `tab` and confirm with `enter`. In the repo picker, `ctrl+s` (or the
+`Use "<path>"` row) uses the typed path. Set `picker.type_first = true` to
+open pickers in search mode.
+
+Every key above can be changed in the `[keys]` tables of `config.toml`; see
+[Configuration](#configuration).
 
 Inline images are cached by attachment for the current session. Manual reload
 downloads the displayed ticket's images again; automatic reload keeps the cache.
@@ -290,6 +299,13 @@ your config; it keeps your values and saves the old file as
 | `list.viewing.color` | `colors.viewing` |
 | `list.selection.color` | `colors.selection` |
 
+Default keys changed too: `enter` in the list opens the reader; `c` adds a
+comment (was `C`); `y` copies the link (was `c`); `Y` copies the targeted
+comment (was `y`); `@` assigns (was `A`); `A` opens the action builder (was
+`ctrl+a`); `ctrl+/` opens the filter guide (was `?`), and `esc` in the filter
+restores the previous filter. Pickers start in browse mode; press `/` to
+search, or set `picker.type_first = true`.
+
 ## Configuration
 
 `~/.config/asanamate/config.toml` (or `$XDG_CONFIG_HOME/asanamate/config.toml`):
@@ -319,6 +335,8 @@ your config; it keeps your values and saves the old file as
 | `reader.view` | `"cards"` | reader's starting view: `cards` (details card, titled sections, one box per comment) or `markdown` (the rendered ticket Markdown); `v` switches and the choice persists |
 | `images.mode` | `"auto"` | kitty graphics: `auto`, `kitty` (force on), or `off` |
 | `images.inline` | `false` | cards view: draw images in descriptions and comments in place of their links (needs `images.mode` on and a terminal with kitty Unicode placeholders, such as kitty or Ghostty) |
+| `picker.type_first` | `false` | open pickers in search mode, so typing filters at once; `esc` leaves search for browse mode |
+| `keys.<scope>.<name>` | see the template | key bindings: a list of keys per binding, such as `[keys.main] quit = ["q", "ctrl+q"]`; `[]` unbinds. Scopes: `main`, `views`, `filter`, `picker`, `form`, `form_field`, `input`, `builder`, `notice`. Keys are a character (`"j"`, `"?"`) or a key name with modifiers (`"ctrl+d"`, `"shift+tab"`, `"enter"`, `"space"`, `"pgdown"`); `ctrl+c` always quits. `asanamate setup` and `asanamate config update` write every binding, commented, with its default |
 | `reader.max_text_width` | `0` | cards view: wrap description and comment text at this many columns (words are kept whole); `0` wraps at the pane width |
 | `repo_source.root` | your setup directory, or empty | directory whose direct children with a `.git` entry (clones and worktrees) fill the repo picker; absolute or starting with `~`; empty: type a path |
 | `repo_source.command` | unset | prints one repo path per line; replaces `repo_source.root` when set |
@@ -494,10 +512,10 @@ time while their existing form and logging operations continue to work.
 
 ## Actions
 
-Press `ctrl+a`, or choose **Build / edit actions** in Settings (`s`, then `a`).
+Press `A`, or choose **Build / edit actions** in Settings (`s`, then `a`).
 Choose **Create action** or an existing action. The builder provides every
 standard action setting, including ordered form fields and select options.
-Use j/k, arrows, or Tab to move, Enter to edit, and Ctrl+S to accept a text
+Use j/k or arrows to move, Enter to edit, and Ctrl+S to accept a text
 edit. Press `/` to search the current menu; Escape clears search and returns
 to navigation. Outside search, Escape returns or discards the draft.
 Help below the list starts with `nf-fa-circle_info` (`\uf05a`) for Nerd Font
@@ -633,7 +651,8 @@ Otherwise it is the project you are viewing (if the ticket is in it), or the
 ticket's only project.
 
 Repo resolution: the first time a project's ticket runs a `repo = true` action,
-you pick a repo from `repo_source` or type any path (Tab). asanamate
+you pick a repo from `repo_source` or type any path (`/`, the path, then
+`ctrl+s`). asanamate
 remembers it. Tickets in several projects always ask which project to use.
 A ticket given its own repo with `L` (**This ticket only**) uses that repo
 instead, skips the project question, and leaves every project link as it is.

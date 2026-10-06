@@ -4,21 +4,6 @@ Improvements found during the 2026-09-28 code review that were left out of the
 cleanup. Each one either adds a feature or rewrites behavior, so it needs its
 own design pass. They are recorded here so they can be picked up later.
 
-## Configurable key bindings
-
-**Now:** `keyBindings()` in `internal/tui/keys.go` is the one table of list
-and reader keys: `bindingFor` looks keys up in it for `handleKey`, and the `?`
-help and the NORMAL mode hints render from it. Modals, the filter, the views panel, and the
-cards view's selected row still handle their own keys first, and the hints
-for those modes are written out in `Model.mode`.
-
-**Idea:** Let a `[keys]` config table rebind entries of `keyBindings()`.
-
-**Watch out for:** Adding config keys is a public contract (see `AGENTS.md`).
-Action keys are only read inside the action menu, so they do not collide with
-list keys today. An override system must keep that true, and
-`TestKeyBindingsAreUniqueAndDocumented` should check the merged table.
-
 ## Action run steps
 
 **Now:** `pendingRun` in `internal/tui/flow.go` tracks progress with four

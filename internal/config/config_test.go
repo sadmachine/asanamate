@@ -68,6 +68,7 @@ func TestLoadRejectsInvalid(t *testing.T) {
 		"no workspace":  "theme = \"dark\"\n",
 		"bad theme":     "workspace = \"1\"\ntheme = \"blue\"\n",
 		"bad images":    "workspace = \"1\"\n[images]\nmode = \"sixel\"\n",
+		"relative root": "workspace = \"1\"\n[repo_source]\nroot = \"code\"\n",
 		"inline action": "workspace = \"1\"\n[[actions]]\nname = \"a\"\nkey = \"a\"\ncommand = \"true\"\n",
 	}
 	for name, body := range cases {
@@ -76,6 +77,15 @@ func TestLoadRejectsInvalid(t *testing.T) {
 				t.Fatal("expected an error")
 			}
 		})
+	}
+}
+
+func TestRepoSourceRootAcceptsHomeAndAbsolutePaths(t *testing.T) {
+	for _, root := range []string{"", "~", "~/code", "/srv/code"} {
+		cfg, err := Load(writeFile(t, "workspace = \"1\"\n[repo_source]\nroot = \""+root+"\"\n"))
+		if err != nil || cfg.RepoSource.Root != root {
+			t.Errorf("root %q: cfg = %+v, err = %v", root, cfg.RepoSource, err)
+		}
 	}
 }
 

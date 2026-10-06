@@ -39,11 +39,34 @@ type harvestEntryRequest struct {
 // and credentials. Harvest's API needs a nested external_reference object;
 // hrvst's create command flattens its bracketed flags and drops the link.
 func RunHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID string) error {
-	home, err := os.UserHomeDir()
+	configPath, err := harvestConfigPath()
 	if err != nil {
 		return err
 	}
-	return runHarvest(ctx, in, out, taskID, filepath.Join(home, ".hrvst", "config.json"), "https://api.harvestapp.com/v2/time_entries")
+	return runHarvest(ctx, in, out, taskID, configPath, "https://api.harvestapp.com/v2/time_entries")
+}
+
+// CheckHarvest reports whether hrvst is installed and logged in, without
+// calling Harvest.
+func CheckHarvest() error {
+	if _, err := exec.LookPath("hrvst"); err != nil {
+		return errors.New("hrvst is not installed; run `npm install -g hrvst-cli`")
+	}
+	configPath, err := harvestConfigPath()
+	if err != nil {
+		return err
+	}
+	_, err = loadHarvestCredentials(configPath)
+	return err
+}
+
+// harvestConfigPath is where hrvst 3.x keeps its login; it has no override.
+func harvestConfigPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".hrvst", "config.json"), nil
 }
 
 func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, configPath, endpoint string) error {
@@ -63,13 +86,13 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 		if err != nil {
 			return fmt.Errorf("hrvst project assignments: %s: %w", strings.TrimSpace(stderr.String()), err)
 		}
-		projects, err := parseAssignments(data)
+		projects, task, err := parseAssignments(data, taskID)
 		if err != nil {
 			return err
 		}
 		return json.NewEncoder(out).Encode(form.Spec{Fields: []form.Field{
 			{ID: "project_id", Label: "Harvest project", Type: form.Select, Options: projects, Remember: true},
-			{ID: "task_id", Label: "Harvest task", Type: form.Select, Options: []form.Option{{ID: taskID, Name: "Engineering"}}, Remember: true},
+			{ID: "task_id", Label: "Harvest task", Type: form.Select, Options: []form.Option{task}, Remember: true},
 			{ID: "hours", Label: "Hours", Type: form.Hours},
 		}})
 	case "summary":
@@ -149,15 +172,23 @@ func digits(s string) bool {
 	return true
 }
 
+// harvestRef is the id and name of a Harvest project or task.
+type harvestRef struct {
+	ID   json.Number `json:"id"`
+	Name string      `json:"name"`
+}
+
 // parseAssignments accepts hrvst's JSON array of active assignments. Some
-// versions may print the Harvest response wrapper instead of its array.
-func parseAssignments(data []byte) ([]form.Option, error) {
+// versions may print the Harvest response wrapper instead of its array. It
+// returns the projects where taskID is an active task, and that task.
+func parseAssignments(data []byte, taskID string) ([]form.Option, form.Option, error) {
 	type assignment struct {
-		IsActive *bool `json:"is_active"`
-		Project  struct {
-			ID   json.Number `json:"id"`
-			Name string      `json:"name"`
-		} `json:"project"`
+		IsActive        *bool      `json:"is_active"`
+		Project         harvestRef `json:"project"`
+		TaskAssignments []struct {
+			IsActive *bool      `json:"is_active"`
+			Task     harvestRef `json:"task"`
+		} `json:"task_assignments"`
 	}
 	var assignments []assignment
 	dec := json.NewDecoder(bytes.NewReader(data))
@@ -169,26 +200,41 @@ func parseAssignments(data []byte) ([]form.Option, error) {
 		decoder := json.NewDecoder(bytes.NewReader(data))
 		decoder.UseNumber()
 		if err := decoder.Decode(&wrapped); err != nil || wrapped.Assignments == nil {
-			return nil, errors.New("hrvst project assignments: invalid JSON response")
+			return nil, form.Option{}, errors.New("hrvst project assignments: invalid JSON response")
 		}
 		assignments = wrapped.Assignments
 	}
 	seen := map[string]bool{}
 	var projects []form.Option
+	task := form.Option{ID: taskID}
+	active := 0
 	for _, a := range assignments {
 		if a.IsActive != nil && !*a.IsActive {
 			continue
 		}
+		active++
 		id := a.Project.ID.String()
 		if !digits(id) || a.Project.Name == "" {
-			return nil, errors.New("hrvst project assignments: missing project ID or name")
+			return nil, form.Option{}, errors.New("hrvst project assignments: missing project ID or name")
 		}
-		if !seen[id] {
-			seen[id] = true
-			projects = append(projects, form.Option{ID: id, Name: a.Project.Name})
+		for _, ta := range a.TaskAssignments {
+			if ta.Task.ID.String() != taskID || (ta.IsActive != nil && !*ta.IsActive) {
+				continue
+			}
+			task.Name = ta.Task.Name
+			if !seen[id] {
+				seen[id] = true
+				projects = append(projects, form.Option{ID: id, Name: a.Project.Name})
+			}
 		}
 	}
-	return projects, nil
+	if active == 0 {
+		return nil, form.Option{}, errors.New("Harvest lists no active projects for you; ask a Harvest admin to assign you to one")
+	}
+	if len(projects) == 0 {
+		return nil, form.Option{}, fmt.Errorf("Harvest task %s is not active on any of your projects; set --task-id to a task ID from `hrvst users project-assignments me`", taskID)
+	}
+	return projects, task, nil
 }
 
 // harvestCredentials are shared by entry creation and summary retrieval.

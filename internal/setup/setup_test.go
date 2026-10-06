@@ -40,7 +40,9 @@ func options(t *testing.T, input string) (Options, *strings.Builder) {
 }
 
 func TestRunWritesLoadableConfig(t *testing.T) {
-	root := t.TempDir()
+	// Quotes, spaces, and Unicode must survive TOML encoding as data.
+	root := filepath.Join(t.TempDir(), `it's "my" code ☃`)
+	os.Mkdir(root, 0o700)
 	o, out := options(t, "2\n/definitely/missing\n"+root+"\n")
 	if err := Run(context.Background(), o); err != nil {
 		t.Fatal(err)
@@ -49,7 +51,7 @@ func TestRunWritesLoadableConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generated config does not load: %v", err)
 	}
-	if cfg.Workspace != "w2" || !strings.Contains(cfg.RepoSource.Command, root) || len(cfg.Actions) != 1 {
+	if cfg.Workspace != "w2" || cfg.RepoSource.Root != root || cfg.RepoSource.Command != "" || len(cfg.Actions) != 1 {
 		t.Fatalf("cfg = %+v", cfg)
 	}
 	info, _ := os.Stat(o.ConfigPath)
@@ -86,6 +88,38 @@ func TestRunKeepsActionsAndExampleLoads(t *testing.T) {
 	}
 	if len(cfg.Actions) != 2 || !cfg.Actions[0].Repo || cfg.Actions[1].Name != "Mine" {
 		t.Fatalf("actions = %+v", cfg.Actions)
+	}
+}
+
+func TestRunSkipsRepoRoot(t *testing.T) {
+	o, out := options(t, "2\n-\n")
+	if err := Run(context.Background(), o); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(o.ConfigPath)
+	if err != nil {
+		t.Fatalf("generated config does not load: %v", err)
+	}
+	if cfg.RepoSource != (config.RepoSource{}) {
+		t.Fatalf("repo_source = %+v, want empty", cfg.RepoSource)
+	}
+	if !strings.Contains(out.String(), "type a repo path when an action asks") {
+		t.Errorf("output does not explain the skipped repo picker:\n%s", out)
+	}
+}
+
+func TestWarnMissingPager(t *testing.T) {
+	var out strings.Builder
+	t.Setenv("PAGER", "no-such-pager-asanamate --flag")
+	warnMissingPager(&out)
+	if !strings.Contains(out.String(), `pager "no-such-pager-asanamate" not found`) {
+		t.Errorf("missing pager warning:\n%s", out.String())
+	}
+	out.Reset()
+	t.Setenv("PAGER", "sh -c")
+	warnMissingPager(&out)
+	if out.Len() != 0 {
+		t.Errorf("warned about an installed pager:\n%s", out.String())
 	}
 }
 

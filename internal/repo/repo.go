@@ -36,10 +36,11 @@ func CollapseHome(p string) string {
 	return p
 }
 
-// Candidates runs command with /bin/sh and returns one path per output line.
-func Candidates(ctx context.Context, command string) ([]string, error) {
+// Candidates returns the repo picker's paths: one per output line of command,
+// run with /bin/sh, or when command is empty the repos directly inside root.
+func Candidates(ctx context.Context, command, root string) ([]string, error) {
 	if strings.TrimSpace(command) == "" {
-		return nil, nil
+		return List(root)
 	}
 	out, err := exec.CommandContext(ctx, "/bin/sh", "-c", command).Output()
 	if err != nil {
@@ -58,6 +59,27 @@ func Candidates(ctx context.Context, command string) ([]string, error) {
 	return paths, nil
 }
 
+// List returns the directories directly inside root that hold a .git entry,
+// a directory for a clone or a file for a worktree. Empty root lists nothing.
+func List(root string) ([]string, error) {
+	if root == "" {
+		return nil, nil
+	}
+	dir := ExpandHome(root)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("repo_source.root: %w", err)
+	}
+	var paths []string
+	for _, e := range entries {
+		p := filepath.Join(dir, e.Name())
+		if _, err := os.Stat(filepath.Join(p, ".git")); err == nil {
+			paths = append(paths, p)
+		}
+	}
+	return paths, nil
+}
+
 // Resolve returns the top-level directory of the git working tree containing path.
 func Resolve(path string) (string, error) {
 	p := ExpandHome(strings.TrimSpace(path))
@@ -69,6 +91,9 @@ func Resolve(path string) (string, error) {
 		return "", err
 	}
 	out, err := exec.Command("git", "-C", abs, "rev-parse", "--show-toplevel").Output()
+	if errors.Is(err, exec.ErrNotFound) {
+		return "", errors.New("git is not installed; repo actions need it")
+	}
 	if err != nil {
 		return "", fmt.Errorf("not a git repository: %s", abs)
 	}

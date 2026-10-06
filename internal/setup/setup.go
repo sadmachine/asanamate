@@ -8,9 +8,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"charm.land/lipgloss/v2"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
@@ -19,7 +22,11 @@ import (
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
-const defaultRepoRoot = "~/code"
+const (
+	defaultRepoRoot = "~/code"
+	// skipRepoRoot answers the repo directory prompt to set none.
+	skipRepoRoot = "-"
+)
 
 // Options wires setup to its input, output, and file locations.
 type Options struct {
@@ -34,7 +41,8 @@ type Options struct {
 	Executable string
 }
 
-// Run asks for the workspace and repo directory, then writes the config file.
+// Run asks for the workspace and an optional repo directory, then writes the
+// config file.
 func Run(ctx context.Context, o Options) error {
 	if _, err := os.Stat(o.ConfigPath); err == nil {
 		ok, err := prompt.Confirm(o.In, o.Out, o.ConfigPath+" already exists. Overwrite it?")
@@ -68,7 +76,12 @@ func Run(ctx context.Context, o Options) error {
 	if err := writeActions(actions); err != nil {
 		return err
 	}
-	fmt.Fprintf(o.Out, summary, o.ConfigPath, root, actions, o.StatePath)
+	repos := "type a repo path when an action asks for one.\n    Set [repo_source] root to pick from a directory instead."
+	if root != "" {
+		repos = "git repositories directly inside " + root + "."
+	}
+	fmt.Fprintf(o.Out, summary, o.ConfigPath, repos, actions, o.StatePath)
+	warnMissingPager(o.Out)
 	return OfferCodexHook(o)
 }
 
@@ -96,32 +109,58 @@ func chooseWorkspace(o Options, workspaces []asana.Ref) (asana.Ref, error) {
 	}
 }
 
+// chooseRepoRoot returns the repo directory, with the home directory as "~",
+// or "" when the user skips it.
 func chooseRepoRoot(o Options) (string, error) {
+	def := skipRepoRoot
+	if info, err := os.Stat(repo.ExpandHome(defaultRepoRoot)); err == nil && info.IsDir() {
+		def = defaultRepoRoot
+	}
 	for {
-		answer, err := prompt.Line(o.In, o.Out, "Directory that contains your git repositories", defaultRepoRoot)
+		answer, err := prompt.Line(o.In, o.Out, "Directory that contains your git repositories ("+skipRepoRoot+" to skip)", def)
 		if err != nil {
 			return "", err
+		}
+		if answer == skipRepoRoot {
+			return "", nil
 		}
 		dir, err := filepath.Abs(repo.ExpandHome(answer))
 		if err != nil {
 			return "", err
 		}
-		if strings.Contains(dir, "'") {
-			fmt.Fprintln(o.Out, "Paths containing ' are not supported.")
-			continue
-		}
 		if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 			fmt.Fprintf(o.Out, "%s is not a directory.\n", dir)
 			continue
 		}
-		return dir, nil
+		return repo.CollapseHome(dir), nil
 	}
 }
 
-// Render returns the commented config file for a workspace and repo directory.
+// Pager is the program the pager action runs: $PAGER's first word, else less.
+func Pager() string {
+	if f := strings.Fields(os.Getenv("PAGER")); len(f) > 0 {
+		return f[0]
+	}
+	return "less"
+}
+
+// warnMissingPager warns when the pager action's pager is not on PATH.
+func warnMissingPager(out io.Writer) {
+	pager := Pager()
+	if _, err := exec.LookPath(pager); err == nil {
+		return
+	}
+	lipgloss.Fprintln(out, "\n"+warning.Render("Warning: pager "+strconv.Quote(pager)+" not found")+"\n"+
+		"  The \"View ticket in pager\" action (v) needs it. Install less, or set\n"+
+		"  $PAGER to a pager you have.")
+}
+
+// Render returns the commented config file for a workspace and repo
+// directory; an empty repoRoot leaves repo discovery off.
 func Render(workspace asana.Ref, repoRoot string) string {
 	name := strings.Join(strings.Fields(ticket.Clean(workspace.Name)), " ")
-	return fmt.Sprintf(configTemplate, name, workspace.GID, repoRoot, repoRoot)
+	root, _ := formatValue(repoRoot) // a string always encodes
+	return fmt.Sprintf(configTemplate, name, workspace.GID, root)
 }
 
 const summary = `
@@ -129,10 +168,12 @@ Wrote %s.
 
 Defaults:
   - View: My Tasks, filtered by "is:open". Press p to switch projects, / to filter.
-  - Repo picker: git repositories directly inside %s.
-    Change [repo_source] command to use sesh, zoxide, or anything else.
+  - Repo picker: %s
+    Set [repo_source] command to use sesh, zoxide, or anything else.
   - Writes to Asana ask for confirmation (confirm_writes = true).
   - Actions: one file each in %s. Rename the .example file to enable it.
+  - Agent status and time tracking are off. See the Agents and Time tracking
+    sections of the README to turn them on.
   - Repo links and recent projects are stored in %s.
 
 Run asanamate to start.
@@ -264,10 +305,12 @@ inline = false
 
 
 [repo_source]
-# Prints one git repository path per line for the repo picker.
-# The default lists repositories directly inside %s.
-# Alternatives: "sesh list -z", "zoxide query -l".
-command = '''find '%s' -mindepth 2 -maxdepth 2 -name .git -exec dirname {} \;'''
+# Directory whose git repositories (its direct children) fill the repo picker.
+# Empty: type a repo path when an action asks for one.
+root = %s
+# Or a command printing one repo path per line; it replaces root when set.
+# Examples: "sesh list -z", "zoxide query -l".
+# command = ""
 `
 
 // actionFiles are written to the actions directory by setup. The .example

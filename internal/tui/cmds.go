@@ -230,9 +230,9 @@ func loadLinkNames(c *asana.Client, gids []string) tea.Cmd {
 
 // loadCandidates loads the repo picker's paths; link is set when editing a
 // link from the repo links picker.
-func loadCandidates(command string, link *linkTarget) tea.Cmd {
+func loadCandidates(src config.RepoSource, link *linkTarget) tea.Cmd {
 	return request(func(ctx context.Context) tea.Msg {
-		paths, err := repo.Candidates(ctx, command)
+		paths, err := repo.Candidates(ctx, src.Command, src.Root)
 		return candidatesMsg{paths: paths, err: err, link: link}
 	})
 }

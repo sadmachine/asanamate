@@ -220,7 +220,7 @@ func (m *Model) continueRun() tea.Cmd {
 			m.status = fmt.Sprintf("linked repo %s is no longer a git repository; pick again", path)
 		}
 	}
-	return loadCandidates(m.deps.Config.RepoSource.Command, nil)
+	return loadCandidates(m.deps.Config.RepoSource, nil)
 }
 
 // isRepoRoot reports whether a saved link still names a repo. Links are saved

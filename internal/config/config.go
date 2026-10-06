@@ -200,6 +200,10 @@ type Images struct {
 
 // RepoSource configures where repo picker candidates come from.
 type RepoSource struct {
+	// Root is a directory whose direct children with a .git entry are listed,
+	// without a shell. Absolute, or starting with "~". Empty lists nothing.
+	Root string `toml:"root"`
+	// Command prints one repo path per line; when set, it replaces Root.
 	Command string `toml:"command"`
 }
 
@@ -321,6 +325,9 @@ func (c Config) validate() error {
 		if err := oneOf("symbols", c.Symbols, SymbolsUnicode, SymbolsNerd, SymbolsASCII); err != nil {
 			return err
 		}
+	}
+	if r := c.RepoSource.Root; r != "" && r != "~" && !strings.HasPrefix(r, "~/") && !filepath.IsAbs(r) {
+		return fmt.Errorf("repo_source.root must be an absolute path or start with ~, got %q", r)
 	}
 	if c.Reader.MaxTextWidth < 0 {
 		return fmt.Errorf("reader.max_text_width must be 0 (no limit) or more, got %d", c.Reader.MaxTextWidth)

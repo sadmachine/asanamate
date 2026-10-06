@@ -2,12 +2,15 @@ package tui
 
 import (
 	"cmp"
+	"fmt"
 	"strings"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/sadmachine/asanamate/internal/keymap"
 )
 
 type pickItem struct {
@@ -26,32 +29,35 @@ type pickResult struct {
 	free      string
 }
 
-// picker is a modal list. It filters by typed words, or with keySelect it
-// selects by each item's Key. With allowFree, typed text can be returned as is.
-// With multi, enter toggles items and ctrl+s returns the checked ones.
+// picker is a modal list. It starts in browse mode, or in search mode with
+// picker.type_first; search filters by typed words. With keySelect it
+// selects by each item's Key instead. With allowFree, the search text can be
+// returned as is. With multi, toggle checks items and choose returns them.
 type picker struct {
-	onPick      func(pickResult) tea.Cmd // runs on the returned choice
-	title       string
-	items       []pickItem
-	matches     []int
-	cursor      int
-	input       textinput.Model
-	keySelect   bool
-	browseFirst bool // optional j/k navigation; / activates filtering
-	searching   bool
-	helpIcon    string // resolved symbol set's info icon; empty uses (i)
-	allowFree   bool
-	multi       bool
-	checked     map[int]bool
-	err         string
+	onPick    func(pickResult) tea.Cmd // runs on the returned choice
+	title     string
+	items     []pickItem
+	matches   []int
+	cursor    int
+	input     textinput.Model
+	keySelect bool
+	searching bool
+	helpIcon  string // resolved symbol set's info icon; empty uses (i)
+	allowFree bool
+	multi     bool
+	checked   map[int]bool
+	err       string
 }
 
 // newPicker returns a picker that calls onPick with the choice.
 func newPicker(onPick func(pickResult) tea.Cmd, title string, items []pickItem) *picker {
 	in := textinput.New()
-	in.Prompt = "> "
-	in.Focus()
+	in.Prompt = "/ "
 	p := &picker{onPick: onPick, title: title, items: items, input: in}
+	if typeFirst {
+		p.searching = true
+		p.input.Focus()
+	}
 	p.refilter()
 	return p
 }
@@ -86,7 +92,45 @@ func (p *picker) refilter() {
 			p.matches = append(p.matches, i)
 		}
 	}
-	p.cursor = max(min(p.cursor, len(p.matches)-1), 0)
+	p.cursor = max(min(p.cursor, p.rowCount()-1), 0)
+}
+
+// useRow reports whether the list ends with a row that picks the search text.
+func (p *picker) useRow() bool {
+	return p.allowFree && p.searching && strings.TrimSpace(p.input.Value()) != ""
+}
+
+// rowCount is the number of rows the cursor moves over.
+func (p *picker) rowCount() int {
+	if p.useRow() {
+		return len(p.matches) + 1
+	}
+	return len(p.matches)
+}
+
+// stopSearch clears the search and returns to browse mode, keeping the
+// highlighted item highlighted, or going to the top from the Use row.
+func (p *picker) stopSearch() {
+	selected := 0
+	if p.cursor < len(p.matches) {
+		selected = p.matches[p.cursor]
+	}
+	p.searching = false
+	p.input.Blur()
+	p.input.SetValue("")
+	p.refilter()
+	p.cursor = selected
+}
+
+// checkedResult returns the checked items of a multi picker, in list order.
+func (p *picker) checkedResult() pickResult {
+	res := pickResult{done: true, items: []pickItem{}}
+	for i, it := range p.items {
+		if p.checked[i] {
+			res.items = append(res.items, it)
+		}
+	}
+	return res
 }
 
 func (p *picker) choose(i int) pickResult {
@@ -103,80 +147,63 @@ func (p *picker) freeText() (pickResult, bool) {
 }
 
 func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
-	if p.browseFirst {
-		if p.searching && msg.String() == "esc" {
-			selected := -1
-			if len(p.matches) > 0 {
-				selected = p.matches[p.cursor]
-			}
-			p.searching = false
-			p.input.Blur()
-			p.input.SetValue("")
-			p.refilter()
-			if selected >= 0 {
-				p.cursor = selected
-			}
-			return pickResult{}, nil
-		}
-		if !p.searching {
-			switch msg.String() {
-			case "/":
-				p.searching = true
-				p.input.Prompt = "/ "
-				return pickResult{}, p.input.Focus()
-			case "j":
-				msg = tea.KeyPressMsg{Code: tea.KeyDown}
-			case "k":
-				msg = tea.KeyPressMsg{Code: tea.KeyUp}
-			}
-		}
-	}
-	switch msg.String() {
-	case "esc":
-		return pickResult{cancelled: true}, nil
-	case "up", "ctrl+p":
-		p.cursor = max(p.cursor-1, 0)
-		return pickResult{}, nil
-	case "down", "ctrl+n":
-		p.cursor = max(min(p.cursor+1, len(p.matches)-1), 0)
-		return pickResult{}, nil
-	case "enter":
-		if p.multi {
-			if len(p.matches) > 0 {
-				i := p.matches[p.cursor]
-				p.checked[i] = !p.checked[i]
-			}
-			return pickResult{}, nil
-		}
-		if len(p.matches) > 0 {
-			return p.choose(p.matches[p.cursor]), nil
-		}
-		res, _ := p.freeText()
-		return res, nil
-	case "tab":
-		res, _ := p.freeText()
-		return res, nil
-	case "ctrl+s":
-		if !p.multi {
-			return pickResult{}, nil
-		}
-		res := pickResult{done: true, items: []pickItem{}}
-		for i, it := range p.items {
-			if p.checked[i] {
-				res.items = append(res.items, it)
-			}
-		}
-		return res, nil
-	}
 	if p.keySelect {
 		for i := range p.items {
 			if p.items[i].Key == msg.String() {
 				return p.choose(i), nil
 			}
 		}
-		return pickResult{}, nil
 	}
-	if p.browseFirst && !p.searching {
+	// Key-select pickers keep printable keys for their items.
+	var name string
+	if !p.keySelect || !keymap.Printable(msg.String()) {
+		name = bound("picker", msg, p.searching && !p.keySelect)
+	}
+	switch name {
+	case "cancel":
+		// Key-select pickers have no search, even with picker.type_first.
+		if p.searching && !p.keySelect {
+			p.stopSearch()
+			return pickResult{}, nil
+		}
+		return pickResult{cancelled: true}, nil
+	case "down":
+		p.cursor = max(min(p.cursor+1, p.rowCount()-1), 0)
+		return pickResult{}, nil
+	case "up":
+		p.cursor = max(p.cursor-1, 0)
+		return pickResult{}, nil
+	case "top":
+		p.cursor = 0
+		return pickResult{}, nil
+	case "bottom":
+		p.cursor = max(p.rowCount()-1, 0)
+		return pickResult{}, nil
+	case "choose":
+		switch {
+		case p.multi:
+			return p.checkedResult(), nil
+		case p.cursor < len(p.matches):
+			return p.choose(p.matches[p.cursor]), nil
+		}
+		res, _ := p.freeText()
+		return res, nil
+	case "toggle":
+		if p.multi && p.cursor < len(p.matches) {
+			i := p.matches[p.cursor]
+			p.checked[i] = !p.checked[i]
+		}
+		return pickResult{}, nil
+	case "use_typed":
+		res, _ := p.freeText()
+		return res, nil
+	case "search":
+		if !p.keySelect {
+			p.searching = true
+			return pickResult{}, p.input.Focus()
+		}
+	}
+	if !p.searching || p.keySelect {
 		return pickResult{}, nil
 	}
 	var cmd tea.Cmd
@@ -189,7 +216,7 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 func (p *picker) view(width, height int, accent lipgloss.Style) string {
 	var b strings.Builder
 	b.WriteString(accent.Render(p.title) + "\n")
-	if !p.keySelect && (!p.browseFirst || p.searching) {
+	if !p.keySelect && p.searching {
 		styles := p.input.Styles()
 		styles.Focused.Prompt = accent
 		p.input.SetStyles(styles)
@@ -200,7 +227,7 @@ func (p *picker) view(width, height int, accent lipgloss.Style) string {
 	for _, item := range p.items {
 		if item.Help != "" {
 			text := ""
-			if len(p.matches) > 0 {
+			if p.cursor < len(p.matches) {
 				text = p.items[p.matches[p.cursor]].Help
 			}
 			help = modalHelp(text, p.helpIcon, width, min(2, max(height-6, 1)))
@@ -209,22 +236,27 @@ func (p *picker) view(width, height int, accent lipgloss.Style) string {
 	}
 	rows := max(height-4-lipgloss.Height(help), 1)
 	start := max(p.cursor-rows+1, 0)
-	if len(p.matches) == 0 {
+	if p.rowCount() == 0 {
 		b.WriteString(dimStyle.Render("no matches") + "\n")
 	}
-	for i := start; i < len(p.matches) && i < start+rows; i++ {
-		it := p.items[p.matches[i]]
-		line := it.Label
-		switch {
-		case p.keySelect:
-			line = accent.Render("["+it.Key+"]") + " " + line
-		case p.multi && p.checked[p.matches[i]]:
-			line = okStyle.Render("[x]") + " " + line
-		case p.multi:
-			line = "[ ] " + line
-		}
-		if it.Hint != "" {
-			line += "  " + dimStyle.Render(it.Hint)
+	for i := start; i < p.rowCount() && i < start+rows; i++ {
+		var line string
+		if i == len(p.matches) {
+			line = fmt.Sprintf("Use %q", strings.TrimSpace(p.input.Value()))
+		} else {
+			it := p.items[p.matches[i]]
+			line = it.Label
+			switch {
+			case p.keySelect:
+				line = accent.Render("["+it.Key+"]") + " " + line
+			case p.multi && p.checked[p.matches[i]]:
+				line = okStyle.Render("[x]") + " " + line
+			case p.multi:
+				line = "[ ] " + line
+			}
+			if it.Hint != "" {
+				line += "  " + dimStyle.Render(it.Hint)
+			}
 		}
 		line = ansi.Truncate(line, max(width-4, 1), "…")
 		if i == p.cursor {
@@ -241,22 +273,29 @@ func (p *picker) view(width, height int, accent lipgloss.Style) string {
 	if help != "" {
 		b.WriteString(help + "\n")
 	}
-	hint := accent.Render("enter") + dimStyle.Render(" select · ") + accent.Render("esc") + dimStyle.Render(" cancel")
-	if p.browseFirst {
-		if p.searching {
-			hint = accent.Render("enter") + dimStyle.Render(" select · ") + accent.Render("esc") + dimStyle.Render(" clear search")
-		} else {
-			hint = accent.Render("j/k") + dimStyle.Render(" move · ") + accent.Render("/") + dimStyle.Render(" search · ") + hint
-		}
+	var hints [][2]string
+	if p.searching && !p.keySelect {
+		hints = append(hints, [2]string{typedLabel("picker", "down", "up"), "move"})
+	} else if !p.keySelect {
+		hints = append(hints, [2]string{keyLabel("picker", "down", "up"), "move"}, [2]string{keyLabel("picker", "search"), "search"})
 	}
 	if p.multi {
-		hint = accent.Render("enter") + dimStyle.Render(" toggle · ") + accent.Render("ctrl+s") +
-			dimStyle.Render(" save · ") + accent.Render("esc") + dimStyle.Render(" cancel")
+		toggle := keyLabel("picker", "toggle")
+		if p.searching {
+			toggle = typedLabel("picker", "toggle")
+		}
+		hints = append(hints, [2]string{toggle, "toggle"}, [2]string{keyLabel("picker", "choose"), "done"})
+	} else {
+		hints = append(hints, [2]string{keyLabel("picker", "choose"), "select"})
 	}
 	if p.allowFree {
-		hint += dimStyle.Render(" · ") + accent.Render("tab") + dimStyle.Render(" use typed path")
+		hints = append(hints, [2]string{keyLabel("picker", "use_typed"), "use typed path"})
 	}
-	b.WriteString(hint)
+	cancel := "cancel"
+	if p.searching && !p.keySelect {
+		cancel = "clear search"
+	}
+	b.WriteString(hintLine(accent, append(hints, [2]string{keyLabel("picker", "cancel"), cancel})...))
 	return b.String()
 }
 

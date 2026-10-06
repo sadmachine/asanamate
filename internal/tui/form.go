@@ -67,15 +67,15 @@ func (f *formModal) update(msg tea.KeyPressMsg) (bool, tea.Cmd) {
 	}
 	field := f.spec.Fields[f.cursor]
 	if f.editing {
-		switch msg.String() {
-		case "esc":
+		switch name := bound("form_field", msg, true); name {
+		case "cancel":
 			f.editing = false
 			return false, nil
-		case "enter", "tab":
+		case "done", "next":
 			f.values[field.ID] = strings.TrimSpace(f.input.Value())
 			f.editing = false
 			f.err = ""
-			if msg.String() == "tab" {
+			if name == "next" {
 				f.cursor = (f.cursor + 1) % len(f.spec.Fields)
 			}
 			return false, nil
@@ -84,14 +84,14 @@ func (f *formModal) update(msg tea.KeyPressMsg) (bool, tea.Cmd) {
 		f.input, cmd = f.input.Update(msg)
 		return false, cmd
 	}
-	switch msg.String() {
-	case "esc":
+	switch bound("form", msg, false) {
+	case "cancel":
 		return true, nil
-	case "up", "shift+tab":
+	case "prev":
 		f.cursor = (f.cursor - 1 + len(f.spec.Fields)) % len(f.spec.Fields)
-	case "down", "tab":
+	case "next":
 		f.cursor = (f.cursor + 1) % len(f.spec.Fields)
-	case "enter":
+	case "edit":
 		if field.Type == form.Select {
 			items := make([]pickItem, len(field.Options))
 			for i, option := range field.Options {
@@ -103,7 +103,7 @@ func (f *formModal) update(msg tea.KeyPressMsg) (bool, tea.Cmd) {
 			f.input.Focus()
 			f.editing = true
 		}
-	case "ctrl+s":
+	case "submit":
 		if err := f.spec.ValidateValues(f.values); err != nil {
 			f.err = err.Error()
 			return false, nil
@@ -145,6 +145,7 @@ func (f *formModal) view(width, height int, accent lipgloss.Style) string {
 	if f.err != "" {
 		b.WriteString(errorStyle.Render(ticket.OneLine(f.err)) + "\n")
 	}
-	b.WriteString(accent.Render("enter") + dimStyle.Render(" edit · ") + accent.Render("tab") + dimStyle.Render(" next · ") + accent.Render("ctrl+s") + dimStyle.Render(" submit · ") + accent.Render("esc") + dimStyle.Render(" cancel"))
+	b.WriteString(hintLine(accent, [2]string{keyLabel("form", "edit"), "edit"}, [2]string{keyLabel("form", "next"), "next"},
+		[2]string{keyLabel("form", "submit"), "submit"}, [2]string{keyLabel("form", "cancel"), "cancel"}))
 	return b.String()
 }

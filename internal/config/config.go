@@ -16,6 +16,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/form"
+	"github.com/sadmachine/asanamate/internal/keymap"
 )
 
 // TokenEnv names the environment variable that holds the Asana personal access token.
@@ -55,9 +56,10 @@ var ErrNotConfigured = errors.New("asanamate is not configured; run `asanamate s
 
 // Config is the contents of config.toml.
 type Config struct {
-	Workspace     string     `toml:"workspace"`
-	Theme         string     `toml:"theme"`
-	AccentColor   string     `toml:"accent_color"`
+	Workspace string `toml:"workspace"`
+	// Theme selects the color theme; Colors overrides its roles.
+	Theme         Theme      `toml:"theme"`
+	Colors        Colors     `toml:"colors"`
 	DefaultFilter string     `toml:"default_filter"`
 	ConfirmWrites bool       `toml:"confirm_writes"`
 	BranchField   string     `toml:"branch_field"`
@@ -70,8 +72,16 @@ type Config struct {
 	List         List         `toml:"list"`
 	Reader       Reader       `toml:"reader"`
 	Images       Images       `toml:"images"`
+	Picker       Picker       `toml:"picker"`
+	// Keys overrides key bindings: scope, then binding name, then keys. See
+	// internal/keymap for the scopes and names.
+	Keys map[string]map[string][]string `toml:"keys"`
+	// Keymap is Keys applied to the default bindings, set by Load.
+	Keymap keymap.Keymap `toml:"-"`
 	// Actions come from the *.toml files in ActionsDir, not from config.toml.
 	Actions []Action `toml:"-"`
+	// Themes are the theme files Theme names, read from ThemesDir by Load.
+	Themes map[string]ThemeFile `toml:"-"`
 }
 
 // TimeTracking configures an optional JSON command provider.
@@ -140,8 +150,6 @@ type List struct {
 	GroupBy         string    `toml:"group_by"`
 	Sort            Sort      `toml:"sort"`
 	Header          Header    `toml:"header"`
-	Pinned          Pinned    `toml:"pinned"`
-	Viewing         Viewing   `toml:"viewing"`
 	Selection       Selection `toml:"selection"`
 }
 
@@ -153,32 +161,16 @@ type Sort struct {
 }
 
 // Header configures group headers. Style draws them as a reversed bar or a
-// rule; Spacing adds a blank line above and below each. Color overrides the
-// accent color when set.
+// rule; Spacing adds a blank line above and below each.
 type Header struct {
 	Style   string `toml:"style"`
 	Spacing bool   `toml:"spacing"`
-	Color   string `toml:"color"`
-}
-
-// Pinned configures the section of explicitly pinned tickets at the top of
-// the list. Color overrides the accent color for its header when set.
-type Pinned struct {
-	Color string `toml:"color"`
-}
-
-// Viewing configures the section that temporarily keeps a ticket visible
-// outside the filter. Color overrides the accent color for its header when set.
-type Viewing struct {
-	Color string `toml:"color"`
 }
 
 // Selection configures the selected ticket. Style marks it with a bold title
-// and a left marker, or a reversed bar. Color overrides the accent color for
-// the marker when set.
+// and a left marker, or a reversed bar.
 type Selection struct {
 	Style string `toml:"style"`
-	Color string `toml:"color"`
 }
 
 // Reader configures the reading pane. View is its starting view: cards
@@ -196,6 +188,12 @@ type Reader struct {
 type Images struct {
 	Mode   string `toml:"mode"`
 	Inline bool   `toml:"inline"`
+}
+
+// Picker configures list pickers. TypeFirst opens them in search mode
+// instead of browse mode.
+type Picker struct {
+	TypeFirst bool `toml:"type_first"`
 }
 
 // RepoSource configures where repo picker candidates come from.
@@ -230,27 +228,39 @@ type Action struct {
 // Default returns the values used for keys the config file omits.
 func Default() Config {
 	return Config{
-		Theme: "dark", AccentColor: "4", DefaultFilter: "is:open", ConfirmWrites: true,
+		Theme:         Theme{Name: ThemeAuto, Dark: "dark", Light: "light"},
+		DefaultFilter: "is:open", ConfirmWrites: true,
 		TimeTracking: TimeTracking{},
 		Actions:      nil,
 		List: List{
 			RefreshInterval: "30s",
 			Sort:            Sort{By: "", Direction: "asc"},
 			Layout:          LayoutSingle, Fields: []string{"section", "due"},
-			Header: Header{Style: StyleRule}, Pinned: Pinned{Color: "208"}, Viewing: Viewing{Color: "5"}, Selection: Selection{Style: StyleMarker},
+			Header: Header{Style: StyleRule}, Selection: Selection{Style: StyleMarker},
 		},
 		Reader: Reader{View: ViewCards},
 		Images: Images{Mode: "auto"},
+		Keymap: keymap.Default(),
 	}
 }
 
 // Load reads and validates the config file at path.
 func Load(path string) (Config, error) {
 	cfg := Default()
-	md, err := toml.DecodeFile(path, &cfg)
+	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return cfg, ErrNotConfigured
 	}
+	if err != nil {
+		return cfg, err
+	}
+	var raw map[string]any
+	if _, err := toml.Decode(string(data), &raw); err == nil {
+		if mv, ok := movedFrom(raw); ok {
+			return cfg, fmt.Errorf("%s: %s moved to %s in v0.2.0; run `asanamate config update`", path, mv.From, mv.To)
+		}
+	}
+	md, err := toml.Decode(string(data), &cfg)
 	if err != nil {
 		return cfg, fmt.Errorf("%s: %w", path, err)
 	}
@@ -260,8 +270,29 @@ func Load(path string) (Config, error) {
 	if err := cfg.validate(); err != nil {
 		return cfg, fmt.Errorf("%s: %w", path, err)
 	}
+	cfg.Keys = compactKeys(cfg.Keys)
+	if cfg.Keymap, err = keymap.Resolve(cfg.Keys); err != nil {
+		return cfg, fmt.Errorf("%s: %w", path, err)
+	}
+	if cfg.Themes, err = loadThemes(ThemesDir(path), cfg.Theme); err != nil {
+		return cfg, fmt.Errorf("%s: %w", path, err)
+	}
 	cfg.Actions, err = loadActions(ActionsDir(path))
 	return cfg, err
+}
+
+// compactKeys drops scopes that override nothing, such as the template's
+// empty [keys.main] tables, and returns nil when none are left.
+func compactKeys(keys map[string]map[string][]string) map[string]map[string][]string {
+	for scope, names := range keys {
+		if len(names) == 0 {
+			delete(keys, scope)
+		}
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	return keys
 }
 
 // loadActions reads every *.toml file in dir, in file name order. A missing
@@ -310,7 +341,6 @@ func (c Config) validate() error {
 		return errors.New("time_tracking.id must not have surrounding whitespace")
 	}
 	for _, e := range []error{
-		oneOf("theme", c.Theme, "dark", "light"),
 		oneOf("images.mode", c.Images.Mode, "auto", "kitty", "off"),
 		oneOf("list.layout", c.List.Layout, LayoutSingle, LayoutMulti),
 		oneOf("reader.view", c.Reader.View, ViewCards, ViewMarkdown),
@@ -343,11 +373,6 @@ func (c Config) validate() error {
 			return errors.New("the title is always shown; remove it from list.fields")
 		}
 	}
-	for key, color := range map[string]string{"accent_color": c.AccentColor, "list.header.color": c.List.Header.Color, "list.pinned.color": c.List.Pinned.Color, "list.viewing.color": c.List.Viewing.Color, "list.selection.color": c.List.Selection.Color} {
-		if (key == "accent_color" || color != "") && !validColor(color) {
-			return fmt.Errorf("%s must be an ANSI color number (0-255) or #rrggbb, got %q", key, color)
-		}
-	}
 	if strings.EqualFold(strings.TrimSpace(c.List.GroupBy), "title") {
 		return errors.New("list.group_by can't be the title; use a field such as section or due")
 	}
@@ -355,6 +380,9 @@ func (c Config) validate() error {
 		return errors.New("list.sort.by must not contain control characters")
 	}
 	if err := oneOf("list.sort.direction", c.List.Sort.Direction, "asc", "desc"); err != nil {
+		return err
+	}
+	if err := c.Colors.validate("colors"); err != nil {
 		return err
 	}
 	return c.Agents.validate()

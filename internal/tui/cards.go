@@ -236,15 +236,11 @@ func (m *Model) comment(c asana.Story, width int, selected bool) string {
 	return head + "\n" + strings.Join(lines, "\n")
 }
 
-// authorColors tell comment authors apart: ANSI blue, magenta, cyan, green,
-// yellow, and red.
-var authorColors = []string{"4", "5", "6", "2", "3", "1"}
-
-// authorStyle colors an author the same way every time.
+// authorStyle colors an author the same way every time, from colors.authors.
 func authorStyle(name string) lipgloss.Style {
 	h := fnv.New32a()
 	h.Write([]byte(name))
-	return lipgloss.NewStyle().Foreground(lipgloss.Color(authorColors[h.Sum32()%uint32(len(authorColors))]))
+	return authorStyles[h.Sum32()%uint32(len(authorStyles))]
 }
 
 // shortDate shows a date as "Sep 26", with the year when it is not this year's.

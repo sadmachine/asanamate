@@ -210,7 +210,7 @@ func TestGroupPicker(t *testing.T) {
 	if it := m.modal.items[m.modal.matches[m.modal.cursor]]; it.Hint != "current" || it.Value != "section" {
 		t.Fatalf("picker opens on %+v, want the current grouping", it)
 	}
-	press("none")
+	press("/none")
 	m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if sel, _ := m.selected(); m.modal != nil || m.groupBy != "" || m.groups != nil || sel.GID != "2" {
 		t.Fatalf("groupBy = %q, groups = %q, selected = %q", m.groupBy, m.groups, sel.GID)
@@ -235,19 +235,22 @@ func TestSelectionMarker(t *testing.T) {
 
 func TestHeaderStyles(t *testing.T) {
 	tasks := []asana.Task{{GID: "1", Name: "A", AssigneeSection: &asana.Ref{Name: "Doing"}}}
-	rule, _ := testModel(t, config.Config{List: config.List{GroupBy: "section", Header: config.Header{Style: config.StyleRule, Color: "5"}}})
+	rule, _ := testModel(t, config.Config{List: config.List{GroupBy: "section", Header: config.Header{Style: config.StyleRule}}, Colors: config.Colors{Header: config.Style{FG: "5"}}})
 	rule.Update(tasksMsg{tasks: tasks})
 	if got := listLines(rule, 20, 2)[0]; got != "── Doing (1) ───────" {
 		t.Fatalf("rule header = %q", got)
 	}
-	bar, _ := testModel(t, config.Config{AccentColor: "2", List: config.List{GroupBy: "section", Header: config.Header{Color: "#ff0000"}}})
+	bar, _ := testModel(t, config.Config{Colors: config.Colors{Accent: config.Style{FG: "2"}, Header: config.Style{FG: "#ff0000"}}, List: config.List{GroupBy: "section"}})
 	bar.Update(tasksMsg{tasks: tasks})
-	want := colorStyle("#ff0000").Reverse(true).Render(" Doing (1)" + strings.Repeat(" ", 10))
+	if bar.headerStyle.GetForeground() != lipgloss.Color("#ff0000") {
+		t.Fatalf("header color = %v", bar.headerStyle.GetForeground())
+	}
+	want := bar.headerStyle.Reverse(true).Render(" Doing (1)" + strings.Repeat(" ", 10))
 	if got := strings.Split(bar.listView(20, 2), "\n")[0]; got != want {
 		t.Fatalf("bar header = %q, want %q", got, want)
 	}
 	if bar.markerStyle.GetForeground() != lipgloss.Color("2") || bar.accentStyle.GetForeground() != lipgloss.Color("2") {
-		t.Fatal("marker and reader fall back to accent_color")
+		t.Fatal("marker and reader fall back to colors.accent")
 	}
 }
 
@@ -255,11 +258,12 @@ func TestViewingHeaderColor(t *testing.T) {
 	for _, style := range []string{config.StyleRule, config.StyleBar} {
 		for _, color := range []string{"5", "#aabbcc", ""} {
 			t.Run(style+"/"+color, func(t *testing.T) {
+				bold := true
 				cfg := config.Default()
 				cfg.List.GroupBy = "section"
 				cfg.List.Header.Style = style
-				cfg.List.Header.Color = "2"
-				cfg.List.Viewing.Color = color
+				cfg.Colors.Header = config.Style{FG: "2"}
+				cfg.Colors.Viewing = config.Style{FG: color}
 				m, st := testModel(t, cfg)
 				st.PinnedTasks = map[string][]string{"": {doneTask.GID}}
 				regular := openTask
@@ -268,7 +272,7 @@ func TestViewingHeaderColor(t *testing.T) {
 				m.showTicket(sideTask)
 				wantColor := color
 				if wantColor == "" {
-					wantColor = cfg.AccentColor
+					wantColor = "5" // the dark theme's viewing color
 				}
 				if m.viewingStyle.GetForeground() != lipgloss.Color(wantColor) {
 					t.Fatalf("Viewing color = %v, want %q", m.viewingStyle.GetForeground(), wantColor)
@@ -280,7 +284,7 @@ func TestViewingHeaderColor(t *testing.T) {
 					if len(lines) < 2 {
 						t.Fatalf("missing header %q", header.label)
 					}
-					want := m.groupHeader(colorStyle(header.color), header.label, 1, 50)
+					want := m.groupHeader(lipStyle(config.Style{FG: header.color, Bold: &bold}), header.label, 1, 50)
 					if lines[0] != want {
 						t.Fatalf("%s header = %q, want %q", header.label, lines[0], want)
 					}

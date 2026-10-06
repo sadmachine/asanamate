@@ -47,7 +47,7 @@ command = "less \"$ASANAMATE_TICKET_MD\""
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Theme != "dark" || cfg.Images.Mode != "auto" || cfg.Images.Inline || cfg.DefaultFilter != "is:open" || !cfg.ConfirmWrites {
+	if cfg.Theme != (Theme{Name: ThemeAuto, Dark: "dark", Light: "light"}) || cfg.Images.Mode != "auto" || cfg.Images.Inline || cfg.DefaultFilter != "is:open" || !cfg.ConfirmWrites {
 		t.Fatalf("defaults not applied: %+v", cfg)
 	}
 	if cfg.Actions[0].Mode != ModeForeground {
@@ -65,7 +65,7 @@ func TestLoadMissingFile(t *testing.T) {
 func TestLoadRejectsInvalid(t *testing.T) {
 	cases := map[string]string{
 		"unknown key":   "workspace = \"1\"\nworkspaec = \"2\"\n",
-		"no workspace":  "theme = \"dark\"\n",
+		"no workspace":  "[theme]\nname = \"dark\"\n",
 		"bad theme":     "workspace = \"1\"\ntheme = \"blue\"\n",
 		"bad images":    "workspace = \"1\"\n[images]\nmode = \"sixel\"\n",
 		"relative root": "workspace = \"1\"\n[repo_source]\nroot = \"code\"\n",
@@ -189,24 +189,19 @@ func TestListConfig(t *testing.T) {
 	if err != nil || cfg.List.Layout != LayoutSingle || !slices.Equal(cfg.List.Fields, []string{"section", "due"}) || cfg.Reader.View != ViewCards {
 		t.Fatalf("defaults: %+v, err = %v", cfg.List, err)
 	}
-	if cfg.AccentColor != "4" || cfg.List.Header != (Header{Style: StyleRule}) || cfg.List.Pinned != (Pinned{Color: "208"}) || cfg.List.Viewing != (Viewing{Color: "5"}) || cfg.List.Selection != (Selection{Style: StyleMarker}) {
+	if !reflect.DeepEqual(cfg.Colors, Colors{}) || cfg.List.Header != (Header{Style: StyleRule}) || cfg.List.Selection != (Selection{Style: StyleMarker}) {
 		t.Fatalf("style defaults: %+v", cfg.List)
 	}
 	for _, color := range []string{"0", "255", "#abc", "#A1b2C3"} {
-		if _, err := Load(writeFile(t, "workspace = \"1\"\n[list.header]\ncolor = \""+color+"\"\n")); err != nil {
-			t.Errorf("header.color %q: %v", color, err)
-		}
-	}
-	for _, color := range []string{"", "0", "255", "#abc", "#A1b2C3"} {
-		cfg, err := Load(writeFile(t, "workspace = \"1\"\n[list.viewing]\ncolor = \""+color+"\"\n"))
-		if err != nil || cfg.List.Viewing.Color != color {
-			t.Errorf("viewing.color %q: got %q, err = %v", color, cfg.List.Viewing.Color, err)
+		cfg, err := Load(writeFile(t, "workspace = \"1\"\n[colors]\nviewing = \""+color+"\"\n"))
+		if err != nil || cfg.Colors.Viewing.FG != color {
+			t.Errorf("colors.viewing %q: got %q, err = %v", color, cfg.Colors.Viewing.FG, err)
 		}
 	}
 	for _, color := range []string{"magenta", "-1", "256", "#12345g"} {
-		_, err := Load(writeFile(t, "workspace = \"1\"\n[list.viewing]\ncolor = \""+color+"\"\n"))
-		if err == nil || !strings.Contains(err.Error(), "list.viewing.color") {
-			t.Errorf("viewing.color %q: expected error naming list.viewing.color, got %v", color, err)
+		_, err := Load(writeFile(t, "workspace = \"1\"\n[colors]\nviewing = \""+color+"\"\n"))
+		if err == nil || !strings.Contains(err.Error(), "colors.viewing") {
+			t.Errorf("colors.viewing %q: expected error naming colors.viewing, got %v", color, err)
 		}
 	}
 	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[list]\nlayout = \"multi\"\nfields = [\"status\", \"Branch Name\", \"due\"]\n"))
@@ -222,13 +217,8 @@ func TestListConfig(t *testing.T) {
 		"title group":   "[list]\ngroup_by = \"title\"\n",
 		"bad header":    "[list.header]\nstyle = \"box\"\n",
 		"int spacing":   "[list.header]\nspacing = 1\n",
-		"bad color":     "[list.header]\ncolor = \"blue\"\n",
-		"color range":   "[list.header]\ncolor = \"256\"\n",
-		"bad hex":       "[list.header]\ncolor = \"#12345g\"\n",
-		"bad pinned":    "[list.pinned]\ncolor = \"orange\"\n",
 		"bad selection": "[list.selection]\nstyle = \"rule\"\n",
-		"bad marker":    "[list.selection]\ncolor = \"red\"\n",
-		"empty accent":  "accent_color = \"\"\n",
+		"bad accent":    "[colors]\naccent = \"blue\"\n",
 	} {
 		if _, err := Load(writeFile(t, "workspace = \"1\"\n"+body)); err == nil {
 			t.Errorf("%s: expected an error", name)
@@ -515,5 +505,33 @@ func TestListSortConfig(t *testing.T) {
 				t.Fatalf("sort = %v, err = %v, want %v", cfg.List.Sort, err, tc.want)
 			}
 		})
+	}
+}
+
+func TestKeysConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n[keys.main]\nquit = [\"x\"]\n[keys.picker]\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Keymap.Name("main", "x") != "quit" || cfg.Keymap.Name("main", "q") != "" {
+		t.Fatalf("keymap main = %v", cfg.Keymap["main"])
+	}
+	if len(cfg.Keys) != 1 {
+		t.Fatalf("empty scopes must be dropped: %v", cfg.Keys)
+	}
+	_, err = Load(writeFile(t, "workspace = \"1\"\n[keys.main]\ndwon = [\"j\"]\n"))
+	if err == nil || !strings.Contains(err.Error(), "keys.main.dwon: unknown binding") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestPickerConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
+	if err != nil || cfg.Picker.TypeFirst {
+		t.Fatalf("default: %+v, err = %v", cfg.Picker, err)
+	}
+	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[picker]\ntype_first = true\n"))
+	if err != nil || !cfg.Picker.TypeFirst {
+		t.Fatalf("set: %+v, err = %v", cfg.Picker, err)
 	}
 }

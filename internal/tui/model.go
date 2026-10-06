@@ -24,6 +24,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/filter"
+	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/kitty"
 	"github.com/sadmachine/asanamate/internal/state"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -72,6 +73,9 @@ type Deps struct {
 	// ExitOnAction runs background actions as exit actions, so asanamate
 	// quits first. It suits popups, which close when asanamate exits.
 	ExitOnAction bool
+	// Palette is the resolved theme. Zero resolves Config's theme for a dark
+	// background.
+	Palette config.Palette
 }
 
 // Model is the Bubble Tea model for asanamate.
@@ -89,6 +93,8 @@ type Model struct {
 	sortBy          config.Sort    // ordering within groups; empty By keeps Asana order
 	groupBy         string         // list field the list is grouped by; "" for none
 	listW           int            // fitted list pane width; 0 for the default split
+	palette         config.Palette // resolved theme, for Markdown
+	bindings        []binding      // [keys.main] with their handlers
 	accentStyle     lipgloss.Style // reader headings
 	headerStyle     lipgloss.Style // group headers
 	pinnedStyle     lipgloss.Style // Pinned header
@@ -105,7 +111,9 @@ type Model struct {
 	refreshSeq      uint64           // invalidates timers from earlier session intervals
 
 	filterInput textinput.Model
-	filtering   bool
+	// filterBefore is the filter when editing started; the filter cancel key restores it.
+	filterBefore string
+	filtering    bool
 
 	focusReader bool
 	focusNav    bool // the views panel has focus; wide layout only
@@ -170,6 +178,16 @@ type Model struct {
 func New(d Deps) *Model {
 	in := textinput.New()
 	in.Prompt = "/"
+	keys, typeFirst = d.Config.Keymap, d.Config.Picker.TypeFirst
+	if keys == nil {
+		keys = keymap.Default()
+	}
+	p := d.Palette
+	if p.Base == "" {
+		p = d.Config.Palette(true)
+	}
+	applyPalette(p)
+	c := p.Colors
 	m := &Model{
 		deps:          d,
 		filterInput:   in,
@@ -178,11 +196,12 @@ func New(d Deps) *Model {
 		separator:     *cmp.Or(d.State.Display.Separator, &d.Config.List.Separator),
 		spacing:       *cmp.Or(d.State.Display.HeaderSpacing, &d.Config.List.Header.Spacing),
 		lastAction:    -1,
-		accentStyle:   colorStyle(d.Config.AccentColor),
-		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
-		pinnedStyle:   colorStyle(cmp.Or(d.Config.List.Pinned.Color, d.Config.AccentColor)),
-		viewingStyle:  colorStyle(cmp.Or(d.Config.List.Viewing.Color, d.Config.AccentColor)),
-		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),
+		palette:       p,
+		accentStyle:   lipStyle(c.Accent),
+		headerStyle:   lipStyle(c.Header),
+		pinnedStyle:   lipStyle(c.Pinned),
+		viewingStyle:  lipStyle(c.Viewing),
+		markerStyle:   lipStyle(c.Selection),
 		renderers:     map[rendererKey]*markdownRenderer{},
 		details:       map[string]ticket.Ticket{},
 		images:        map[string]*inlineImage{},
@@ -192,17 +211,13 @@ func New(d Deps) *Model {
 		loading:       true,
 		now:           time.Now,
 	}
+	m.bindings = keyBindings()
 	m.restoreView()
 	m.refreshInterval, _ = config.ParseRefreshInterval(cmp.Or(d.Config.List.RefreshInterval, config.Default().List.RefreshInterval))
 	if saved, err := config.ParseRefreshInterval(d.State.Display.RefreshInterval); err == nil {
 		m.refreshInterval = saved
 	}
 	return m
-}
-
-// colorStyle is bold text in a configured color.
-func colorStyle(color string) lipgloss.Style {
-	return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(color))
 }
 
 // ExitCommand is the command an exit-mode action left to run after the TUI quits.
@@ -447,7 +462,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return tea.Quit
 	}
 	if len(m.notices) > 0 {
-		if k == "enter" || k == "esc" {
+		if keys.Name("notice", k) == "dismiss" {
 			m.notices = m.notices[1:]
 		}
 		return nil
@@ -473,7 +488,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return nil
 	}
 	if m.loading {
-		if k == "q" {
+		if keys.Name("main", k) == "quit" {
 			return tea.Quit
 		}
 		return nil
@@ -482,18 +497,10 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	if m.filtering {
 		return m.updateFilter(msg)
 	}
-	if k == "enter" && m.focusReader && m.fieldKey != "" {
-		if m.fieldKey == emptyFieldsKey {
-			m.showEmptyFields()
-			return nil
+	if m.focusNav {
+		if name := keys.Name("views", k); name != "" {
+			return m.updateNav(name)
 		}
-		if m.editableTarget() {
-			return m.openField(m.fieldKey)
-		}
-		return nil
-	}
-	if m.focusNav && slices.Contains(navKeys, k) {
-		return m.updateNav(k)
 	}
 	if b, ok := m.bindingFor(k); ok {
 		return b.run(m, msg)
@@ -539,22 +546,32 @@ func (m *Model) updateInput(msg tea.Msg) tea.Cmd {
 }
 
 func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
-	switch msg.String() {
-	case "?":
+	switch bound("filter", msg, true) {
+	case "help":
 		m.help = true
 		return nil
-	case "enter", "esc":
-		m.filtering = false
-		m.filterInput.Blur()
-		m.reader.SetHeight(m.paneHeight())
-		m.saveView()
-		m.fitList()
+	case "cancel":
+		m.filterInput.SetValue(m.filterBefore)
+		m.applyFilter()
+		m.finishFilter()
+		return m.selectionChanged()
+	case "done":
+		m.finishFilter()
 		return nil
 	}
 	var cmd tea.Cmd
 	m.filterInput, cmd = m.filterInput.Update(msg)
 	m.applyFilter()
 	return tea.Batch(cmd, m.selectionChanged())
+}
+
+// finishFilter leaves filter editing with the current filter.
+func (m *Model) finishFilter() {
+	m.filtering = false
+	m.filterInput.Blur()
+	m.reader.SetHeight(m.paneHeight())
+	m.saveView()
+	m.fitList()
 }
 
 // reload refetches the tasks, keeping the current view until they land.
@@ -870,7 +887,7 @@ func (m *Model) glamour(md string, width int, bare bool) string {
 	key := rendererKey{width, bare}
 	r := m.renderers[key]
 	if r == nil {
-		r = newMarkdownRenderer(m.deps.Config.Theme, width, bare, m.sym.codeWrap)
+		r = newMarkdownRenderer(m.palette, width, bare, m.sym.codeWrap)
 		m.renderers[key] = r
 	}
 	out, err := r.Render(md)
@@ -1009,7 +1026,7 @@ func (m *Model) body() string {
 	switch {
 	case len(m.notices) > 0:
 		content = m.accentStyle.Render("Notice") + "\n\n" + ansi.Wrap(ticket.OneLine(m.notices[0]), w, "") +
-			"\n\n" + m.accentStyle.Render("enter") + dimStyle.Render(" / ") + m.accentStyle.Render("esc") + dimStyle.Render(" dismiss")
+			"\n\n" + hintLine(m.accentStyle, [2]string{keyLabel("notice", "dismiss"), "dismiss"})
 		style = modalStyle.BorderForeground(warnStyle.GetForeground())
 	case m.builder != nil:
 		content = m.builder.view(w, mh, m.accentStyle)
@@ -1280,10 +1297,15 @@ func (m *Model) emptyView(width, height int) string {
 	if len(m.tasks) > 0 {
 		title, why = "All clear.", "Nothing matches "+warnStyle.Render(m.filterInput.Value())
 	}
-	hint := func(k, desc string) string { return m.accentStyle.Render(k) + " " + dimStyle.Render(desc) }
+	var hints []string
+	for _, h := range [][2]string{{"filter", "filter"}, {"projects", "projects"}, {"reload", "reload"}} {
+		if k := keyLabel("main", h[0]); k != "" {
+			hints = append(hints, m.accentStyle.Render(k)+" "+dimStyle.Render(h[1]))
+		}
+	}
 	block := lipgloss.JoinVertical(lipgloss.Center,
 		okStyle.Bold(true).Render(m.sym.done), "", titleStyle.Render(title), dimStyle.Render(why), "",
-		hint("/", "filter")+"   "+hint("p", "projects")+"   "+hint("r", "reload"))
+		strings.Join(hints, "   "))
 	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, block)
 }
 

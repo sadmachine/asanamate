@@ -17,6 +17,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/prompt"
 	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -73,7 +74,10 @@ func Run(ctx context.Context, o Options) error {
 		return err
 	}
 	actions := config.ActionsDir(o.ConfigPath)
-	if err := writeActions(actions); err != nil {
+	if err := writeFiles(actions, actionFiles); err != nil {
+		return err
+	}
+	if err := writeFiles(config.ThemesDir(o.ConfigPath), themeFiles); err != nil {
 		return err
 	}
 	repos := "type a repo path when an action asks for one.\n    Set [repo_source] root to pick from a directory instead."
@@ -160,7 +164,31 @@ func warnMissingPager(out io.Writer) {
 func Render(workspace asana.Ref, repoRoot string) string {
 	name := strings.Join(strings.Fields(ticket.Clean(workspace.Name)), " ")
 	root, _ := formatValue(repoRoot) // a string always encodes
-	return fmt.Sprintf(configTemplate, name, workspace.GID, root)
+	return fmt.Sprintf(configTemplate, name, workspace.GID, root) + keysTemplate()
+}
+
+// keysTemplate is the [keys] section: every binding, commented out with its
+// default keys, generated from the keymap catalog.
+func keysTemplate() string {
+	var b strings.Builder
+	b.WriteString(`
+[keys]
+# Key bindings. Each name takes a list of keys: a character ("j", "G", "?")
+# or a key name with modifiers ("ctrl+d", "shift+tab", "enter", "space",
+# "pgdown"). An empty list unbinds. ctrl+c always quits. Action keys stay in
+# each actions/*.toml file.
+`)
+	for _, s := range keymap.Catalog() {
+		fmt.Fprintf(&b, "\n[keys.%s]\n# %s\n", s.Name, s.Doc)
+		for _, k := range s.Bindings {
+			quoted := make([]string, len(k.Keys))
+			for i, key := range k.Keys {
+				quoted[i] = strconv.Quote(key)
+			}
+			fmt.Fprintf(&b, "# %s = [%s]  # %s\n", k.Name, strings.Join(quoted, ", "), k.Desc)
+		}
+	}
+	return b.String()
 }
 
 const summary = `
@@ -172,6 +200,8 @@ Defaults:
     Set [repo_source] command to use sesh, zoxide, or anything else.
   - Writes to Asana ask for confirmation (confirm_writes = true).
   - Actions: one file each in %s. Rename the .example file to enable it.
+  - Themes: "auto" follows the terminal background. Copy the example in
+    themes/ to make your own.
   - Agent status and time tracking are off. See the Agents and Time tracking
     sections of the README to turn them on.
   - Repo links and recent projects are stored in %s.
@@ -184,13 +214,6 @@ const configTemplate = `# asanamate configuration.
 
 # Asana workspace: %s
 workspace = %q
-
-# Markdown style for the reading pane: "dark" or "light".
-theme = "dark"
-
-# Accent for reader headings, group headers, and the selection marker: an ANSI
-# color number (0-255) or "#rrggbb".
-accent_color = "4"
 
 # Filter applied at startup. Terms: words, section:, project:, assignee:, tag:,
 # project:<name>[<section>], is:open, is:done. Prefix a term with "-" to negate it; quote multi-word values.
@@ -211,6 +234,63 @@ branch_field = ""
 # Static agent symbols instead of the spinner. Unset: follow the OS setting.
 # reduced_motion = true
 
+[theme]
+# "auto", "dark", "light", or the name of a file in themes/ (without .toml).
+# Copy themes/example.toml.example to start your own.
+name = "auto"
+# Themes "auto" uses on dark and light terminal backgrounds.
+dark = "dark"
+light = "light"
+
+[colors]
+# Overrides on top of the active theme. Each value is a color (an ANSI number
+# 0-255, which follows your terminal's scheme, or "#rrggbb") or a style table:
+#   { fg = "4", bg = "#1a1b26", bold = true, italic = false,
+#     underline = false, faint = false, reverse = false }
+# A bare color sets fg only; fields left out keep the theme's value.
+# Values below are the dark theme's.
+# Reader headings, the focused panel border, NORMAL and VIEWS pills.
+# accent = { fg = "4", bold = true }
+# Unfocused panel and card borders.
+# border = "8"
+# Secondary text such as distant due dates.
+# muted = { faint = true }
+# Bar selection and the views panel cursor.
+# highlight = { reverse = true }
+# Status messages and due-date urgency (today: warn, overdue: error).
+# ok = "2"
+# warn = "3"
+# error = "1"
+# Working coding agents.
+# working = "14"
+# Group headers and the selection marker; unset uses accent.
+# header = { fg = "4", bold = true }
+# selection = { fg = "4", bold = true }
+# Pinned (P) and Viewing section headers.
+# pinned = { fg = "208", bold = true }
+# viewing = { fg = "5", bold = true }
+# Comment authors cycle through these.
+# authors = ["4", "5", "6", "2", "3", "1"]
+
+[colors.mode]
+# Statusline mode pills. A pill without bg is drawn reversed.
+# Unset normal uses accent; unset filter uses warn.
+# normal = { fg = "4", bold = true }
+# filter = "3"
+# read = "6"
+# edit = "5"
+
+[colors.markdown]
+# Reading pane Markdown, on top of the theme's glamour style. Unset by default.
+# text = ""
+# heading = ""
+# h1 = { fg = "228", bg = "63", bold = true }
+# link = ""
+# code = ""
+# code_block = ""
+# quote = ""
+# rule = ""
+
 [list]
 # Automatically reload the list at this interval (at least 1s).
 # R changes it for the current session only; use durations such as "15s" or "1m".
@@ -222,7 +302,8 @@ layout = "single"
 # project, tags, completed. Any other name is matched to a custom field, for
 # example "Status" or "Branch Name".
 fields = ["section", "due"]
-# Frame each ticket with lines above and below (neighbours share one); s toggles.
+# Frame each ticket with lines above and below (neighbours share one); toggle
+# it in settings (s).
 separator = false
 # Group tickets under a header per value of one field, such as "section" or
 # "due"; press b to pick another. Empty: ungrouped.
@@ -238,26 +319,12 @@ direction = "asc"
 [list.header]
 # Group headers: "rule" (── Label (n) ───) or "bar" (reversed bar).
 style = "rule"
-# Blank line above and below each group header; S toggles.
+# Blank line above and below each group header; toggle it in settings (s).
 spacing = false
-# Header color; unset uses accent_color.
-# color = "4"
-
-[list.pinned]
-# Header color of the Pinned section for tickets manually pinned with P;
-# empty uses accent_color.
-color = "208"
-
-[list.viewing]
-# Header color of the Viewing section for a ticket kept outside the filter;
-# empty uses accent_color.
-color = "5"
 
 [list.selection]
 # Selected ticket: "marker" (bold title with a left marker) or "bar" (reversed row).
 style = "marker"
-# Marker color; unset uses accent_color.
-# color = "4"
 
 [reader]
 # Starting view for the reading pane; press v to switch. "cards": sections
@@ -273,6 +340,11 @@ max_text_width = 0
 mode = "auto"
 # Draw images in descriptions and comments in the cards view instead of links.
 inline = false
+
+[picker]
+# Open pickers in search mode, so typing filters at once. esc leaves search
+# for browse mode (j/k to move); a second esc closes the picker.
+type_first = false
 
 # Optional: show running coding agents next to their tickets. Off unless a
 # preset or command is set. A ticket matches agents on its branch (see
@@ -343,12 +415,40 @@ tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "ASANAMATE_TICKET_M
 `},
 }
 
-// writeActions adds the default action files, keeping any that already exist.
-func writeActions(dir string) error {
+// themeFiles are written to the themes directory by setup. The .example file
+// stays inactive until renamed to .toml and named in [theme].
+var themeFiles = []struct{ name, body string }{
+	{"example.toml.example", `# Rename to <name>.toml and set [theme] name = "<name>" in config.toml.
+# Built-in theme to start from: "dark" or "light". It sets every color this
+# file leaves out, and the base Markdown style. Keys match config.toml's
+# [colors] tables.
+base = "dark"
+
+[colors]
+accent = "#7aa2f7"
+border = "#3b4261"
+muted = "#565f89"
+pinned = "#ff9e64"
+selection = { fg = "#bb9af7", bold = true }
+authors = ["#7aa2f7", "#bb9af7", "#7dcfff", "#9ece6a", "#e0af68"]
+
+[colors.mode]
+normal = { fg = "#1a1b26", bg = "#7aa2f7", bold = true }
+read = { fg = "#1a1b26", bg = "#7dcfff", bold = true }
+
+[colors.markdown]
+heading = { fg = "#7aa2f7", bold = true }
+link = { fg = "#7dcfff", underline = true }
+code = { fg = "#9ece6a", bg = "#24283b" }
+`},
+}
+
+// writeFiles adds the default files to dir, keeping any that already exist.
+func writeFiles(dir string, files []struct{ name, body string }) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	for _, f := range actionFiles {
+	for _, f := range files {
 		path := filepath.Join(dir, f.name)
 		if _, err := os.Stat(path); err == nil {
 			continue

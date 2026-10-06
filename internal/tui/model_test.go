@@ -13,6 +13,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/kitty"
 	"github.com/sadmachine/asanamate/internal/state"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -24,15 +25,18 @@ func testModel(t *testing.T, cfg config.Config) (*Model, *state.State) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Theme == "" {
-		cfg.Theme = "dark"
-	}
 	// Most tests assert on bare rows; TestSelectionMarker covers the default.
 	if cfg.List.Selection.Style == "" {
 		cfg.List.Selection.Style = config.StyleBar
 	}
 	m := New(Deps{Config: cfg, State: st, StateDir: t.TempDir()})
 	m.now = func() time.Time { return testToday }
+	// New sets package state from cfg; restore the defaults so tests that
+	// never call New see them.
+	t.Cleanup(func() {
+		keys, typeFirst = keymap.Default(), false
+		applyPalette(config.Config{}.Palette(true))
+	})
 	return m, st
 }
 

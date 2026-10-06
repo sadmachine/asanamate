@@ -16,6 +16,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/form"
+	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -109,7 +110,7 @@ func TestActionBuilderCreatesEditsAndReloads(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
 	m.loading = false
-	m.Update(tea.KeyPressMsg{Code: 'a', Mod: tea.ModCtrl})
+	m.Update(key("A"))
 	if m.modal == nil || m.modal.title != "Build / edit actions" {
 		t.Fatal("ctrl+a did not open builder menu")
 	}
@@ -218,13 +219,13 @@ func TestActionBuilderCancelAndDeleteStayInDraft(t *testing.T) {
 		t.Fatal("esc committed text")
 	}
 	m.builder.menu.cursor = 0
-	m.Update(key("tab"))
+	m.Update(key("j"))
 	if m.builder.menu.cursor != 1 {
-		t.Fatal("tab did not move")
+		t.Fatal("j did not move")
 	}
-	m.Update(key("shift+tab"))
+	m.Update(key("k"))
 	if m.builder.menu.cursor != 0 {
-		t.Fatal("shift+tab did not move")
+		t.Fatal("k did not move")
 	}
 	builderPick(t, m, "Form fields")
 	builderPick(t, m, "1. Target")
@@ -355,7 +356,7 @@ func TestActionBuilderBrowseSearchAndInfoIcon(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
 	m.openActionBuilder()
-	if !m.modal.browseFirst {
+	if m.modal.searching {
 		t.Fatal("action chooser opened in search mode")
 	}
 	m.Update(key("enter"))
@@ -390,7 +391,7 @@ func TestActionBuilderBrowseSearchAndInfoIcon(t *testing.T) {
 	}
 	m.Update(key("esc"))
 	builderPick(t, m, "Form fields")
-	if !b.menu.browseFirst || b.menu.searching {
+	if b.menu.searching {
 		t.Fatal("nested menu did not start in browse mode")
 	}
 }
@@ -422,5 +423,43 @@ func TestActionBuilderInfoIconFollowsSymbolSet(t *testing.T) {
 				t.Fatal("nested help used wrong info icon")
 			}
 		})
+	}
+}
+
+func TestTypeFirstBuilderMenusAcceptTyping(t *testing.T) {
+	cfg := config.Default()
+	cfg.Picker.TypeFirst = true
+	m, _ := testModel(t, cfg)
+	m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
+	m.openActionBuilder()
+	typeText(m.modal, "cr")
+	if m.modal.input.Value() != "cr" {
+		t.Fatalf("chooser value = %q", m.modal.input.Value())
+	}
+	m.Update(key("enter"))
+	typeText(m.builder.menu, "na")
+	if m.builder.menu.input.Value() != "na" {
+		t.Fatalf("builder menu value = %q", m.builder.menu.input.Value())
+	}
+}
+
+func TestBuilderSaveFollowsItsBinding(t *testing.T) {
+	cfg := config.Default()
+	var err error
+	if cfg.Keymap, err = keymap.Resolve(map[string]map[string][]string{"builder": {"save": {"ctrl+w", "w"}}}); err != nil {
+		t.Fatal(err)
+	}
+	m, _ := testModel(t, cfg)
+	m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
+	m.openActionBuilder()
+	m.Update(key("enter"))
+	view := ansi.Strip(m.builder.view(100, 30, lipgloss.NewStyle()))
+	if !strings.Contains(view, "ctrl+w save") || strings.Contains(view, "ctrl+s") {
+		t.Fatalf("builder hints must use the bound save key:\n%s", view)
+	}
+	m.Update(key("/"))
+	m.Update(key("w"))
+	if m.builder == nil || m.builder.menu.input.Value() != "w" {
+		t.Fatal("a printable save key must type while searching")
 	}
 }

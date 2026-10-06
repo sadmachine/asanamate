@@ -1,0 +1,20 @@
+# Built-in light theme. ANSI numbers follow the terminal's own color scheme.
+# Roles left out here (header, selection, mode.normal, mode.filter, and all
+# Markdown roles) fall back to accent, warn, or glamour's light style.
+
+[colors]
+accent = { fg = "4", bold = true }
+border = "8"
+muted = { faint = true }
+highlight = { reverse = true }
+ok = "2"
+warn = "3"
+error = "1"
+working = "6"
+pinned = { fg = "166", bold = true }
+viewing = { fg = "5", bold = true }
+authors = ["4", "5", "6", "2", "3", "1"]
+
+[colors.mode]
+read = "6"
+edit = "5"

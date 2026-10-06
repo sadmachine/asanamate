@@ -66,8 +66,6 @@ func (m *Model) openActionBuilder() {
 		items = append(items, pickItem{Label: ticket.OneLine(file.Action.Name), Hint: file.Name, Value: file})
 	}
 	m.modal = newPicker(pickValue(open), "Build / edit actions", items)
-	m.modal.browseFirst = true
-	m.modal.input.Blur()
 }
 
 func builderRow(label, value, help string, edit func()) pickItem {
@@ -80,9 +78,7 @@ func (b *actionBuilder) show(title string, rows []pickItem) {
 		cursor = b.menu.matches[b.menu.cursor]
 	}
 	b.menu = newPicker(pickValue(func(edit func()) tea.Cmd { edit(); return nil }), title, rows)
-	b.menu.browseFirst = true
 	b.menu.helpIcon = b.infoIcon
-	b.menu.input.Blur()
 	b.menu.cursor = min(cursor, len(rows)-1)
 	b.root = false
 }
@@ -193,7 +189,7 @@ func (b *actionBuilder) showAction() {
 			}, b.showAction)
 		}),
 		builderRow("Form fields", fmt.Sprint(len(a.Form.Fields)), "Optional select/hour prompts before running. Answers become ASANAMATE_PARAM_<ID>.", func() { b.descend(b.showAction, b.showFields) }),
-		builderRow("Save action", "ctrl+s", "Validate and write the action file. Changes become available immediately.", b.submit),
+		builderRow("Save action", keyLabel("builder", "save"), "Validate and write the action file. Changes become available immediately.", b.submit),
 	}
 	b.show("Action builder", rows)
 	b.root = true
@@ -300,15 +296,9 @@ func (b *actionBuilder) update(msg tea.Msg) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	if key.String() == "ctrl+s" && b.root {
+	if b.root && bound("builder", key, b.menu.searching) == "save" {
 		b.submit()
 		return nil
-	}
-	if key.String() == "tab" {
-		key = tea.KeyPressMsg{Code: tea.KeyDown}
-	}
-	if key.String() == "shift+tab" {
-		key = tea.KeyPressMsg{Code: tea.KeyUp}
 	}
 	res, cmd := b.menu.update(key)
 	if res.cancelled {
@@ -329,8 +319,8 @@ func (b *actionBuilder) view(width, height int, accent lipgloss.Style) string {
 		hint = " discard draft"
 	}
 	view = strings.Replace(view, dimStyle.Render(" cancel"), dimStyle.Render(hint), 1)
-	if b.root {
-		view += dimStyle.Render(" · ") + accent.Render("ctrl+s") + dimStyle.Render(" save")
+	if save := keyLabel("builder", "save"); b.root && save != "" {
+		view += dimStyle.Render(" · ") + accent.Render(save) + dimStyle.Render(" save")
 	}
 	return view
 }

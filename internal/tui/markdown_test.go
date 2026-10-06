@@ -19,7 +19,7 @@ func TestMarkdownCodeBlocks(t *testing.T) {
 		for _, bare := range []bool{true, false} {
 			for _, width := range []int{20, 40, 80} {
 				t.Run(fmt.Sprintf("%s/bare=%v/width=%d", theme, bare, width), func(t *testing.T) {
-					m, _ := testModel(t, config.Config{Theme: theme})
+					m, _ := testModel(t, config.Config{Theme: config.Theme{Name: theme}})
 					code := "    " + strings.Repeat("word ", 22) + strings.Repeat("界", 8)
 					for _, wrapper := range []string{"```php\n%s\n```", "```\n%s\n```", "> ```php\n> %s\n> ```", "- item\n\n  ```php\n  %s\n  ```", "    %s"} {
 						out := m.glamour(fmt.Sprintf(wrapper, code), width, bare)
@@ -57,7 +57,7 @@ func TestMarkdownCodeBlocks(t *testing.T) {
 func TestCodeWrapMarkerOnlyOnContinuations(t *testing.T) {
 	for _, symbols := range []string{config.SymbolsUnicode, config.SymbolsNerd, config.SymbolsASCII} {
 		for _, theme := range []string{"dark", "light"} {
-			m, _ := testModel(t, config.Config{Theme: theme, Symbols: symbols})
+			m, _ := testModel(t, config.Config{Theme: config.Theme{Name: theme}, Symbols: symbols})
 			m.sym = newSymbols(symbols, nil, false)
 			out := m.renderBody("```\n    "+strings.Repeat("word ", 12)+"\n    next original line\n\n    last line\n```", 30)
 			marker := symbolSets[symbols].codeWrap
@@ -90,7 +90,7 @@ func TestCommentCodeIsLiteralAndMonochrome(t *testing.T) {
 	for _, tag := range []string{"pre", "code"} {
 		md := ticket.HTMLToMarkdown("<body><" + tag + ">" + code + "</" + tag + "></body>")
 		for _, theme := range []string{"dark", "light"} {
-			m, _ := testModel(t, config.Config{Theme: theme})
+			m, _ := testModel(t, config.Config{Theme: config.Theme{Name: theme}})
 			out := m.renderBody(md, 80)
 			for _, line := range strings.Split(strings.ReplaceAll(code, "&lt;tag&gt;", "<tag>"), "\n") {
 				if !strings.Contains(ansi.Strip(out), line) {
@@ -124,7 +124,7 @@ func TestMarkdownProseUnchanged(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			m, _ := testModel(t, config.Config{Theme: theme})
+			m, _ := testModel(t, config.Config{Theme: config.Theme{Name: theme}})
 			if got := m.glamour(md, 40, bare); got != want {
 				t.Fatalf("%s bare=%v: prose rendering changed", theme, bare)
 			}
@@ -149,7 +149,7 @@ func TestMarkdownListHangingIndent(t *testing.T) {
 				{"quote", "> - hello " + strings.Repeat("continuation ", 8), "• hello"},
 			} {
 				t.Run(fmt.Sprintf("%s/%v/%s", theme, bare, tt.name), func(t *testing.T) {
-					m, _ := testModel(t, config.Config{Theme: theme})
+					m, _ := testModel(t, config.Config{Theme: config.Theme{Name: theme}})
 					out := ansi.Strip(m.glamour(tt.markdown, 32, bare))
 					column, continuations := -1, 0
 					for _, line := range strings.Split(out, "\n") {
@@ -171,5 +171,23 @@ func TestMarkdownListHangingIndent(t *testing.T) {
 				})
 			}
 		}
+	}
+}
+
+func TestMarkdownColorsOverrideGlamour(t *testing.T) {
+	yes := true
+	p := config.Config{Colors: config.Colors{Markdown: config.MarkdownColors{
+		Link:    config.Style{FG: "#ff0000", Underline: &yes},
+		Heading: config.Style{FG: "2"},
+	}}}.Palette(true)
+	r := newMarkdownRenderer(p, 80, false, "↪")
+	if c := r.style.Link.Color; c == nil || *c != "#ff0000" || !*r.style.Link.Underline {
+		t.Fatalf("link = %+v", r.style.Link)
+	}
+	if c := r.style.Heading.Color; c == nil || *c != "2" {
+		t.Fatalf("heading = %+v", r.style.Heading)
+	}
+	if light := newMarkdownRenderer(config.Config{}.Palette(false), 80, false, "↪"); light.style.Document.Color == r.style.Document.Color {
+		t.Fatal("the light base must use glamour's light style")
 	}
 }

@@ -160,20 +160,20 @@ key press.
 | `g`/`G` | first/last ticket; in the reader, jump to its top or bottom (in cards view, selecting the first or last field, section, or comment) |
 | `ctrl+d`/`ctrl+u` | half page down/up in the list, or scroll the reader half a page |
 | `ctrl+f`/`ctrl+b` (or pgdown/pgup) | page down/up in the list, or scroll the reader a page |
-| `tab` / `shift+tab` | focus the next/previous pane: the views panel (wide screens), the list, and the reader; in the cards view, entering the reader selects its first editable row |
-| `enter` (reader, editable row selected) | edit the selected row, skipping the `e` menu; Add comment opens the comment editor |
-| `esc` (reader) | return focus to the list |
+| `tab`/`shift+tab`, `l`/`h` | focus the next/previous pane: the views panel (wide screens), the list, and the reader; in the cards view, entering the reader selects its first editable row |
+| `enter` | in the list, open the ticket in the reader; in the reader, edit the selected row (Add comment opens the comment editor) |
+| `esc` | return focus to the list |
 | `0` / `1` / `2` | focus the views panel (wide screens) / the list / the reader |
-| `/` | edit the filter (available fields appear while editing; `?` opens the filter guide; Enter or Esc to finish) |
+| `/` | edit the filter (available fields appear while editing; `ctrl+/` opens the filter guide; `enter` keeps the filter, `esc` restores the previous one) |
 | `p` | switch project (recent first) |
 | `H` | ticket history: the last 10 tickets focused in the reader, most recent first; picking one selects it (keeping it in the Viewing section when the view doesn't show it) and focuses the reader |
 | `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project), or give the selected ticket its own repo that overrides its projects' links without changing them |
 | `space`, `a` | run an action on the selected ticket |
-| `ctrl+a` | create or edit action files (also available in Settings) |
+| `A` | create or edit action files (also available in Settings) |
 | `P` | pin / unpin the selected ticket; pins persist locally per project or My Tasks, above filtered tickets |
 | `e` | edit the selected ticket: add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), assign it, or set its branch (saved locally, overrides `branch_field`; empty removes it) |
-| `C` | add a comment to the selected ticket, from the list or the reader |
-| `d` / `m` / `A` | set the due date / move to a section / assign, skipping the `e` menu |
+| `c` | add a comment to the selected ticket, from the list or the reader |
+| `d` / `m` / `@` | set the due date / move to a section / assign, skipping the `e` menu |
 | `.` | run the last picked action again on the selected ticket |
 | `t` | log completed time for the selected ticket (only when time tracking is configured) |
 | `f` | attachments: view images inline (`j`/`k` step between them) or open in the browser |
@@ -186,12 +186,26 @@ key press.
 | `ctrl+s` | save the current filter, grouping, and sorting under a name |
 | `s` | settings: separators, header spacing, reader view, and auto-update interval; changes persist between sessions |
 | `o` | open the ticket in the browser |
-| `c` | copy the selected ticket's link to the clipboard (requires terminal OSC 52 support) |
-| `y` | copy the targeted comment as Markdown in the cards reader (requires terminal OSC 52 support); does nothing on other targets |
+| `y` | copy the selected ticket's link to the clipboard (requires terminal OSC 52 support) |
+| `Y` | copy the targeted comment as Markdown in the cards reader (requires terminal OSC 52 support); does nothing on other targets |
 | `r` | reload tickets and clear the inline image cache (including failed loads) |
 | `R` | set the automatic reload interval (persists between sessions) |
 | `?` | show every key |
 | `q` | quit |
+
+Pickers start in browse mode: `j`/`k` move, `/` searches, `enter` picks, and
+`esc` stops searching or closes. Multi-select pickers check items with `space`
+or `tab` and confirm with `enter`. In the repo picker, `ctrl+s` (or the
+`Use "<path>"` row) uses the typed path. Set `picker.type_first = true` to
+open pickers in search mode.
+
+The action menu, the `e` edit menu, and the settings menu work differently:
+each item has its own key, shown in brackets, which picks it at once. They
+have no search; arrows and `ctrl+n`/`ctrl+p` move, and `esc` closes. Action
+keys come from each action file; edit and settings menu keys are fixed.
+
+Every key above can be changed in the `[keys]` tables of `config.toml`; see
+[Configuration](#configuration).
 
 Inline images are cached by attachment for the current session. Manual reload
 downloads the displayed ticket's images again; automatic reload keeps the cache.
@@ -275,15 +289,41 @@ Pick a ticket with fzf:
 asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {1}' | cut -f1
 ```
 
+## Upgrading to v0.2.0
+
+v0.2.0 moves the color settings. Run `asanamate config update` to rewrite
+your config; it keeps your values and saves the old file as
+`config.toml.bak`. Until then, asanamate names the first moved key and stops.
+
+| v0.1.0 | v0.2.0 |
+|---|---|
+| `theme` | `theme.name` |
+| `accent_color` | `colors.accent` |
+| `list.header.color` | `colors.header` |
+| `list.pinned.color` | `colors.pinned` |
+| `list.viewing.color` | `colors.viewing` |
+| `list.selection.color` | `colors.selection` |
+
+Default keys changed too: `enter` in the list opens the reader; `c` adds a
+comment (was `C`); `y` copies the link (was `c`); `Y` copies the targeted
+comment (was `y`); `@` assigns (was `A`); `A` opens the action builder (was
+`ctrl+a`); `ctrl+/` opens the filter guide (was `?`), and `esc` in the filter
+restores the previous filter. Pickers start in browse mode; press `/` to
+search, or set `picker.type_first = true`.
+
 ## Configuration
 
-`~/.config/asanamate/config.toml` (or `$XDG_CONFIG_HOME/asanamate/config.toml`):
+`~/.config/asanamate/config.toml` (or `$XDG_CONFIG_HOME/asanamate/config.toml`).
+Changes to `config.toml`, theme files, and action files take effect the next
+time asanamate starts; actions saved with the action builder (`A`) apply at
+once. Run `asanamate doctor` to check a change without starting the TUI.
 
 | Key | Default | Meaning |
 |---|---|---|
 | `workspace` | set by setup | Asana workspace gid |
-| `theme` | `"dark"` | reading pane style: `dark` or `light` |
-| `accent_color` | `"4"` | accent for reader card headings, group headers, and the selection marker: an ANSI color number (`0`–`255`) or `#rrggbb` |
+| `theme.name` | `"auto"` | color theme: `auto` (follow the terminal background), `dark`, `light`, or a file in `themes/`; see [Themes](#themes) |
+| `theme.dark` / `theme.light` | `"dark"` / `"light"` | themes `auto` uses on dark and light backgrounds |
+| `colors.*` | the theme's | per-role overrides on top of the theme: a color (`0`–`255`, `#rgb`, or `#rrggbb`) or a style table `{ fg, bg, bold, italic, underline, faint, reverse }`; see [Themes](#themes) |
 | `default_filter` | `"is:open"` | filter applied at startup |
 | `confirm_writes` | `true` | write-back subcommands ask before writing |
 | `list.layout` | `"single"` | `single` (one line per ticket) or `multi` (title, then fields on a second line) |
@@ -299,14 +339,12 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `list.sort.direction` | `"asc"` | `asc` (earliest dates / A–Z) or `desc` (latest dates / Z–A); missing values always last |
 | `list.header.style` | `"rule"` | group headers: `rule` (`── Label (n) ───`) or `bar` (reversed bar) |
 | `list.header.spacing` | `false` | `true` adds a blank line above and below each group header; the `s` settings menu toggles it and the choice persists |
-| `list.header.color` | `accent_color` | group header color, same format as `accent_color` |
-| `list.pinned.color` | `"208"` (orange) | header color of the Pinned section for tickets manually pinned with `P`; same format as `accent_color`, empty uses it |
-| `list.viewing.color` | `"5"` (magenta) | header color of the Viewing section for a ticket temporarily kept outside the filter; same format as `accent_color`, empty uses it |
 | `list.selection.style` | `"marker"` | selected ticket: `marker` (bold title with a left `▌`) or `bar` (reversed row; agent badges swap colors) |
-| `list.selection.color` | `accent_color` | selection marker color, same format as `accent_color` |
 | `reader.view` | `"cards"` | reader's starting view: `cards` (details card, titled sections, one box per comment) or `markdown` (the rendered ticket Markdown); `v` switches and the choice persists |
 | `images.mode` | `"auto"` | kitty graphics: `auto`, `kitty` (force on), or `off` |
 | `images.inline` | `false` | cards view: draw images in descriptions and comments in place of their links (needs `images.mode` on and a terminal with kitty Unicode placeholders, such as kitty or Ghostty) |
+| `picker.type_first` | `false` | open pickers in search mode, so typing filters at once; `esc` leaves search for browse mode |
+| `keys.<scope>.<name>` | see the template | key bindings: a list of keys per binding, such as `[keys.main] quit = ["q", "ctrl+q"]`; `[]` unbinds. Scopes: `main`, `views`, `filter`, `picker`, `form`, `form_field`, `input`, `builder`, `notice`. Keys are a character (`"j"`, `"?"`) or a key name with modifiers (`"ctrl+d"`, `"shift+tab"`, `"enter"`, `"space"`, `"pgdown"`); a letter with `ctrl` or `alt` is lower case, plus `shift` for the capital (`"ctrl+shift+q"`, not `"ctrl+Q"`); `ctrl+c` always quits and can't be bound. `asanamate setup` and `asanamate config update` write every binding, commented, with its default |
 | `reader.max_text_width` | `0` | cards view: wrap description and comment text at this many columns (words are kept whole); `0` wraps at the pane width |
 | `repo_source.root` | your setup directory, or empty | directory whose direct children with a `.git` entry (clones and worktrees) fill the repo picker; absolute or starting with `~`; empty: type a path |
 | `repo_source.command` | unset | prints one repo path per line; replaces `repo_source.root` when set |
@@ -358,6 +396,51 @@ To pick repos from sesh or zoxide instead:
 [repo_source]
 command = "sesh list -z"
 ```
+
+### Themes
+
+`[theme] name` picks a built-in theme (`dark`, `light`), a theme file, or
+`auto`, which asks the terminal for its background color and uses
+`theme.dark` or `theme.light`. Built-in themes use ANSI color numbers, so they
+follow your terminal's color scheme.
+
+A theme file is `themes/<name>.toml` next to `config.toml`; the names `dark`,
+`light`, and `auto` are reserved. Setup and `asanamate config update` write
+`themes/example.toml.example` to start from:
+
+```toml
+base = "dark"            # built-in theme for every color this file leaves out
+
+[colors]
+accent = "#7aa2f7"
+selection = { fg = "#bb9af7", bold = true }
+
+[colors.mode]
+normal = { fg = "#1a1b26", bg = "#7aa2f7", bold = true }
+
+[colors.markdown]
+link = { fg = "#7dcfff", underline = true }
+```
+
+Colors layer in order: the built-in base, the theme file, then `[colors]` in
+`config.toml`. Each style field (fg, bg, bold, ...) layers on its own, so
+`accent = "#ffffff"` keeps the theme's bold. Unset `header`, `selection`, and
+`mode.normal` use `accent`; unset `mode.filter` uses `warn`. A mode pill
+without a background is drawn reversed.
+
+| Role | Used for |
+|---|---|
+| `accent` | reader headings, focused panel border, NORMAL and VIEWS pills |
+| `border` | unfocused panel and card borders |
+| `muted` | secondary text such as distant due dates |
+| `highlight` | bar selection and the views panel cursor |
+| `ok`, `warn`, `error` | status messages and due-date urgency |
+| `working` | working coding agents |
+| `header`, `selection` | group headers, selection marker |
+| `pinned`, `viewing` | Pinned and Viewing section headers |
+| `authors` | comment author names, cycled |
+| `mode.normal`, `mode.filter`, `mode.read`, `mode.edit` | statusline mode pills |
+| `markdown.text`, `.heading`, `.h1`, `.link`, `.code`, `.code_block`, `.quote`, `.rule` | reading pane Markdown, on top of glamour's dark or light style |
 
 ### Time tracking (optional)
 
@@ -437,10 +520,10 @@ time while their existing form and logging operations continue to work.
 
 ## Actions
 
-Press `ctrl+a`, or choose **Build / edit actions** in Settings (`s`, then `a`).
+Press `A`, or choose **Build / edit actions** in Settings (`s`, then `a`).
 Choose **Create action** or an existing action. The builder provides every
 standard action setting, including ordered form fields and select options.
-Use j/k, arrows, or Tab to move, Enter to edit, and Ctrl+S to accept a text
+Use j/k or arrows to move, Enter to edit, and Ctrl+S to accept a text
 edit. Press `/` to search the current menu; Escape clears search and returns
 to navigation. Outside search, Escape returns or discards the draft.
 Help below the list starts with `nf-fa-circle_info` (`\uf05a`) for Nerd Font
@@ -576,7 +659,8 @@ Otherwise it is the project you are viewing (if the ticket is in it), or the
 ticket's only project.
 
 Repo resolution: the first time a project's ticket runs a `repo = true` action,
-you pick a repo from `repo_source` or type any path (Tab). asanamate
+you pick a repo from `repo_source` or type any path (`/`, the path, then
+`ctrl+s`). asanamate
 remembers it. Tickets in several projects always ask which project to use.
 A ticket given its own repo with `L` (**This ticket only**) uses that repo
 instead, skips the project question, and leaves every project link as it is.
@@ -818,7 +902,7 @@ With a ticket gid, it also explains why each agent links to that ticket or not.
 2. Set `ASANA_ACCESS_TOKEN` there the same way as before (see [Token](#token)).
    Never copy the token inside a file with the others; create a new token at
    <https://app.asana.com/0/my-apps> if you prefer.
-3. Copy `~/.config/asanamate/` (config and actions). If a path in it differs
+3. Copy `~/.config/asanamate/` (config, actions, and themes). If a path in it differs
    on the new machine, such as `repo_source.root`, edit it; paths starting
    with `~` carry over.
 4. Optionally copy `~/.local/state/asanamate/state.toml` to keep repo links,
@@ -841,6 +925,7 @@ is no need to copy them.
 
 - Config: `~/.config/asanamate/config.toml`
 - Actions: `~/.config/asanamate/actions/*.toml`
+- Themes: `~/.config/asanamate/themes/*.toml`
 - State (repo links, saved branches, saved views, recent projects, ticket history): `~/.local/state/asanamate/state.toml`
 - Ticket exports: `~/.local/state/asanamate/tickets/<gid>/`
 - Background action log: `~/.local/state/asanamate/actions.log`

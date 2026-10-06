@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"image/color"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -10,50 +9,48 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
-// Mode pill colors: accent for the list, then ANSI cyan, magenta, and yellow.
-var (
-	readColor   = lipgloss.Color("6")
-	editColor   = lipgloss.Color("5")
-	filterColor = warnStyle.GetForeground()
-)
-
-// mode returns the statusline's mode name and pill color, and the key hints
+// mode returns the statusline's mode name and pill style, and the key hints
 // for what has focus.
-func (m *Model) mode() (name string, pill color.Color, hints [][2]string) {
+func (m *Model) mode() (name string, pill lipgloss.Style, hints [][2]string) {
+	targets := [2]string{keyLabel("main", "down", "up"), "targets"}
+	scroll := [2]string{keyLabel("main", "scroll_down", "scroll_up"), "scroll"}
+	pane := [2]string{keyLabel("main", "next_pane"), "pane"}
+	list := [2]string{keyLabel("main", "focus_list"), "list"}
 	switch {
 	case m.loading && m.tasks == nil:
-		// Only q works until the first tasks land.
-		return "NORMAL", m.accentStyle.GetForeground(), [][2]string{{"q", "quit"}}
+		// Only quit works until the first tasks land.
+		return "NORMAL", normalPill, [][2]string{{keyLabel("main", "quit"), "quit"}}
 	case m.filtering:
-		return "FILTER", filterColor, [][2]string{{"enter", "apply"}, {"esc", "done"}}
+		return "FILTER", filterPill, [][2]string{{typedLabel("filter", "done"), "apply"}, {typedLabel("filter", "cancel"), "cancel"}, {typedLabel("filter", "help"), "guide"}}
 	case m.focusReader && m.fieldKey == commentKey:
-		return "EDIT", editColor, [][2]string{{"j/k", "targets"}, {"enter", "add comment"}, {"↑/↓", "scroll"}, {"esc", "list"}}
+		return "EDIT", editPill, [][2]string{targets, {keyLabel("main", "open"), "add comment"}, scroll, list}
 	case m.focusReader && m.editableTarget():
-		return "EDIT", editColor, [][2]string{{"j/k", "targets"}, {"enter", "edit"}, {"↑/↓", "scroll"}, {"esc", "list"}}
+		return "EDIT", editPill, [][2]string{targets, {keyLabel("main", "open"), "edit"}, scroll, list}
 	case m.focusReader:
 		if m.readerView != config.ViewMarkdown {
-			hints := [][2]string{{"j/k", "targets"}}
+			hints := [][2]string{targets}
 			if t, ok := m.selectedDetail(); ok && m.selectedComment(t) != nil {
-				hints = append(hints, m.keyHints("y")...)
+				hints = append(hints, m.keyHints("copy_comment")...)
 			}
-			return "READ", readColor, append(hints, [2]string{"↑/↓", "scroll"}, [2]string{"tab", "pane"}, [2]string{"esc", "list"})
+			return "READ", readPill, append(hints, scroll, pane, list)
 		}
-		return "READ", readColor, [][2]string{{"j/k", "scroll"}, {"tab", "pane"}, {"esc", "list"}}
+		return "READ", readPill, [][2]string{{keyLabel("main", "down", "up"), "scroll"}, pane, list}
 	case m.focusNav:
-		return "VIEWS", m.accentStyle.GetForeground(), [][2]string{{"j/k", "move"}, {"enter", "open"}, {"esc", "list"}, {"?", "keys"}}
+		return "VIEWS", normalPill, [][2]string{{keyLabel("views", "down", "up"), "move"}, {keyLabel("views", "open"), "open"}, list, {keyLabel("main", "help"), "keys"}}
 	}
-	return "NORMAL", m.accentStyle.GetForeground(), m.keyHints("space", "e", "t", "c", "/", "p", "?")
+	return "NORMAL", normalPill, m.keyHints("action", "edit", "log_time", "copy_link", "filter", "projects", "help")
 }
 
 // statusline is the bottom bar: a mode pill, where the list is and what it
 // shows, then the key hints for what has focus, or the latest status message
 // in their place.
 func (m *Model) statusline() string {
-	name, pillColor, hints := m.mode()
-	pill := lipgloss.NewStyle().Bold(true).Reverse(true).Foreground(pillColor).Render(" " + name + " ")
+	name, pillStyle, hints := m.mode()
+	pill := pillStyle.Render(" " + name + " ")
 	sep := dimStyle.Render(" │ ")
 	segs := []string{m.sym.icon(iconView) + m.viewName()}
 	if _, _, split := m.paneWidths(); !split && len(m.deps.State.SavedViews) > 0 {
@@ -82,9 +79,11 @@ func (m *Model) statusline() string {
 	}
 	right := titleStyle.Render(ticket.OneLine(status))
 	if status == "" {
-		parts := make([]string, len(hints))
-		for i, h := range hints {
-			parts[i] = m.accentStyle.Render(h[0]) + " " + dimStyle.Render(h[1])
+		var parts []string
+		for _, h := range hints {
+			if h[0] != "" { // unbound
+				parts = append(parts, m.accentStyle.Render(h[0])+" "+dimStyle.Render(h[1]))
+			}
 		}
 		right = strings.Join(parts, "  ")
 	}
@@ -125,22 +124,44 @@ func (m *Model) linkedAgents() []agents.Agent {
 
 // helpView renders the key help in one column per help group.
 func (m *Model) helpView() string {
-	var shown []binding
-	keyW := 0
-	for _, b := range keyBindings() {
-		if (!b.splitOnly || !m.deps.NoPreview) && (b.keys[0] != "t" || m.deps.Config.TimeTrackingEnabled()) {
-			shown = append(shown, b)
-			keyW = max(keyW, ansi.StringWidth(b.helpLabel()))
+	all := m.bindings
+	partner, byName := map[string]binding{}, map[string]binding{}
+	for _, b := range all {
+		if b.Pair != "" {
+			partner[b.Pair] = b
 		}
+		byName[b.Name] = b
+	}
+	type row struct{ label, desc, group string }
+	var rows []row
+	keyW := 0
+	for _, b := range all {
+		// A paired binding shares its partner's row, or takes the partner's
+		// place in its group when the partner is unbound.
+		if !m.available(b) {
+			continue
+		}
+		if p, ok := byName[b.Pair]; ok {
+			if m.available(p) {
+				continue
+			}
+			b.Group = p.Group
+		}
+		label := keymap.Label(b.keys...)
+		if p, ok := partner[b.Name]; ok && m.available(p) {
+			label = keymap.Label(b.keys[0], p.keys[0])
+		}
+		rows = append(rows, row{label, b.Desc, b.Group})
+		keyW = max(keyW, ansi.StringWidth(label))
 	}
 	keyStyle := m.accentStyle.Width(keyW + 2)
-	head := lipgloss.NewStyle().Bold(true).Foreground(editColor)
+	head := editPill.Reverse(false)
 	cols := make([]string, len(helpGroups))
 	for i, g := range helpGroups {
 		lines := []string{head.Render(g)}
-		for _, b := range shown {
-			if b.group == g {
-				lines = append(lines, keyStyle.Render(b.helpLabel())+b.desc)
+		for _, r := range rows {
+			if r.group == g {
+				lines = append(lines, keyStyle.Render(r.label)+r.desc)
 			}
 		}
 		cols[i] = lipgloss.NewStyle().PaddingRight(4).Render(strings.Join(lines, "\n"))

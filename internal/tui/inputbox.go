@@ -29,13 +29,13 @@ func newInputBox(title, placeholder string) *inputBox {
 	return &inputBox{title: title, area: a}
 }
 
-// update returns done with the trimmed text on ctrl+s, or cancelled on esc.
+// update returns done with the trimmed text on submit, or cancelled on cancel.
 func (b *inputBox) update(msg tea.Msg) (res pickResult, cmd tea.Cmd) {
 	if key, ok := msg.(tea.KeyPressMsg); ok {
-		switch key.String() {
-		case "esc":
+		switch bound("input", key, true) {
+		case "cancel":
 			return pickResult{cancelled: true}, nil
-		case "ctrl+s":
+		case "submit":
 			return pickResult{done: true, free: strings.TrimSpace(b.area.Value())}, nil
 		}
 		b.err = ""
@@ -78,6 +78,5 @@ func (b *inputBox) view(width, height int, accent lipgloss.Style) string {
 		b.area.SetHeight(min(available, 8))
 	}
 	return accent.Render(b.title) + "\n" + b.area.View() + "\n" + errorLine + help +
-		accent.Render("enter") + dimStyle.Render(" newline · ") + accent.Render("ctrl+s") +
-		dimStyle.Render(" submit · ") + accent.Render("esc") + dimStyle.Render(" cancel")
+		hintLine(accent, [2]string{"enter", "newline"}, [2]string{keyLabel("input", "submit"), "submit"}, [2]string{keyLabel("input", "cancel"), "cancel"})
 }

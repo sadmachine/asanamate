@@ -23,8 +23,8 @@ func wideModel(t *testing.T, width int) *Model {
 	return m
 }
 
-// keys sends keys without running the commands they return.
-func keys(m *Model, ks ...string) {
+// sendKeys sends keys without running the commands they return.
+func sendKeys(m *Model, ks ...string) {
 	for _, k := range ks {
 		m.Update(key(k))
 	}
@@ -64,11 +64,11 @@ func TestViewsPanelPicksGroupingAndProject(t *testing.T) {
 		t.Fatalf("focusNav = %v, navCursor = %d", m.focusNav, m.navCursor)
 	}
 	// My Tasks, Mobile, Web, then none, section, due.
-	keys(m, "j", "j", "j", "j", "enter")
+	sendKeys(m, "j", "j", "j", "j", "enter")
 	if m.focusNav || m.groupBy != "section" {
 		t.Fatalf("focusNav = %v, groupBy = %q", m.focusNav, m.groupBy)
 	}
-	keys(m, "0", "j", "enter")
+	sendKeys(m, "0", "j", "enter")
 	if gidOf(m.viewProject) != "p2" {
 		t.Fatalf("viewProject = %+v", m.viewProject)
 	}
@@ -85,9 +85,9 @@ func TestViewsPanelPicksGroupingAndProject(t *testing.T) {
 func TestViewsPanelCursorSurvivesShrinkingRows(t *testing.T) {
 	m := wideModel(t, 200)
 	m.groupBy = "Priority"
-	keys(m, "0", "G")
+	sendKeys(m, "0", "G")
 	m.groupBy = "" // Priority's row is gone
-	keys(m, "enter")
+	sendKeys(m, "enter")
 	if m.sortBy.By != "title" || m.groupBy != "" {
 		t.Fatalf("sort = %v, group = %q, want the last row, title sort", m.sortBy, m.groupBy)
 	}
@@ -123,7 +123,7 @@ func TestViewsPanelAppliesAndResetsSavedViewWithoutSwitchingProject(t *testing.T
 	m := wideModel(t, 220)
 	st := m.deps.State
 	st.SavedViews["Work"] = state.View{Filter: "is:open", GroupBy: "section", Sort: config.Sort{By: "due", Direction: "asc"}}
-	keys(m, "0", "j", "enter") // My Tasks, then Work
+	sendKeys(m, "0", "j", "enter") // My Tasks, then Work
 	if m.focusNav || m.viewProject != nil || m.savedViewLabel() != "Work" || m.currentView() != st.SavedViews["Work"] {
 		t.Fatalf("sidebar recall failed: name = %q, view = %+v", m.savedViewLabel(), m.currentView())
 	}
@@ -132,17 +132,17 @@ func TestViewsPanelAppliesAndResetsSavedViewWithoutSwitchingProject(t *testing.T
 	if !strings.Contains(body, "▌ Work *") {
 		t.Fatalf("sidebar lost modified mark:\n%s", body)
 	}
-	keys(m, "0", "j", "enter")
+	sendKeys(m, "0", "j", "enter")
 	if m.savedViewLabel() != "Work" || m.filterInput.Value() != "is:open" {
 		t.Fatalf("active modified view did not reset: %q", m.savedViewLabel())
 	}
 	m.pickedProject(&asana.Ref{GID: "p1", Name: "Web"})
 	m.Update(tasksMsg{project: m.viewProject, tasks: []asana.Task{openTask, doneTask}})
-	keys(m, "0", "g", "j", "enter")
+	sendKeys(m, "0", "g", "j", "enter")
 	if m.viewProject == nil || m.viewProject.GID != "p1" || m.savedViewLabel() != "Work" {
 		t.Fatalf("sidebar recall switched project: %+v", m.viewProject)
 	}
-	keys(m, "0", "g", "enter")
+	sendKeys(m, "0", "g", "enter")
 	if m.viewProject != nil || m.savedViewLabel() != "Work" {
 		t.Fatalf("My Tasks did not restore its view: %q", m.savedViewLabel())
 	}

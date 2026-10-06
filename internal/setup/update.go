@@ -3,7 +3,9 @@ package setup
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"slices"
@@ -33,16 +35,16 @@ func Update(o Options, yes bool) error {
 	if err != nil {
 		return err
 	}
-	if _, err := config.Load(o.ConfigPath); err != nil {
-		return fmt.Errorf("fix the config before updating it: %w", err)
-	}
 	updated, added, err := Merge(string(old))
 	if err != nil {
-		return err
+		return fmt.Errorf("fix the config before updating it: %w", err)
+	}
+	if err := checkLoads(o.ConfigPath, updated); err != nil {
+		return fmt.Errorf("fix the config before updating it: %w", err)
 	}
 	if updated == string(old) {
 		fmt.Fprintln(o.Out, "Config is already up to date.")
-		return nil
+		return writeFiles(config.ThemesDir(o.ConfigPath), themeFiles)
 	}
 	if len(added) > 0 {
 		fmt.Fprintf(o.Out, "New settings with their defaults: %s\n", strings.Join(added, ", "))
@@ -61,6 +63,9 @@ func Update(o Options, yes bool) error {
 		return err
 	}
 	if err := writePrivate(o.ConfigPath, []byte(updated)); err != nil {
+		return err
+	}
+	if err := writeFiles(config.ThemesDir(o.ConfigPath), themeFiles); err != nil {
 		return err
 	}
 	fmt.Fprintf(o.Out, updateSummary, o.ConfigPath, backup)
@@ -82,6 +87,9 @@ func Merge(old string) (string, []string, error) {
 	if err != nil {
 		return "", nil, err
 	}
+	if err := config.ApplyMoves(user); err != nil {
+		return "", nil, err
+	}
 	gid, _ := user["workspace"].(string)
 	name := gid
 	if m := workspaceName.FindStringSubmatch(old); m != nil {
@@ -101,8 +109,10 @@ func Merge(old string) (string, []string, error) {
 		if m := keyLine.FindStringSubmatch(line); m != nil {
 			key := append(slices.Clone(table), m[2])
 			dotted := strings.Join(key, ".")
-			if md.IsDefined(key...) {
-				v, err := formatValue(lookup(user, key))
+			// Moved keys are not in the file's metadata, so presence comes
+			// from the migrated map.
+			if v, ok := lookupOK(user, key); ok {
+				v, err := formatValue(v)
 				if err != nil {
 					return "", nil, fmt.Errorf("%s: %w", dotted, err)
 				}
@@ -156,13 +166,40 @@ func writePrivate(path string, data []byte) error {
 	return os.Chmod(path, 0o600)
 }
 
-func lookup(m map[string]any, key []string) any {
+// lookupOK returns the value at key and whether m sets it.
+func lookupOK(m map[string]any, key []string) (any, bool) {
 	var v any = m
 	for _, k := range key {
-		t, _ := v.(map[string]any)
-		v = t[k]
+		t, ok := v.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		if v, ok = t[k]; !ok {
+			return nil, false
+		}
 	}
-	return v
+	return v, true
+}
+
+// checkLoads loads body as if it were the config at path: from a temporary
+// file in the same directory, so actions and themes resolve the same way.
+func checkLoads(path, body string) error {
+	f, err := os.CreateTemp(filepath.Dir(path), ".config-*.toml")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	if _, err := f.WriteString(body); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if _, err := config.Load(f.Name()); err != nil {
+		return errors.New(strings.ReplaceAll(err.Error(), f.Name(), path))
+	}
+	return nil
 }
 
 // checkUsed errors on a key in a template table that the template has no line for.
@@ -238,12 +275,37 @@ func childOrder(md toml.MetaData, path []string, t map[string]any) []string {
 }
 
 // formatValue returns v as a TOML value, preferring the template's quoting:
-// "basic" strings, then 'literal', then multi-line literal strings.
+// "basic" strings, then 'literal', then multi-line literal strings. Tables
+// are written inline, so style values stay on their key's line.
 func formatValue(v any) (string, error) {
-	if s, ok := v.(string); ok {
-		if q, ok := quote(s); ok {
+	switch v := v.(type) {
+	case string:
+		if q, ok := quote(v); ok {
 			return q, nil
 		}
+	case map[string]any:
+		parts := make([]string, 0, len(v))
+		for _, k := range slices.Sorted(maps.Keys(v)) {
+			s, err := formatValue(v[k])
+			if err != nil {
+				return "", err
+			}
+			parts = append(parts, k+" = "+s)
+		}
+		if len(parts) == 0 {
+			return "{}", nil
+		}
+		return "{ " + strings.Join(parts, ", ") + " }", nil
+	case []any:
+		parts := make([]string, len(v))
+		for i, e := range v {
+			s, err := formatValue(e)
+			if err != nil {
+				return "", err
+			}
+			parts[i] = s
+		}
+		return "[" + strings.Join(parts, ", ") + "]", nil
 	}
 	var b strings.Builder
 	if err := toml.NewEncoder(&b).Encode(map[string]any{"v": v}); err != nil {

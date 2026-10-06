@@ -18,6 +18,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/keymap"
 )
 
 func fakeClient(t *testing.T) *asana.Client {
@@ -337,5 +338,142 @@ func TestOfferCodexHookSkipsWithoutCodex(t *testing.T) {
 	}
 	if state, err := CodexHook(o.CodexHome, o.Executable); err != nil || state != CodexAbsent {
 		t.Fatalf("state = %v, err = %v", state, err)
+	}
+}
+
+func TestMergeMovesReleasedKeys(t *testing.T) {
+	updated, _, err := Merge("workspace = \"1\"\ntheme = \"light\"\naccent_color = \"2\"\n[list.header]\nstyle = \"bar\"\ncolor = \"3\"\n[list.pinned]\ncolor = \"208\"\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := loadString(t, updated)
+	if cfg.Theme.Name != "light" || cfg.Colors.Accent.FG != "2" || cfg.Colors.Header.FG != "3" || cfg.Colors.Pinned.FG != "208" || cfg.List.Header.Style != "bar" {
+		t.Fatalf("cfg = %+v\n%s", cfg, updated)
+	}
+	if strings.Contains(updated, "accent_color") || strings.Contains(updated, "[list.pinned]") {
+		t.Fatalf("old keys left behind:\n%s", updated)
+	}
+}
+
+func TestMergeMovesEmptyPinnedToAccent(t *testing.T) {
+	updated, _, err := Merge("workspace = \"1\"\naccent_color = \"6\"\n[list.pinned]\ncolor = \"\"\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg := loadString(t, updated); cfg.Palette(true).Colors.Pinned.FG != "6" {
+		t.Fatalf("pinned = %+v\n%s", cfg.Palette(true).Colors.Pinned, updated)
+	}
+}
+
+func TestMergeKeepsStyleTables(t *testing.T) {
+	updated, _, err := Merge("workspace = \"1\"\n[colors]\naccent = { fg = \"4\", bold = false }\nauthors = [\"1\", { fg = \"2\", italic = true }]\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`accent = { bold = false, fg = "4" }`, `authors = ["1", { fg = "2", italic = true }]`} {
+		if !strings.Contains(updated, want) {
+			t.Errorf("missing %s in:\n%s", want, updated)
+		}
+	}
+	if cfg := loadString(t, updated); *cfg.Colors.Accent.Bold || !*cfg.Colors.Authors[1].Italic {
+		t.Fatalf("cfg = %+v", cfg.Colors)
+	}
+}
+
+func TestUpdateMigratesV010Config(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	os.WriteFile(path, []byte("workspace = \"1\"\naccent_color = \"2\"\n"), 0o600)
+	o := Options{In: bufio.NewReader(strings.NewReader("")), Out: &strings.Builder{}, ConfigPath: path}
+	if err := Update(o, true); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(path)
+	if err != nil || cfg.Colors.Accent.FG != "2" {
+		t.Fatalf("cfg = %+v, err = %v", cfg.Colors.Accent, err)
+	}
+	if leftovers, _ := filepath.Glob(filepath.Join(dir, ".config-*")); len(leftovers) != 0 {
+		t.Fatalf("temporary check file left behind: %v", leftovers)
+	}
+}
+
+func TestRunWritesThemeExample(t *testing.T) {
+	path := runSetup(t)
+	example := filepath.Join(config.ThemesDir(path), "example.toml.example")
+	data, err := os.ReadFile(example)
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(config.ThemesDir(path), "mine.toml"), data, 0o600)
+	body, _ := os.ReadFile(path)
+	body = []byte(strings.Replace(string(body), "name = \"auto\"", "name = \"mine\"", 1))
+	os.WriteFile(path, body, 0o600)
+	cfg, err := config.Load(path)
+	if err != nil || cfg.Palette(true).Colors.Accent.FG != "#7aa2f7" {
+		t.Fatalf("accent = %+v, err = %v", cfg.Palette(true).Colors.Accent, err)
+	}
+}
+
+// runSetup runs setup without a repo directory and returns the config path.
+func runSetup(t *testing.T) string {
+	t.Helper()
+	o, _ := options(t, "2\n-\n")
+	if err := Run(context.Background(), o); err != nil {
+		t.Fatal(err)
+	}
+	return o.ConfigPath
+}
+
+// loadString loads body as a config file.
+func loadString(t *testing.T, body string) config.Config {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(path)
+	if err != nil {
+		t.Fatalf("%v\n%s", err, body)
+	}
+	return cfg
+}
+
+func TestTemplateListsEveryBinding(t *testing.T) {
+	tmpl := Render(asana.Ref{GID: "1", Name: "W"}, "")
+	for _, s := range keymap.Catalog() {
+		if !strings.Contains(tmpl, "\n[keys."+s.Name+"]\n") {
+			t.Errorf("template lacks [keys.%s]", s.Name)
+		}
+		for _, b := range s.Bindings {
+			if !strings.Contains(tmpl, "\n# "+b.Name+" = ") {
+				t.Errorf("template lacks keys.%s.%s", s.Name, b.Name)
+			}
+		}
+	}
+}
+
+func TestMergeKeepsKeyOverrides(t *testing.T) {
+	updated, added, err := Merge("workspace = \"1\"\n[keys.main]\nquit = [\"x\"]\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg := loadString(t, updated); cfg.Keymap.Name("main", "x") != "quit" {
+		t.Fatalf("override lost:\n%s", updated)
+	}
+	if !slices.Contains(added, "picker.type_first") {
+		t.Errorf("added = %v", added)
+	}
+}
+
+func TestUpdateWritesThemeExample(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	os.WriteFile(path, []byte("workspace = \"1\"\n"), 0o600)
+	o := Options{In: bufio.NewReader(strings.NewReader("")), Out: &strings.Builder{}, ConfigPath: path}
+	if err := Update(o, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(config.ThemesDir(path), "example.toml.example")); err != nil {
+		t.Fatalf("config update must add the theme example: %v", err)
 	}
 }

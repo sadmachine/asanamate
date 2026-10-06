@@ -1,0 +1,21 @@
+internal/config/style.go
+  s_2cc67e320e8e12::t_206ac7445287b1 1-85
+internal/config/style_test.go
+  s_2cc67e320e8e12::t_4cf8a791615773 1-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a0f02aa8b8d1b8ab4b5d88b14db7803eeea21401",
+  "prompts": {},
+  "sessions": {
+    "s_2cc67e320e8e12": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb32cb8b-ac7f-4514-968c-4aa6ab106c71",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

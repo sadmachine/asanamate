@@ -234,3 +234,13 @@ func TestBrowsePickerRequiresSlashBeforeFiltering(t *testing.T) {
 		t.Fatal("browse esc did not cancel")
 	}
 }
+
+func TestTypeFirstSkipsKeySelectPickers(t *testing.T) {
+	typeFirst = true
+	defer func() { typeFirst = false }()
+	p := newPicker(nil, "Actions", []pickItem{{Label: "View", Key: "v"}})
+	p.keySelect = true
+	if res, _ := p.update(key("esc")); !res.cancelled {
+		t.Fatal("one esc must close a key-select picker")
+	}
+}

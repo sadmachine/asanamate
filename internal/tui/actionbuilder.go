@@ -66,7 +66,6 @@ func (m *Model) openActionBuilder() {
 		items = append(items, pickItem{Label: ticket.OneLine(file.Action.Name), Hint: file.Name, Value: file})
 	}
 	m.modal = newPicker(pickValue(open), "Build / edit actions", items)
-	m.modal.input.Blur()
 }
 
 func builderRow(label, value, help string, edit func()) pickItem {
@@ -80,7 +79,6 @@ func (b *actionBuilder) show(title string, rows []pickItem) {
 	}
 	b.menu = newPicker(pickValue(func(edit func()) tea.Cmd { edit(); return nil }), title, rows)
 	b.menu.helpIcon = b.infoIcon
-	b.menu.input.Blur()
 	b.menu.cursor = min(cursor, len(rows)-1)
 	b.root = false
 }

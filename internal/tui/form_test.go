@@ -424,3 +424,21 @@ func TestActionBuilderInfoIconFollowsSymbolSet(t *testing.T) {
 		})
 	}
 }
+
+func TestTypeFirstBuilderMenusAcceptTyping(t *testing.T) {
+	cfg := config.Default()
+	cfg.Picker.TypeFirst = true
+	m, _ := testModel(t, cfg)
+	defer func() { typeFirst = false }()
+	m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
+	m.openActionBuilder()
+	typeText(m.modal, "cr")
+	if m.modal.input.Value() != "cr" {
+		t.Fatalf("chooser value = %q", m.modal.input.Value())
+	}
+	m.Update(key("enter"))
+	typeText(m.builder.menu, "na")
+	if m.builder.menu.input.Value() != "na" {
+		t.Fatalf("builder menu value = %q", m.builder.menu.input.Value())
+	}
+}

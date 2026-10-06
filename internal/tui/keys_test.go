@@ -265,3 +265,24 @@ func TestMarkdownKeepsJScroll(t *testing.T) {
 		t.Fatalf("markdown g scroll = %d", m.reader.YOffset())
 	}
 }
+
+func TestReboundMoveKeysScrollTheReader(t *testing.T) {
+	for _, tc := range []struct{ binding, key string }{{"scroll_down", "ctrl+e"}, {"down", "n"}} {
+		t.Run(tc.binding, func(t *testing.T) {
+			km, err := keymap.Resolve(map[string]map[string][]string{"main": {tc.binding: {tc.key}}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			m, _ := editModel(t)
+			keys = km
+			m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})
+			m.readerView = config.ViewMarkdown
+			m.focusReader = true
+			m.reader.SetContent(strings.Repeat("line\n", 100))
+			m.Update(key(tc.key))
+			if m.reader.YOffset() == 0 {
+				t.Fatalf("%s bound to %s did not scroll the reader", tc.binding, tc.key)
+			}
+		})
+	}
+}

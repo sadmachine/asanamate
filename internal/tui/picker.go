@@ -158,7 +158,8 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 	typing := p.searching || p.keySelect
 	switch bound("picker", msg, typing) {
 	case "cancel":
-		if p.searching {
+		// Key-select pickers have no search, even with picker.type_first.
+		if p.searching && !p.keySelect {
 			p.stopSearch()
 			return pickResult{}, nil
 		}

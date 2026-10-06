@@ -48,24 +48,34 @@ func keyBindings() []binding {
 // handlers runs each [keys.main] binding by name. A function, not a
 // variable, because the handlers reach code that reads them.
 func handlers() map[string]handler {
+	// scroll moves the reader a line, whichever key the binding uses.
+	scroll := func(m *Model, dir int) {
+		if dir < 0 {
+			m.reader.ScrollUp(1)
+		} else {
+			m.reader.ScrollDown(1)
+		}
+	}
 	// Arrow keys scroll the reader when it has focus.
-	move := func(to func(m *Model) int) func(*Model, tea.KeyPressMsg) tea.Cmd {
-		return func(m *Model, msg tea.KeyPressMsg) tea.Cmd {
+	move := func(dir int, to func(m *Model) int) func(*Model, tea.KeyPressMsg) tea.Cmd {
+		return func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			if m.focusReader {
-				return m.scrollReader(msg)
+				scroll(m, dir)
+				return nil
 			}
 			m.moveTo(to(m))
 			return m.selectionChanged()
 		}
 	}
 	cardMove := func(dir int, to func(m *Model) int) func(*Model, tea.KeyPressMsg) tea.Cmd {
-		return func(m *Model, msg tea.KeyPressMsg) tea.Cmd {
+		return func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			if m.focusReader {
 				if m.readerView != config.ViewMarkdown {
 					m.stepCardTarget(dir)
 					return nil
 				}
-				return m.scrollReader(msg)
+				scroll(m, dir)
+				return nil
 			}
 			m.moveTo(to(m))
 			return m.selectionChanged()
@@ -118,8 +128,8 @@ func handlers() map[string]handler {
 	return map[string]handler{
 		"down":           {run: cardMove(1, func(m *Model) int { return m.cursor + 1 })},
 		"up":             {run: cardMove(-1, func(m *Model) int { return m.cursor - 1 })},
-		"scroll_down":    {run: move(func(m *Model) int { return m.cursor + 1 })},
-		"scroll_up":      {run: move(func(m *Model) int { return m.cursor - 1 })},
+		"scroll_down":    {run: move(1, func(m *Model) int { return m.cursor + 1 })},
+		"scroll_up":      {run: move(-1, func(m *Model) int { return m.cursor - 1 })},
 		"top":            {run: jump(true, func(m *Model) int { return 0 })},
 		"bottom":         {run: jump(false, func(m *Model) int { return len(m.visible) - 1 })},
 		"half_page_down": {run: page(2, false)},

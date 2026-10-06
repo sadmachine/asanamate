@@ -544,22 +544,32 @@ func (m *Model) updateInput(msg tea.Msg) tea.Cmd {
 }
 
 func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
-	switch msg.String() {
-	case "?":
+	switch bound("filter", msg, true) {
+	case "help":
 		m.help = true
 		return nil
-	case "enter", "esc":
-		m.filtering = false
-		m.filterInput.Blur()
-		m.reader.SetHeight(m.paneHeight())
-		m.saveView()
-		m.fitList()
+	case "cancel":
+		m.filterInput.SetValue(m.filterBefore)
+		m.applyFilter()
+		m.finishFilter()
+		return m.selectionChanged()
+	case "done":
+		m.finishFilter()
 		return nil
 	}
 	var cmd tea.Cmd
 	m.filterInput, cmd = m.filterInput.Update(msg)
 	m.applyFilter()
 	return tea.Batch(cmd, m.selectionChanged())
+}
+
+// finishFilter leaves filter editing with the current filter.
+func (m *Model) finishFilter() {
+	m.filtering = false
+	m.filterInput.Blur()
+	m.reader.SetHeight(m.paneHeight())
+	m.saveView()
+	m.fitList()
 }
 
 // reload refetches the tasks, keeping the current view until they land.

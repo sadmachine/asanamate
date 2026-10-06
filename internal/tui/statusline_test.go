@@ -77,7 +77,7 @@ func TestFilterGuideLayout(t *testing.T) {
 		m.Update(size)
 		hints := m.filterHints()
 		plain := ansi.Strip(strings.Join(hints, " "))
-		for _, want := range []string{"section:", "project:", "assignee:", "tag:", "is:", "agent:", "? guide"} {
+		for _, want := range []string{"section:", "project:", "assignee:", "tag:", "is:", "agent:", "ctrl+/ guide"} {
 			if !strings.Contains(plain, want) {
 				t.Errorf("%dx%d guide lacks %q: %q", size.Width, size.Height, want, plain)
 			}
@@ -87,7 +87,7 @@ func TestFilterGuideLayout(t *testing.T) {
 				t.Errorf("%dx%d guide line width = %d", size.Width, size.Height, width)
 			}
 		}
-		if !strings.Contains(ansi.Strip(m.body()), "? guide") {
+		if !strings.Contains(ansi.Strip(m.body()), "ctrl+/ guide") {
 			t.Errorf("%dx%d body lacks guide", size.Width, size.Height)
 		}
 	}
@@ -104,7 +104,7 @@ func TestFilterHelpReturnsToEditing(t *testing.T) {
 	m.applyFilter()
 	m.Update(key("/"))
 	m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
-	m.Update(key("?"))
+	m.Update(key("ctrl+/"))
 	if !m.help || !m.filtering || m.filterInput.Value() != "is:open" || !strings.Contains(ansi.Strip(m.body()), "agent:any") {
 		t.Fatal("filter help did not open over the current query")
 	}
@@ -161,5 +161,35 @@ func TestFirstLoadShowsPlaceholderRows(t *testing.T) {
 	m.reload()
 	if body := ansi.Strip(m.body()); !strings.Contains(body, "Loading tasks") || !strings.Contains(body, "Fix login") {
 		t.Fatalf("a reload keeps the list under the loading modal:\n%s", body)
+	}
+}
+
+func TestFilterHelpOpensOnCtrlUnderscore(t *testing.T) {
+	m := splitModel(t)
+	m.Update(key("/"))
+	m.Update(key("ctrl+_"))
+	if !m.help || !m.filtering {
+		t.Fatal("ctrl+_ must open the filter guide like ctrl+/")
+	}
+}
+
+func TestFilterTypesQuestionMark(t *testing.T) {
+	m := splitModel(t)
+	m.Update(key("/"))
+	m.Update(key("?"))
+	if m.help || m.filterInput.Value() != "?" {
+		t.Fatalf("help = %v, filter = %q", m.help, m.filterInput.Value())
+	}
+}
+
+func TestFilterEscRestoresPreviousFilter(t *testing.T) {
+	m := splitModel(t)
+	m.filterInput.SetValue("is:open")
+	m.applyFilter()
+	m.Update(key("/"))
+	m.Update(key("x"))
+	m.Update(key("esc"))
+	if m.filtering || m.filterInput.Value() != "is:open" || len(m.visible) != 1 {
+		t.Fatalf("filtering = %v, filter = %q, visible = %d", m.filtering, m.filterInput.Value(), len(m.visible))
 	}
 }

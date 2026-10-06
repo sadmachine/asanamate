@@ -8,6 +8,14 @@ import (
 	"github.com/sadmachine/asanamate/internal/filter"
 )
 
+// filterGuide is the hint for the filter guide key, or "" when unbound.
+func filterGuide() string {
+	if k := typedLabel("filter", "help"); k != "" {
+		return k + " guide"
+	}
+	return ""
+}
+
 // filterHints keeps available fields visible next to the filter editor.
 func (m *Model) filterHints() []string {
 	if !m.filtering || m.width < 1 || m.bodyHeight() < 4 {
@@ -17,7 +25,9 @@ func (m *Model) filterHints() []string {
 	for _, key := range filter.Keys() {
 		parts = append(parts, key+":")
 	}
-	parts = append(parts, "? guide")
+	if g := filterGuide(); g != "" {
+		parts = append(parts, g)
+	}
 	var lines []string
 	var line []string
 	width := 0
@@ -38,7 +48,7 @@ func (m *Model) filterHints() []string {
 	}
 	if maxLines := m.bodyHeight() - 3; len(lines) > maxLines {
 		lines = lines[:maxLines]
-		lines[maxLines-1] = m.styleFilterHint([]string{"? guide"})
+		lines[maxLines-1] = m.styleFilterHint([]string{filterGuide()})
 	}
 	return lines
 }
@@ -51,8 +61,8 @@ func (m *Model) styleFilterHint(parts []string) string {
 		switch part {
 		case "FILTER BY":
 			styled[i] = dimStyle.Render(part)
-		case "? guide":
-			styled[i] = m.accentStyle.Render("?") + dimStyle.Render(" guide")
+		case filterGuide():
+			styled[i] = m.accentStyle.Render(typedLabel("filter", "help")) + dimStyle.Render(" guide")
 		default:
 			styled[i] = m.accentStyle.Render(part)
 		}

@@ -48,6 +48,11 @@ func (b *inputBox) update(msg tea.Msg) (res pickResult, cmd tea.Cmd) {
 		b.sanitizedPaste = b.sanitizedPaste || probe.Value() != paste.Content
 	}
 	b.area, cmd = b.area.Update(msg)
+	if b.area.Err != nil {
+		// ctrl+v reads the OS clipboard; terminal paste works without it.
+		b.err = "ctrl+v paste failed (" + b.area.Err.Error() + "); use your terminal's paste instead"
+		b.area.Err = nil
+	}
 	return pickResult{}, cmd
 }
 

@@ -70,6 +70,26 @@ func TestInputBoxPasteMessages(t *testing.T) {
 	}
 }
 
+// A missing clipboard tool shows why ctrl+v did nothing and keeps the text.
+func TestInputBoxClipboardFailure(t *testing.T) {
+	m := &Model{edit: &pendingEdit{}}
+	m.pickedEdit(editComment)
+	m.input.area.SetValue("kept")
+	t.Setenv("PATH", t.TempDir())
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 'v', Mod: tea.ModCtrl})
+	if cmd == nil {
+		t.Fatal("ctrl+v did not request clipboard text")
+	}
+	m.Update(cmd())
+	if !strings.Contains(m.input.err, "terminal's paste") || m.input.area.Value() != "kept" {
+		t.Fatalf("err = %q, value = %q", m.input.err, m.input.area.Value())
+	}
+	m.Update(tea.PasteMsg{Content: "!"})
+	if m.input.err != "" || m.input.area.Value() != "kept!" {
+		t.Fatalf("terminal paste after failure: err = %q, value = %q", m.input.err, m.input.area.Value())
+	}
+}
+
 func TestCommentBoxGrowsAndScrolls(t *testing.T) {
 	m := &Model{edit: &pendingEdit{}}
 	m.pickedEdit(editComment)

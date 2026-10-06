@@ -173,22 +173,31 @@ func Normalize(key string) (string, error) {
 		}
 		seen[m] = true
 	}
+	join := func(base string) string {
+		var out []string
+		for _, m := range modifiers {
+			if seen[m] {
+				out = append(out, m)
+			}
+		}
+		return strings.Join(append(out, base), "+")
+	}
 	r, size := utf8.DecodeRuneInString(base)
 	switch {
 	case size == len(base) && unicode.IsPrint(r):
-		if len(seen) == 1 && seen["shift"] && unicode.IsLower(r) {
+		switch {
+		// Shift alone types the upper-case letter, which is the key reported.
+		case len(seen) == 1 && seen["shift"] && unicode.IsLetter(r):
 			return string(unicode.ToUpper(r)), nil
+		// Terminals report other modified letters in lower case, plus shift.
+		case len(seen) > 0 && unicode.IsUpper(r):
+			seen["shift"] = true
+			return "", fmt.Errorf("use %q: letters with modifiers are lower case", join(string(unicode.ToLower(r))))
 		}
 	case !names[base]:
 		return "", fmt.Errorf("unknown key %q", base)
 	}
-	var out []string
-	for _, m := range modifiers {
-		if seen[m] {
-			out = append(out, m)
-		}
-	}
-	normalized := strings.Join(append(out, base), "+")
+	normalized := join(base)
 	if a, ok := aliases[normalized]; ok {
 		normalized = a
 	}

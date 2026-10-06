@@ -37,6 +37,7 @@ func TestNormalize(t *testing.T) {
 		"j": "j", "G": "G", "?": "?", "+": "+", "ctrl++": "ctrl++",
 		"shift+ctrl+x": "ctrl+shift+x", "shift+g": "G", "ctrl+_": "ctrl+/",
 		"enter": "enter", "f12": "f12", "alt+pgdown": "alt+pgdown",
+		"shift+Q": "Q", "ctrl+shift+q": "ctrl+shift+q",
 	} {
 		if got, err := Normalize(in); err != nil || got != want {
 			t.Errorf("Normalize(%q) = %q, %v; want %q", in, got, err, want)
@@ -49,6 +50,8 @@ func TestNormalize(t *testing.T) {
 		"ctrl+foo":    `unknown key "foo"`,
 		"hyperx+a":    `unknown modifier "hyperx"`,
 		"ctrl+ctrl+a": `repeats "ctrl"`,
+		"ctrl+Q":      `use "ctrl+shift+q"`,
+		"alt+shift+A": `use "alt+shift+a"`,
 	} {
 		if _, err := Normalize(in); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("Normalize(%q) err = %v, want %q", in, err, want)

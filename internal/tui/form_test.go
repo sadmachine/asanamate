@@ -109,7 +109,7 @@ func TestActionBuilderCreatesEditsAndReloads(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
 	m.loading = false
-	m.Update(tea.KeyPressMsg{Code: 'a', Mod: tea.ModCtrl})
+	m.Update(key("A"))
 	if m.modal == nil || m.modal.title != "Build / edit actions" {
 		t.Fatal("ctrl+a did not open builder menu")
 	}

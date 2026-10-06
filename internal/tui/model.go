@@ -24,6 +24,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/filter"
+	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/kitty"
 	"github.com/sadmachine/asanamate/internal/state"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -109,7 +110,9 @@ type Model struct {
 	refreshSeq      uint64           // invalidates timers from earlier session intervals
 
 	filterInput textinput.Model
-	filtering   bool
+	// filterBefore is the filter when editing started; the filter cancel key restores it.
+	filterBefore string
+	filtering    bool
 
 	focusReader bool
 	focusNav    bool // the views panel has focus; wide layout only
@@ -174,6 +177,10 @@ type Model struct {
 func New(d Deps) *Model {
 	in := textinput.New()
 	in.Prompt = "/"
+	keys, typeFirst = d.Config.Keymap, d.Config.Picker.TypeFirst
+	if keys == nil {
+		keys = keymap.Default()
+	}
 	p := d.Palette
 	if p.Base == "" {
 		p = d.Config.Palette(true)
@@ -453,7 +460,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return tea.Quit
 	}
 	if len(m.notices) > 0 {
-		if k == "enter" || k == "esc" {
+		if keys.Name("notice", k) == "dismiss" {
 			m.notices = m.notices[1:]
 		}
 		return nil
@@ -479,7 +486,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return nil
 	}
 	if m.loading {
-		if k == "q" {
+		if keys.Name("main", k) == "quit" {
 			return tea.Quit
 		}
 		return nil
@@ -488,18 +495,10 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	if m.filtering {
 		return m.updateFilter(msg)
 	}
-	if k == "enter" && m.focusReader && m.fieldKey != "" {
-		if m.fieldKey == emptyFieldsKey {
-			m.showEmptyFields()
-			return nil
+	if m.focusNav {
+		if name := keys.Name("views", k); name != "" {
+			return m.updateNav(name)
 		}
-		if m.editableTarget() {
-			return m.openField(m.fieldKey)
-		}
-		return nil
-	}
-	if m.focusNav && slices.Contains(navKeys, k) {
-		return m.updateNav(k)
 	}
 	if b, ok := m.bindingFor(k); ok {
 		return b.run(m, msg)
@@ -1015,7 +1014,7 @@ func (m *Model) body() string {
 	switch {
 	case len(m.notices) > 0:
 		content = m.accentStyle.Render("Notice") + "\n\n" + ansi.Wrap(ticket.OneLine(m.notices[0]), w, "") +
-			"\n\n" + m.accentStyle.Render("enter") + dimStyle.Render(" / ") + m.accentStyle.Render("esc") + dimStyle.Render(" dismiss")
+			"\n\n" + hintLine(m.accentStyle, [2]string{keyLabel("notice", "dismiss"), "dismiss"})
 		style = modalStyle.BorderForeground(warnStyle.GetForeground())
 	case m.builder != nil:
 		content = m.builder.view(w, mh, m.accentStyle)
@@ -1289,7 +1288,7 @@ func (m *Model) emptyView(width, height int) string {
 	hint := func(k, desc string) string { return m.accentStyle.Render(k) + " " + dimStyle.Render(desc) }
 	block := lipgloss.JoinVertical(lipgloss.Center,
 		okStyle.Bold(true).Render(m.sym.done), "", titleStyle.Render(title), dimStyle.Render(why), "",
-		hint("/", "filter")+"   "+hint("p", "projects")+"   "+hint("r", "reload"))
+		hint(keyLabel("main", "filter"), "filter")+"   "+hint(keyLabel("main", "projects"), "projects")+"   "+hint(keyLabel("main", "reload"), "reload"))
 	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, block)
 }
 

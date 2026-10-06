@@ -10,20 +10,22 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
-func TestKeyBindingsAreUniqueAndDocumented(t *testing.T) {
-	seen := map[string]string{}
+func TestEveryMainBindingHasAHandler(t *testing.T) {
+	h := handlers()
+	var names []string
 	for _, b := range keyBindings() {
-		if b.desc == "" || !slices.Contains(helpGroups, b.group) || b.run == nil {
-			t.Errorf("binding %q: desc %q, group %q", b.keys, b.desc, b.group)
+		names = append(names, b.Name)
+		if b.run == nil {
+			t.Errorf("%s has no handler", b.Name)
 		}
-		for _, k := range b.keys {
-			if prev, ok := seen[k]; ok {
-				t.Errorf("%q runs both %q and %q", k, prev, b.desc)
-			}
-			seen[k] = b.desc
+	}
+	for name := range h {
+		if !slices.Contains(names, name) {
+			t.Errorf("handler %s is not in the keymap catalog", name)
 		}
 	}
 }
@@ -32,12 +34,45 @@ func TestHelpAndHintsComeFromTheTable(t *testing.T) {
 	m := splitModel(t)
 	help := ansi.Strip(m.helpView())
 	for _, b := range keyBindings() {
-		if _, ok := m.bindingFor(b.keys[0]); ok && !strings.Contains(help, b.desc) {
-			t.Errorf("help lacks %q", b.desc)
+		if b.Pair == "" && m.available(b) && !strings.Contains(help, b.Desc) {
+			t.Errorf("help lacks %q", b.Desc)
 		}
 	}
-	if got := m.keyHints("space", "?", "enter", "nope"); len(got) != 2 || got[0] != [2]string{"space", "act"} || got[1] != [2]string{"?", "keys"} {
+	if !strings.Contains(help, "ctrl+d/ctrl+u") {
+		t.Error("paired bindings must share a help row")
+	}
+	if got := m.keyHints("action", "help", "nope"); len(got) != 2 || got[0] != [2]string{"space", "act"} || got[1] != [2]string{"?", "keys"} {
 		t.Fatalf("hints = %q", got)
+	}
+}
+
+func TestReboundKeyRunsItsBinding(t *testing.T) {
+	cfg := config.Config{}
+	var err error
+	if cfg.Keymap, err = keymap.Resolve(map[string]map[string][]string{"main": {"quit": {"x"}}}); err != nil {
+		t.Fatal(err)
+	}
+	m, _ := testModel(t, cfg)
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	if _, cmd := m.Update(key("q")); cmd != nil {
+		if _, ok := cmd().(tea.QuitMsg); ok {
+			t.Fatal("q still quits")
+		}
+	}
+	_, cmd := m.Update(key("x"))
+	if cmd == nil {
+		t.Fatal("x did nothing")
+	}
+	if _, ok := cmd().(tea.QuitMsg); !ok {
+		t.Fatal("x did not quit")
+	}
+}
+
+func TestEnterOpensTheReader(t *testing.T) {
+	m := splitModel(t)
+	m.Update(key("enter"))
+	if !m.focusReader {
+		t.Fatal("enter in the list must focus the reader")
 	}
 }
 
@@ -103,10 +138,10 @@ func TestCopyCommentOnlyOnTarget(t *testing.T) {
 				m.readerView = config.ViewMarkdown
 			}
 			_, _, hints := m.mode()
-			if got := slices.Contains(hints, [2]string{"y", "copy comment"}); got != (tt.want != "" && !tt.noPreview) {
+			if got := slices.Contains(hints, [2]string{"Y", "copy comment"}); got != (tt.want != "" && !tt.noPreview) {
 				t.Fatalf("copy hint = %v, hints = %v", got, hints)
 			}
-			_, cmd := m.Update(key("y"))
+			_, cmd := m.Update(key("Y"))
 			if tt.want == "" {
 				if cmd != nil || m.status != "" {
 					t.Fatalf("non-comment target copied: command present = %v, status = %q", cmd != nil, m.status)

@@ -175,7 +175,7 @@ func TestEditWrites(t *testing.T) {
 			press(m, "m", "enter", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee_section":"m2"}}`},
 		{"assign key", func(m *Model) {
-			press(m, "A", "down", "down", "enter")
+			press(m, "@", "down", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee":"u2"}}`},
 	}
 	for _, tc := range cases {
@@ -403,7 +403,7 @@ func TestReaderFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `POST /tasks/1/stories {"data":{"text":"hello"}}`},
 		{"comment key", func(m *Model) {
-			press(m, "2", "C")
+			press(m, "2", "c")
 			m.input.area.SetValue("hello")
 			send(m, ctrlS)
 		}, `POST /tasks/1/stories {"data":{"text":"hello"}}`},

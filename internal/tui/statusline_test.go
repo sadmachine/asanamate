@@ -57,7 +57,7 @@ func TestStatusMessageReplacesHints(t *testing.T) {
 func TestHelpOpensAndAnyKeyCloses(t *testing.T) {
 	m := splitModel(t)
 	m.Update(key("?"))
-	if !m.help || !regexp.MustCompile(`1/esc +list`).MatchString(ansi.Strip(m.body())) {
+	if !m.help || !regexp.MustCompile(`esc/1 +list`).MatchString(ansi.Strip(m.body())) {
 		t.Fatalf("help = %v, body = %q", m.help, ansi.Strip(m.body()))
 	}
 	m.Update(key("j"))

@@ -28,9 +28,6 @@ const maxNavProjects = 8
 // maxNavSavedViews caps named views; V offers the full list.
 const maxNavSavedViews = 5
 
-// navKeys are the keys the views panel handles while it has focus.
-var navKeys = []string{"j", "k", "down", "up", "g", "G", "home", "end", "enter", "l"}
-
 // navItem is one row of the views panel: a project or saved view to open, a grouping or sort to
 // pick, or, with neither, a heading or an agent count.
 type navItem struct {
@@ -251,8 +248,8 @@ func (m *Model) focusNavPanel() {
 	}
 }
 
-// updateNav handles a key while the views panel has focus.
-func (m *Model) updateNav(k string) tea.Cmd {
+// updateNav runs a [keys.views] binding while the views panel has focus.
+func (m *Model) updateNav(name string) tea.Cmd {
 	items := m.navItems()
 	var selectable []navItem
 	for _, it := range items {
@@ -263,16 +260,16 @@ func (m *Model) updateNav(k string) tea.Cmd {
 	// The rows can shrink under the cursor, such as when a grouping by a
 	// custom field is dropped.
 	m.navCursor = min(m.navCursor, len(selectable)-1)
-	switch k {
-	case "j", "down":
+	switch name {
+	case "down":
 		m.navCursor = min(m.navCursor+1, len(selectable)-1)
-	case "k", "up":
+	case "up":
 		m.navCursor = max(m.navCursor-1, 0)
-	case "g", "home":
+	case "top":
 		m.navCursor = 0
-	case "G", "end":
+	case "bottom":
 		m.navCursor = len(selectable) - 1
-	case "enter", "l":
+	case "open":
 		it := selectable[m.navCursor]
 		m.focusNav = false
 		if it.savedView != "" {

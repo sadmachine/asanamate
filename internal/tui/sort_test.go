@@ -138,11 +138,11 @@ func TestSortCustomFieldUsesActiveProject(t *testing.T) {
 
 func TestViewsPanelSortAndScroll(t *testing.T) {
 	m := wideModel(t, 200)
-	keys(m, "0", "G")
+	sendKeys(m, "0", "G")
 	if body := ansi.Strip(m.navView(navW-panelFrame, 8)); !strings.Contains(body, "title") || !strings.Contains(body, "Sort by") {
 		t.Fatalf("sort cursor not visible: %s", body)
 	}
-	keys(m, "k", "enter")
+	sendKeys(m, "k", "enter")
 	if m.focusNav || m.sortBy.By != "assignee" {
 		t.Fatalf("sort = %v, focus = %v", m.sortBy, m.focusNav)
 	}

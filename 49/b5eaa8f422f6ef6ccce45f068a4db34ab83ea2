@@ -1,0 +1,29 @@
+internal/timetracking/hrvst.go
+  s_339580692fbe7b::t_fd46f4b7dfc89e 89,95,175-180,182-184,186-191,203,209,218,220-228,234-237
+  s_339580692fbe7b::t_b458a473fc795e 210,215,231-233
+  s_339580692fbe7b::t_64a25273b98776 42-55,59-69
+README.md
+  s_339580692fbe7b::t_b458a473fc795e 284
+  s_339580692fbe7b::t_7b08454514a539 270-279,287,290-292
+internal/timetracking/hrvst_test.go
+  s_339580692fbe7b::t_fd46f4b7dfc89e 18-21,23-24,26-28,30-32,36,55
+  s_339580692fbe7b::t_b458a473fc795e 33-35
+internal/tui/time_test.go
+  s_339580692fbe7b::t_c16bbddd2e9d43 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "49b5eaa8f422f6ef6ccce45f068a4db34ab83ea2",
+  "prompts": {},
+  "sessions": {
+    "s_339580692fbe7b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b355a498-50cd-47b0-a83c-f0e1e0c92dbf",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

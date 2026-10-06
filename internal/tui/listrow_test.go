@@ -210,7 +210,7 @@ func TestGroupPicker(t *testing.T) {
 	if it := m.modal.items[m.modal.matches[m.modal.cursor]]; it.Hint != "current" || it.Value != "section" {
 		t.Fatalf("picker opens on %+v, want the current grouping", it)
 	}
-	press("none")
+	press("/none")
 	m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if sel, _ := m.selected(); m.modal != nil || m.groupBy != "" || m.groups != nil || sel.GID != "2" {
 		t.Fatalf("groupBy = %q, groups = %q, selected = %q", m.groupBy, m.groups, sel.GID)

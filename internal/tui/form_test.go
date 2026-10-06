@@ -218,13 +218,13 @@ func TestActionBuilderCancelAndDeleteStayInDraft(t *testing.T) {
 		t.Fatal("esc committed text")
 	}
 	m.builder.menu.cursor = 0
-	m.Update(key("tab"))
+	m.Update(key("j"))
 	if m.builder.menu.cursor != 1 {
-		t.Fatal("tab did not move")
+		t.Fatal("j did not move")
 	}
-	m.Update(key("shift+tab"))
+	m.Update(key("k"))
 	if m.builder.menu.cursor != 0 {
-		t.Fatal("shift+tab did not move")
+		t.Fatal("k did not move")
 	}
 	builderPick(t, m, "Form fields")
 	builderPick(t, m, "1. Target")
@@ -355,7 +355,7 @@ func TestActionBuilderBrowseSearchAndInfoIcon(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
 	m.openActionBuilder()
-	if !m.modal.browseFirst {
+	if m.modal.searching {
 		t.Fatal("action chooser opened in search mode")
 	}
 	m.Update(key("enter"))
@@ -390,7 +390,7 @@ func TestActionBuilderBrowseSearchAndInfoIcon(t *testing.T) {
 	}
 	m.Update(key("esc"))
 	builderPick(t, m, "Form fields")
-	if !b.menu.browseFirst || b.menu.searching {
+	if b.menu.searching {
 		t.Fatal("nested menu did not start in browse mode")
 	}
 }

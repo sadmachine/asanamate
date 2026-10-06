@@ -153,12 +153,10 @@ func TestEditWrites(t *testing.T) {
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"due_on":null}}`},
 		{"multi-select field", func(m *Model) {
-			press(m, "e", "f", "down", "down", "enter", "down", "enter")
-			send(m, ctrlS)
+			press(m, "e", "f", "down", "down", "enter", "down", "space", "enter")
 		}, `PUT /tasks/1 {"data":{"custom_fields":{"f3":["o1","o2"]}}}`},
 		{"people field", func(m *Model) {
-			press(m, "e", "f", "down", "down", "down", "enter", "down", "enter")
-			send(m, ctrlS)
+			press(m, "e", "f", "down", "down", "down", "enter", "down", "space", "enter")
 		}, `PUT /tasks/1 {"data":{"custom_fields":{"f4":["u2"]}}}`},
 		{"assign", func(m *Model) {
 			press(m, "e", "a", "down", "down", "enter")

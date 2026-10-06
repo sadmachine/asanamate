@@ -66,7 +66,6 @@ func (m *Model) openActionBuilder() {
 		items = append(items, pickItem{Label: ticket.OneLine(file.Action.Name), Hint: file.Name, Value: file})
 	}
 	m.modal = newPicker(pickValue(open), "Build / edit actions", items)
-	m.modal.browseFirst = true
 	m.modal.input.Blur()
 }
 
@@ -80,7 +79,6 @@ func (b *actionBuilder) show(title string, rows []pickItem) {
 		cursor = b.menu.matches[b.menu.cursor]
 	}
 	b.menu = newPicker(pickValue(func(edit func()) tea.Cmd { edit(); return nil }), title, rows)
-	b.menu.browseFirst = true
 	b.menu.helpIcon = b.infoIcon
 	b.menu.input.Blur()
 	b.menu.cursor = min(cursor, len(rows)-1)
@@ -300,15 +298,9 @@ func (b *actionBuilder) update(msg tea.Msg) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	if key.String() == "ctrl+s" && b.root {
+	if b.root && bound("builder", key, false) == "save" {
 		b.submit()
 		return nil
-	}
-	if key.String() == "tab" {
-		key = tea.KeyPressMsg{Code: tea.KeyDown}
-	}
-	if key.String() == "shift+tab" {
-		key = tea.KeyPressMsg{Code: tea.KeyUp}
 	}
 	res, cmd := b.menu.update(key)
 	if res.cancelled {

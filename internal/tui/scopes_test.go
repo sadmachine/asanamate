@@ -51,16 +51,24 @@ func TestEveryScopeBindingRuns(t *testing.T) {
 
 	checks := map[string]map[string]func(t *testing.T){
 		"views": {
-			"down":   func(t *testing.T) { expect(t, views(t, "down").navCursor == 1, "cursor did not move down") },
-			"up":     func(t *testing.T) { expect(t, views(t, "down", "up").navCursor == 0, "cursor did not move up") },
-			"top":    func(t *testing.T) { expect(t, views(t, "down", "down", "top").navCursor == 0, "cursor did not go to the top") },
+			"down": func(t *testing.T) { expect(t, views(t, "down").navCursor == 1, "cursor did not move down") },
+			"up":   func(t *testing.T) { expect(t, views(t, "down", "up").navCursor == 0, "cursor did not move up") },
+			"top": func(t *testing.T) {
+				expect(t, views(t, "down", "down", "top").navCursor == 0, "cursor did not go to the top")
+			},
 			"bottom": func(t *testing.T) { expect(t, views(t, "bottom").navCursor > 1, "cursor did not go to the bottom") },
 			"open":   func(t *testing.T) { expect(t, !views(t, "down", "open").focusNav, "open left the panel focused") },
 		},
 		"filter": {
-			"done":   func(t *testing.T) { m := filtering(t, "done"); expect(t, !m.filtering && m.filterInput.Value() != "", "done") },
-			"cancel": func(t *testing.T) { m := filtering(t, "cancel"); expect(t, !m.filtering && m.filterInput.Value() == "", "cancel") },
-			"help":   func(t *testing.T) { expect(t, filtering(t, "help").help, "help did not open") },
+			"done": func(t *testing.T) {
+				m := filtering(t, "done")
+				expect(t, !m.filtering && m.filterInput.Value() != "", "done")
+			},
+			"cancel": func(t *testing.T) {
+				m := filtering(t, "cancel")
+				expect(t, !m.filtering && m.filterInput.Value() == "", "cancel")
+			},
+			"help": func(t *testing.T) { expect(t, filtering(t, "help").help, "help did not open") },
 		},
 		"picker": {
 			"down": func(t *testing.T) { p := abc(); p.update(firstKey("picker", "down")); expect(t, p.cursor == 1, "down") },
@@ -76,7 +84,11 @@ func TestEveryScopeBindingRuns(t *testing.T) {
 				p.update(firstKey("picker", "top"))
 				expect(t, p.cursor == 0, "top")
 			},
-			"bottom": func(t *testing.T) { p := abc(); p.update(firstKey("picker", "bottom")); expect(t, p.cursor == 2, "bottom") },
+			"bottom": func(t *testing.T) {
+				p := abc()
+				p.update(firstKey("picker", "bottom"))
+				expect(t, p.cursor == 2, "bottom")
+			},
 			"choose": func(t *testing.T) {
 				res, _ := abc().update(firstKey("picker", "choose"))
 				expect(t, res.done && res.item != nil && res.item.Label == "A", "choose")
@@ -93,15 +105,27 @@ func TestEveryScopeBindingRuns(t *testing.T) {
 				res, _ := p.update(firstKey("picker", "use_typed"))
 				expect(t, res.done && res.free == "x", "use_typed")
 			},
-			"search": func(t *testing.T) { p := abc(); p.update(firstKey("picker", "search")); expect(t, p.searching, "search") },
+			"search": func(t *testing.T) {
+				p := abc()
+				p.update(firstKey("picker", "search"))
+				expect(t, p.searching, "search")
+			},
 			"cancel": func(t *testing.T) {
 				res, _ := abc().update(firstKey("picker", "cancel"))
 				expect(t, res.cancelled, "cancel")
 			},
 		},
 		"form": {
-			"next": func(t *testing.T) { f := twoFields(); f.update(firstKey("form", "next")); expect(t, f.cursor == 1, "next") },
-			"prev": func(t *testing.T) { f := twoFields(); f.update(firstKey("form", "prev")); expect(t, f.cursor == 1, "prev wraps") },
+			"next": func(t *testing.T) {
+				f := twoFields()
+				f.update(firstKey("form", "next"))
+				expect(t, f.cursor == 1, "next")
+			},
+			"prev": func(t *testing.T) {
+				f := twoFields()
+				f.update(firstKey("form", "prev"))
+				expect(t, f.cursor == 1, "prev wraps")
+			},
 			"edit": func(t *testing.T) { f := twoFields(); f.update(firstKey("form", "edit")); expect(t, f.editing, "edit") },
 			"submit": func(t *testing.T) {
 				f := twoFields()

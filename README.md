@@ -11,25 +11,121 @@ macOS and Linux only.
 
 ## Install
 
+asanamate needs macOS or Linux on amd64 or arm64, a terminal, an Asana account
+with a personal access token, and network access. Everything else is optional;
+see [Optional features](#optional-features).
+
+### Release archive
+
+Each [GitHub release](https://github.com/sadmachine/asanamate/releases) has an
+archive per system, `asanamate_<os>_<arch>.tar.gz`, and `checksums.txt`. Set
+`version` to the release you want; the rest detects your system:
+
+```sh
+version=vX.Y.Z
+os=$(uname -s | tr '[:upper:]' '[:lower:]')   # darwin or linux
+arch=$(uname -m); case $arch in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; esac
+archive=asanamate_${os}_${arch}.tar.gz
+base=https://github.com/sadmachine/asanamate/releases/download/$version
+curl -fL -O "$base/$archive" -O "$base/checksums.txt"
+grep " $archive\$" checksums.txt | sha256sum -c   # macOS: shasum -a 256 -c
+tar -xzf "$archive" asanamate
+mkdir -p ~/.local/bin && mv asanamate ~/.local/bin/
+asanamate version
+```
+
+If `asanamate version` is not found, add `~/.local/bin` to your `PATH` in your
+shell's startup file (`~/.zshrc`, `~/.bashrc`), then open a new shell:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+On macOS, files downloaded with `curl` run as is. The binary is not notarized,
+so if you downloaded the archive with a browser, macOS blocks it; clear the
+quarantine flag once:
+
+```sh
+xattr -d com.apple.quarantine ~/.local/bin/asanamate
+```
+
+### Homebrew (macOS)
+
 ```sh
 brew install --cask sadmachine/tap/asanamate
-# or
+```
+
+### From source
+
+Needs Go 1.26 or later.
+
+```sh
 go install github.com/sadmachine/asanamate/cmd/asanamate@latest
 ```
 
-Prebuilt binaries are attached to each [GitHub release](https://github.com/sadmachine/asanamate/releases).
+This installs to `$(go env GOBIN)`, else `$(go env GOPATH)/bin` (usually
+`~/go/bin`); add that directory to your `PATH` as above.
+
+### Upgrade and uninstall
+
+Upgrade the way you installed: replace the binary with a newer archive,
+`brew upgrade --cask asanamate`, or rerun `go install`. Upgrades never touch
+your config, actions, or state.
+
+To uninstall, delete the binary (or `brew uninstall --cask asanamate`). Your
+files stay until you delete them yourself: the config and actions in
+`~/.config/asanamate`, the state, ticket exports, and logs in
+`~/.local/state/asanamate`, and the Codex hook, if you added it, in
+`~/.codex/hooks.json`.
 
 ## Setup
 
-1. Create a personal access token at <https://app.asana.com/0/my-apps> and export it:
-   `export ASANA_ACCESS_TOKEN=...`
-2. Run `asanamate setup`. It checks the token, asks for your workspace and the
-   directory that holds your git repositories, and writes
+1. Create a personal access token at <https://app.asana.com/0/my-apps> and
+   put it in `ASANA_ACCESS_TOKEN` (see [Token](#token)).
+2. Run `asanamate setup`. It checks the token, asks for your workspace and, optionally, the
+   directory that holds your git repositories (`-` skips it), and writes
    `~/.config/asanamate/config.toml` with every default explained, plus a
    pager action and a Claude example in `~/.config/asanamate/actions/`. When
    Codex is installed, it also offers to add asanamate's agent status hook (see
-   [Agent status](#agent-status)).
-3. Run `asanamate`.
+   [Agent status](#agent-status)). It warns when the pager action's pager
+   (`$PAGER`, else `less`) is not installed.
+3. Run `asanamate`. `asanamate doctor` checks the setup if something fails.
+
+### Token
+
+asanamate reads the token only from `ASANA_ACCESS_TOKEN` and never writes it
+to a file or edits your shell files.
+
+- For the current shell only: `export ASANA_ACCESS_TOKEN=...`
+- For every new shell: add that line to your shell's startup file
+  (`~/.zshrc`, `~/.bashrc`), or load the token there from a password manager.
+- tmux keeps the environment it started with, so panes and popups of a tmux
+  server started before you set the token lack it. Copy it in with
+  `tmux set-environment -g ASANA_ACCESS_TOKEN "$ASANA_ACCESS_TOKEN"`, or restart
+  tmux. Other launchers, such as desktop shortcuts, need it in their own
+  environment the same way.
+
+### Optional features
+
+Browsing needs none of these. Each one affects only its own feature, and
+`asanamate doctor` reports which are usable.
+
+| Feature | Needs | Without it |
+|---|---|---|
+| Pager action (`v`) | `$PAGER`, else `less` | the action fails; setup and `doctor` warn |
+| `asanamate config` | `$VISUAL` or `$EDITOR`, else `vi` | edit `config.toml` directly |
+| Repo actions, agent branch matching | `git` | browsing works; repo actions report that git is missing |
+| Repo picker | `repo_source.root` or `repo_source.command` | type a repo path when an action asks |
+| Open in browser (`o`, `f`) | macOS `open`; Linux `xdg-open` and a desktop browser | the error shows in the status line |
+| Copy link or comment (`c`, `y`) | terminal OSC 52 support; in tmux, `set -g set-clipboard on` | nothing is copied; asanamate cannot detect this |
+| Paste into input (`Ctrl+V`) | macOS `pbpaste`; Linux `xclip`, `xsel`, or `wl-clipboard` with a graphical session | use your terminal's paste shortcut |
+| Agent status | a supported agent tool; see [Agents](#agents-optional) | off until configured |
+| Time tracking | `hrvst`; see [Time tracking](#time-tracking-optional) | off until configured |
+| Inline images | a kitty-graphics terminal (kitty, Ghostty); in tmux, `set -g allow-passthrough on` | links shown instead |
+| Nerd Font symbols | a Nerd Font and `symbols = "nerd"` | unicode or ascii symbols |
+| Follow OS reduced motion | macOS `defaults`; GNOME `gsettings` | set `reduced_motion` yourself |
+
+Actions you write run your own commands; installing what they use is up to you.
 
 `asanamate config` opens the config file in `$VISUAL` or `$EDITOR` (falling
 back to `vi`) and reports any errors in it after you save.

@@ -8,16 +8,20 @@ import (
 	"runtime"
 )
 
-// Open opens rawURL with open (macOS) or xdg-open (Linux).
+// Open opens rawURL with Opener.
 func Open(rawURL string) error {
 	if err := validate(rawURL); err != nil {
 		return err
 	}
-	name := "xdg-open"
+	return exec.Command(Opener(), rawURL).Run()
+}
+
+// Opener is the program that opens URLs: open on macOS, else xdg-open.
+func Opener() string {
 	if runtime.GOOS == "darwin" {
-		name = "open"
+		return "open"
 	}
-	return exec.Command(name, rawURL).Run()
+	return "xdg-open"
 }
 
 func validate(rawURL string) error {

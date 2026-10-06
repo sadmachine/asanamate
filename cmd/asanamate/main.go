@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"cmp"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -13,6 +14,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +24,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/browser"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/filter"
 	"github.com/sadmachine/asanamate/internal/kitty"
@@ -51,7 +55,7 @@ const usage = `usage:
   asanamate move    [--yes] [--project <gid>] <gid> <section>
   asanamate field   [--yes] [--project <gid>] <gid> <field> <value>
                                                    set a custom field ("" clears it)
-  asanamate doctor [<gid>]                         show agents and why they link (or not) to a ticket
+  asanamate doctor [<gid>]                         check setup and optional tools; for a ticket, why agents link (or not)
   asanamate time-provider hrvst --task-id <id>     serve time tracking provider requests on stdin
   asanamate hook codex                             record a Codex hook event read on stdin
                                                    (installed by setup)
@@ -266,9 +270,8 @@ func runConfig(args []string) error {
 	if _, err := os.Stat(path); err != nil {
 		return fmt.Errorf("%w (run asanamate setup first)", err)
 	}
-	// Like git: $VISUAL, then $EDITOR, then vi. The value may carry
-	// arguments ("code --wait"), so the shell splits it.
-	editor := cmp.Or(os.Getenv("VISUAL"), os.Getenv("EDITOR"), "vi")
+	// The value may carry arguments ("code --wait"), so the shell splits it.
+	editor := editorCommand()
 	cmd := exec.Command("sh", "-c", editor+` "$1"`, "sh", path)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -276,6 +279,12 @@ func runConfig(args []string) error {
 	}
 	_, err = config.Load(path)
 	return err
+}
+
+// editorCommand is the editor `asanamate config` runs, like git: $VISUAL,
+// then $EDITOR, then vi.
+func editorCommand() string {
+	return cmp.Or(os.Getenv("VISUAL"), os.Getenv("EDITOR"), "vi")
 }
 
 func runConfigUpdate(args []string) error {
@@ -422,6 +431,13 @@ func runShow(args []string) error {
 	return listing.Ticket(os.Stdout, *format, t)
 }
 
+// errDoctorBlocking is doctor's error when a check browsing needs fails.
+var errDoctorBlocking = errors.New("doctor found problems that block browsing (marked error)")
+
+// runDoctor reports whether asanamate is ready to browse and which optional
+// features can work, then, for a ticket, why agents link to it or not. Only
+// core failures (config, token, workspace) make it fail. It runs no actions
+// and writes nothing.
 func runDoctor(args []string) error {
 	if len(args) > 1 || (len(args) == 1 && !asana.ValidGID(args[0])) {
 		return fmt.Errorf("doctor takes at most one numeric task gid\n%s", usage)
@@ -443,37 +459,41 @@ func runDoctor(args []string) error {
 		return err
 	}
 	w := os.Stdout
-	fmt.Fprintf(w, "config        %s\n", path)
-	if cfg.BranchField == "" {
-		fmt.Fprintln(w, "branch_field  unset: tickets use their ID field or title slug as the branch")
-	} else {
-		fmt.Fprintf(w, "branch_field  %q\n", cfg.BranchField)
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	row(w, "config", "ok: "+path)
+	row(w, "actions", fmt.Sprintf("ok: %d in %s", len(cfg.Actions), config.ActionsDir(path)))
+	row(w, "state", "ok: "+stateDir)
+	client := checkAsana(ctx, w, cfg.Workspace)
+	checkFeatures(w, cfg)
+	if cfg.BranchField == "" {
+		row(w, "branch_field", "unset: tickets use their ID field or title slug as the branch")
+	} else {
+		row(w, "branch_field", strconv.Quote(cfg.BranchField))
+	}
 	var list []agents.Agent
 	if !cfg.AgentsEnabled() {
-		fmt.Fprintln(w, "agents        off: set agents.preset or agents.command")
+		row(w, "agents", "off: set agents.preset or agents.command")
 	} else {
+		source := "command " + strconv.Quote(cfg.Agents.Command)
 		if cfg.Agents.Preset != "" {
-			fmt.Fprintf(w, "agents        preset %q\n", cfg.Agents.Preset)
-		} else {
-			fmt.Fprintf(w, "agents        command %q\n", cfg.Agents.Command)
+			source = "preset " + strconv.Quote(cfg.Agents.Preset)
 		}
 		if list, err = agents.Fetch(ctx, cfg.Agents.Preset, cfg.Agents.Command, cfg.Agents.States, stateDir); err != nil {
-			return err
+			row(w, "agents", fmt.Sprintf("warning: %s failed: %v", source, err))
+		} else {
+			row(w, "agents", "ok: "+source)
+			fmt.Fprintf(w, "\n%d running:\n", len(list))
+			for _, a := range list {
+				fmt.Fprintf(w, "  %s  branch %s  %s  repo %s\n", a.Path, orNone(a.Branch), a.State, orNone(a.Repo))
+			}
 		}
-		fmt.Fprintf(w, "\n%d running:\n", len(list))
-		for _, a := range list {
-			fmt.Fprintf(w, "  %s  branch %s  %s  repo %s\n", a.Path, orNone(a.Branch), a.State, orNone(a.Repo))
-		}
+	}
+	if client == nil {
+		return errDoctorBlocking
 	}
 	if len(args) == 0 {
 		return nil
-	}
-	client, err := newClient()
-	if err != nil {
-		return err
 	}
 	t, err := ticket.Fetch(ctx, client, args[0])
 	if err != nil {
@@ -507,6 +527,79 @@ func runDoctor(args []string) error {
 		}
 	}
 	return nil
+}
+
+// checkAsana reports whether the token works for the configured workspace,
+// the checks browsing needs, and returns the client when they pass.
+func checkAsana(ctx context.Context, w io.Writer, workspace string) *asana.Client {
+	client, err := newClient()
+	if err != nil {
+		row(w, "asana", "error: "+err.Error())
+		return nil
+	}
+	me, err := client.Me(ctx)
+	if err != nil {
+		row(w, "asana", fmt.Sprintf("error: %s is set, but Asana rejected it or is unreachable: %v", config.TokenEnv, err))
+		return nil
+	}
+	for _, ws := range me.Workspaces {
+		if ws.GID == workspace {
+			row(w, "asana", fmt.Sprintf("ok: %s in workspace %s", ticket.Clean(me.Name), ticket.Clean(ws.Name)))
+			return client
+		}
+	}
+	row(w, "asana", fmt.Sprintf("error: %s cannot access workspace %s; run asanamate setup", ticket.Clean(me.Name), workspace))
+	return nil
+}
+
+// checkFeatures reports the tools optional features need. Missing ones only
+// warn: browsing works without them. Custom commands are not run.
+func checkFeatures(w io.Writer, cfg config.Config) {
+	tool := func(label, name, need string) {
+		if p, err := exec.LookPath(name); err == nil {
+			row(w, label, "ok: "+p)
+		} else {
+			row(w, label, fmt.Sprintf("warning: %s not found; %s", name, need))
+		}
+	}
+	tool("git", "git", "repo actions and agent branch matching need it; install it from https://git-scm.com/downloads")
+	switch {
+	case cfg.RepoSource.Command != "":
+		row(w, "repo_source", "unchecked: command "+strconv.Quote(cfg.RepoSource.Command)+" (not run)")
+	case cfg.RepoSource.Root != "":
+		if paths, err := repo.List(cfg.RepoSource.Root); err != nil {
+			row(w, "repo_source", "warning: "+err.Error())
+		} else {
+			row(w, "repo_source", fmt.Sprintf("ok: %d repos in %s", len(paths), cfg.RepoSource.Root))
+		}
+	default:
+		row(w, "repo_source", "off: type a repo path when an action asks; set repo_source.root to pick from a directory")
+	}
+	if slices.ContainsFunc(cfg.Actions, func(a config.Action) bool { return strings.Contains(a.Command, "PAGER") }) {
+		tool("pager", setup.Pager(), "pager actions need it; install less or set $PAGER")
+	}
+	editor := strings.Fields(editorCommand())
+	if len(editor) > 0 {
+		tool("editor", editor[0], "asanamate config needs it; set $EDITOR or edit the config file directly")
+	}
+	tool("browser", browser.Opener(), "opening tickets in a browser needs it; on Linux, install xdg-utils and a desktop browser")
+	switch {
+	case cfg.TimeTracking.Command == "":
+		row(w, "time_tracking", "off")
+	case strings.Contains(cfg.TimeTracking.Command, "time-provider hrvst"):
+		if err := timetracking.CheckHarvest(); err != nil {
+			row(w, "time_tracking", "warning: hrvst: "+err.Error())
+		} else {
+			row(w, "time_tracking", "ok: hrvst installed and logged in")
+		}
+	default:
+		row(w, "time_tracking", "unchecked: custom command (not run)")
+	}
+}
+
+// row prints one doctor line: a label column, then its result.
+func row(w io.Writer, label, result string) {
+	fmt.Fprintf(w, "%-14s%s\n", label, result)
 }
 
 func orNone(s string) string {

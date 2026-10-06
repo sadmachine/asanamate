@@ -172,8 +172,9 @@ work in narrow terminals and list-only mode too.
     by tabs. `--format jsonl` prints one JSON object per task.
 - `asanamate show <gid>` prints one ticket as Markdown. `--format json` prints
   JSON instead.
-- `asanamate doctor [<gid>]` shows the running agents and, for a ticket, why
-  they link to it or not. See [Agents](#agents-optional).
+- `asanamate doctor [<gid>]` checks that asanamate is ready to browse and
+  which optional features can work, and, for a ticket, why agents link to it
+  or not. See [Troubleshooting](#troubleshooting).
 
 Pick a ticket with fzf:
 
@@ -697,6 +698,19 @@ bind-key a split-window -h asanamate
 # Needed for inline images inside tmux
 set -g allow-passthrough on
 ```
+
+## Troubleshooting
+
+`asanamate doctor` checks everything browsing needs and every optional
+feature, without running actions or writing anything:
+
+- `error` lines block browsing: an invalid config, a missing or rejected
+  token, or an inaccessible workspace. `doctor` exits nonzero when any appear.
+- `warning` lines name a missing tool and the feature that needs it.
+- `off` features are not configured; `unchecked` ones run your own commands,
+  which `doctor` does not run.
+
+With a ticket gid, it also explains why each agent links to that ticket or not.
 
 ## Files
 

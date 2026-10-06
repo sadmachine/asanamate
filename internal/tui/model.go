@@ -72,6 +72,9 @@ type Deps struct {
 	// ExitOnAction runs background actions as exit actions, so asanamate
 	// quits first. It suits popups, which close when asanamate exits.
 	ExitOnAction bool
+	// Palette is the resolved theme. Zero resolves Config's theme for a dark
+	// background.
+	Palette config.Palette
 }
 
 // Model is the Bubble Tea model for asanamate.
@@ -89,6 +92,7 @@ type Model struct {
 	sortBy          config.Sort    // ordering within groups; empty By keeps Asana order
 	groupBy         string         // list field the list is grouped by; "" for none
 	listW           int            // fitted list pane width; 0 for the default split
+	palette         config.Palette // resolved theme, for Markdown
 	accentStyle     lipgloss.Style // reader headings
 	headerStyle     lipgloss.Style // group headers
 	pinnedStyle     lipgloss.Style // Pinned header
@@ -170,6 +174,12 @@ type Model struct {
 func New(d Deps) *Model {
 	in := textinput.New()
 	in.Prompt = "/"
+	p := d.Palette
+	if p.Base == "" {
+		p = d.Config.Palette(true)
+	}
+	applyPalette(p)
+	c := p.Colors
 	m := &Model{
 		deps:          d,
 		filterInput:   in,
@@ -178,11 +188,12 @@ func New(d Deps) *Model {
 		separator:     *cmp.Or(d.State.Display.Separator, &d.Config.List.Separator),
 		spacing:       *cmp.Or(d.State.Display.HeaderSpacing, &d.Config.List.Header.Spacing),
 		lastAction:    -1,
-		accentStyle:   colorStyle(d.Config.AccentColor),
-		headerStyle:   colorStyle(cmp.Or(d.Config.List.Header.Color, d.Config.AccentColor)),
-		pinnedStyle:   colorStyle(cmp.Or(d.Config.List.Pinned.Color, d.Config.AccentColor)),
-		viewingStyle:  colorStyle(cmp.Or(d.Config.List.Viewing.Color, d.Config.AccentColor)),
-		markerStyle:   colorStyle(cmp.Or(d.Config.List.Selection.Color, d.Config.AccentColor)),
+		palette:       p,
+		accentStyle:   lipStyle(c.Accent),
+		headerStyle:   lipStyle(c.Header),
+		pinnedStyle:   lipStyle(c.Pinned),
+		viewingStyle:  lipStyle(c.Viewing),
+		markerStyle:   lipStyle(c.Selection),
 		renderers:     map[rendererKey]*markdownRenderer{},
 		details:       map[string]ticket.Ticket{},
 		images:        map[string]*inlineImage{},
@@ -198,11 +209,6 @@ func New(d Deps) *Model {
 		m.refreshInterval = saved
 	}
 	return m
-}
-
-// colorStyle is bold text in a configured color.
-func colorStyle(color string) lipgloss.Style {
-	return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(color))
 }
 
 // ExitCommand is the command an exit-mode action left to run after the TUI quits.
@@ -870,7 +876,7 @@ func (m *Model) glamour(md string, width int, bare bool) string {
 	key := rendererKey{width, bare}
 	r := m.renderers[key]
 	if r == nil {
-		r = newMarkdownRenderer(m.deps.Config.Theme, width, bare, m.sym.codeWrap)
+		r = newMarkdownRenderer(m.palette, width, bare, m.sym.codeWrap)
 		m.renderers[key] = r
 	}
 	out, err := r.Render(md)

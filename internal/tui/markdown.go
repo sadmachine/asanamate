@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"html"
 	"strings"
@@ -17,6 +18,8 @@ import (
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
+
+	"github.com/sadmachine/asanamate/internal/config"
 )
 
 // markdownRenderer uses Glamour's layout with literal, prewrapped code blocks.
@@ -28,8 +31,11 @@ type markdownRenderer struct {
 	wrapMark string
 }
 
-func newMarkdownRenderer(theme string, width int, bare bool, wrapMark string) *markdownRenderer {
-	style := *styles.DefaultStyles[theme]
+func newMarkdownRenderer(p config.Palette, width int, bare bool, wrapMark string) *markdownRenderer {
+	style := *styles.DefaultStyles[p.Base]
+	colors := p.Colors.Markdown
+	// Text goes first: the code block below copies the document color.
+	applyMarkdown(&style.Document.StylePrimitive, colors.Text)
 	if bare {
 		style.Document.Margin = new(uint)
 		style.Document.BlockPrefix, style.Document.BlockSuffix = "", ""
@@ -43,6 +49,13 @@ func newMarkdownRenderer(theme string, width int, bare bool, wrapMark string) *m
 	// Glamour's plain-code fallback unescapes Markdown punctuation. Escape
 	// backslashes first so code, including shell escapes, remains literal.
 	style.CodeBlock.Format = `{{ Replace .text "\\" "\\\\" -1 }}`
+	applyMarkdown(&style.Heading.StylePrimitive, colors.Heading)
+	applyMarkdown(&style.H1.StylePrimitive, colors.H1)
+	applyMarkdown(&style.Link, colors.Link)
+	applyMarkdown(&style.Code.StylePrimitive, colors.Code)
+	applyMarkdown(&style.CodeBlock.StylePrimitive, colors.CodeBlock)
+	applyMarkdown(&style.BlockQuote.StylePrimitive, colors.Quote)
+	applyMarkdown(&style.HorizontalRule, colors.Rule)
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM, extension.DefinitionList),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
@@ -53,6 +66,21 @@ func newMarkdownRenderer(theme string, width int, bare bool, wrapMark string) *m
 		}), 1000),
 	)))
 	return &markdownRenderer{markdown: md, style: style, width: width, wrapMark: wrapMark}
+}
+
+// applyMarkdown sets the fields s sets on a glamour style.
+func applyMarkdown(dst *glamouransi.StylePrimitive, s config.Style) {
+	if s.FG != "" {
+		dst.Color = &s.FG
+	}
+	if s.BG != "" {
+		dst.BackgroundColor = &s.BG
+	}
+	dst.Bold = cmp.Or(s.Bold, dst.Bold)
+	dst.Italic = cmp.Or(s.Italic, dst.Italic)
+	dst.Underline = cmp.Or(s.Underline, dst.Underline)
+	dst.Faint = cmp.Or(s.Faint, dst.Faint)
+	dst.Inverse = cmp.Or(s.Reverse, dst.Inverse)
 }
 
 func (r *markdownRenderer) Render(md string) (string, error) {

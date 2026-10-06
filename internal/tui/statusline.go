@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"image/color"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -13,47 +12,40 @@ import (
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
-// Mode pill colors: accent for the list, then ANSI cyan, magenta, and yellow.
-var (
-	readColor   = lipgloss.Color("6")
-	editColor   = lipgloss.Color("5")
-	filterColor = warnStyle.GetForeground()
-)
-
-// mode returns the statusline's mode name and pill color, and the key hints
+// mode returns the statusline's mode name and pill style, and the key hints
 // for what has focus.
-func (m *Model) mode() (name string, pill color.Color, hints [][2]string) {
+func (m *Model) mode() (name string, pill lipgloss.Style, hints [][2]string) {
 	switch {
 	case m.loading && m.tasks == nil:
 		// Only q works until the first tasks land.
-		return "NORMAL", m.accentStyle.GetForeground(), [][2]string{{"q", "quit"}}
+		return "NORMAL", normalPill, [][2]string{{"q", "quit"}}
 	case m.filtering:
-		return "FILTER", filterColor, [][2]string{{"enter", "apply"}, {"esc", "done"}}
+		return "FILTER", filterPill, [][2]string{{"enter", "apply"}, {"esc", "done"}}
 	case m.focusReader && m.fieldKey == commentKey:
-		return "EDIT", editColor, [][2]string{{"j/k", "targets"}, {"enter", "add comment"}, {"↑/↓", "scroll"}, {"esc", "list"}}
+		return "EDIT", editPill, [][2]string{{"j/k", "targets"}, {"enter", "add comment"}, {"↑/↓", "scroll"}, {"esc", "list"}}
 	case m.focusReader && m.editableTarget():
-		return "EDIT", editColor, [][2]string{{"j/k", "targets"}, {"enter", "edit"}, {"↑/↓", "scroll"}, {"esc", "list"}}
+		return "EDIT", editPill, [][2]string{{"j/k", "targets"}, {"enter", "edit"}, {"↑/↓", "scroll"}, {"esc", "list"}}
 	case m.focusReader:
 		if m.readerView != config.ViewMarkdown {
 			hints := [][2]string{{"j/k", "targets"}}
 			if t, ok := m.selectedDetail(); ok && m.selectedComment(t) != nil {
 				hints = append(hints, m.keyHints("y")...)
 			}
-			return "READ", readColor, append(hints, [2]string{"↑/↓", "scroll"}, [2]string{"tab", "pane"}, [2]string{"esc", "list"})
+			return "READ", readPill, append(hints, [2]string{"↑/↓", "scroll"}, [2]string{"tab", "pane"}, [2]string{"esc", "list"})
 		}
-		return "READ", readColor, [][2]string{{"j/k", "scroll"}, {"tab", "pane"}, {"esc", "list"}}
+		return "READ", readPill, [][2]string{{"j/k", "scroll"}, {"tab", "pane"}, {"esc", "list"}}
 	case m.focusNav:
-		return "VIEWS", m.accentStyle.GetForeground(), [][2]string{{"j/k", "move"}, {"enter", "open"}, {"esc", "list"}, {"?", "keys"}}
+		return "VIEWS", normalPill, [][2]string{{"j/k", "move"}, {"enter", "open"}, {"esc", "list"}, {"?", "keys"}}
 	}
-	return "NORMAL", m.accentStyle.GetForeground(), m.keyHints("space", "e", "t", "c", "/", "p", "?")
+	return "NORMAL", normalPill, m.keyHints("space", "e", "t", "c", "/", "p", "?")
 }
 
 // statusline is the bottom bar: a mode pill, where the list is and what it
 // shows, then the key hints for what has focus, or the latest status message
 // in their place.
 func (m *Model) statusline() string {
-	name, pillColor, hints := m.mode()
-	pill := lipgloss.NewStyle().Bold(true).Reverse(true).Foreground(pillColor).Render(" " + name + " ")
+	name, pillStyle, hints := m.mode()
+	pill := pillStyle.Render(" " + name + " ")
 	sep := dimStyle.Render(" │ ")
 	segs := []string{m.sym.icon(iconView) + m.viewName()}
 	if _, _, split := m.paneWidths(); !split && len(m.deps.State.SavedViews) > 0 {
@@ -134,7 +126,7 @@ func (m *Model) helpView() string {
 		}
 	}
 	keyStyle := m.accentStyle.Width(keyW + 2)
-	head := lipgloss.NewStyle().Bold(true).Foreground(editColor)
+	head := editPill.Reverse(false)
 	cols := make([]string, len(helpGroups))
 	for i, g := range helpGroups {
 		lines := []string{head.Render(g)}

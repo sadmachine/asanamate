@@ -20,6 +20,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/agents"
@@ -345,6 +346,7 @@ func runTUI(args []string) error {
 		ExitOnAction:  *exitOnAction,
 		Symbols:       cfg.SymbolSet(os.Getenv),
 		ReducedMotion: reducedMotion(cfg),
+		Palette:       cfg.Palette(darkBackground(cfg)),
 	})
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		return err
@@ -354,6 +356,15 @@ func runTUI(args []string) error {
 		return nil
 	}
 	return action.Exec(cmd)
+}
+
+// darkBackground asks the terminal for its background, only when the theme
+// follows it.
+func darkBackground(cfg config.Config) bool {
+	if cmp.Or(cfg.Theme.Name, config.ThemeAuto) != config.ThemeAuto {
+		return true
+	}
+	return lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
 }
 
 // reducedMotion honors the config, else the OS accessibility setting

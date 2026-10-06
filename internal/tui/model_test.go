@@ -24,9 +24,6 @@ func testModel(t *testing.T, cfg config.Config) (*Model, *state.State) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Theme == "" {
-		cfg.Theme = "dark"
-	}
 	// Most tests assert on bare rows; TestSelectionMarker covers the default.
 	if cfg.List.Selection.Style == "" {
 		cfg.List.Selection.Style = config.StyleBar

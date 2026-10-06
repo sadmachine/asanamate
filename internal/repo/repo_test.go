@@ -53,6 +53,25 @@ func TestListFindsDirectChildRepos(t *testing.T) {
 	}
 }
 
+// List keeps the repos it found and names the children it cannot inspect.
+func TestListReportsUnreadableChildren(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads every directory")
+	}
+	root := t.TempDir()
+	repo, locked := filepath.Join(root, "a"), filepath.Join(root, "locked")
+	os.MkdirAll(filepath.Join(repo, ".git"), 0o755)
+	os.MkdirAll(locked, 0o000)
+	t.Cleanup(func() { os.Chmod(locked, 0o755) })
+	got, err := List(root)
+	if !slices.Equal(got, []string{repo}) {
+		t.Errorf("got %v, want %v", got, []string{repo})
+	}
+	if err == nil || !strings.Contains(err.Error(), "cannot read locked") {
+		t.Errorf("err = %v", err)
+	}
+}
+
 func TestListExpandsHome(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)

@@ -568,7 +568,7 @@ func checkFeatures(w io.Writer, cfg config.Config) {
 		row(w, "repo_source", "unchecked: command "+strconv.Quote(cfg.RepoSource.Command)+" (not run)")
 	case cfg.RepoSource.Root != "":
 		if paths, err := repo.List(cfg.RepoSource.Root); err != nil {
-			row(w, "repo_source", "warning: "+err.Error())
+			row(w, "repo_source", fmt.Sprintf("warning: %v (%d repos found)", err, len(paths)))
 		} else {
 			row(w, "repo_source", fmt.Sprintf("ok: %d repos in %s", len(paths), cfg.RepoSource.Root))
 		}

@@ -18,6 +18,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/keymap"
 )
 
 func fakeClient(t *testing.T) *asana.Client {
@@ -435,4 +436,31 @@ func loadString(t *testing.T, body string) config.Config {
 		t.Fatalf("%v\n%s", err, body)
 	}
 	return cfg
+}
+
+func TestTemplateListsEveryBinding(t *testing.T) {
+	tmpl := Render(asana.Ref{GID: "1", Name: "W"}, "")
+	for _, s := range keymap.Catalog() {
+		if !strings.Contains(tmpl, "\n[keys."+s.Name+"]\n") {
+			t.Errorf("template lacks [keys.%s]", s.Name)
+		}
+		for _, b := range s.Bindings {
+			if !strings.Contains(tmpl, "\n# "+b.Name+" = ") {
+				t.Errorf("template lacks keys.%s.%s", s.Name, b.Name)
+			}
+		}
+	}
+}
+
+func TestMergeKeepsKeyOverrides(t *testing.T) {
+	updated, added, err := Merge("workspace = \"1\"\n[keys.main]\nquit = [\"x\"]\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg := loadString(t, updated); cfg.Keymap.Name("main", "x") != "quit" {
+		t.Fatalf("override lost:\n%s", updated)
+	}
+	if !slices.Contains(added, "picker.type_first") {
+		t.Errorf("added = %v", added)
+	}
 }

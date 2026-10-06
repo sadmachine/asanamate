@@ -507,3 +507,31 @@ func TestListSortConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestKeysConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n[keys.main]\nquit = [\"x\"]\n[keys.picker]\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Keymap.Name("main", "x") != "quit" || cfg.Keymap.Name("main", "q") != "" {
+		t.Fatalf("keymap main = %v", cfg.Keymap["main"])
+	}
+	if len(cfg.Keys) != 1 {
+		t.Fatalf("empty scopes must be dropped: %v", cfg.Keys)
+	}
+	_, err = Load(writeFile(t, "workspace = \"1\"\n[keys.main]\ndwon = [\"j\"]\n"))
+	if err == nil || !strings.Contains(err.Error(), "keys.main.dwon: unknown binding") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestPickerConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
+	if err != nil || cfg.Picker.TypeFirst {
+		t.Fatalf("default: %+v, err = %v", cfg.Picker, err)
+	}
+	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[picker]\ntype_first = true\n"))
+	if err != nil || !cfg.Picker.TypeFirst {
+		t.Fatalf("set: %+v, err = %v", cfg.Picker, err)
+	}
+}

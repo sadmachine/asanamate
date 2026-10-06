@@ -17,6 +17,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/prompt"
 	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -163,7 +164,31 @@ func warnMissingPager(out io.Writer) {
 func Render(workspace asana.Ref, repoRoot string) string {
 	name := strings.Join(strings.Fields(ticket.Clean(workspace.Name)), " ")
 	root, _ := formatValue(repoRoot) // a string always encodes
-	return fmt.Sprintf(configTemplate, name, workspace.GID, root)
+	return fmt.Sprintf(configTemplate, name, workspace.GID, root) + keysTemplate()
+}
+
+// keysTemplate is the [keys] section: every binding, commented out with its
+// default keys, generated from the keymap catalog.
+func keysTemplate() string {
+	var b strings.Builder
+	b.WriteString(`
+[keys]
+# Key bindings. Each name takes a list of keys: a character ("j", "G", "?")
+# or a key name with modifiers ("ctrl+d", "shift+tab", "enter", "space",
+# "pgdown"). An empty list unbinds. ctrl+c always quits. Action keys stay in
+# each actions/*.toml file.
+`)
+	for _, s := range keymap.Catalog() {
+		fmt.Fprintf(&b, "\n[keys.%s]\n# %s\n", s.Name, s.Doc)
+		for _, k := range s.Bindings {
+			quoted := make([]string, len(k.Keys))
+			for i, key := range k.Keys {
+				quoted[i] = strconv.Quote(key)
+			}
+			fmt.Fprintf(&b, "# %s = [%s]  # %s\n", k.Name, strings.Join(quoted, ", "), k.Desc)
+		}
+	}
+	return b.String()
 }
 
 const summary = `
@@ -315,6 +340,11 @@ max_text_width = 0
 mode = "auto"
 # Draw images in descriptions and comments in the cards view instead of links.
 inline = false
+
+[picker]
+# Open pickers in search mode, so typing filters at once. esc leaves search
+# for browse mode (j/k to move); a second esc closes the picker.
+type_first = false
 
 # Optional: show running coding agents next to their tickets. Off unless a
 # preset or command is set. A ticket matches agents on its branch (see

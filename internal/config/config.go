@@ -16,6 +16,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/form"
+	"github.com/sadmachine/asanamate/internal/keymap"
 )
 
 // TokenEnv names the environment variable that holds the Asana personal access token.
@@ -71,6 +72,12 @@ type Config struct {
 	List         List         `toml:"list"`
 	Reader       Reader       `toml:"reader"`
 	Images       Images       `toml:"images"`
+	Picker       Picker       `toml:"picker"`
+	// Keys overrides key bindings: scope, then binding name, then keys. See
+	// internal/keymap for the scopes and names.
+	Keys map[string]map[string][]string `toml:"keys"`
+	// Keymap is Keys applied to the default bindings, set by Load.
+	Keymap keymap.Keymap `toml:"-"`
 	// Actions come from the *.toml files in ActionsDir, not from config.toml.
 	Actions []Action `toml:"-"`
 	// Themes are the theme files Theme names, read from ThemesDir by Load.
@@ -183,6 +190,12 @@ type Images struct {
 	Inline bool   `toml:"inline"`
 }
 
+// Picker configures list pickers. TypeFirst opens them in search mode
+// instead of browse mode.
+type Picker struct {
+	TypeFirst bool `toml:"type_first"`
+}
+
 // RepoSource configures where repo picker candidates come from.
 type RepoSource struct {
 	// Root is a directory whose direct children with a .git entry are listed,
@@ -227,6 +240,7 @@ func Default() Config {
 		},
 		Reader: Reader{View: ViewCards},
 		Images: Images{Mode: "auto"},
+		Keymap: keymap.Default(),
 	}
 }
 
@@ -256,11 +270,29 @@ func Load(path string) (Config, error) {
 	if err := cfg.validate(); err != nil {
 		return cfg, fmt.Errorf("%s: %w", path, err)
 	}
+	cfg.Keys = compactKeys(cfg.Keys)
+	if cfg.Keymap, err = keymap.Resolve(cfg.Keys); err != nil {
+		return cfg, fmt.Errorf("%s: %w", path, err)
+	}
 	if cfg.Themes, err = loadThemes(ThemesDir(path), cfg.Theme); err != nil {
 		return cfg, fmt.Errorf("%s: %w", path, err)
 	}
 	cfg.Actions, err = loadActions(ActionsDir(path))
 	return cfg, err
+}
+
+// compactKeys drops scopes that override nothing, such as the template's
+// empty [keys.main] tables, and returns nil when none are left.
+func compactKeys(keys map[string]map[string][]string) map[string]map[string][]string {
+	for scope, names := range keys {
+		if len(names) == 0 {
+			delete(keys, scope)
+		}
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	return keys
 }
 
 // loadActions reads every *.toml file in dir, in file name order. A missing

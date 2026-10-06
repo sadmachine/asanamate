@@ -98,6 +98,9 @@ func Resolve(overrides map[string]map[string][]string) (Keymap, error) {
 				if err != nil {
 					return nil, fmt.Errorf("keys.%s.%s: %w", s.Name, b.Name, err)
 				}
+				if key == "ctrl+c" {
+					return nil, fmt.Errorf("keys.%s.%s: ctrl+c always quits; it can't be bound", s.Name, b.Name)
+				}
 				if prev, ok := owner[key]; ok && prev != b.Name {
 					return nil, fmt.Errorf("keys.%s: %q is bound to both %s and %s", s.Name, r, prev, b.Name)
 				}

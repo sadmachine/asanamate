@@ -1,0 +1,19 @@
+.gitignore
+  s_4c7398a2d06647::t_41ac1ed4fc7176 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "13ac6b0535dac1f84a9d11ce889741a9fa292cf4",
+  "prompts": {},
+  "sessions": {
+    "s_4c7398a2d06647": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a19b61e0-35c4-499f-af5f-f8929046967e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

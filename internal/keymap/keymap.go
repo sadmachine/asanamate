@@ -41,6 +41,18 @@ type Scope struct {
 // Catalog returns every scope, in template order. Callers must not modify it.
 func Catalog() []Scope { return catalog }
 
+// Typing reports whether the binding name in scope runs while a text field
+// has focus.
+func Typing(scope, name string) bool {
+	for _, s := range catalog {
+		if s.Name == scope {
+			i := slices.IndexFunc(s.Bindings, func(b Binding) bool { return b.Name == name })
+			return i >= 0 && s.Bindings[i].Typing
+		}
+	}
+	return false
+}
+
 // Keymap holds the resolved keys: scope, then binding name, then keys.
 type Keymap map[string]map[string][]string
 

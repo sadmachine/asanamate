@@ -17,13 +17,14 @@ var (
 )
 
 // bound returns the binding msg runs in scope, or "". While a text field has
-// focus (typing), printable keys are typed instead of run.
+// focus (typing), only Typing bindings run, and printable keys are typed.
 func bound(scope string, msg tea.KeyPressMsg, typing bool) string {
 	k := msg.String()
-	if typing && keymap.Printable(k) {
+	name := keys.Name(scope, k)
+	if typing && (keymap.Printable(k) || !keymap.Typing(scope, name)) {
 		return ""
 	}
-	return keys.Name(scope, k)
+	return name
 }
 
 // keyLabel shows the first key of each named binding, as hints do.

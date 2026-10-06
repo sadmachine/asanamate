@@ -93,7 +93,7 @@ var catalog = []Scope{
 		{Name: "cancel", Keys: []string{"esc"}, Desc: "cancel", Typing: true},
 	}},
 	{Name: "builder", Doc: "Action builder (A). Its menus use [keys.picker].", Bindings: []Binding{
-		{Name: "save", Keys: []string{"ctrl+s"}, Desc: "save the action"},
+		{Name: "save", Keys: []string{"ctrl+s"}, Desc: "save the action", Typing: true},
 	}},
 	{Name: "notice", Doc: "Notice popups.", Bindings: []Binding{
 		{Name: "dismiss", Keys: []string{"enter", "esc"}, Desc: "dismiss"},

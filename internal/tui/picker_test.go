@@ -23,6 +23,10 @@ func key(s string) tea.KeyPressMsg {
 		return tea.KeyPressMsg{Code: tea.KeyDown}
 	case "up":
 		return tea.KeyPressMsg{Code: tea.KeyUp}
+	case "home":
+		return tea.KeyPressMsg{Code: tea.KeyHome}
+	case "end":
+		return tea.KeyPressMsg{Code: tea.KeyEnd}
 	case "space":
 		return tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
 	}
@@ -242,5 +246,47 @@ func TestTypeFirstSkipsKeySelectPickers(t *testing.T) {
 	p.keySelect = true
 	if res, _ := p.update(key("esc")); !res.cancelled {
 		t.Fatal("one esc must close a key-select picker")
+	}
+}
+
+func TestSearchKeepsHomeAndEndForTheText(t *testing.T) {
+	p := newPicker(nil, "Pick", items("Ab", "Ac", "Ad"))
+	search(p, "a")
+	p.cursor = 1
+	p.update(key("home"))
+	if p.cursor != 1 || p.input.Position() != 0 {
+		t.Fatalf("home: cursor = %d, text position = %d", p.cursor, p.input.Position())
+	}
+	p.update(key("end"))
+	if p.cursor != 1 || p.input.Position() != 1 {
+		t.Fatalf("end: cursor = %d, text position = %d", p.cursor, p.input.Position())
+	}
+}
+
+func TestKeySelectHomeAndEndMove(t *testing.T) {
+	p := newPicker(nil, "Pick", items("A", "B", "C"))
+	p.keySelect = true
+	p.update(key("end"))
+	if p.cursor != 2 {
+		t.Fatalf("end: cursor = %d", p.cursor)
+	}
+	p.update(key("home"))
+	if p.cursor != 0 {
+		t.Fatalf("home: cursor = %d", p.cursor)
+	}
+}
+
+func TestStopSearchFromUseRowGoesToTop(t *testing.T) {
+	p := newPicker(nil, "Pick", items("Apple", "Apricot", "Banana"))
+	p.allowFree = true
+	search(p, "ap")
+	p.update(key("down"))
+	p.update(key("down"))
+	if p.cursor != 2 {
+		t.Fatalf("not on the Use row: cursor = %d", p.cursor)
+	}
+	p.update(key("esc"))
+	if p.searching || p.cursor != 0 {
+		t.Fatalf("searching = %v, cursor = %d", p.searching, p.cursor)
 	}
 }

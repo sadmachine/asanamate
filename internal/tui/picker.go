@@ -9,6 +9,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/sadmachine/asanamate/internal/keymap"
 )
 
 type pickItem struct {
@@ -107,9 +109,9 @@ func (p *picker) rowCount() int {
 }
 
 // stopSearch clears the search and returns to browse mode, keeping the
-// highlighted item highlighted.
+// highlighted item highlighted, or going to the top from the Use row.
 func (p *picker) stopSearch() {
-	selected := -1
+	selected := 0
 	if p.cursor < len(p.matches) {
 		selected = p.matches[p.cursor]
 	}
@@ -117,9 +119,7 @@ func (p *picker) stopSearch() {
 	p.input.Blur()
 	p.input.SetValue("")
 	p.refilter()
-	if selected >= 0 {
-		p.cursor = selected
-	}
+	p.cursor = selected
 }
 
 // checkedResult returns the checked items of a multi picker, in list order.
@@ -154,9 +154,12 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 			}
 		}
 	}
-	// Key-select pickers keep printable keys for their items, as searching does.
-	typing := p.searching || p.keySelect
-	switch bound("picker", msg, typing) {
+	// Key-select pickers keep printable keys for their items.
+	var name string
+	if !p.keySelect || !keymap.Printable(msg.String()) {
+		name = bound("picker", msg, p.searching && !p.keySelect)
+	}
+	switch name {
 	case "cancel":
 		// Key-select pickers have no search, even with picker.type_first.
 		if p.searching && !p.keySelect {

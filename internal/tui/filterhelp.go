@@ -48,7 +48,9 @@ func (m *Model) filterHints() []string {
 	}
 	if maxLines := m.bodyHeight() - 3; len(lines) > maxLines {
 		lines = lines[:maxLines]
-		lines[maxLines-1] = m.styleFilterHint([]string{filterGuide()})
+		if g := filterGuide(); g != "" {
+			lines[maxLines-1] = m.styleFilterHint([]string{g})
+		}
 	}
 	return lines
 }

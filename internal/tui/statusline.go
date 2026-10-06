@@ -79,9 +79,11 @@ func (m *Model) statusline() string {
 	}
 	right := titleStyle.Render(ticket.OneLine(status))
 	if status == "" {
-		parts := make([]string, len(hints))
-		for i, h := range hints {
-			parts[i] = m.accentStyle.Render(h[0]) + " " + dimStyle.Render(h[1])
+		var parts []string
+		for _, h := range hints {
+			if h[0] != "" { // unbound
+				parts = append(parts, m.accentStyle.Render(h[0])+" "+dimStyle.Render(h[1]))
+			}
 		}
 		right = strings.Join(parts, "  ")
 	}

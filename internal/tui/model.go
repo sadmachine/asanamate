@@ -1295,10 +1295,15 @@ func (m *Model) emptyView(width, height int) string {
 	if len(m.tasks) > 0 {
 		title, why = "All clear.", "Nothing matches "+warnStyle.Render(m.filterInput.Value())
 	}
-	hint := func(k, desc string) string { return m.accentStyle.Render(k) + " " + dimStyle.Render(desc) }
+	var hints []string
+	for _, h := range [][2]string{{"filter", "filter"}, {"projects", "projects"}, {"reload", "reload"}} {
+		if k := keyLabel("main", h[0]); k != "" {
+			hints = append(hints, m.accentStyle.Render(k)+" "+dimStyle.Render(h[1]))
+		}
+	}
 	block := lipgloss.JoinVertical(lipgloss.Center,
 		okStyle.Bold(true).Render(m.sym.done), "", titleStyle.Render(title), dimStyle.Render(why), "",
-		hint(keyLabel("main", "filter"), "filter")+"   "+hint(keyLabel("main", "projects"), "projects")+"   "+hint(keyLabel("main", "reload"), "reload"))
+		strings.Join(hints, "   "))
 	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, block)
 }
 

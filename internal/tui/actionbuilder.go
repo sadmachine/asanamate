@@ -189,7 +189,7 @@ func (b *actionBuilder) showAction() {
 			}, b.showAction)
 		}),
 		builderRow("Form fields", fmt.Sprint(len(a.Form.Fields)), "Optional select/hour prompts before running. Answers become ASANAMATE_PARAM_<ID>.", func() { b.descend(b.showAction, b.showFields) }),
-		builderRow("Save action", "ctrl+s", "Validate and write the action file. Changes become available immediately.", b.submit),
+		builderRow("Save action", keyLabel("builder", "save"), "Validate and write the action file. Changes become available immediately.", b.submit),
 	}
 	b.show("Action builder", rows)
 	b.root = true
@@ -296,7 +296,7 @@ func (b *actionBuilder) update(msg tea.Msg) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	if b.root && bound("builder", key, false) == "save" {
+	if b.root && bound("builder", key, b.menu.searching) == "save" {
 		b.submit()
 		return nil
 	}
@@ -319,8 +319,8 @@ func (b *actionBuilder) view(width, height int, accent lipgloss.Style) string {
 		hint = " discard draft"
 	}
 	view = strings.Replace(view, dimStyle.Render(" cancel"), dimStyle.Render(hint), 1)
-	if b.root {
-		view += dimStyle.Render(" · ") + accent.Render("ctrl+s") + dimStyle.Render(" save")
+	if save := keyLabel("builder", "save"); b.root && save != "" {
+		view += dimStyle.Render(" · ") + accent.Render(save) + dimStyle.Render(" save")
 	}
 	return view
 }

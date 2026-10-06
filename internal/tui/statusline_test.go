@@ -10,6 +10,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -191,5 +192,30 @@ func TestFilterEscRestoresPreviousFilter(t *testing.T) {
 	m.Update(key("esc"))
 	if m.filtering || m.filterInput.Value() != "is:open" || len(m.visible) != 1 {
 		t.Fatalf("filtering = %v, filter = %q, visible = %d", m.filtering, m.filterInput.Value(), len(m.visible))
+	}
+}
+
+func TestUnboundKeysLeaveNoEmptyHints(t *testing.T) {
+	cfg := config.Config{}
+	var err error
+	if cfg.Keymap, err = keymap.Resolve(map[string]map[string][]string{"filter": {"help": {}}, "main": {"filter": {}}}); err != nil {
+		t.Fatal(err)
+	}
+	m, _ := testModel(t, cfg)
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.filtering = true
+	if s := ansi.Strip(m.statusline()); strings.Contains(s, "  guide") || strings.HasSuffix(s, " guide") {
+		t.Fatalf("statusline shows an unbound key: %q", s)
+	}
+	for _, line := range m.filterHints() {
+		if strings.Contains(ansi.Strip(line), "guide") {
+			t.Fatalf("filter hints show an unbound guide key: %q", ansi.Strip(line))
+		}
+	}
+	m.filtering = false
+	m.tasks = nil
+	if strings.Contains(ansi.Strip(m.emptyView(80, 10)), " filter") {
+		t.Fatal("empty view shows an unbound filter key")
 	}
 }

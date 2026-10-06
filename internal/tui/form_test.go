@@ -16,6 +16,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/form"
+	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -440,5 +441,26 @@ func TestTypeFirstBuilderMenusAcceptTyping(t *testing.T) {
 	typeText(m.builder.menu, "na")
 	if m.builder.menu.input.Value() != "na" {
 		t.Fatalf("builder menu value = %q", m.builder.menu.input.Value())
+	}
+}
+
+func TestBuilderSaveFollowsItsBinding(t *testing.T) {
+	cfg := config.Default()
+	var err error
+	if cfg.Keymap, err = keymap.Resolve(map[string]map[string][]string{"builder": {"save": {"ctrl+w", "w"}}}); err != nil {
+		t.Fatal(err)
+	}
+	m, _ := testModel(t, cfg)
+	m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
+	m.openActionBuilder()
+	m.Update(key("enter"))
+	view := ansi.Strip(m.builder.view(100, 30, lipgloss.NewStyle()))
+	if !strings.Contains(view, "ctrl+w save") || strings.Contains(view, "ctrl+s") {
+		t.Fatalf("builder hints must use the bound save key:\n%s", view)
+	}
+	m.Update(key("/"))
+	m.Update(key("w"))
+	if m.builder == nil || m.builder.menu.input.Value() != "w" {
+		t.Fatal("a printable save key must type while searching")
 	}
 }

@@ -238,7 +238,7 @@ func childOrder(md toml.MetaData, path []string, t map[string]any) []string {
 }
 
 // formatValue returns v as a TOML value, preferring the template's quoting:
-// "basic" strings, then 'literal', then '''multi-line literal'''.
+// "basic" strings, then 'literal', then multi-line literal strings.
 func formatValue(v any) (string, error) {
 	if s, ok := v.(string); ok {
 		if q, ok := quote(s); ok {

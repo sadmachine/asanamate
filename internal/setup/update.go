@@ -44,7 +44,7 @@ func Update(o Options, yes bool) error {
 	}
 	if updated == string(old) {
 		fmt.Fprintln(o.Out, "Config is already up to date.")
-		return nil
+		return writeFiles(config.ThemesDir(o.ConfigPath), themeFiles)
 	}
 	if len(added) > 0 {
 		fmt.Fprintf(o.Out, "New settings with their defaults: %s\n", strings.Join(added, ", "))
@@ -63,6 +63,9 @@ func Update(o Options, yes bool) error {
 		return err
 	}
 	if err := writePrivate(o.ConfigPath, []byte(updated)); err != nil {
+		return err
+	}
+	if err := writeFiles(config.ThemesDir(o.ConfigPath), themeFiles); err != nil {
 		return err
 	}
 	fmt.Fprintf(o.Out, updateSummary, o.ConfigPath, backup)

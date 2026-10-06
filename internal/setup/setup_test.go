@@ -392,8 +392,8 @@ func TestUpdateMigratesV010Config(t *testing.T) {
 	if err != nil || cfg.Colors.Accent.FG != "2" {
 		t.Fatalf("cfg = %+v, err = %v", cfg.Colors.Accent, err)
 	}
-	if entries, _ := os.ReadDir(dir); len(entries) != 2 {
-		t.Fatalf("expected config.toml and config.toml.bak only, got %v", entries)
+	if leftovers, _ := filepath.Glob(filepath.Join(dir, ".config-*")); len(leftovers) != 0 {
+		t.Fatalf("temporary check file left behind: %v", leftovers)
 	}
 }
 
@@ -462,5 +462,18 @@ func TestMergeKeepsKeyOverrides(t *testing.T) {
 	}
 	if !slices.Contains(added, "picker.type_first") {
 		t.Errorf("added = %v", added)
+	}
+}
+
+func TestUpdateWritesThemeExample(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	os.WriteFile(path, []byte("workspace = \"1\"\n"), 0o600)
+	o := Options{In: bufio.NewReader(strings.NewReader("")), Out: &strings.Builder{}, ConfigPath: path}
+	if err := Update(o, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(config.ThemesDir(path), "example.toml.example")); err != nil {
+		t.Fatalf("config update must add the theme example: %v", err)
 	}
 }

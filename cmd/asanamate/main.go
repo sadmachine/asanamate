@@ -479,10 +479,14 @@ func runDoctor(args []string) error {
 		if cfg.Agents.Preset != "" {
 			source = "preset " + strconv.Quote(cfg.Agents.Preset)
 		}
-		if list, err = agents.Fetch(ctx, cfg.Agents.Preset, cfg.Agents.Command, cfg.Agents.States, stateDir); err != nil {
+		list, err = agents.Fetch(ctx, cfg.Agents.Preset, cfg.Agents.Command, cfg.Agents.States, stateDir)
+		if err != nil {
 			row(w, "agents", fmt.Sprintf("warning: %s failed: %v", source, err))
 		} else {
 			row(w, "agents", "ok: "+source)
+		}
+		checkCodexHook(w)
+		if err == nil {
 			fmt.Fprintf(w, "\n%d running:\n", len(list))
 			for _, a := range list {
 				fmt.Fprintf(w, "  %s  branch %s  %s  repo %s\n", a.Path, orNone(a.Branch), a.State, orNone(a.Repo))
@@ -568,7 +572,7 @@ func checkFeatures(w io.Writer, cfg config.Config) {
 		row(w, "repo_source", "unchecked: command "+strconv.Quote(cfg.RepoSource.Command)+" (not run)")
 	case cfg.RepoSource.Root != "":
 		if paths, err := repo.List(cfg.RepoSource.Root); err != nil {
-			row(w, "repo_source", "warning: "+err.Error())
+			row(w, "repo_source", fmt.Sprintf("warning: %v (%d repos found)", err, len(paths)))
 		} else {
 			row(w, "repo_source", fmt.Sprintf("ok: %d repos in %s", len(paths), cfg.RepoSource.Root))
 		}
@@ -594,6 +598,26 @@ func checkFeatures(w io.Writer, cfg config.Config) {
 		}
 	default:
 		row(w, "time_tracking", "unchecked: custom command (not run)")
+	}
+}
+
+// checkCodexHook reports asanamate's hook in Codex, which Codex agent
+// status needs. It says nothing when Codex is not installed.
+func checkCodexHook(w io.Writer) {
+	home, err := setup.CodexHome()
+	if err != nil {
+		return
+	}
+	state, err := setup.CodexHook(home, hookExecutable())
+	switch {
+	case err != nil:
+		row(w, "codex_hook", "warning: "+err.Error())
+	case state == setup.HookMissing:
+		row(w, "codex_hook", "warning: missing, so Codex agent status can be wrong; run asanamate setup hooks")
+	case state == setup.HookStale:
+		row(w, "codex_hook", "warning: runs another asanamate path or misses events; run asanamate setup hooks to repair it")
+	case state == setup.HookCurrent:
+		row(w, "codex_hook", "ok: "+filepath.Join(home, "hooks.json"))
 	}
 }
 

@@ -104,20 +104,23 @@ to a file or edits your shell files.
 Browsing needs none of these. Each one affects only its own feature, and
 `asanamate doctor` reports which are usable.
 
-| Feature | Needs | Without it |
-|---|---|---|
-| Pager action (`v`) | `$PAGER`, else `less` | the action fails; setup and `doctor` warn |
-| `asanamate config` | `$VISUAL` or `$EDITOR`, else `vi` | edit `config.toml` directly |
-| Repo actions, agent branch matching | `git` | browsing works; repo actions report that git is missing |
-| Repo picker | `repo_source.root` or `repo_source.command` | type a repo path when an action asks |
-| Open in browser (`o`, `f`) | macOS `open`; Linux `xdg-open` and a desktop browser | the error shows in the status line |
-| Copy link or comment (`c`, `y`) | terminal OSC 52 support; in tmux, `set -g set-clipboard on` | nothing is copied; asanamate cannot detect this |
-| Paste into input (`Ctrl+V`) | macOS `pbpaste`; Linux `xclip`, `xsel`, or `wl-clipboard` with a graphical session | use your terminal's paste shortcut |
-| Agent status | a supported agent tool; see [Agents](#agents-optional) | off until configured |
-| Time tracking | `hrvst`; see [Time tracking](#time-tracking-optional) | off until configured |
-| Inline images | a kitty-graphics terminal (kitty, Ghostty); in tmux, `set -g allow-passthrough on` | links shown instead |
-| Nerd Font symbols | a Nerd Font and `symbols = "nerd"` | unicode or ascii symbols |
-| Follow OS reduced motion | macOS `defaults`; GNOME `gsettings` | set `reduced_motion` yourself |
+| Feature | Needs | Turn on | Turn off | `doctor` row | Without it |
+|---|---|---|---|---|---|
+| Pager action (`v`) | `$PAGER`, else `less` (your package manager) | on by default | delete `actions/pager.toml` | `pager` | the action fails; setup and `doctor` warn |
+| `asanamate config` | `$VISUAL` or `$EDITOR`, else `vi` | set `$EDITOR` | not needed | `editor` | edit `config.toml` directly |
+| Repo actions, agent branch matching | [git](https://git-scm.com/downloads) | install git | not needed | `git` | browsing works; repo actions report that git is missing |
+| Repo picker | a directory of clones | `repo_source.root` or `repo_source.command` | leave both empty | `repo_source` | type a repo path when an action asks |
+| Open in browser (`o`, `f`) | macOS `open`; Linux [xdg-utils](https://www.freedesktop.org/wiki/Software/xdg-utils/) and a desktop browser | always on | not needed | `browser` | the status line shows the error and the URL to copy |
+| Copy link or comment (`c`, `y`) | terminal OSC 52 support; in tmux, `set -g set-clipboard on` | always on | not needed | not checked | nothing is copied; asanamate cannot detect this |
+| Paste into input (`Ctrl+V`) | macOS `pbpaste`; Linux `xclip` or `xsel` (X11) or `wl-clipboard` (Wayland) | always on | not needed | not checked | the input shows why, and your terminal's paste still works |
+| Agent status | a supported agent tool; see [Agents](#agents-optional) | `[agents]` | remove `[agents]` keys | `agents`, `codex_hook` | off |
+| Time tracking | [hrvst](https://github.com/kgajera/hrvst-cli) 3.x; see [Time tracking](#time-tracking-optional) | `[time_tracking]` | remove `[time_tracking]` keys | `time_tracking` | off |
+| Inline images | a kitty-graphics terminal ([kitty](https://sw.kovidgoyal.net/kitty/), [Ghostty](https://ghostty.org)); in tmux, `set -g allow-passthrough on` | `images.mode = "auto"` (default) | `images.mode = "off"` | not checked | links shown instead |
+| Nerd Font symbols | a [Nerd Font](https://www.nerdfonts.com) | `symbols = "nerd"` | `symbols = "unicode"` or `"ascii"` | not checked | unicode or ascii symbols |
+| Follow OS reduced motion | macOS `defaults`; GNOME `gsettings` | leave `reduced_motion` unset | set `reduced_motion` | not checked | set `reduced_motion` yourself |
+
+Run `asanamate doctor` after turning a feature on: its row reads `ok` when the
+tools it needs are present, and the `warning` text names what is missing.
 
 Actions you write run your own commands; installing what they use is up to you.
 
@@ -651,6 +654,13 @@ reported itself, when that report is newer than ccmux's:
   Without it, Codex states fall back to the Codex pane title, and are
   inaccurate or wrong when the title format changes.
 
+  The hook runs asanamate by its full path. After you move or reinstall
+  asanamate somewhere else, `asanamate setup hooks` finds the old hook, and
+  `doctor` reports it in its `codex_hook` row; answer yes to replace it with
+  the current path. Your other hooks stay, and the old file is saved as
+  `hooks.json.bak` again. To remove the hook, delete the entries whose command
+  ends in `hook codex` from `hooks.json`.
+
 Any status other than `idle` from ccmux is kept as is.
 
 **Linking.** A ticket matches every agent whose working directory has
@@ -801,6 +811,31 @@ feature, without running actions or writing anything:
   which `doctor` does not run.
 
 With a ticket gid, it also explains why each agent links to that ticket or not.
+
+## Moving to another machine
+
+1. Install asanamate on the new machine (see [Install](#install)).
+2. Set `ASANA_ACCESS_TOKEN` there the same way as before (see [Token](#token)).
+   Never copy the token inside a file with the others; create a new token at
+   <https://app.asana.com/0/my-apps> if you prefer.
+3. Copy `~/.config/asanamate/` (config and actions). If a path in it differs
+   on the new machine, such as `repo_source.root`, edit it; paths starting
+   with `~` carry over.
+4. Optionally copy `~/.local/state/asanamate/state.toml` to keep repo links,
+   saved branches, saved views, recent projects, and Harvest project choices.
+   Repo links are absolute paths: an action whose linked repo is missing asks
+   you to pick it again, and `L` relinks or unlinks any of them.
+5. Install the tools your own actions use, and the optional tools you had on
+   (see [Optional features](#optional-features)). Run `hrvst login` again for
+   time tracking.
+6. Run `asanamate setup hooks` if you use the Codex hook; it adds or repairs
+   the hook for the new path.
+7. Run `asanamate doctor` and fix what it reports.
+
+The state file, ticket exports (`tickets/`), and the action log hold project
+names, ticket text, and comments from your workspace; treat them as private.
+Exports and the agent status files are rebuilt as you use asanamate, so there
+is no need to copy them.
 
 ## Files
 

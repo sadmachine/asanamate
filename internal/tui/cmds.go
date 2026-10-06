@@ -232,7 +232,7 @@ func loadLinkNames(c *asana.Client, gids []string) tea.Cmd {
 // link from the repo links picker.
 func loadCandidates(src config.RepoSource, link *linkTarget) tea.Cmd {
 	return request(func(ctx context.Context) tea.Msg {
-		paths, err := repo.Candidates(ctx, src.Command, src.Root)
+		paths, err := repo.Candidates(ctx, src)
 		return candidatesMsg{paths: paths, err: err, link: link}
 	})
 }

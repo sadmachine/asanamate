@@ -8,12 +8,20 @@ import (
 	"runtime"
 )
 
-// Open opens rawURL with Opener.
+// Open opens rawURL with Opener. Its error names the URL, so it stays
+// visible to copy when no browser can open it.
 func Open(rawURL string) error {
 	if err := validate(rawURL); err != nil {
 		return err
 	}
-	return exec.Command(Opener(), rawURL).Run()
+	if err := exec.Command(Opener(), rawURL).Run(); err != nil {
+		hint := ""
+		if runtime.GOOS != "darwin" {
+			hint = "; install xdg-utils and a desktop browser"
+		}
+		return fmt.Errorf("could not open %s with %s: %v%s", rawURL, Opener(), err, hint)
+	}
+	return nil
 }
 
 // Opener is the program that opens URLs: open on macOS, else xdg-open.

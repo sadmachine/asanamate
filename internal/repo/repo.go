@@ -5,10 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/sadmachine/asanamate/internal/config"
 )
 
 // ExpandHome replaces a leading "~" with the user's home directory.
@@ -36,13 +39,14 @@ func CollapseHome(p string) string {
 	return p
 }
 
-// Candidates returns the repo picker's paths: one per output line of command,
-// run with /bin/sh, or when command is empty the repos directly inside root.
-func Candidates(ctx context.Context, command, root string) ([]string, error) {
-	if strings.TrimSpace(command) == "" {
-		return List(root)
+// Candidates returns the repo picker's paths: one per output line of
+// src.Command, run with /bin/sh, or when it is empty the repos directly
+// inside src.Root.
+func Candidates(ctx context.Context, src config.RepoSource) ([]string, error) {
+	if strings.TrimSpace(src.Command) == "" {
+		return List(src.Root)
 	}
-	out, err := exec.CommandContext(ctx, "/bin/sh", "-c", command).Output()
+	out, err := exec.CommandContext(ctx, "/bin/sh", "-c", src.Command).Output()
 	if err != nil {
 		return nil, fmt.Errorf("repo_source command failed: %w", err)
 	}
@@ -61,6 +65,8 @@ func Candidates(ctx context.Context, command, root string) ([]string, error) {
 
 // List returns the directories directly inside root that hold a .git entry,
 // a directory for a clone or a file for a worktree. Empty root lists nothing.
+// Children it cannot inspect are reported in the error, alongside the paths
+// it found.
 func List(root string) ([]string, error) {
 	if root == "" {
 		return nil, nil
@@ -71,11 +77,19 @@ func List(root string) ([]string, error) {
 		return nil, fmt.Errorf("repo_source.root: %w", err)
 	}
 	var paths []string
+	var unreadable []string
 	for _, e := range entries {
 		p := filepath.Join(dir, e.Name())
-		if _, err := os.Stat(filepath.Join(p, ".git")); err == nil {
+		_, err := os.Stat(filepath.Join(p, ".git"))
+		switch {
+		case err == nil:
 			paths = append(paths, p)
+		case errors.Is(err, fs.ErrPermission):
+			unreadable = append(unreadable, e.Name())
 		}
+	}
+	if len(unreadable) > 0 {
+		return paths, fmt.Errorf("repo_source.root: cannot read %s in %s", strings.Join(unreadable, ", "), dir)
 	}
 	return paths, nil
 }

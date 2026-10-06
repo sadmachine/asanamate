@@ -275,6 +275,21 @@ Pick a ticket with fzf:
 asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {1}' | cut -f1
 ```
 
+## Upgrading to v0.2.0
+
+v0.2.0 moves the color settings. Run `asanamate config update` to rewrite
+your config; it keeps your values and saves the old file as
+`config.toml.bak`. Until then, asanamate names the first moved key and stops.
+
+| v0.1.0 | v0.2.0 |
+|---|---|
+| `theme` | `theme.name` |
+| `accent_color` | `colors.accent` |
+| `list.header.color` | `colors.header` |
+| `list.pinned.color` | `colors.pinned` |
+| `list.viewing.color` | `colors.viewing` |
+| `list.selection.color` | `colors.selection` |
+
 ## Configuration
 
 `~/.config/asanamate/config.toml` (or `$XDG_CONFIG_HOME/asanamate/config.toml`):
@@ -282,8 +297,9 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | Key | Default | Meaning |
 |---|---|---|
 | `workspace` | set by setup | Asana workspace gid |
-| `theme` | `"dark"` | reading pane style: `dark` or `light` |
-| `accent_color` | `"4"` | accent for reader card headings, group headers, and the selection marker: an ANSI color number (`0`–`255`) or `#rrggbb` |
+| `theme.name` | `"auto"` | color theme: `auto` (follow the terminal background), `dark`, `light`, or a file in `themes/`; see [Themes](#themes) |
+| `theme.dark` / `theme.light` | `"dark"` / `"light"` | themes `auto` uses on dark and light backgrounds |
+| `colors.*` | the theme's | per-role overrides on top of the theme: a color (`0`–`255` or `#rrggbb`) or a style table `{ fg, bg, bold, italic, underline, faint, reverse }`; see [Themes](#themes) |
 | `default_filter` | `"is:open"` | filter applied at startup |
 | `confirm_writes` | `true` | write-back subcommands ask before writing |
 | `list.layout` | `"single"` | `single` (one line per ticket) or `multi` (title, then fields on a second line) |
@@ -299,11 +315,7 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `list.sort.direction` | `"asc"` | `asc` (earliest dates / A–Z) or `desc` (latest dates / Z–A); missing values always last |
 | `list.header.style` | `"rule"` | group headers: `rule` (`── Label (n) ───`) or `bar` (reversed bar) |
 | `list.header.spacing` | `false` | `true` adds a blank line above and below each group header; the `s` settings menu toggles it and the choice persists |
-| `list.header.color` | `accent_color` | group header color, same format as `accent_color` |
-| `list.pinned.color` | `"208"` (orange) | header color of the Pinned section for tickets manually pinned with `P`; same format as `accent_color`, empty uses it |
-| `list.viewing.color` | `"5"` (magenta) | header color of the Viewing section for a ticket temporarily kept outside the filter; same format as `accent_color`, empty uses it |
 | `list.selection.style` | `"marker"` | selected ticket: `marker` (bold title with a left `▌`) or `bar` (reversed row; agent badges swap colors) |
-| `list.selection.color` | `accent_color` | selection marker color, same format as `accent_color` |
 | `reader.view` | `"cards"` | reader's starting view: `cards` (details card, titled sections, one box per comment) or `markdown` (the rendered ticket Markdown); `v` switches and the choice persists |
 | `images.mode` | `"auto"` | kitty graphics: `auto`, `kitty` (force on), or `off` |
 | `images.inline` | `false` | cards view: draw images in descriptions and comments in place of their links (needs `images.mode` on and a terminal with kitty Unicode placeholders, such as kitty or Ghostty) |
@@ -358,6 +370,51 @@ To pick repos from sesh or zoxide instead:
 [repo_source]
 command = "sesh list -z"
 ```
+
+### Themes
+
+`[theme] name` picks a built-in theme (`dark`, `light`), a theme file, or
+`auto`, which asks the terminal for its background color and uses
+`theme.dark` or `theme.light`. Built-in themes use ANSI color numbers, so they
+follow your terminal's color scheme.
+
+A theme file is `themes/<name>.toml` next to `config.toml`; the names `dark`,
+`light`, and `auto` are reserved. Setup writes `themes/example.toml.example`
+to start from:
+
+```toml
+base = "dark"            # built-in theme for every color this file leaves out
+
+[colors]
+accent = "#7aa2f7"
+selection = { fg = "#bb9af7", bold = true }
+
+[colors.mode]
+normal = { fg = "#1a1b26", bg = "#7aa2f7", bold = true }
+
+[colors.markdown]
+link = { fg = "#7dcfff", underline = true }
+```
+
+Colors layer in order: the built-in base, the theme file, then `[colors]` in
+`config.toml`. Each style field (fg, bg, bold, ...) layers on its own, so
+`accent = "#ffffff"` keeps the theme's bold. Unset `header`, `selection`, and
+`mode.normal` use `accent`; unset `mode.filter` uses `warn`. A mode pill
+without a background is drawn reversed.
+
+| Role | Used for |
+|---|---|
+| `accent` | reader headings, focused panel border, NORMAL and VIEWS pills |
+| `border` | unfocused panel and card borders |
+| `muted` | secondary text such as distant due dates |
+| `highlight` | bar selection and the views panel cursor |
+| `ok`, `warn`, `error` | status messages and due-date urgency |
+| `working` | working coding agents |
+| `header`, `selection` | group headers, selection marker |
+| `pinned`, `viewing` | Pinned and Viewing section headers |
+| `authors` | comment author names, cycled |
+| `mode.normal`, `mode.filter`, `mode.read`, `mode.edit` | statusline mode pills |
+| `markdown.text`, `.heading`, `.h1`, `.link`, `.code`, `.code_block`, `.quote`, `.rule` | reading pane Markdown, on top of glamour's dark or light style |
 
 ### Time tracking (optional)
 
@@ -818,7 +875,7 @@ With a ticket gid, it also explains why each agent links to that ticket or not.
 2. Set `ASANA_ACCESS_TOKEN` there the same way as before (see [Token](#token)).
    Never copy the token inside a file with the others; create a new token at
    <https://app.asana.com/0/my-apps> if you prefer.
-3. Copy `~/.config/asanamate/` (config and actions). If a path in it differs
+3. Copy `~/.config/asanamate/` (config, actions, and themes). If a path in it differs
    on the new machine, such as `repo_source.root`, edit it; paths starting
    with `~` carry over.
 4. Optionally copy `~/.local/state/asanamate/state.toml` to keep repo links,
@@ -841,6 +898,7 @@ is no need to copy them.
 
 - Config: `~/.config/asanamate/config.toml`
 - Actions: `~/.config/asanamate/actions/*.toml`
+- Themes: `~/.config/asanamate/themes/*.toml`
 - State (repo links, saved branches, saved views, recent projects, ticket history): `~/.local/state/asanamate/state.toml`
 - Ticket exports: `~/.local/state/asanamate/tickets/<gid>/`
 - Background action log: `~/.local/state/asanamate/actions.log`

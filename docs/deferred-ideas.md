@@ -6,13 +6,13 @@ own design pass. They are recorded here so they can be picked up later.
 
 ## Configurable key bindings
 
-**Now:** `keyBindings` in `internal/tui/keys.go` is the one table of list and
-reader keys: `handleKey` dispatches from it, and the `?` help and the NORMAL
-mode hints render from it. Modals, the filter, the views panel, and the
+**Now:** `keyBindings()` in `internal/tui/keys.go` is the one table of list
+and reader keys: `bindingFor` looks keys up in it for `handleKey`, and the `?`
+help and the NORMAL mode hints render from it. Modals, the filter, the views panel, and the
 cards view's selected row still handle their own keys first, and the hints
 for those modes are written out in `Model.mode`.
 
-**Idea:** Let a `[keys]` config table rebind entries of `keyBindings`.
+**Idea:** Let a `[keys]` config table rebind entries of `keyBindings()`.
 
 **Watch out for:** Adding config keys is a public contract (see `AGENTS.md`).
 Action keys are only read inside the action menu, so they do not collide with
@@ -37,15 +37,16 @@ visually in both themes.
 ## Action run steps
 
 **Now:** `pendingRun` in `internal/tui/flow.go` tracks progress with four
-flags (`projectChosen`, `awaitingFields`, `inputDone`, `branchOK`).
+flags (`projectChosen`, `awaitingFields`, `inputDone`, `formDone`) and an
+empty `branch` string.
 `continueRun` and `execute` re-enter each other until every flag is settled.
 The flow works, but each new step adds another flag and another re-entry
 point.
 
 **Idea:** Model the run as an ordered list of steps: pick agent, pick project,
-resolve repo, collect input, load project fields, confirm branch fallback. Each
-step either finishes right away or opens a modal and resumes when it is
-answered.
+resolve repo, collect input, fill the action form, load project fields, ask
+for a branch when the branch field is empty. Each step either finishes right
+away or opens a modal and resumes when it is answered.
 
 **Watch out for:** This is the most intricate flow in the TUI. The tests in
 `flow_test.go` and `agents_test.go` cover it and should pass unchanged.
@@ -80,12 +81,12 @@ but is not a member of, which changes what the project picker shows.
 
 ## Shared shell runner
 
-**Now:** `agents.List`, `action.Command`, and `repo.Candidates` each build
-`/bin/sh -c <command>`.
+**Now:** `agents.List`, `action.Command`, `repo.Candidates`, and the
+`timetracking` provider each build `/bin/sh -c <command>`.
 
 **Idea:** Add one helper that builds the command.
 
-**Why deferred:** It is a one-line duplicate in three places, and a new
+**Why deferred:** It is a one-line duplicate in four places, and a new
 package for it costs more than it saves. Revisit if shell handling grows, for
 example a configurable shell or Windows support.
 
@@ -96,4 +97,3 @@ These were already broken before the cleanup:
 - `TestRunBackgroundStartsNewSession` in `internal/action` fails under
   `go test -race`. It passes without `-race`. The race is between
   `action.RunBackground` and the test.
-- `gofmt -l` reports `internal/setup/update.go`.

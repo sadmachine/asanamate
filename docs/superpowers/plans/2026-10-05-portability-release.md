@@ -242,9 +242,10 @@ Implemented on branch `forlorn-mantis`, uncommitted:
   darwin/arm64 binaries with a fresh home, alternate XDG paths, and a minimal
   `PATH`. A local snapshot build passed the same archive checks.
 
-Remaining before release (tracked with the deferred work): darwin/amd64 and
-linux/arm64 are cross-built only, with no native run; tested OS versions and
-live Asana evidence are recorded at release time; CI has not run yet.
+Remaining before release (tracked with the deferred work): tested OS versions
+and live Asana evidence are recorded at release time; CI has not run yet. The
+smoke job runs all four targets natively on GitHub's free public-repo runners,
+including `ubuntu-24.04-arm` and `macos-15-intel`.
 
 ## Deferred work (P1)
 

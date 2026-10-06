@@ -55,8 +55,12 @@ jobs:
         include:
           - os: ubuntu-latest
             archive: asanamate_linux_amd64.tar.gz
+          - os: ubuntu-24.04-arm
+            archive: asanamate_linux_arm64.tar.gz
           - os: macos-latest
             archive: asanamate_darwin_arm64.tar.gz
+          - os: macos-15-intel
+            archive: asanamate_darwin_amd64.tar.gz
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/download-artifact@v4

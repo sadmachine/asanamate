@@ -1,7 +1,7 @@
 # asanamate Portability Implementation Plan
 
 Date: 2026-10-05
-Status: P0 in progress; P1 deferred (see Deferred work)
+Status: P0 done; P1 done except the Homebrew tap and release evidence (see Deferred work)
 
 ## Goal and governing specification
 
@@ -266,6 +266,31 @@ Not part of the current P0 pass. Pick up in this order before publishing.
   reporting unreadable child directories in `repo.List`.
 - Live release evidence: the table below is filled against the final candidate
   at release time.
+
+## P1 progress (2026-10-05)
+
+Implemented on branch `smelly-buffalo`, uncommitted:
+
+- Task 5: `setup.CodexHook` classifies asanamate's Codex hook as missing,
+  stale (another path, missing events, or duplicates), or current.
+  `asanamate setup hooks` offers to replace a stale hook in place, keeping
+  other hooks and groups and backing up the file; repeated runs add nothing.
+  `doctor` reports it in a `codex_hook` row when agents are on and Codex is
+  installed.
+- Task 7: a failed `Ctrl+V` shows the clipboard error in the input box and
+  keeps terminal paste working; a failed browser open names the URL and, on
+  Linux, xdg-utils. README gains the moving-systems guide and hook repair
+  steps. Audit: executable defaults, templates, and the README hold no author
+  paths, IDs, or labels; the author's name appears only in test fixtures and
+  design mocks.
+- Review follow-ups: the optional-feature table lists install links, how to
+  turn each feature on and off, and its `doctor` row. `repo.Candidates` takes
+  `config.RepoSource`. `repo.List` names children it cannot read and still
+  returns the repos it found. Setup already runs against a local Asana
+  fixture in `internal/setup` tests on both CI operating systems, so the
+  binary gets no API URL override. Pager and hrvst detection still match
+  command text: no action or provider has another identity, and adding one
+  would change released config for a diagnostic.
 
 ## Release evidence and handoff
 

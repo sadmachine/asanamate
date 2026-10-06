@@ -430,7 +430,6 @@ func TestTypeFirstBuilderMenusAcceptTyping(t *testing.T) {
 	cfg := config.Default()
 	cfg.Picker.TypeFirst = true
 	m, _ := testModel(t, cfg)
-	defer func() { typeFirst = false }()
 	m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
 	m.openActionBuilder()
 	typeText(m.modal, "cr")

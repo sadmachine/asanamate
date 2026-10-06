@@ -1,0 +1,19 @@
+internal/setup/update.go
+  s_32775d0a7f3fc2::t_9a98deab3d47e9 241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "50bfb7999d3d121efda8b4298d6db3f2fee467dd",
+  "prompts": {},
+  "sessions": {
+    "s_32775d0a7f3fc2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "95679e74-53d5-4080-bb01-737d7f5e1e87",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

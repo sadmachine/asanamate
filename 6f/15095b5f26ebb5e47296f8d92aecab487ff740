@@ -1,0 +1,22 @@
+internal/browser/browser_test.go
+  s_4bd60b15533244::t_e35721bb9c9311 3-6,18-23
+  s_4bd60b15533244::t_27d9a389121f6a 24-25
+internal/browser/browser.go
+  s_4bd60b15533244::t_e35721bb9c9311 11-12,17-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6f15095b5f26ebb5e47296f8d92aecab487ff740",
+  "prompts": {},
+  "sessions": {
+    "s_4bd60b15533244": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5dab581f-5670-43c1-9526-2fdf9854bfb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

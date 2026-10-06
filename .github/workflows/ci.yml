@@ -5,7 +5,10 @@ on:
   pull_request:
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -13,3 +16,71 @@ jobs:
           go-version-file: go.mod
       - run: go vet ./...
       - run: go test ./...
+
+  # Builds the release archives without publishing and checks them; smoke runs
+  # the binaries.
+  release-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean --skip=before
+        env:
+          HOMEBREW_TAP_TOKEN: unused
+      - name: Check archives
+        working-directory: dist
+        run: |
+          sha256sum -c checksums.txt
+          for os in darwin linux; do
+            for arch in amd64 arm64; do
+              tar -tzf "asanamate_${os}_${arch}.tar.gz" | grep -qx asanamate
+            done
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: archives
+          path: dist/*.tar.gz
+
+  smoke:
+    needs: release-check
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            archive: asanamate_linux_amd64.tar.gz
+          - os: macos-latest
+            archive: asanamate_darwin_arm64.tar.gz
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: archives
+      # A fresh home and a PATH without optional tools: the binary must still
+      # start, and doctor must fail only because nothing is configured.
+      - name: Run the binary on a bare system
+        run: |
+          tar -xzf "${{ matrix.archive }}" asanamate
+          export HOME="$(mktemp -d)" PATH=/usr/bin:/bin
+          unset XDG_CONFIG_HOME XDG_STATE_HOME ASANA_ACCESS_TOKEN
+          ./asanamate version
+          ./asanamate help > /dev/null
+          if ./asanamate doctor 2> err.txt; then echo "doctor passed without config"; exit 1; fi
+          grep -q "run \`asanamate setup\`" err.txt
+      # With a config but a bad token and no tools on PATH, doctor must report
+      # the token as blocking and every missing tool as a warning.
+      - name: Run doctor without optional tools
+        run: |
+          unset VISUAL EDITOR
+          export HOME="$(mktemp -d)" XDG_CONFIG_HOME="$RUNNER_TEMP/alt-config" XDG_STATE_HOME="$RUNNER_TEMP/alt-state"
+          mkdir -p "$XDG_CONFIG_HOME/asanamate" && echo 'workspace = "1"' > "$XDG_CONFIG_HOME/asanamate/config.toml"
+          if ASANA_ACCESS_TOKEN=invalid PATH="$HOME/empty" ./asanamate doctor > out.txt; then echo "doctor passed with a bad token"; exit 1; fi
+          cat out.txt
+          grep -q '^asana  *error:' out.txt
+          for tool in git editor browser; do grep -q "^$tool  *warning:" out.txt; done

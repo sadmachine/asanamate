@@ -214,7 +214,8 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 | `images.mode` | `"auto"` | kitty graphics: `auto`, `kitty` (force on), or `off` |
 | `images.inline` | `false` | cards view: draw images in descriptions and comments in place of their links (needs `images.mode` on and a terminal with kitty Unicode placeholders, such as kitty or Ghostty) |
 | `reader.max_text_width` | `0` | cards view: wrap description and comment text at this many columns (words are kept whole); `0` wraps at the pane width |
-| `repo_source.command` | lists repos in your setup directory | prints one repo path per line |
+| `repo_source.root` | your setup directory, or empty | directory whose direct children with a `.git` entry (clones and worktrees) fill the repo picker; absolute or starting with `~`; empty: type a path |
+| `repo_source.command` | unset | prints one repo path per line; replaces `repo_source.root` when set |
 | `time_tracking.id` / `time_tracking.command` | unset (off) | provider ID for saved choices and command implementing the time tracking JSON protocol |
 
 The title is always shown. `list.fields` picks the other columns and their
@@ -246,6 +247,15 @@ active project; otherwise the first with a value. Writes never guess:
 [list]
 layout = "multi"
 fields = ["section", "Status", "Branch Name", "due"]
+```
+
+Configs written by older versions of setup list repos with a generated
+`find` command. It keeps working; to switch to the built-in listing, replace it
+with the directory it searched:
+
+```toml
+[repo_source]
+root = "~/code"
 ```
 
 To pick repos from sesh or zoxide instead:
@@ -465,7 +475,7 @@ Otherwise it is the project you are viewing (if the ticket is in it), or the
 ticket's only project.
 
 Repo resolution: the first time a project's ticket runs a `repo = true` action,
-you pick a repo from `repo_source.command` or type any path (Tab). asanamate
+you pick a repo from `repo_source` or type any path (Tab). asanamate
 remembers it. Tickets in several projects always ask which project to use.
 A ticket given its own repo with `L` (**This ticket only**) uses that repo
 instead, skips the project question, and leaves every project link as it is.

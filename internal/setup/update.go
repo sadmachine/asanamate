@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"slices"
@@ -16,7 +15,6 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/prompt"
-	"github.com/sadmachine/asanamate/internal/repo"
 )
 
 var (
@@ -89,16 +87,11 @@ func Merge(old string) (string, []string, error) {
 	if m := workspaceName.FindStringSubmatch(old); m != nil {
 		name = m[1]
 	}
-	root, err := filepath.Abs(repo.ExpandHome(defaultRepoRoot))
-	if err != nil {
-		return "", nil, err
-	}
-
 	var out, added []string
 	used := map[string]bool{} // dotted keys taken from the user's file
 	live := map[string]bool{} // tables the template defines
 	var table []string
-	for _, line := range strings.Split(Render(asana.Ref{GID: gid, Name: name}, root), "\n") {
+	for _, line := range strings.Split(Render(asana.Ref{GID: gid, Name: name}, ""), "\n") {
 		if m := headerLine.FindStringSubmatch(line); m != nil {
 			table = strings.Split(m[1], ".")
 			live[m[1]] = true

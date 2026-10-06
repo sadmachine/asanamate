@@ -79,7 +79,7 @@ func (m *Model) openLinks() tea.Cmd {
 // pickedLink loads candidates for the chosen link's repo picker.
 func (m *Model) pickedLink(target linkTarget) tea.Cmd {
 	m.modal = nil
-	return loadCandidates(m.deps.Config.RepoSource.Command, &target)
+	return loadCandidates(m.deps.Config.RepoSource, &target)
 }
 
 // openLinkRepoPicker opens the repo picker for msg.link, offering to unlink

@@ -199,6 +199,11 @@ or `tab` and confirm with `enter`. In the repo picker, `ctrl+s` (or the
 `Use "<path>"` row) uses the typed path. Set `picker.type_first = true` to
 open pickers in search mode.
 
+The action menu, the `e` edit menu, and the settings menu work differently:
+each item has its own key, shown in brackets, which picks it at once. They
+have no search; arrows and `ctrl+n`/`ctrl+p` move, and `esc` closes. Action
+keys come from each action file; edit and settings menu keys are fixed.
+
 Every key above can be changed in the `[keys]` tables of `config.toml`; see
 [Configuration](#configuration).
 
@@ -308,14 +313,17 @@ search, or set `picker.type_first = true`.
 
 ## Configuration
 
-`~/.config/asanamate/config.toml` (or `$XDG_CONFIG_HOME/asanamate/config.toml`):
+`~/.config/asanamate/config.toml` (or `$XDG_CONFIG_HOME/asanamate/config.toml`).
+Changes to `config.toml`, theme files, and action files take effect the next
+time asanamate starts; actions saved with the action builder (`A`) apply at
+once. Run `asanamate doctor` to check a change without starting the TUI.
 
 | Key | Default | Meaning |
 |---|---|---|
 | `workspace` | set by setup | Asana workspace gid |
 | `theme.name` | `"auto"` | color theme: `auto` (follow the terminal background), `dark`, `light`, or a file in `themes/`; see [Themes](#themes) |
 | `theme.dark` / `theme.light` | `"dark"` / `"light"` | themes `auto` uses on dark and light backgrounds |
-| `colors.*` | the theme's | per-role overrides on top of the theme: a color (`0`–`255` or `#rrggbb`) or a style table `{ fg, bg, bold, italic, underline, faint, reverse }`; see [Themes](#themes) |
+| `colors.*` | the theme's | per-role overrides on top of the theme: a color (`0`–`255`, `#rgb`, or `#rrggbb`) or a style table `{ fg, bg, bold, italic, underline, faint, reverse }`; see [Themes](#themes) |
 | `default_filter` | `"is:open"` | filter applied at startup |
 | `confirm_writes` | `true` | write-back subcommands ask before writing |
 | `list.layout` | `"single"` | `single` (one line per ticket) or `multi` (title, then fields on a second line) |
@@ -336,7 +344,7 @@ search, or set `picker.type_first = true`.
 | `images.mode` | `"auto"` | kitty graphics: `auto`, `kitty` (force on), or `off` |
 | `images.inline` | `false` | cards view: draw images in descriptions and comments in place of their links (needs `images.mode` on and a terminal with kitty Unicode placeholders, such as kitty or Ghostty) |
 | `picker.type_first` | `false` | open pickers in search mode, so typing filters at once; `esc` leaves search for browse mode |
-| `keys.<scope>.<name>` | see the template | key bindings: a list of keys per binding, such as `[keys.main] quit = ["q", "ctrl+q"]`; `[]` unbinds. Scopes: `main`, `views`, `filter`, `picker`, `form`, `form_field`, `input`, `builder`, `notice`. Keys are a character (`"j"`, `"?"`) or a key name with modifiers (`"ctrl+d"`, `"shift+tab"`, `"enter"`, `"space"`, `"pgdown"`); `ctrl+c` always quits. `asanamate setup` and `asanamate config update` write every binding, commented, with its default |
+| `keys.<scope>.<name>` | see the template | key bindings: a list of keys per binding, such as `[keys.main] quit = ["q", "ctrl+q"]`; `[]` unbinds. Scopes: `main`, `views`, `filter`, `picker`, `form`, `form_field`, `input`, `builder`, `notice`. Keys are a character (`"j"`, `"?"`) or a key name with modifiers (`"ctrl+d"`, `"shift+tab"`, `"enter"`, `"space"`, `"pgdown"`); `ctrl+c` always quits and can't be bound. `asanamate setup` and `asanamate config update` write every binding, commented, with its default |
 | `reader.max_text_width` | `0` | cards view: wrap description and comment text at this many columns (words are kept whole); `0` wraps at the pane width |
 | `repo_source.root` | your setup directory, or empty | directory whose direct children with a `.git` entry (clones and worktrees) fill the repo picker; absolute or starting with `~`; empty: type a path |
 | `repo_source.command` | unset | prints one repo path per line; replaces `repo_source.root` when set |
@@ -397,8 +405,8 @@ command = "sesh list -z"
 follow your terminal's color scheme.
 
 A theme file is `themes/<name>.toml` next to `config.toml`; the names `dark`,
-`light`, and `auto` are reserved. Setup writes `themes/example.toml.example`
-to start from:
+`light`, and `auto` are reserved. Setup and `asanamate config update` write
+`themes/example.toml.example` to start from:
 
 ```toml
 base = "dark"            # built-in theme for every color this file leaves out

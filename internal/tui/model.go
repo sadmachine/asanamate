@@ -94,6 +94,7 @@ type Model struct {
 	groupBy         string         // list field the list is grouped by; "" for none
 	listW           int            // fitted list pane width; 0 for the default split
 	palette         config.Palette // resolved theme, for Markdown
+	bindings        []binding      // [keys.main] with their handlers
 	accentStyle     lipgloss.Style // reader headings
 	headerStyle     lipgloss.Style // group headers
 	pinnedStyle     lipgloss.Style // Pinned header
@@ -210,6 +211,7 @@ func New(d Deps) *Model {
 		loading:       true,
 		now:           time.Now,
 	}
+	m.bindings = keyBindings()
 	m.restoreView()
 	m.refreshInterval, _ = config.ParseRefreshInterval(cmp.Or(d.Config.List.RefreshInterval, config.Default().List.RefreshInterval))
 	if saved, err := config.ParseRefreshInterval(d.State.Display.RefreshInterval); err == nil {

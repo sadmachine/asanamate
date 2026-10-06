@@ -269,12 +269,13 @@ func TestMarkdownKeepsJScroll(t *testing.T) {
 func TestReboundMoveKeysScrollTheReader(t *testing.T) {
 	for _, tc := range []struct{ binding, key string }{{"scroll_down", "ctrl+e"}, {"down", "n"}} {
 		t.Run(tc.binding, func(t *testing.T) {
+			m, _ := editModel(t)
 			km, err := keymap.Resolve(map[string]map[string][]string{"main": {tc.binding: {tc.key}}})
 			if err != nil {
 				t.Fatal(err)
 			}
-			m, _ := editModel(t)
 			keys = km
+			m.bindings = keyBindings()
 			m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})
 			m.readerView = config.ViewMarkdown
 			m.focusReader = true

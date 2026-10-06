@@ -124,7 +124,7 @@ func (m *Model) linkedAgents() []agents.Agent {
 
 // helpView renders the key help in one column per help group.
 func (m *Model) helpView() string {
-	all := keyBindings()
+	all := m.bindings
 	partner := map[string]binding{}
 	for _, b := range all {
 		if b.Pair != "" {

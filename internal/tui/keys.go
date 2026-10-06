@@ -29,8 +29,9 @@ type handler struct {
 // helpGroups are the key help's columns, in order.
 var helpGroups = []string{"Move", "Ticket", "View"}
 
-// keyBindings lists [keys.main] in key help order with their keys. Modals,
-// the filter, and the views panel handle their own scopes first.
+// keyBindings lists [keys.main] in key help order with their keys. New
+// stores the result in Model.bindings, since keys only change at startup.
+// Modals, the filter, and the views panel handle their own scopes first.
 func keyBindings() []binding {
 	h := handlers()
 	var out []binding
@@ -235,7 +236,7 @@ func (m *Model) available(b binding) bool {
 // bindingFor returns the binding k runs in the current layout.
 func (m *Model) bindingFor(k string) (binding, bool) {
 	name := keys.Name("main", k)
-	for _, b := range keyBindings() {
+	for _, b := range m.bindings {
 		if b.Name == name && m.available(b) {
 			return b, true
 		}
@@ -245,7 +246,7 @@ func (m *Model) bindingFor(k string) (binding, bool) {
 
 // keyHints are the statusline hints for the named bindings, in that order.
 func (m *Model) keyHints(names ...string) [][2]string {
-	all := keyBindings()
+	all := m.bindings
 	var hints [][2]string
 	for _, name := range names {
 		i := slices.IndexFunc(all, func(b binding) bool { return b.Name == name })

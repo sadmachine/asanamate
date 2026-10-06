@@ -1,0 +1,24 @@
+README.md
+  s_4bd60b15533244::t_9527434d0d9445 815-838
+  s_4bd60b15533244::t_7b7497d24f234b 107-123
+  s_4bd60b15533244::t_bef5f1482ea138 839
+docs/superpowers/plans/2026-10-05-portability-release.md
+  s_4bd60b15533244::t_773305e81f5622 4,270-293
+  s_4bd60b15533244::t_44ca5a4be6c823 294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3e1deb911b86fa96fea25e87f14c1dbb3b7a248d",
+  "prompts": {},
+  "sessions": {
+    "s_4bd60b15533244": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5dab581f-5670-43c1-9526-2fdf9854bfb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

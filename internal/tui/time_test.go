@@ -16,7 +16,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/timetracking"
 )
 
-const timeFormJSON = `{"fields":[{"id":"project_id","label":"Harvest project","type":"select","options":[{"id":"123","name":"Web"},{"id":"789","name":"Other"}],"remember":true},{"id":"task_id","label":"Harvest task","type":"select","options":[{"id":"456","name":"Engineering"}],"remember":true},{"id":"hours","label":"Hours","type":"hours"}]}`
+const timeFormJSON = `{"fields":[{"id":"project_id","label":"Harvest project","type":"select","options":[{"id":"123","name":"Web"},{"id":"789","name":"Other"}],"remember":true},{"id":"task_id","label":"Harvest task","type":"select","options":[{"id":"456","name":"Development"}],"remember":true},{"id":"hours","label":"Hours","type":"hours"}]}`
 
 func timeModel(t *testing.T, memberships ...asana.Membership) (*Model, *state.State) {
 	t.Helper()

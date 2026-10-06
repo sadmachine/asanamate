@@ -15,14 +15,25 @@ import (
 	"github.com/sadmachine/asanamate/internal/form"
 )
 
-const assignmentJSON = `[{"is_active":true,"project":{"id":123,"name":"Web"}},{"is_active":true,"project":{"id":123,"name":"Web"}},{"is_active":false,"project":{"id":999,"name":"Old"}}]`
+const assignmentJSON = `[{"is_active":true,"project":{"id":123,"name":"Web"},"task_assignments":[{"is_active":true,"task":{"id":456,"name":"Development"}}]},` +
+	`{"is_active":true,"project":{"id":123,"name":"Web"},"task_assignments":[{"is_active":true,"task":{"id":456,"name":"Development"}}]},` +
+	`{"is_active":true,"project":{"id":321,"name":"Ops"},"task_assignments":[{"is_active":true,"task":{"id":7,"name":"Support"}},{"is_active":false,"task":{"id":456,"name":"Development"}}]},` +
+	`{"is_active":false,"project":{"id":999,"name":"Old"},"task_assignments":[{"is_active":true,"task":{"id":456,"name":"Development"}}]}]`
 
+// Only active projects with the configured task are offered, under the
+// task's real name.
 func TestParseHarvestAssignments(t *testing.T) {
-	projects, err := parseAssignments([]byte(assignmentJSON))
-	if err != nil || len(projects) != 1 || projects[0] != (form.Option{ID: "123", Name: "Web"}) {
-		t.Fatalf("projects = %+v, err = %v", projects, err)
+	projects, task, err := parseAssignments([]byte(assignmentJSON), "456")
+	if err != nil || len(projects) != 1 || projects[0] != (form.Option{ID: "123", Name: "Web"}) || task != (form.Option{ID: "456", Name: "Development"}) {
+		t.Fatalf("projects = %+v, task = %+v, err = %v", projects, task, err)
 	}
-	if _, err := parseAssignments([]byte("not JSON")); err == nil {
+	if _, _, err := parseAssignments([]byte(assignmentJSON), "8"); err == nil || !strings.Contains(err.Error(), "Harvest task 8 is not active") {
+		t.Fatalf("unassigned task err = %v", err)
+	}
+	if _, _, err := parseAssignments([]byte(`[]`), "456"); err == nil || !strings.Contains(err.Error(), "no active projects") {
+		t.Fatalf("no assignments err = %v", err)
+	}
+	if _, _, err := parseAssignments([]byte("not JSON"), "456"); err == nil {
 		t.Fatal("unrecognized assignment output accepted")
 	}
 }
@@ -41,7 +52,7 @@ func TestHarvestAdapterUsesExternalReference(t *testing.T) {
 		t.Fatal(err)
 	}
 	var spec form.Spec
-	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || len(spec.Fields) != 3 || spec.Fields[0].Options[0].ID != "123" || spec.Fields[1].Options[0].ID != "456" || !spec.Fields[0].Remember || !spec.Fields[1].Remember {
+	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || len(spec.Fields) != 3 || spec.Fields[0].Options[0].ID != "123" || spec.Fields[1].Options[0] != (form.Option{ID: "456", Name: "Development"}) || !spec.Fields[0].Remember || !spec.Fields[1].Remember {
 		t.Fatalf("response = %s, err = %v", out.String(), err)
 	}
 	projectArgs, _ := os.ReadFile(projectCall)

@@ -267,22 +267,29 @@ command = "sesh list -z"
 
 ### Time tracking (optional)
 
-To use installed `hrvst`, add:
+Harvest support uses [hrvst](https://github.com/kgajera/hrvst-cli) 3.x
+(`npm install -g hrvst-cli`), which needs Node.js 20 or later. Set it up:
+
+1. Run `hrvst login` and authorize your Harvest account. hrvst stores the
+   credentials in `~/.hrvst/config.json`; asanamate reads them from there to
+   create entries with the Asana link, and never stores them itself.
+2. Find the numeric ID of the Harvest task you log time to. Run
+   `hrvst users project-assignments me --output=json` and pick the `task.id`
+   under `task_assignments`.
+3. Add to the config:
 
 ```toml
 [time_tracking]
 id = "hrvst"
-command = "asanamate time-provider hrvst --task-id YOUR_ENGINEERING_TASK_ID"
+command = "asanamate time-provider hrvst --task-id YOUR_TASK_ID"
 ```
 
-Set `--task-id` to numeric ID of your default Harvest task (Engineering in
-your case). `hrvst alias list` can show that ID for an existing Engineering
-alias. Aliases do not populate project picker. Project choices come from
-`hrvst users project-assignments me`; entry creation uses Harvest's API with
-the credentials in `~/.hrvst/config.json` so Asana link metadata is preserved.
+To turn time tracking off, remove the `[time_tracking]` keys.
 
 Press `t` on a ticket. If ticket belongs to several Asana projects, choose one.
-The form shows Harvest project, Engineering task, and decimal hours. Press
+The form shows the Harvest projects where your task is active, the task under
+its real name, and decimal hours; an error naming the task ID means it is not
+active on any of your projects. Press
 Enter to edit a field, Tab to move, and Ctrl+S to log. Project and task choices
 are remembered per Asana project after a successful log; hours starts empty.
 Harvest notes contain ticket title; external reference links to Asana ticket

@@ -49,12 +49,6 @@ quarantine flag once:
 xattr -d com.apple.quarantine ~/.local/bin/asanamate
 ```
 
-### Homebrew (macOS)
-
-```sh
-brew install --cask sadmachine/tap/asanamate
-```
-
 ### From source
 
 Needs Go 1.26 or later.
@@ -68,11 +62,11 @@ This installs to `$(go env GOBIN)`, else `$(go env GOPATH)/bin` (usually
 
 ### Upgrade and uninstall
 
-Upgrade the way you installed: replace the binary with a newer archive,
-`brew upgrade --cask asanamate`, or rerun `go install`. Upgrades never touch
+Upgrade the way you installed: replace the binary with a newer archive, or
+rerun `go install`. Upgrades never touch
 your config, actions, or state.
 
-To uninstall, delete the binary (or `brew uninstall --cask asanamate`). Your
+To uninstall, delete the binary. Your
 files stay until you delete them yourself: the config and actions in
 `~/.config/asanamate`, the state, ticket exports, and logs in
 `~/.local/state/asanamate`, and the Codex hook, if you added it, in

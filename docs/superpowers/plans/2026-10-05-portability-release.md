@@ -254,10 +254,10 @@ Not part of the current P0 pass. Pick up in this order before publishing.
 - Task 5: repair relocated or partial Codex hooks.
 - Task 7: optional feature failure messages, the moving-systems guide, and the
   personal-reference audit.
-- Release publishing: make the repository public, create the
-  `sadmachine/homebrew-tap` repository and `HOMEBREW_TAP_TOKEN` secret, verify
-  published artifacts, test Homebrew through the real tap, and recheck
-  Homebrew's unsigned-cask policy.
+- Homebrew: create the `sadmachine/homebrew-tap` repository and
+  `HOMEBREW_TAP_TOKEN` secret, remove `skip_upload` from `.goreleaser.yaml`,
+  restore the README Homebrew install, test it through the real tap, and
+  recheck Homebrew's unsigned-cask policy. v0.1.0 shipped without the cask.
 - Review follow-ups from the P0 code review: a fuller optional-feature table
   (install links, activation, verification, and disable steps per feature);
   running setup against a local Asana API fixture in CI; replacing the two

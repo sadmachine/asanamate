@@ -25,8 +25,11 @@ checksum:
 changelog:
   use: github
 
+# The tap repository does not exist yet; the cask is built but not published.
+# Remove skip_upload once sadmachine/homebrew-tap and HOMEBREW_TAP_TOKEN exist.
 homebrew_casks:
   - name: asanamate
+    skip_upload: true
     repository:
       owner: sadmachine
       name: homebrew-tap

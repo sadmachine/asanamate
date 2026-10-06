@@ -1,0 +1,22 @@
+internal/tui/inputbox_test.go
+  s_4bd60b15533244::t_b02fa7cabe1001 73-92
+internal/tui/inputbox.go
+  s_4bd60b15533244::t_b02fa7cabe1001 51-52,54-55
+  s_4bd60b15533244::t_3fe065372aa63a 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cc7426570dea95be959f2a54dc7c8f72e7d52fbc",
+  "prompts": {},
+  "sessions": {
+    "s_4bd60b15533244": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5dab581f-5670-43c1-9526-2fdf9854bfb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

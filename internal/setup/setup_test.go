@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 )
@@ -258,10 +259,83 @@ func TestOfferCodexHook(t *testing.T) {
 	}
 }
 
+// A hook left at an old path, or missing from some events, is replaced in
+// place: other hooks, even in the same group, stay, and nothing is doubled.
+func TestOfferCodexHookRepairsStaleHook(t *testing.T) {
+	home := t.TempDir()
+	path := filepath.Join(home, "hooks.json")
+	stale := `{"hooks":{"Stop":[{"matcher":"x","hooks":[` +
+		`{"type":"command","command":"other"},{"type":"command","command":"'/old/asanamate' hook codex"}]}],` +
+		`"SessionEnd":[{"hooks":[{"type":"command","command":"'/new/asanamate' hook codex"}]}]}}`
+	os.WriteFile(path, []byte(stale), 0o600)
+	offer := func(input string) string {
+		t.Helper()
+		out := &strings.Builder{}
+		o := Options{In: bufio.NewReader(strings.NewReader(input)), Out: out, CodexHome: home, Executable: "/new/asanamate"}
+		if err := OfferCodexHook(o); err != nil {
+			t.Fatal(err)
+		}
+		return out.String()
+	}
+	if state, err := CodexHook(home, "/new/asanamate"); err != nil || state != HookStale {
+		t.Fatalf("state = %v, err = %v", state, err)
+	}
+	if out := offer("n\n"); !strings.Contains(out, "out of date") {
+		t.Fatalf("decline output = %q", out)
+	}
+	if data, _ := os.ReadFile(path); string(data) != stale {
+		t.Fatalf("declined but changed: %s", data)
+	}
+
+	if out := offer("y\n"); !strings.Contains(out, "Replaced the hook") {
+		t.Fatalf("repair output = %q", out)
+	}
+	if data, _ := os.ReadFile(path + ".bak"); string(data) != stale {
+		t.Fatalf("backup = %s", data)
+	}
+	var got struct {
+		Hooks map[string][]struct {
+			Matcher string
+			Hooks   []struct{ Type, Command string }
+		}
+	}
+	data, _ := os.ReadFile(path)
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	const want = `'/new/asanamate' hook codex`
+	stop := got.Hooks["Stop"]
+	if len(stop) != 2 || stop[0].Matcher != "x" || len(stop[0].Hooks) != 1 || stop[0].Hooks[0].Command != "other" || stop[1].Hooks[0].Command != want {
+		t.Fatalf("hooks.json = %s", data)
+	}
+	for _, event := range agents.HookEvents() {
+		ours := 0
+		for _, g := range got.Hooks[event] {
+			for _, h := range g.Hooks {
+				if h.Command == want {
+					ours++
+				}
+			}
+		}
+		if ours != 1 {
+			t.Fatalf("%s has %d asanamate hooks: %s", event, ours, data)
+		}
+	}
+	if state, _ := CodexHook(home, "/new/asanamate"); state != HookCurrent {
+		t.Fatalf("state after repair = %v", state)
+	}
+	if out := offer(""); out != "" {
+		t.Fatalf("repaired hook offered again: %q", out)
+	}
+}
+
 func TestOfferCodexHookSkipsWithoutCodex(t *testing.T) {
 	out := &strings.Builder{}
 	o := Options{Out: out, CodexHome: filepath.Join(t.TempDir(), "missing"), Executable: "asanamate"}
 	if err := OfferCodexHook(o); err != nil || out.Len() != 0 {
 		t.Fatalf("err = %v, out = %q", err, out)
+	}
+	if state, err := CodexHook(o.CodexHome, o.Executable); err != nil || state != CodexAbsent {
+		t.Fatalf("state = %v, err = %v", state, err)
 	}
 }

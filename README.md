@@ -651,6 +651,13 @@ reported itself, when that report is newer than ccmux's:
   Without it, Codex states fall back to the Codex pane title, and are
   inaccurate or wrong when the title format changes.
 
+  The hook runs asanamate by its full path. After you move or reinstall
+  asanamate somewhere else, `asanamate setup hooks` finds the old hook, and
+  `doctor` reports it in its `codex_hook` row; answer yes to replace it with
+  the current path. Your other hooks stay, and the old file is saved as
+  `hooks.json.bak` again. To remove the hook, delete the entries whose command
+  ends in `hook codex` from `hooks.json`.
+
 Any status other than `idle` from ccmux is kept as is.
 
 **Linking.** A ticket matches every agent whose working directory has

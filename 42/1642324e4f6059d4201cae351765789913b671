@@ -1,0 +1,39 @@
+internal/config/themes/light.toml
+  s_6cbafdcbf807af::t_41a689d24b30cc 16
+internal/tui/cards.go
+  s_6cbafdcbf807af::t_41a689d24b30cc 243,255,257-259,269
+  s_6cbafdcbf807af::t_ce1309d12d4ea9 233-235,242,244-254,256,260-268
+  s_6cbafdcbf807af::t_0a7ccd11d40632 270-271
+internal/config/themes/dark.toml
+  s_6cbafdcbf807af::t_41a689d24b30cc 16
+internal/asana/api.go
+  s_6cbafdcbf807af::t_47e3d038cca577 83
+internal/setup/setup.go
+  s_6cbafdcbf807af::t_41a689d24b30cc 272-273
+internal/tui/styles.go
+  s_6cbafdcbf807af::t_41a689d24b30cc 24,43
+internal/asana/types.go
+  s_6cbafdcbf807af::t_47e3d038cca577 202-210
+internal/config/theme.go
+  s_6cbafdcbf807af::t_41a689d24b30cc 42
+README.md
+  s_6cbafdcbf807af::t_923444f82f1dab 441
+internal/tui/symbols.go
+  s_6cbafdcbf807af::t_4d571b74f12525 24,57,78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "421642324e4f6059d4201cae351765789913b671",
+  "prompts": {},
+  "sessions": {
+    "s_6cbafdcbf807af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb27d49a-12a0-441d-8ac1-ab6e3df964b7",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

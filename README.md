@@ -9,6 +9,9 @@ the ticket as context. Agents and scripts report back with `asanamate comment`,
 asanamate runs in any terminal and works well in tmux panes, windows, and popups.
 macOS and Linux only.
 
+**Early release.** asanamate is pre-1.0: expect breaking changes, including to
+config keys, before 1.0. Release notes call out each one.
+
 ## Install
 
 asanamate needs macOS or Linux on amd64 or arm64, a terminal, an Asana account

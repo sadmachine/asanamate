@@ -1,0 +1,31 @@
+README.md
+  s_5a2f4c5cd65304::t_6f89b6606110cf 26-27
+  s_5a2f4c5cd65304::t_2595c4dde0c4b7 37
+  s_5a2f4c5cd65304::t_c71af7a3e9925e 227-228
+  s_5a2f4c5cd65304::t_50929dad2abdfd 891-892,897-902
+  s_923bc72f269a95::t_9239d3aa8788df 903
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f2717bca252c3821e395ac8447067b4cc97cefcb",
+  "prompts": {},
+  "sessions": {
+    "s_5a2f4c5cd65304": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18310a8a-88ac-4623-8d0c-a2c5b84b40ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    },
+    "s_923bc72f269a95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1609b046-2266-499a-83d6-01f4810fe944",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

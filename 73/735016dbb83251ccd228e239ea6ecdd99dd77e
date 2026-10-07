@@ -1,0 +1,21 @@
+README.md
+  s_3b46901bb9c521::t_1bd9e34fb99e4e 23-25
+  s_3b46901bb9c521::t_da8c1e04c46325 888,890-893,896-903
+  s_3b46901bb9c521::t_b18023e80e8ac6 904
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "73735016dbb83251ccd228e239ea6ecdd99dd77e",
+  "prompts": {},
+  "sessions": {
+    "s_3b46901bb9c521": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "72dacc95-dafe-424a-a17e-b16015522954",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

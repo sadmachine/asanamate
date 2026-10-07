@@ -1,0 +1,19 @@
+README.md
+  s_f96f9cf768b290::t_9fea730df7bc1e 808-809
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fc942339e3e9f13fcabbfdfd5a27ef4cddfd6925",
+  "prompts": {},
+  "sessions": {
+    "s_f96f9cf768b290": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a935244b-625b-48b3-a7d0-232c97015a90",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

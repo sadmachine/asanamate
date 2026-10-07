@@ -1,0 +1,23 @@
+.github/workflows/ci.yml
+  s_b63282e0992704::t_481f60bd6ebd27 18-19
+staticcheck.conf
+  s_b63282e0992704::t_c649a4a1719141 1-2
+internal/tui/symbols.go
+  s_b63282e0992704::t_481f60bd6ebd27 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ed8fe84e41cda1e304263b76b519d67b5cf9d03",
+  "prompts": {},
+  "sessions": {
+    "s_b63282e0992704": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4066726a-4503-4c1a-9c15-d39c18894dec",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

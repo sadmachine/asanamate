@@ -1,0 +1,21 @@
+internal/ccmux/ccmux.go
+  s_f96f9cf768b290::t_88be52a96f331a 22-24,32-34
+internal/ccmux/ccmux_test.go
+  s_f96f9cf768b290::t_02e39f45082259 77-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "31f75df31944415b2bc96991e83d3f3c89d72389",
+  "prompts": {},
+  "sessions": {
+    "s_f96f9cf768b290": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a935244b-625b-48b3-a7d0-232c97015a90",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

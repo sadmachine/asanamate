@@ -1,0 +1,47 @@
+README.md
+  s_3b46901bb9c521::t_88b53b03b10c7e 13-14,175-192,230,232,328-340,407-408
+docs/deferred-ideas.md
+  s_3b46901bb9c521::t_c7d89f71f18d73 137-152
+docs/specs/README.md
+  s_3b46901bb9c521::t_d7af26b41fd75d 19-20
+internal/config/config.go
+  s_3b46901bb9c521::t_f61a9cd712d683 72,141-149,245,373-375
+internal/config/config_test.go
+  s_3b46901bb9c521::t_aef774cd1782a2 538-552
+internal/keymap/catalog.go
+  s_3b46901bb9c521::t_2cf753a08d1519 42
+internal/setup/setup.go
+  s_3b46901bb9c521::t_d768cc244b0d47 296-304
+internal/tui/history.go
+  s_3b46901bb9c521::t_4c65b11be1c635 71
+internal/tui/keys.go
+  s_3b46901bb9c521::t_82668b5809035e 198,235-237,299-317
+internal/tui/listonly_test.go
+  s_3b46901bb9c521::t_67bafe7a518c85 14-46,48,51-53,55-58,60-87,89-96
+internal/tui/listview.go
+  s_3b46901bb9c521::t_38bb1d188aab6c 374-375,377-379
+internal/tui/model.go
+  s_3b46901bb9c521::t_22447cb900510a 70-71,103-108,187,829-863,867,871-873
+internal/tui/model_test.go
+  s_3b46901bb9c521::t_c6b71099ad583b 32-35
+internal/tui/nav.go
+  s_3b46901bb9c521::t_52c8a0485b769a 50
+internal/tui/reader.go
+  s_3b46901bb9c521::t_50a79abee70b1d 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f4ea98a62c51f5c88eb7da9195fb26e478939da3",
+  "prompts": {},
+  "sessions": {
+    "s_3b46901bb9c521": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "72dacc95-dafe-424a-a17e-b16015522954",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

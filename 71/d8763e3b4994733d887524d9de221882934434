@@ -1,0 +1,53 @@
+cmd/asanamate/main.go
+  s_3fdd10797bc42f::t_66b47841cbd889 693,695-696
+internal/setup/setup.go
+  s_3fdd10797bc42f::t_d2fea9c5d1fa74 387
+cmd/asanamate-hrvst/harvest.go
+  s_3fdd10797bc42f::t_45a5a8f0b0cec4 42,44
+  s_3fdd10797bc42f::t_b392831303a063 65-67
+  s_3fdd10797bc42f::t_19590705e72e93 1-20,22,26-41,43,45-64,68-344
+  s_3fdd10797bc42f::t_e19d856a9c3459 21,23-25
+cmd/asanamate-hrvst/main.go
+  s_3fdd10797bc42f::t_dfa660356a709b 8,25
+  s_3fdd10797bc42f::t_b64a3367cbfea3 1-7,9-24,26-58
+internal/config/moves_test.go
+  s_3fdd10797bc42f::t_3c83a3574f6c2d 117-139
+internal/config/config.go
+  s_3fdd10797bc42f::t_c2f60b468405ae 273-275
+cmd/asanamate-hrvst/harvest_test.go
+  s_3fdd10797bc42f::t_32872aef0d873d 52
+  s_3fdd10797bc42f::t_a563a4502ec261 16,207
+  s_3fdd10797bc42f::t_19590705e72e93 1-15,17-51,53-206,208-216
+internal/setup/setup_test.go
+  s_3fdd10797bc42f::t_3c83a3574f6c2d 198-201,205-207,209-214
+internal/config/moves.go
+  s_3fdd10797bc42f::t_db5a67663006c9 28-61
+README.md
+  s_3fdd10797bc42f::t_19a2e11c1d7221 67-74,88,97,109-110,159,401-408,567-569,572-577,580,585
+docs/extensions.md
+  s_3fdd10797bc42f::t_19a2e11c1d7221 208-209
+  s_3fdd10797bc42f::t_5586754de287f8 210-211
+internal/config/config_test.go
+  s_3fdd10797bc42f::t_3c83a3574f6c2d 268
+cmd/asanamate-hrvst/main_test.go
+  s_3fdd10797bc42f::t_17ab664a82c67e 1-12,14-43,45-50,52-72,75-90
+  s_3fdd10797bc42f::t_0a478d5934b97f 13,44,51,73-74
+internal/setup/update.go
+  s_3fdd10797bc42f::t_cef48d6cd7c692 94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "71d8763e3b4994733d887524d9de221882934434",
+  "prompts": {},
+  "sessions": {
+    "s_3fdd10797bc42f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "78c4cbe6-8deb-4b2f-853c-9cd045c8c70f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

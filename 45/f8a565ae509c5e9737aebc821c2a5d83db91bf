@@ -1,0 +1,40 @@
+docs/specs/05-layout-config.md
+  s_f96f9cf768b290::t_787fea610f255d 1-32,34-58
+  s_f96f9cf768b290::t_efa85e152a6da5 33
+docs/specs/08-extract-agent-adapter.md
+  s_f96f9cf768b290::t_f7cb18312c6d09 1-60
+docs/specs/07-extract-hrvst.md
+  s_f96f9cf768b290::t_3a7a1ca6b61ce5 1-49
+docs/specs/04-cli-parity.md
+  s_f96f9cf768b290::t_8f615a794c0150 1-54
+docs/specs/01-readme-mission.md
+  s_f96f9cf768b290::t_764559b681f30d 1-41
+docs/specs/03-create-tickets.md
+  s_f96f9cf768b290::t_becc0906bee460 1-37,39-40,42-65
+  s_f96f9cf768b290::t_daa3c074790727 38
+  s_f96f9cf768b290::t_0c7c1a3ecbec09 41
+docs/specs/06-extension-protocols.md
+  s_f96f9cf768b290::t_f6756d89f269a2 1-52
+docs/specs/02-complete-tickets.md
+  s_f96f9cf768b290::t_1685c504fe5ede 33
+  s_f96f9cf768b290::t_13d765038d91a0 1-32,34-56
+docs/specs/README.md
+  s_f96f9cf768b290::t_a8479f7bd40a01 1-30,35-56
+  s_f96f9cf768b290::t_632b0610ae6d0c 31-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "45f8a565ae509c5e9737aebc821c2a5d83db91bf",
+  "prompts": {},
+  "sessions": {
+    "s_f96f9cf768b290": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a935244b-625b-48b3-a7d0-232c97015a90",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

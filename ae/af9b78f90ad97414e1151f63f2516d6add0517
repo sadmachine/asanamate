@@ -1,0 +1,21 @@
+internal/writeback/writeback.go
+  s_5a2f4c5cd65304::t_c553ab2b68f655 294-305
+internal/writeback/writeback_test.go
+  s_5a2f4c5cd65304::t_c553ab2b68f655 230-241,274-275,287-288
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aeaf9b78f90ad97414e1151f63f2516d6add0517",
+  "prompts": {},
+  "sessions": {
+    "s_5a2f4c5cd65304": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18310a8a-88ac-4623-8d0c-a2c5b84b40ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+internal/repo/repo_test.go
+  s_3b46901bb9c521::t_f893e42126b7ad 26-42
+internal/repo/testdata/repos.sh
+  s_3b46901bb9c521::t_eeafa41cc99b8b 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bf527ccb72303b46e298456a9203d91817c173ad",
+  "prompts": {},
+  "sessions": {
+    "s_3b46901bb9c521": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "72dacc95-dafe-424a-a17e-b16015522954",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+README.md
+  s_38ddf77e2cda04::t_ce3b1514352706 193,344,373-387
+internal/asana/api.go
+  s_38ddf77e2cda04::t_1a32087cadc459 154-156,159,163,165-178
+internal/asana/client_test.go
+  s_38ddf77e2cda04::t_5f40709179c3ea 239-264
+internal/state/state.go
+  s_38ddf77e2cda04::t_de1203a1852623 45-48,84-91,117-119
+internal/state/state_test.go
+  s_38ddf77e2cda04::t_97e0b41724059f 7,58-86
+internal/tui/cmds.go
+  s_38ddf77e2cda04::t_fc0168c18d79b8 39,51-55,139,144-145,151,187-188
+internal/tui/columns.go
+  s_38ddf77e2cda04::t_5b994e894b93b1 1-212
+internal/tui/columns_test.go
+  s_38ddf77e2cda04::t_ab6811070908c7 1-261
+internal/tui/model.go
+  s_38ddf77e2cda04::t_549283aa261b95 150,194-215,262-263,375-377,380-382,385-391,946-948,1375-1376,1380,1400,1404,1419,1424,1454-1455,1459-1460
+internal/tui/picker.go
+  s_38ddf77e2cda04::t_c05ec207f40628 30,38-52,153-165,232-252,255,260-261,275-276,315-320,339-344,349
+internal/tui/picker_test.go
+  s_38ddf77e2cda04::t_5b1861339f6ec9 293-327
+internal/tui/settings.go
+  s_38ddf77e2cda04::t_067c5f0d2ee485 40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef1326b956a1e7f94157cb0849e9c70bff5cba83",
+  "prompts": {},
+  "sessions": {
+    "s_38ddf77e2cda04": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a113e7-d19d-7073-a25e-38dbc2935b06",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

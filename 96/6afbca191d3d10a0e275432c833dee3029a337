@@ -1,0 +1,26 @@
+internal/tui/keys.go
+  s_3b46901bb9c521::t_61f5ef02c1154e 198
+  s_3b46901bb9c521::t_ae35b6d0f0faac 299-317
+  s_3b46901bb9c521::t_6428ed5f639961 236-237
+internal/tui/listonly_test.go
+  s_3b46901bb9c521::t_5ccc2a6795fc5b 46-57,60,63-79
+  s_3b46901bb9c521::t_3147879c76ed85 58-59,61-62
+internal/keymap/catalog.go
+  s_3b46901bb9c521::t_889dcf6ade9d27 42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "966afbca191d3d10a0e275432c833dee3029a337",
+  "prompts": {},
+  "sessions": {
+    "s_3b46901bb9c521": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "72dacc95-dafe-424a-a17e-b16015522954",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

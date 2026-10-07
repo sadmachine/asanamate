@@ -1,0 +1,21 @@
+internal/asana/client_test.go
+  s_5a2f4c5cd65304::t_d063a59d92ddad 205-206
+internal/asana/api.go
+  s_5a2f4c5cd65304::t_d063a59d92ddad 235-239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d95a0829163760eec9b7575849ec8b46aa49408c",
+  "prompts": {},
+  "sessions": {
+    "s_5a2f4c5cd65304": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18310a8a-88ac-4623-8d0c-a2c5b84b40ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

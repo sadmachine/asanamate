@@ -1,0 +1,62 @@
+internal/tui/columns.go
+  s_38ddf77e2cda04::t_3b7f7f209bf86e 1-144,146-212
+  s_38ddf77e2cda04::t_d07ff4260e758b 145
+internal/state/state.go
+  s_38ddf77e2cda04::t_cf075668c051aa 45-48,84-91,117-118
+  s_1ba8ecff7673d7::t_55768a281d11f5 119
+internal/state/state_test.go
+  s_38ddf77e2cda04::t_bfa1d549ddde7a 7,58-84
+  s_1ba8ecff7673d7::t_6d450f19011721 85-86
+internal/asana/client_test.go
+  s_38ddf77e2cda04::t_bfa1d549ddde7a 214-239
+internal/tui/picker_test.go
+  s_38ddf77e2cda04::t_8bf58c989747c2 112-144
+internal/asana/api.go
+  s_38ddf77e2cda04::t_cf075668c051aa 123-125,128,132,134-147
+internal/tui/cmds.go
+  s_38ddf77e2cda04::t_cf075668c051aa 53-54,139,144-145,151,187-188
+  s_38ddf77e2cda04::t_411c21425d3c5c 51-52,55
+  s_38ddf77e2cda04::t_d07ff4260e758b 39
+internal/tui/picker.go
+  s_38ddf77e2cda04::t_0bc8163497f730 27,47-48,138-146,201-219,296,298-301
+  s_38ddf77e2cda04::t_598e80ae0a4dee 220,224,244-245,279-284,297,306
+  s_38ddf77e2cda04::t_1883d789932183 229-230
+  s_38ddf77e2cda04::t_7d147df69cb403 221
+internal/tui/columns_test.go
+  s_38ddf77e2cda04::t_bfa1d549ddde7a 1-213,231-261
+  s_38ddf77e2cda04::t_8bf58c989747c2 214-230
+internal/tui/model.go
+  s_38ddf77e2cda04::t_a94bf3bdc2cb6d 192,246-247,364-366,369-375,1352-1353,1357,1377,1381,1396,1401,1431-1432,1436-1437
+  s_38ddf77e2cda04::t_411c21425d3c5c 141,175-191,193-195
+  s_38ddf77e2cda04::t_bd9586900649c5 928-930
+  s_38ddf77e2cda04::t_d07ff4260e758b 359-361
+internal/tui/settings.go
+  s_38ddf77e2cda04::t_2d925e6e63b17f 40
+README.md
+  s_38ddf77e2cda04::t_2d925e6e63b17f 325-339
+  s_38ddf77e2cda04::t_c79435eefa596a 190,294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c3c3d60f849e9ba2153b994f907f1703a59b0231",
+  "prompts": {},
+  "sessions": {
+    "s_1ba8ecff7673d7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1146a-fa31-7802-899f-edfda09c9ab9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    },
+    "s_38ddf77e2cda04": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a113e7-d19d-7073-a25e-38dbc2935b06",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

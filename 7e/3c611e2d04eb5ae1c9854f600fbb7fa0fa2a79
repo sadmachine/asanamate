@@ -1,0 +1,36 @@
+docs/specs/04-layout-config.md
+  s_f96f9cf768b290::t_ad26c77c59056a 1-58
+docs/specs/03-create-tickets.md
+  s_f96f9cf768b290::t_4240ba2fb94503 3-4
+docs/specs/README.md
+  s_f96f9cf768b290::t_4240ba2fb94503 9-12,16-23,33,37,47
+docs/specs/07-extract-agent-adapter.md
+  s_f96f9cf768b290::t_ad26c77c59056a 1-60
+docs/specs/06-extract-hrvst.md
+  s_f96f9cf768b290::t_ad26c77c59056a 1-49
+docs/specs/08-readme-mission.md
+  s_f96f9cf768b290::t_ad26c77c59056a 1-2,5-42
+  s_f96f9cf768b290::t_4240ba2fb94503 3-4
+docs/specs/05-extension-protocols.md
+  s_f96f9cf768b290::t_ad26c77c59056a 1-52
+docs/specs/02-complete-tickets.md
+  s_f96f9cf768b290::t_4240ba2fb94503 3-4
+docs/specs/01-cli-parity.md
+  s_f96f9cf768b290::t_ad26c77c59056a 1-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7e3c611e2d04eb5ae1c9854f600fbb7fa0fa2a79",
+  "prompts": {},
+  "sessions": {
+    "s_f96f9cf768b290": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a935244b-625b-48b3-a7d0-232c97015a90",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

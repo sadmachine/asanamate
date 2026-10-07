@@ -1,0 +1,23 @@
+internal/timetracking/hrvst_test.go
+  s_3b46901bb9c521::t_ba449e63491a56 205-215
+internal/timetracking/provider.go
+  s_3b46901bb9c521::t_4923ea96ae9837 25-29,32,77
+internal/timetracking/provider_test.go
+  s_3b46901bb9c521::t_d8b6faa2f1f690 29,37,69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e89e8e3ab411cffe0cc5fb90344c4fd1d2ebc09c",
+  "prompts": {},
+  "sessions": {
+    "s_3b46901bb9c521": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "72dacc95-dafe-424a-a17e-b16015522954",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

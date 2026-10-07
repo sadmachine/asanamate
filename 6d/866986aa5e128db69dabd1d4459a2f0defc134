@@ -1,0 +1,24 @@
+internal/tui/listview.go
+  s_3b46901bb9c521::t_03462f463c6988 374-375,377-379
+internal/tui/model.go
+  s_3b46901bb9c521::t_b5ccddda811fd6 837-839,841-861
+  s_3b46901bb9c521::t_bb05d42c193980 871-873
+internal/tui/listonly_test.go
+  s_3b46901bb9c521::t_386c8befcf258e 80-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6d866986aa5e128db69dabd1d4459a2f0defc134",
+  "prompts": {},
+  "sessions": {
+    "s_3b46901bb9c521": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "72dacc95-dafe-424a-a17e-b16015522954",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

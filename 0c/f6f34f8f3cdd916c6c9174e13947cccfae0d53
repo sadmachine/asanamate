@@ -1,0 +1,63 @@
+.github/workflows/ci.yml
+  s_3fdd10797bc42f::t_8fd1f421288562 47,77,83
+.goreleaser.yaml
+  s_3fdd10797bc42f::t_5d09c70b09b94c 9,29-38,61,66
+README.md
+  s_3fdd10797bc42f::t_f02c7f385823b4 35-37,68-71,75,92,102,114-115,128-130,162,420-433,455,792-793,799,802-805,821-825,829-830,834-839,846-852,854-855,1042-1046,1066
+cmd/asanamate-ccmux/main.go
+  s_3fdd10797bc42f::t_a2634a0902253e 1-82
+cmd/asanamate/main.go
+  s_3fdd10797bc42f::t_0acc0a7f744e92 29,107-108,294-295,298,545,548,551,665-669,673,675-676
+docs/extensions.md
+  s_3fdd10797bc42f::t_efd30ffb37e0b4 116-118,128,142-145,148-150,165
+docs/specs/README.md
+  s_3fdd10797bc42f::t_e551c4aca62735 22
+internal/agents/agents.go
+  s_3fdd10797bc42f::t_4db114e7ac7c35 1-3,38-39,41,46-47,61-64,96-100,117-120,124-133
+internal/agents/agents_test.go
+  s_3fdd10797bc42f::t_808c5bed575835 53-72,84,92,143,146
+internal/agents/testdata/agents.sh
+  s_3fdd10797bc42f::t_465fdb420c92b7 3-4,8
+internal/ccmux/ccmux.go
+  s_3fdd10797bc42f::t_756a84ef0318e0 1-130
+internal/ccmux/ccmux_test.go
+  s_3fdd10797bc42f::t_3eb335e5ae3f27 1-183
+internal/ccmux/codexhook.go
+  s_3fdd10797bc42f::t_d9b991e5238617 1,4,9,16,19-21,34,40,44,57-63,65-76,79,84-85,88,91,95,97,102,106,120-121,124,126,128,160,165-168,171-172,180,185-194,198,247-248
+internal/ccmux/codexhook_test.go
+  s_3fdd10797bc42f::t_770184c63ce73a 1-160
+internal/ccmux/live.go
+  s_3fdd10797bc42f::t_b736a5af23559f 1,14-16,22,26-27,32-39,91-102,140,178
+internal/config/agentspreset.go
+  s_3fdd10797bc42f::t_daf77fb354589e 1-40
+internal/config/config.go
+  s_3fdd10797bc42f::t_c039eba86e4419 100-101,112,275-277
+internal/config/config_test.go
+  s_3fdd10797bc42f::t_bd81b7a324a01b 304-305,309-313,315-317
+internal/setup/setup.go
+  s_3fdd10797bc42f::t_c5edca20364ebb 85,153,155-178,379-382,384-386
+internal/setup/setup_test.go
+  s_3fdd10797bc42f::t_2405d5f3841637 173,177,188,269-296
+internal/setup/update.go
+  s_3fdd10797bc42f::t_1f93255d20866f 100-102
+internal/tui/cmds.go
+  s_3fdd10797bc42f::t_b957cae4dcdc7c 173,177
+internal/tui/model.go
+  s_3fdd10797bc42f::t_6cb4aae0ba26c6 207,255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0cf6f34f8f3cdd916c6c9174e13947cccfae0d53",
+  "prompts": {},
+  "sessions": {
+    "s_3fdd10797bc42f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "78c4cbe6-8deb-4b2f-853c-9cd045c8c70f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

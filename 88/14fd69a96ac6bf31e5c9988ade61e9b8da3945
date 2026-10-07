@@ -1,0 +1,21 @@
+internal/agents/testdata/agents.sh
+  s_3b46901bb9c521::t_7294dd81b91712 1-7
+internal/agents/agents_test.go
+  s_3b46901bb9c521::t_105d99128ce6b2 57-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8814fd69a96ac6bf31e5c9988ade61e9b8da3945",
+  "prompts": {},
+  "sessions": {
+    "s_3b46901bb9c521": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "72dacc95-dafe-424a-a17e-b16015522954",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+internal/tui/keys_test.go
+  s_22b668d5ddec0f::t_62816f5183af0e 237-238,240
+internal/asana/api.go
+  s_22b668d5ddec0f::t_304600e2a32db0 197-210
+internal/tui/flow_test.go
+  s_22b668d5ddec0f::t_62816f5183af0e 477-478,480
+  s_22b668d5ddec0f::t_70dd90c877b51e 508-531
+cmd/asanamate/main.go
+  s_22b668d5ddec0f::t_f82db012e214b1 67-69,95,193-196,201,208-211,213,257-258
+README.md
+  s_22b668d5ddec0f::t_c09dbbf1b21a70 19-20,24,244,1038,1059-1062
+  s_22b668d5ddec0f::t_f2fdf2f954fe65 1063
+internal/writeback/writeback.go
+  s_22b668d5ddec0f::t_3dddfbbd0dbf16 161-210
+internal/writeback/writeback_test.go
+  s_22b668d5ddec0f::t_7e10c6759a9da8 641-642
+  s_22b668d5ddec0f::t_01dd586ecc1271 571-640,643-647
+internal/tui/keys.go
+  s_22b668d5ddec0f::t_a4bbc45194a91b 221-222
+  s_22b668d5ddec0f::t_1b790e9d86eb74 228-232
+  s_22b668d5ddec0f::t_c83872d3b529ef 233
+internal/tui/commentmenu.go
+  s_22b668d5ddec0f::t_c0bf9d2dc71a66 1-85
+internal/asana/types.go
+  s_22b668d5ddec0f::t_2a917bd50731e8 220
+internal/tui/statusline.go
+  s_22b668d5ddec0f::t_db20c26ab74a4f 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ffd1aac99207b18c02684560be0f0b011bdc3722",
+  "prompts": {},
+  "sessions": {
+    "s_22b668d5ddec0f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9ad53092-9c51-464c-a955-936405a97db1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+docs/deferred-ideas.md
+  s_22b668d5ddec0f::t_8dbc040cffee2f 171
+  s_22b668d5ddec0f::t_c09dbbf1b21a70 153-170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2dc358396a26f32109d990d8c4e3aa3b3c3bc823",
+  "prompts": {},
+  "sessions": {
+    "s_22b668d5ddec0f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9ad53092-9c51-464c-a955-936405a97db1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

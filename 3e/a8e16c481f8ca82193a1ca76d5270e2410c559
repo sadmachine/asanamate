@@ -1,0 +1,28 @@
+README.md
+  s_5d83e97e7ee983::t_147131544d1654 386-388
+internal/tui/statusline.go
+  s_5d83e97e7ee983::t_70dd44eb5c632a 24-25,56-58,60,87-109
+  s_5d83e97e7ee983::t_b4365bdf7e64fa 110-111
+internal/tui/activity.go
+  s_5d83e97e7ee983::t_4545a1b6078ded 436
+  s_5d83e97e7ee983::t_02bde12202c39a 378-379,381-382,384,391,439-444,446-447,450-454,456,458-459,461-465,468-469,474-475,477,479,485-486,488-489,491,494-511,513-515,517,519-521,523-524,526-535,537
+  s_5d83e97e7ee983::t_3a7386faeb93b6 380,383,385,393,395
+internal/tui/nav.go
+  s_5d83e97e7ee983::t_2878fee49e1391 121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ea8e16c481f8ca82193a1ca76d5270e2410c559",
+  "prompts": {},
+  "sessions": {
+    "s_5d83e97e7ee983": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c397ffa6-5c5c-47bd-beb2-5a0d18198252",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,17 +1,41 @@
 README.md
   s_575201288af88d::t_86b654d08c3acd 324-327
+  s_575201288af88d::t_c703db51e33ec2 321-323
+  s_575201288af88d::t_63932e2e1e1e56 1191
 internal/asana/api.go
   s_575201288af88d::t_b82a563f093a64 15-16
 internal/state/state.go
   s_575201288af88d::t_55562f7e3c9325 9,61-63,259-297
   s_575201288af88d::t_8466a898337a8b 298
+  s_575201288af88d::t_63932e2e1e1e56 2-3
 internal/tui/listrow_test.go
   s_575201288af88d::t_f311b9d846de08 15,360-372,374-375,379-382,384-389,391-393,400-405
   s_575201288af88d::t_31d57696f112c8 406
+  s_575201288af88d::t_527d090051ab88 373,376-378,383,390,394-397
+  s_575201288af88d::t_c703db51e33ec2 398-399
 internal/tui/seen.go
   s_575201288af88d::t_0b098c24638b6b 1-41
+  s_575201288af88d::t_93f05b80e93b4d 42-56
 internal/state/state_test.go
   s_575201288af88d::t_f199daa5df97b1 11,202-249
+internal/tui/model.go
+  s_575201288af88d::t_c9daf62a209dbe 346
+internal/setup/setup.go
+  s_575201288af88d::t_c9daf62a209dbe 293-294
+internal/tui/listview.go
+  s_575201288af88d::t_93f05b80e93b4d 30-32,405-407
+  s_575201288af88d::t_c9daf62a209dbe 33
+  s_575201288af88d::t_9e65fd601ce439 87-90,99-101,104-106,112-114,211,213,219
+internal/tui/reader.go
+  s_575201288af88d::t_c9daf62a209dbe 46
+internal/config/themes/dark.toml
+  s_575201288af88d::t_c9daf62a209dbe 17
+internal/config/themes/light.toml
+  s_575201288af88d::t_c9daf62a209dbe 17
+internal/config/theme.go
+  s_575201288af88d::t_c9daf62a209dbe 43
+internal/tui/styles.go
+  s_575201288af88d::t_c9daf62a209dbe 26,47
 ---
 {
   "schema_version": "authorship/3.0.0",

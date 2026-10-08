@@ -1,0 +1,314 @@
+internal/config/config.go
+  s_3e54a840b229ba::t_9033843593560e 80
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 19,59-62,72-74,78-79,81-83,86-87,102-116,127,155-163,188,195,217-222,255-256,258,260,265,269,276,280-295,305-311,316-329,375-377,397-399,423,425
+  s_3e54a840b229ba::t_fe4cf719649b42 424
+.goreleaser.yaml
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 9,11-13,20-48,71,76
+internal/setup/update.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 6,8,14,30,41-44,48,53,69-71,91-94,100-102,117-120,167-172,180-181,184-190,192-213,289-290,292-294,297-319
+internal/clipboard/image_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-16
+cmd/asanamate-hrvst/harvest.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-352
+internal/tui/cards.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 50-51,54-72,99,116,255-257,264-292,294,298
+internal/tui/inputbox_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 13,160-172
+  s_3e54a840b229ba::t_849735e9ed9eab 173
+internal/asana/types.go
+  s_3e54a840b229ba::t_b551dcbe1a0c95 207-208
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 218-222
+  s_3e54a840b229ba::t_6725b4a2492f69 223-224
+internal/ccmux/ccmux.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-136
+internal/form/form_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 13-16,28-29
+internal/config/config_test.go
+  s_3e54a840b229ba::t_9033843593560e 539
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 50,68,192,196-198,202-204,221,268,279-292,318-319,323-327,329-331,527-538,547-577
+  s_3e54a840b229ba::t_7ad2273fb25d4a 540-546
+internal/tui/time.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 24-28,30-33,79-86,93,115-117,126
+docs/specs/04-layout-config.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-58
+internal/tui/keys_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 13,17-19,21-23,25-28,37-38,41-44,49-90,98,148,153,156,280-301
+internal/tui/refresh.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 51
+cmd/asanamate-hub/main.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-56
+docs/specs/02-complete-tickets.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-58
+internal/config/agentspreset.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-40
+cmd/asanamate-hub/hub.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-179
+internal/tui/history.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 71
+internal/tui/styles_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-51
+staticcheck.conf
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-2
+cmd/asanamate-hrvst/main_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-91
+cmd/asanamate-hrvst/main.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-58
+internal/config/themes/dark.toml
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-21
+internal/tui/edit_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 34-41,51-53,166,169,186,203-242,454
+internal/tui/listview.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-406
+internal/config/style.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-85
+internal/projectlinks/testdata/provider.sh
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-17
+internal/timetracking/provider.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 12-13,24-30,32-36,78-79,82-85
+docs/deprecated.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-9
+docs/specs/01-cli-parity.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-54
+internal/tui/reader.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-211
+internal/tui/statusline_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 13,61,81,91,108,167-221
+internal/ccmux/ccmux_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-196
+internal/tui/columns_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-261
+internal/tui/picker_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 26-34,40-45,62,80-83,86-92,96-98,123-127,133-172,185,219-220,241-327
+internal/agents/testdata/agents.sh
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-9
+.github/workflows/ci.yml
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 18-19,44-48,78,83-85
+cmd/asanamate/main.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 23,29,45,47,54,56,58-70,90-95,108-109,151-168,170-175,182-189,194-197,205-207,211-217,219,237-246,252-286,290-297,299,370-372,408,412,424-432,548,551,554,661,663-669,673-677,681,683-684
+internal/clipboard/image.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-76
+internal/repo/testdata/repos.sh
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-4
+internal/tui/styles.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 3-4,6-13,15-26,30-31,33-87
+docs/specs/07-extract-agent-adapter.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-60
+internal/jsoncmd/jsoncmd.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-34
+internal/writeback/writeback.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 9,11-12,67-87,103-104,110-119,121,123,137-139,144-154,161-198,203,207,211-226,229-230,234-469,491-494,504,518-522,543-623,639-649,651,653
+internal/config/style_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-64
+internal/agents/agents_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 53-101,143,146
+docs/mocks/src/d-whichkey.html
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 19,24
+internal/repo/repo_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 26-42,171-216
+internal/ccmux/live.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-182
+internal/tui/statusline.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 12,16,18-22,25-26,28,30,32,35,37,39,41,43,45,55-56,85-89,130-139,141-155,157-158,161,165-167
+internal/projectlinks/projectlinks.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-86
+internal/keymap/keymap.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-246
+docs/deferred-ideas.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 7,9-13,15-19,21-23,25,27-28,30,32-34,36,38-40,42-46,48-52,54,56-58,60-61,63-65,67,69-71,73-74,76-78,80,82-83,85-88,90-151
+cmd/asanamate-hrvst/harvest_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-224
+internal/setup/setup.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 20,73-76,85,153,155-178,186-210,222-223,256-323,335-336,352,374-382,384-386,405-412,454-483,487
+internal/tui/form.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 38-39,71,73-93,96,100,109-110,112,114,116,128,170-175
+internal/tui/scopes_test.go
+  s_3e54a840b229ba::t_e0714e35e31a2b 199,220
+  s_3e54a840b229ba::t_1f39cf029b5e62 200-219
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-198,221-250
+internal/tui/time_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 50-52,55-56,64-86,90,121
+internal/timetracking/testdata/provider.sh
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-19
+internal/tui/flow_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 83,88,93,110-115,122,212,261,276,286-337,391,396
+internal/tui/nav_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 26-27,88,90,145
+  s_3e54a840b229ba::t_b551dcbe1a0c95 67,71,126,135,141
+internal/tui/flow.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 27,29-32,34-63,174,177-198,201,203-204,207-210,213,217-218,222-248,253-254,259-263,301-302,305-307,309-311,321-322,345-346,384-411,414-415,421,436,439-458,460-472,474,476-480,482,493,500-501,506,512,549-551,562-564
+internal/agents/agents.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-3,38-39,41,46-47,61-64,96-100,117-120,124-133
+internal/tui/settings.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 40
+internal/projectlinks/projectlinks_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-71
+internal/tui/hints.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-66
+docs/specs/05-extension-protocols.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-52
+internal/action/testdata/action.sh
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-9
+internal/tui/columns.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-212
+docs/specs/README.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-56
+internal/tui/cmds.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 17,40,52-56,78-82,112,143,148-149,155,176,180,191-192,239-241,244-249
+internal/config/moves_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-139
+internal/config/theme_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-117
+cmd/asanamate-ccmux/main.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-82
+internal/tui/actionbuilder.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 192,299,322-323
+internal/tui/markdown.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 5,21-22,34-38,52-58,71-83
+  s_3e54a840b229ba::t_502e9e8b9f6166 84-85
+internal/tui/listonly_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 8,15-47,49,52-57,59,61-135,137-161
+internal/tui/model.go
+  s_3e54a840b229ba::t_1f39cf029b5e62 91,728-729
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 26,70,75-77,85-87,92-98,102,106-112,115-118,120-147,154-160,162-196,211,226-227,233,241,243,252,261,263,265-268,276-278,293-295,330-498,520,525-533,555,574-576,614,620-621,624-630,639-647,730-735,792,837-839,878-909,913-918,921-923,939,984,1006-1007,1032-1033,1039,1041-1047,1049-1053,1055
+internal/config/themes/light.toml
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-21
+internal/writeback/markdown.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 6,21-24,132-136,162-181
+  s_3e54a840b229ba::t_758d1721321c0d 182
+paseo.json
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-10
+internal/tui/listrow_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 213,238,243,245-248,253,261,265-266,275,287
+cmd/asanamate-hub/hub_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-96
+internal/writeback/markdown_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 6-8,42,93-147
+internal/tui/create_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-60
+internal/tui/model_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 16,32-35,38-43,384-417
+internal/ccmux/codexhook.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-258
+docs/extensions.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-395
+AGENTS.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 36-39,46-55
+internal/config/moves.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-144
+internal/tui/create.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-79
+internal/tui/edit.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 29,41-47,84,100,131-132,137-160,225,227,233,235,258-261,286,301,303,345-348,393-399,466,476-477,480,482,490,492,502,515,565,567
+internal/tui/editor_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-187
+internal/form/form.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 28-29,36,67-69,71-72
+internal/tui/form_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 19,113,222,224,226,228,359,394,428-465
+internal/tui/keys.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 10,14-15,17-26,32-34,36-59,61-62,64-65,72,78-79,96-103,106-107,110,117,124,126,129-147,151,155-160,163-169,175,186,198-215,220-249,252-254,261-263,265-268,309-341,345-348,356,374-375,377,379,383-388
+  s_3e54a840b229ba::t_1f39cf029b5e62 154
+  s_3e54a840b229ba::t_b551dcbe1a0c95 216
+internal/tui/activity.go
+  s_3e54a840b229ba::t_1f39cf029b5e62 225-228,230-231,261-263,341-345,463,474,512,514,517,520,533-557
+  s_3e54a840b229ba::t_7ec36486f84731 147,217,224,229,234-235,238,242,251,253,260,264-267,270,272,274,277,282,285,301,305,310,312,314,316,318,324,330,332,334,336,346,488-491,511
+  s_3e54a840b229ba::t_9df3e4c92cfb14 191
+  s_3e54a840b229ba::t_e0714e35e31a2b 371
+docs/specs/08-readme-mission.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-42
+docs/specs/03-create-tickets.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-67
+internal/state/state.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 2,37-39,48-51,87-100,126-127
+  s_3e54a840b229ba::t_22822734197683 128
+internal/tui/agents_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 267-299
+internal/tui/picker.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 5,12-13,30,33-36,38-52,58,60-63,98-136,153-157,159-162,165-169,173-184,186-189,192-193,195-202,207-210,212-214,216-219,222,232-252,255-256,260-261,268,275-276,278,281-298,315-325,328-334,337,339-349
+internal/ccmux/codexhook_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-160
+internal/tui/savedviews_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 22,193
+internal/tui/sort_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 141,145
+README.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 3-45,75-86,100-102,111-113,125-126,139-141,171,173-175,190-192,203-223,242-244,246,252,254-259,265,267-268,272,274-275,281-305,394-409,432-482,485-488,493-495,498-499,502,504,517,521-523,532-546,587-632,635-637,640-645,648,653,677-707,709,711-713,716-723,727,730,773-776,852-853,884-885,891,894-899,901-902,915-919,923-924,928-933,940-946,948-949,1028,1030-1036,1039-1060,1091-1102,1119,1136-1140,1150,1160,1173-1174
+  s_3e54a840b229ba::t_e0714e35e31a2b 380
+  s_3e54a840b229ba::t_7ec36486f84731 518
+internal/tui/editor.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-55
+internal/writeback/writeback_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 11,24-26,42-57,64,150-299,325-363,435-460,482,509-570
+internal/tui/activity_test.go
+  s_3e54a840b229ba::t_b551dcbe1a0c95 37,41,49,58,62,74,85,89,97,101,105,132,140,145,149
+  s_3e54a840b229ba::t_7ec36486f84731 45
+  s_3e54a840b229ba::t_e0714e35e31a2b 139
+  s_3e54a840b229ba::t_9df3e4c92cfb14 185-186,209-211,237
+  s_3e54a840b229ba::t_1f39cf029b5e62 14,187-208,212-236
+cmd/asanamate-hub/main_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-55
+internal/config/theme.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-252
+internal/timetracking/provider_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 12,25-26,31-34,41,48-87,91,96,113
+internal/setup/setup_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 19,173,177,188,194-197,201-203,205-210,214-221,223-226,228-231,233-234,236,238-256,258-260,263-273,276-278,280-281,283-293,297-304,307-308,310-318,320-322,324-327,329-334,336-342,344-351,353-360,363-374,376-379,382-390,392-393,397-403,405-406
+internal/asana/api.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 4,6-7,9,87,112-138,154-156,159,163,165-178,235-239,246-286
+  s_3e54a840b229ba::t_068a234c485c30 287
+docs/specs/06-extract-hrvst.md
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-49
+internal/asana/client_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 24,75,82-96,163-187,205-206,218-254,293-318
+internal/action/action_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 10,160-196,198-201,203-205,207-211,213,216
+internal/keymap/catalog.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-25,27-61,68-117
+  s_3e54a840b229ba::t_b551dcbe1a0c95 26
+  s_3e54a840b229ba::t_7ec36486f84731 62-67
+internal/tui/links.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 11,80-81,84-94
+internal/tui/filterhelp.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 11-18,31-33,54-56,69-70
+internal/tui/markdown_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 22,60,93,127,152,176-192
+  s_3e54a840b229ba::t_e54d27a01113e9 193
+cmd/asanamate/main_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-60
+internal/asana/client.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 33,42,56,62,64-69,85-86,99-101,115-123,125
+  s_3e54a840b229ba::t_994eefa8cfd4f3 124,126
+internal/state/state_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 7,58-84
+  s_3e54a840b229ba::t_ec811c420666ba 85-86
+internal/tui/inputbox.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 10-11,23-35,47,50-51,53,55-72,75-85,124-130,132
+internal/tui/symbols.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 24,46,53,74
+internal/tui/listrow.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 57-59,61,68-82,84
+internal/repo/repo.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 137-191
+internal/keymap/keymap_test.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 1-128
+internal/tui/nav.go
+  s_3e54a840b229ba::t_a2ed5ad08c02d6 52,261-262,273-274,276,278,280,282
+  s_3e54a840b229ba::t_9033843593560e 119
+  s_3e54a840b229ba::t_7ec36486f84731 71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "257b6f61fb314fc5e178cd4cb696a0fc9e36b45f",
+  "prompts": {},
+  "sessions": {
+    "s_3e54a840b229ba": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11c93-2841-7df2-9ff6-6068524e55bb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

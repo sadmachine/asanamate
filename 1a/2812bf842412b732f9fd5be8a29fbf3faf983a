@@ -1,0 +1,25 @@
+internal/state/state.go
+  s_575201288af88d::t_8466a898337a8b 298
+  s_575201288af88d::t_55562f7e3c9325 9,61-63,259-297
+  s_575201288af88d::t_63932e2e1e1e56 2-3
+internal/state/state_test.go
+  s_575201288af88d::t_f199daa5df97b1 11,202-249
+internal/asana/api.go
+  s_575201288af88d::t_b82a563f093a64 15-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a2812bf842412b732f9fd5be8a29fbf3faf983a",
+  "prompts": {},
+  "sessions": {
+    "s_575201288af88d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c8a9e737-4954-4234-bdd5-0aadce21da9d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

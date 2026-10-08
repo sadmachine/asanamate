@@ -1,0 +1,34 @@
+internal/activity/activity.go
+  s_6ebe2cf563841c::t_d7a618b7c4926a 41-45,54-60,62-72,74-78,80-95,97-103,115-121
+README.md
+  s_6ebe2cf563841c::t_366940b7945860 366-367
+internal/asana/activity.go
+  s_6ebe2cf563841c::t_9cf9083866bd13 10-14,23,26-27,29-30,33,36-37,39-42,44
+internal/asana/activity_test.go
+  s_6ebe2cf563841c::t_1c97606d5b4856 35-42,56-57
+internal/activity/activity_test.go
+  s_6ebe2cf563841c::t_d7a618b7c4926a 123
+  s_6ebe2cf563841c::t_0b3bbd9105532d 101-102,106-108
+  s_6ebe2cf563841c::t_b8e49770bf0777 109
+internal/tui/activity.go
+  s_6ebe2cf563841c::t_c0b09df926e4b5 37,41-42,44-47,93-104,106-119,127-132,139,163-166,556-558
+internal/tui/activity_test.go
+  s_6ebe2cf563841c::t_c6000162a5429a 130-135,137-144
+  s_6ebe2cf563841c::t_8f21c778d59c6f 136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c7d2b277aae1dc4f925d684b005322c5d39b7279",
+  "prompts": {},
+  "sessions": {
+    "s_6ebe2cf563841c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a77b7cbb-4494-45cd-9b99-366ba3d2a79e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

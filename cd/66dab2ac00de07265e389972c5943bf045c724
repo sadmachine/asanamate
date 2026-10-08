@@ -1,0 +1,78 @@
+internal/form/form_test.go
+  s_58971703f7a1a6::t_ba437c389b606b 13-16,28-29
+internal/config/config_test.go
+  s_58971703f7a1a6::t_ba437c389b606b 289-302
+internal/config/config.go
+  s_58971703f7a1a6::t_05acb43f8fe54c 70-71,91-103,250,328-329
+  s_58971703f7a1a6::t_6e5cefd9afd679 330
+internal/tui/time_test.go
+  s_58971703f7a1a6::t_fbdad4ee22b361 61-83
+internal/jsoncmd/jsoncmd.go
+  s_58971703f7a1a6::t_4e900f88e4ce87 1-34
+internal/timetracking/provider.go
+  s_58971703f7a1a6::t_821cbf0c2bcd12 12-13,24-25,27-30,72,75-78
+internal/projectlinks/projectlinks.go
+  s_58971703f7a1a6::t_5063c4ec68380b 40-41,47-49
+  s_58971703f7a1a6::t_4e900f88e4ce87 1-39,42-46,50-80
+cmd/asanamate/main.go
+  s_58971703f7a1a6::t_d1eabef0646117 620
+  s_58971703f7a1a6::t_2fe3c5d58eee68 32,61,111-124,617-619,621-628
+internal/projectlinks/hub.go
+  s_58971703f7a1a6::t_f3375c797fc6de 1-181
+internal/tui/time.go
+  s_58971703f7a1a6::t_f649ff8c1a11c6 24-28,80,126
+  s_58971703f7a1a6::t_5063c4ec68380b 30-33,84,86,115-117
+  s_58971703f7a1a6::t_d1eabef0646117 83,85
+  s_58971703f7a1a6::t_92217e67ac2326 81
+internal/repo/repo_test.go
+  s_58971703f7a1a6::t_ba437c389b606b 154-199
+internal/setup/setup.go
+  s_58971703f7a1a6::t_05acb43f8fe54c 306-309,311
+  s_58971703f7a1a6::t_a71be75da2a0cf 310
+internal/projectlinks/hub_test.go
+  s_58971703f7a1a6::t_4a1070c3638023 1-96
+internal/projectlinks/projectlinks_test.go
+  s_58971703f7a1a6::t_4a1070c3638023 1-44
+internal/timetracking/hrvst_test.go
+  s_58971703f7a1a6::t_5f91c2f4ceb8e4 58-65
+internal/tui/flow_test.go
+  s_58971703f7a1a6::t_fbdad4ee22b361 283-314
+internal/tui/flow.go
+  s_58971703f7a1a6::t_92217e67ac2326 223-227,265-266,269-271,273-275,285-286
+internal/timetracking/provider_test.go
+  s_58971703f7a1a6::t_5f91c2f4ceb8e4 12,25-26,31-34
+  s_58971703f7a1a6::t_b1ece367ebec79 51,56
+internal/tui/links.go
+  s_58971703f7a1a6::t_6e87e7437dc338 11
+  s_58971703f7a1a6::t_92217e67ac2326 80-81,84-94
+README.md
+  s_58971703f7a1a6::t_a71be75da2a0cf 454-463,466,468-472,474
+  s_58971703f7a1a6::t_56fc2680fb0dfa 121,318,420-426,448-453,464-465,467,473,475-497
+  s_58971703f7a1a6::t_0671d633e831bc 498
+internal/repo/repo.go
+  s_58971703f7a1a6::t_a8f4c9d46cd32b 137-191
+internal/tui/cmds.go
+  s_58971703f7a1a6::t_e6bf9e637cec1b 17,76-80,236-238,241-246
+internal/form/form.go
+  s_58971703f7a1a6::t_42f01d58a412dc 28-29,36,67-69,71-72
+internal/tui/form.go
+  s_58971703f7a1a6::t_9eb369313fc95d 38-39
+internal/timetracking/hrvst.go
+  s_58971703f7a1a6::t_02ef5ebcda3322 21,94-100,102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cd66dab2ac00de07265e389972c5943bf045c724",
+  "prompts": {},
+  "sessions": {
+    "s_58971703f7a1a6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6da2ac8-5575-4e83-90d9-81ca68b64c1f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

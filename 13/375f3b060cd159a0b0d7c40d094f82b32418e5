@@ -1,0 +1,22 @@
+internal/tui/nav.go
+  s_ade78ff8b3322f::t_170d23f2986e0b 44,75,77,85,101,186-190,203-206
+internal/tui/activity_test.go
+  s_ade78ff8b3322f::t_7b3091dbcbe6e1 75-76,78,82-87,91-93
+  s_ade78ff8b3322f::t_83f436fbc3a52b 77,79-81,88-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "13375f3b060cd159a0b0d7c40d094f82b32418e5",
+  "prompts": {},
+  "sessions": {
+    "s_ade78ff8b3322f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bd942374-9232-4b0e-bd28-a94a638fa98d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+internal/timetracking/provider_test.go
+  s_15e5c8bb936e98::t_a5af359744f7df 62,65,79
+internal/form/form.go
+  s_15e5c8bb936e98::t_0f9a08035324d4 12,21,36-37,82,130-132
+  s_15e5c8bb936e98::t_92f81b410e5d35 133
+internal/tui/actionbuilder.go
+  s_15e5c8bb936e98::t_a5af359744f7df 191,199,222-223,225
+internal/form/form_test.go
+  s_15e5c8bb936e98::t_ae5ed9c103fed1 10,12,15-19,24-26
+  s_15e5c8bb936e98::t_9a35c140973b67 27
+internal/tui/form_test.go
+  s_15e5c8bb936e98::t_a8d471042da0a0 11
+  s_15e5c8bb936e98::t_a5ab03e6b37706 102-118
+  s_15e5c8bb936e98::t_da2e790b43b644 119-120
+docs/extensions.md
+  s_15e5c8bb936e98::t_f965955e918196 237,243,257-259,264-265,271-272
+internal/tui/form.go
+  s_15e5c8bb936e98::t_a55f2f514c7c1d 4,8,15,48-49,103-113
+internal/setup/setup.go
+  s_15e5c8bb936e98::t_f965955e918196 439
+internal/timetracking/testdata/provider.sh
+  s_15e5c8bb936e98::t_a5af359744f7df 8
+README.md
+  s_15e5c8bb936e98::t_6382c176215f49 890,892
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7eae5f675bf37e24f942fbc9e7f4c8e96901d388",
+  "prompts": {},
+  "sessions": {
+    "s_15e5c8bb936e98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa58a2af-0fee-489d-badd-cfbc4caeb560",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,71 @@
+internal/config/config.go
+  s_96fda0568fc99e::t_fa1bba502104ae 79,224-242,288-290,427-429
+  s_96fda0568fc99e::t_8b8f83ec5b830a 287
+  s_96fda0568fc99e::t_fb85d52c87827b 542-544
+docs/specs/README.md
+  s_96fda0568fc99e::t_695eb67abbee7c 24
+internal/config/config_test.go
+  s_96fda0568fc99e::t_8b8f83ec5b830a 13
+  s_96fda0568fc99e::t_f161145e160c53 230-252
+internal/activity/activity_test.go
+  s_96fda0568fc99e::t_740d21536f31ea 103,107
+internal/tui/nav.go
+  s_96fda0568fc99e::t_2a27eb62d30173 72-76,123,126
+cmd/asanamate/main.go
+  s_96fda0568fc99e::t_fb85d52c87827b 408-411,422
+internal/activity/activity.go
+  s_96fda0568fc99e::t_07f167092147c3 1,27-29,34-35,37-44,58,123
+internal/tui/seen.go
+  s_96fda0568fc99e::t_615bada5c5fa2f 51-55,57
+internal/setup/setup.go
+  s_96fda0568fc99e::t_6e67ecf1be7657 381-386
+docs/specs/09-activity-background-cache.md
+  s_96fda0568fc99e::t_a32e9cdff49ee6 74-76
+  s_96fda0568fc99e::t_46ec7f4efea053 47,55-56,67
+  s_96fda0568fc99e::t_43f872d0962c4f 1-46,48-54,57-66,68-73,77-89,94-122
+  s_96fda0568fc99e::t_f4ea88b7cbdf19 90
+  s_96fda0568fc99e::t_9d5c899b94a3c0 91-93
+internal/activity/cache_test.go
+  s_96fda0568fc99e::t_e873b285d73609 66
+  s_96fda0568fc99e::t_437d65cd9640e3 63-64
+  s_96fda0568fc99e::t_00ffce856c0e12 1-62,65,67-102
+internal/tui/model.go
+  s_96fda0568fc99e::t_fb85d52c87827b 64-65
+  s_96fda0568fc99e::t_c78e3010a257f3 91,199,212,225,520,732
+  s_96fda0568fc99e::t_34e967f921e2ae 66-67
+  s_96fda0568fc99e::t_a8730c5c2c2458 226
+internal/tui/activity.go
+  s_96fda0568fc99e::t_27959b2614b837 28-35,37-38,48-50,65-97,113-115,118,122-124,127,129-133,135-137,141-151,153-155,163-170,191,193,204,217-218,222-229,246-248,262-298,427,549-552
+  s_96fda0568fc99e::t_a8730c5c2c2458 99-104,610,612,721-722,742,752
+  s_96fda0568fc99e::t_b97550b11a0f5b 120-121
+  s_96fda0568fc99e::t_615bada5c5fa2f 608-609,611,615-626,628-629
+  s_96fda0568fc99e::t_2fc79c76c4e9e1 4,6,8-9,22,98,215-216
+internal/tui/refresh.go
+  s_96fda0568fc99e::t_a8730c5c2c2458 46
+README.md
+  s_96fda0568fc99e::t_8000ab36f9acd6 372,374-382,385-386,392-393,403-406,540,1208,1210
+  s_96fda0568fc99e::t_615bada5c5fa2f 383-384
+internal/tui/activity_test.go
+  s_96fda0568fc99e::t_615bada5c5fa2f 228,233
+  s_96fda0568fc99e::t_584cc45f988e72 152,162-163,168-175,181-182,187,189-227,229-232,234-273,317-318
+internal/activity/cache.go
+  s_96fda0568fc99e::t_c0d6e764d95332 130-133
+  s_96fda0568fc99e::t_35fe97b67dc31c 80-83
+  s_96fda0568fc99e::t_5d2293968033f8 1-79,84-129,134-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1712ac3aa7d64d458b0b983a5fd4b2b0c08ef37b",
+  "prompts": {},
+  "sessions": {
+    "s_96fda0568fc99e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f1c6f921-0ab6-4192-b5b3-51320e73c8e0",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

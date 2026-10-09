@@ -1,0 +1,35 @@
+README.md
+  s_74312e5975f3ef::t_429ff03da24465 750-754
+cmd/asanamate-hrvst/harvest.go
+  s_74312e5975f3ef::t_e7329348d41c29 295,304,320,339-341,343-345,364-365
+cmd/asanamate-hrvst/harvest_test.go
+  s_74312e5975f3ef::t_0fa6bf52d5f88b 15,135,152,154,165,181-183,195,216,221,227-249
+cmd/asanamate-hrvst/main_test.go
+  s_74312e5975f3ef::t_b4b5b6ba4e0a3f 15,57,79
+docs/extensions.md
+  s_74312e5975f3ef::t_ea2e21f30116c5 279-280,284-290
+internal/timetracking/provider.go
+  s_74312e5975f3ef::t_5b10f101835678 47-49,66,78-81
+internal/timetracking/provider_test.go
+  s_74312e5975f3ef::t_47669f0dc6bb82 141-173
+internal/tui/time.go
+  s_74312e5975f3ef::t_bb4d67c438a572 220-222,224,228-244
+internal/tui/time_test.go
+  s_74312e5975f3ef::t_cc6462b0e6e5d6 138,146,173-190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "708dd4a868c0bf202206ccfb7d0ffd7c34e72329",
+  "prompts": {},
+  "sessions": {
+    "s_74312e5975f3ef": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12222-f887-75a0-bcd6-f4567171f48b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

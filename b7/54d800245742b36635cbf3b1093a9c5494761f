@@ -1,0 +1,27 @@
+docs/extensions.md
+  s_98b238d08002a2::t_e64d26e9d9752b 72-75
+internal/action/action_test.go
+  s_98b238d08002a2::t_2e6613dba8a735 124-157
+README.md
+  s_98b238d08002a2::t_e64d26e9d9752b 826-828
+internal/action/action.go
+  s_98b238d08002a2::t_e64d26e9d9752b 93-95,100-101,104-108,114,118,124
+internal/tui/flow_test.go
+  s_98b238d08002a2::t_2e6613dba8a735 75-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b754d800245742b36635cbf3b1093a9c5494761f",
+  "prompts": {},
+  "sessions": {
+    "s_98b238d08002a2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ef9-4022-7a30-a7a0-9bb6f2c4737f",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

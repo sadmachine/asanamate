@@ -1,0 +1,46 @@
+internal/setup/setup.go
+  s_bd6ef45b766000::t_097aa71569adec 222,257-258,261
+  s_bd6ef45b766000::t_989e6b7db58dce 223
+internal/setup/setup_test.go
+  s_bd6ef45b766000::t_0ffea3ba74e527 10,410-468
+  s_485802c255d5ea::t_beb9427ed051a8 469
+internal/config/theme.go
+  s_bd6ef45b766000::t_097aa71569adec 19,86,96-97,106,134
+README.md
+  s_bd6ef45b766000::t_6050e01d7ef4c0 71,73,109-110,113-119,128-130,626-629,656-658,661-662
+install-themes.sh
+  s_bd6ef45b766000::t_44edb46de27220 1-26
+.goreleaser.yaml
+  s_bd6ef45b766000::t_44edb46de27220 53-59,82
+internal/config/theme_test.go
+  s_bd6ef45b766000::t_44edb46de27220 37,57,62-63,108-109,131,133,144,148-165
+  s_bd6ef45b766000::t_06c3b2329a01e6 166
+.github/workflows/ci.yml
+  s_bd6ef45b766000::t_6050e01d7ef4c0 49-50,80,83-84
+internal/tui/markdown_test.go
+  s_bd6ef45b766000::t_6050e01d7ef4c0 5-6,21-41,45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "400c60800be00831d7d4fbf2b63fb46d8488c979",
+  "prompts": {},
+  "sessions": {
+    "s_485802c255d5ea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5c0bc19d-a413-427b-ba40-2e37e868ff57",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    },
+    "s_bd6ef45b766000": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12200-af4b-70f1-baad-f7a55a37d185",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

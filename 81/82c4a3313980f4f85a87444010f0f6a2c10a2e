@@ -1,0 +1,67 @@
+themes/nord.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/sonokai-espresso.toml
+  s_44bd98943a2102::t_2992137a76c3c2 18
+themes/catppuccin-latte.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+internal/config/themes/light.toml
+  s_44bd98943a2102::t_c663f6e706cc48 3-4
+  s_44bd98943a2102::t_2992137a76c3c2 2,18,25-28
+themes/one-light.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+internal/tui/markdown_test.go
+  s_44bd98943a2102::t_893551632ebf2a 138-140
+themes/dracula.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/solarized-light.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/catppuccin-mocha.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/gruvbox-light.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/sonokai-shusia.toml
+  s_44bd98943a2102::t_2992137a76c3c2 18
+internal/config/themes/dark.toml
+  s_44bd98943a2102::t_2992137a76c3c2 2,18,25-28
+  s_44bd98943a2102::t_c663f6e706cc48 3-4
+themes/rose-pine.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/sonokai-maia.toml
+  s_44bd98943a2102::t_2992137a76c3c2 18
+themes/sonokai-andromeda.toml
+  s_44bd98943a2102::t_2992137a76c3c2 18
+themes/sonokai-atlantis.toml
+  s_44bd98943a2102::t_2992137a76c3c2 18
+themes/monokai.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/tokyo-night.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/gruvbox-dark.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/tokyo-day.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/one-dark.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/sonokai.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+themes/solarized-dark.toml
+  s_44bd98943a2102::t_2992137a76c3c2 17
+internal/setup/setup.go
+  s_44bd98943a2102::t_13172676a1a578 300,315-316,321
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8182c4a3313980f4f85a87444010f0f6a2c10a2e",
+  "prompts": {},
+  "sessions": {
+    "s_44bd98943a2102": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d9e4bfcf-1399-4f8d-b066-232d24164279",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

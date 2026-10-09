@@ -1,0 +1,43 @@
+themes/sonokai-espresso.toml
+  s_bd6ef45b766000::t_82abf09b0549ec 1-36
+README.md
+  s_bd6ef45b766000::t_b49342ca8519b0 625,643-652
+themes/sonokai-shusia.toml
+  s_bd6ef45b766000::t_82abf09b0549ec 1-36
+themes/LICENSE.sonokai
+  s_bd6ef45b766000::t_34b83b8a31d198 1-21
+themes/sonokai-andromeda.toml
+  s_bd6ef45b766000::t_82abf09b0549ec 1-36
+themes/sonokai-atlantis.toml
+  s_bd6ef45b766000::t_82abf09b0549ec 1-36
+internal/config/theme_test.go
+  s_bd6ef45b766000::t_b49342ca8519b0 45-49
+.goreleaser.yaml
+  s_bd6ef45b766000::t_b49342ca8519b0 60-62
+.github/workflows/ci.yml
+  s_bd6ef45b766000::t_b49342ca8519b0 50-53,87-88
+install-themes.sh
+  s_bd6ef45b766000::t_b49342ca8519b0 12,14,26
+internal/setup/setup_test.go
+  s_bd6ef45b766000::t_b49342ca8519b0 430-433,435-440
+internal/setup/setup.go
+  s_bd6ef45b766000::t_b49342ca8519b0 261-262
+themes/sonokai-maia.toml
+  s_bd6ef45b766000::t_82abf09b0549ec 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7a8f9b02f77393a583ba24faadbae03b3c85f18f",
+  "prompts": {},
+  "sessions": {
+    "s_bd6ef45b766000": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12200-af4b-70f1-baad-f7a55a37d185",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

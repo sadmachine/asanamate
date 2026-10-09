@@ -1,0 +1,38 @@
+internal/tui/time.go
+  s_74312e5975f3ef::t_ea9ac7be4e0841 220-222,224,228-243
+  s_74312e5975f3ef::t_76ac2fc0f4ffe8 244
+internal/timetracking/provider.go
+  s_74312e5975f3ef::t_ea9ac7be4e0841 47-49,66,78-81
+cmd/asanamate-hrvst/main_test.go
+  s_74312e5975f3ef::t_906391440e984e 15,57,79
+README.md
+  s_74312e5975f3ef::t_9e387cd5c54921 740-744
+docs/extensions.md
+  s_74312e5975f3ef::t_9e387cd5c54921 279-280,284-290
+cmd/asanamate-hrvst/harvest_test.go
+  s_74312e5975f3ef::t_906391440e984e 15,135,152,154,165,181-183,195,216,221,227-247
+  s_74312e5975f3ef::t_65b74bc37b81e4 248-249
+cmd/asanamate-hrvst/harvest.go
+  s_74312e5975f3ef::t_ea9ac7be4e0841 295,304,320,339-341,343-345,364-365
+internal/tui/time_test.go
+  s_74312e5975f3ef::t_6c4f0a2b2f287f 138,146,173-187
+  s_74312e5975f3ef::t_45d46c657f3bf1 188-190
+internal/timetracking/provider_test.go
+  s_74312e5975f3ef::t_6c4f0a2b2f287f 141-173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "77d412a0ae8080c0be3630988f4d0152650a1a7f",
+  "prompts": {},
+  "sessions": {
+    "s_74312e5975f3ef": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12222-f887-75a0-bcd6-f4567171f48b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

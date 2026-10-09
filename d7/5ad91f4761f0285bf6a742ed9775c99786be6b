@@ -1,0 +1,25 @@
+internal/tui/symbols.go
+  s_8205d3d265406f::t_6a28e0d4f56ba3 125-126,131,134-139,142-146
+internal/tui/agents_test.go
+  s_8205d3d265406f::t_d83f6ebb4e1a12 10,77-83,89-109,111-122
+  s_8205d3d265406f::t_6a28e0d4f56ba3 110
+  s_8205d3d265406f::t_e98066036a2a47 4
+  s_8205d3d265406f::t_41213088f4a157 84-88
+  s_8205d3d265406f::t_4c77c99dbb8bc9 123-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d75ad91f4761f0285bf6a742ed9775c99786be6b",
+  "prompts": {},
+  "sessions": {
+    "s_8205d3d265406f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12261-3706-71f2-89c9-be95ab1ddf94",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

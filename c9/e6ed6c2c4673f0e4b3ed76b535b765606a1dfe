@@ -1,0 +1,35 @@
+internal/config/config_test.go
+  s_9668d957fbdfd1::t_addecdf3e0c442 223
+internal/config/themes/light.toml
+  s_9668d957fbdfd1::t_30d203769d917d 18
+internal/tui/activity.go
+  s_9668d957fbdfd1::t_30d203769d917d 705
+README.md
+  s_9668d957fbdfd1::t_30d203769d917d 398,657
+internal/config/themes/dark.toml
+  s_9668d957fbdfd1::t_30d203769d917d 18
+internal/config/theme.go
+  s_9668d957fbdfd1::t_30d203769d917d 44
+internal/setup/setup.go
+  s_9668d957fbdfd1::t_30d203769d917d 295-296
+internal/tui/styles.go
+  s_9668d957fbdfd1::t_30d203769d917d 26,49
+internal/config/theme_test.go
+  s_9668d957fbdfd1::t_addecdf3e0c442 32-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c9e6ed6c2c4673f0e4b3ed76b535b765606a1dfe",
+  "prompts": {},
+  "sessions": {
+    "s_9668d957fbdfd1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4a2675fb-d2b0-4a0c-9e90-4a42cb6af68a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

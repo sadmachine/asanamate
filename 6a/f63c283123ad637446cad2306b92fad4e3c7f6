@@ -1,0 +1,58 @@
+internal/config/theme.go
+  s_bd6ef45b766000::t_5408cdf5519728 12,20,72-73,97-103,112-116,119-124,150-151,162-163,176-178
+internal/config/themes/one-dark.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/theme_test.go
+  s_bd6ef45b766000::t_f16e71013d7c45 37-143
+internal/config/themes/solarized-light.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/themes/sonokai.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/themes/rose-pine.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+README.md
+  s_bd6ef45b766000::t_9a0b91eb8f6fa5 519,616,618-648,651-653
+internal/config/themes/tokyo-day.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/tui/markdown_test.go
+  s_bd6ef45b766000::t_bcafb50abeb3eb 18,42
+internal/setup/setup.go
+  s_bd6ef45b766000::t_9a0b91eb8f6fa5 222-223,258-260
+  s_bd6ef45b766000::t_29be632f4da33a 257
+internal/config/themes/catppuccin-latte.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/themes/solarized-dark.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/themes/nord.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/themes/one-light.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/themes/gruvbox-dark.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/themes/dracula.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/themes/gruvbox-light.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/themes/monokai.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/themes/catppuccin-mocha.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+internal/config/themes/tokyo-night.toml
+  s_bd6ef45b766000::t_0bd375ac36fdb2 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6af63c283123ad637446cad2306b92fad4e3c7f6",
+  "prompts": {},
+  "sessions": {
+    "s_bd6ef45b766000": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12200-af4b-70f1-baad-f7a55a37d185",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

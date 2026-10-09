@@ -1,0 +1,68 @@
+internal/tui/styles_test.go
+  s_2091b60934a022::t_95a3c69cec68c9 8-12
+  s_2091b60934a022::t_8879c5afc19b51 4,62-117
+internal/tui/nav.go
+  s_2091b60934a022::t_4b2e2509b4e1c8 207-209
+internal/tui/symbols.go
+  s_2091b60934a022::t_44aeb8dc591519 33-43,52,54
+README.md
+  s_2091b60934a022::t_4b2e2509b4e1c8 695-718,733-734
+  s_2091b60934a022::t_9bb59622098e70 735
+internal/config/theme.go
+  s_44bd98943a2102::t_dcb73ac91cc226 45,47,49,53-66,220-234,238-240
+  s_2091b60934a022::t_2d183e53bc60bc 241
+internal/asana/types.go
+  s_2091b60934a022::t_4b2e2509b4e1c8 25-26
+  s_2091b60934a022::t_e90e6e2ad40f38 27
+  s_44bd98943a2102::t_f5c003ee3a22ec 264
+internal/tui/listview.go
+  s_2091b60934a022::t_e90e6e2ad40f38 282,285,287,289,291
+internal/asana/api.go
+  s_44bd98943a2102::t_f5c003ee3a22ec 55
+  s_2091b60934a022::t_e90e6e2ad40f38 15
+internal/tui/columns.go
+  s_2091b60934a022::t_e90e6e2ad40f38 38
+internal/tui/cards.go
+  s_2091b60934a022::t_e90e6e2ad40f38 31
+  s_2091b60934a022::t_4b2e2509b4e1c8 355-356,360-365,367-372
+  s_2091b60934a022::t_44aeb8dc591519 357-359
+  s_2091b60934a022::t_e164e7d5782e9d 158,160,162,171,294
+internal/tui/styles.go
+  s_44bd98943a2102::t_f5c003ee3a22ec 4,6-7,34-36,65-84,86-87,115-138,143-145,147-154,156
+  s_2091b60934a022::t_44aeb8dc591519 155,183
+  s_2091b60934a022::t_e90e6e2ad40f38 169-171
+  s_2091b60934a022::t_4b2e2509b4e1c8 14,172-182,184-185
+  s_2091b60934a022::t_1e2af81b3d7f19 146,186
+internal/setup/setup.go
+  s_2091b60934a022::t_4b2e2509b4e1c8 307-323
+internal/tui/listrow.go
+  s_2091b60934a022::t_e90e6e2ad40f38 27,134,140-141
+  s_2091b60934a022::t_4b2e2509b4e1c8 19-21,142-145
+  s_2091b60934a022::t_52b7d6ead32876 146-147
+internal/config/theme_test.go
+  s_2091b60934a022::t_088fc4ced87f20 256-304
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e925b8b7ede790d93b232979ecb116dc12ce8777",
+  "prompts": {},
+  "sessions": {
+    "s_2091b60934a022": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12258-1da3-7140-8f67-b0b9d4d340ec",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    },
+    "s_44bd98943a2102": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d9e4bfcf-1399-4f8d-b066-232d24164279",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

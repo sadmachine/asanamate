@@ -1,0 +1,44 @@
+README.md
+  s_15e5c8bb936e98::t_a65295615aec85 1106
+  s_15e5c8bb936e98::t_f965955e918196 1108-1109
+  s_15e5c8bb936e98::t_9e1018fdf3093f 1107
+  s_15e5c8bb936e98::t_ac54b3461be123 1110-1113,1120-1121
+internal/dateinput/dateinput_test.go
+  s_15e5c8bb936e98::t_c62849c67fb982 1-38
+internal/dateinput/dateinput.go
+  s_15e5c8bb936e98::t_c1856bbea9a015 36-38,42
+  s_15e5c8bb936e98::t_71aaaa3c0b81ea 1-10,12-35,39-41,43-49
+  s_15e5c8bb936e98::t_21c5d545894345 11
+internal/writeback/writeback.go
+  s_15e5c8bb936e98::t_e8a7be04506115 17
+  s_15e5c8bb936e98::t_6eb082446f2209 427
+  s_15e5c8bb936e98::t_3727411a0c0c03 351-352,357-359
+  s_15e5c8bb936e98::t_672fe33396c224 448-450,452,710
+  s_15e5c8bb936e98::t_401308fefa0e9a 601,675-678,709,711,713
+cmd/asanamate/main.go
+  s_15e5c8bb936e98::t_a5af359744f7df 62,72,274
+  s_15e5c8bb936e98::t_fce97112d033d9 63-64
+internal/tui/edit.go
+  s_15e5c8bb936e98::t_a5af359744f7df 121,454
+internal/writeback/writeback_test.go
+  s_15e5c8bb936e98::t_885f01d8c9dd6e 222-224,232-252,390,572
+  s_15e5c8bb936e98::t_38afe261326ab2 14,17
+internal/tui/edit_test.go
+  s_15e5c8bb936e98::t_3ec71e6aba3eb9 257-258,266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f65d5914c13cac3da9a41635092fa13b968c1d4b",
+  "prompts": {},
+  "sessions": {
+    "s_15e5c8bb936e98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa58a2af-0fee-489d-badd-cfbc4caeb560",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

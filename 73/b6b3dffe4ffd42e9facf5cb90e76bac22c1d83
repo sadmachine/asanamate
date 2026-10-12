@@ -1,0 +1,21 @@
+internal/tui/keys_test.go
+  s_59022576cae074::t_7d13d5493bab9b 298-301,303-305,307-309,320-322
+internal/tui/statusline.go
+  s_59022576cae074::t_ee2afcef5807e5 38-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "73b6b3dffe4ffd42e9facf5cb90e76bac22c1d83",
+  "prompts": {},
+  "sessions": {
+    "s_59022576cae074": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b30246cc-eb48-412e-a0a0-eb7201c3e082",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+internal/keymap/catalog.go
+  s_59022576cae074::t_84c847dd452193 49
+  s_59022576cae074::t_fe2a6278dc64ae 21,71
+docs/extensions.md
+  s_59022576cae074::t_8857d45e9065e2 14,415,422,499-500
+docs/specs/11-feed-panel.md
+  s_59022576cae074::t_8857d45e9065e2 1-185
+docs/specs/README.md
+  s_59022576cae074::t_8857d45e9065e2 26
+internal/tui/feedpanel.go
+  s_59022576cae074::t_fe2a6278dc64ae 1-25,27-65,67-497,499-570
+  s_59022576cae074::t_84c847dd452193 26,498
+  s_59022576cae074::t_1276ec2e64276a 66
+internal/tui/statusline.go
+  s_59022576cae074::t_fe2a6278dc64ae 52-53
+cmd/asanamate/main.go
+  s_59022576cae074::t_fe2a6278dc64ae 568,696
+cmd/asanamate/main_test.go
+  s_59022576cae074::t_fe2a6278dc64ae 76
+internal/feed/feed.go
+  s_59022576cae074::t_fe2a6278dc64ae 2
+internal/setup/setup.go
+  s_59022576cae074::t_84c847dd452193 424,427,436
+  s_59022576cae074::t_fe2a6278dc64ae 287,425
+internal/tui/feedpanel_test.go
+  s_59022576cae074::t_fe2a6278dc64ae 1-201,203-210,212,214-266
+  s_59022576cae074::t_b494576e541ff0 202,211,213
+internal/tui/keys.go
+  s_59022576cae074::t_1276ec2e64276a 146-147
+  s_59022576cae074::t_fe2a6278dc64ae 205,301,319
+internal/tui/model.go
+  s_59022576cae074::t_1276ec2e64276a 94,111,1089-1091,1094
+  s_59022576cae074::t_fe2a6278dc64ae 206,219,234-235,243,379,602,604,674,1086,1111
+cmd/asanamate-hrvst/main.go
+  s_59022576cae074::t_fe2a6278dc64ae 19
+internal/config/config_test.go
+  s_59022576cae074::t_fe2a6278dc64ae 196,616
+  s_59022576cae074::t_31ca428a8f324e 197
+  s_59022576cae074::t_c4fd4e79e7dd79 617,621-622,625-628
+README.md
+  s_59022576cae074::t_8857d45e9065e2 35,38,241,257-258,289,430,432,447,451-452,454,457,460,464,593-596
+internal/config/config.go
+  s_59022576cae074::t_fe2a6278dc64ae 80,251,255,267,328,475,478-479,481-482,484,486
+  s_59022576cae074::t_84c847dd452193 245,258
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "06b252f0a452355016363fc1d0f05805e94fb51d",
+  "prompts": {},
+  "sessions": {
+    "s_59022576cae074": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b30246cc-eb48-412e-a0a0-eb7201c3e082",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

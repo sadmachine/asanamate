@@ -1,0 +1,23 @@
+docs/specs/README.md
+  s_1f2432a52e3f6e::t_d6347a58f2385d 25
+docs/specs/10-portability-release-plan.md
+  s_1f2432a52e3f6e::t_08176b91754075 1-242
+docs/specs/10-portability-release.md
+  s_1f2432a52e3f6e::t_45728c05551c19 1-313
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7450a7a771b8e22b8fad23eb61dc2e7dc69a755a",
+  "prompts": {},
+  "sessions": {
+    "s_1f2432a52e3f6e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10d6d-6337-76c3-a1e1-14b9191a83b2",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

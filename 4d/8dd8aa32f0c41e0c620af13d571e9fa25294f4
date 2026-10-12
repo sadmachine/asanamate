@@ -1,0 +1,73 @@
+docs/specs/11-today-panel.md
+  s_59022576cae074::t_f93fab533266db 1-185
+docs/specs/README.md
+  s_59022576cae074::t_5a1bd50d564163 26
+README.md
+  s_59022576cae074::t_4deddc54ef9ba6 35-38,40,44-46,240-241,257-258,289,430-466,593-596
+cmd/asanamate-hrvst/harvest.go
+  s_59022576cae074::t_c4dedae2445daf 20,68-71,73-76,81-86,317-318,328,331,338,342,350-381,383-384,387,390,394-400,402-480
+cmd/asanamate-hrvst/harvest_test.go
+  s_59022576cae074::t_e9128caaf3dafe 17,261-314
+cmd/asanamate-hrvst/main.go
+  s_59022576cae074::t_16915173cc8a2a 1-4,17-19
+cmd/asanamate-hrvst/main_test.go
+  s_59022576cae074::t_433293a1b1fa3f 17,58-62,87-91
+cmd/asanamate/main.go
+  s_59022576cae074::t_377e7123f972e7 31,568,693-712
+cmd/asanamate/main_test.go
+  s_59022576cae074::t_827bbe46fe1d76 4-5,63-79
+docs/extensions.md
+  s_59022576cae074::t_995d8626f6ec1c 14,412-501
+internal/asana/client_test.go
+  s_59022576cae074::t_10cee85ecab3a4 319-335
+internal/asana/types.go
+  s_59022576cae074::t_e130a929d1f45e 4,6,269-292
+internal/config/config.go
+  s_59022576cae074::t_f78d62fd427361 80,243-271,274,328,475-488
+internal/config/config_test.go
+  s_59022576cae074::t_1dd0c4bc0cdada 196-198,615-634
+internal/feed/feed.go
+  s_59022576cae074::t_2b8ffc93a3f504 1-124
+internal/feed/feed_test.go
+  s_59022576cae074::t_9b9ca76270a3c7 1-71
+internal/feed/testdata/feed.sh
+  s_59022576cae074::t_ecebd1da9b0409 1-16
+internal/keymap/catalog.go
+  s_59022576cae074::t_87f30ebb685a29 21,49,71
+internal/repo/repo.go
+  s_59022576cae074::t_e1d0a6a26aff84 12,14,140-194
+internal/repo/repo_test.go
+  s_59022576cae074::t_f3a9c370609b54 217-250
+internal/setup/setup.go
+  s_59022576cae074::t_473c0bbb0de959 424-437
+internal/tui/activity.go
+  s_59022576cae074::t_1018cd2f78b33a 666,842-854
+internal/tui/cards.go
+  s_59022576cae074::t_07376d4226b9e6 526-532
+internal/tui/keys.go
+  s_59022576cae074::t_1f0e9d4eb64add 108-111,146-147,205,301,319
+internal/tui/model.go
+  s_59022576cae074::t_9acbd7322243a5 93-94,111,206,219,234-239,243,378-381,463,602-606,674,1065,1074,1085-1096,1111
+internal/tui/statusline.go
+  s_59022576cae074::t_5a870d53ec8bb7 52-53
+internal/tui/today.go
+  s_59022576cae074::t_94b9b76693e7c3 1-570
+internal/tui/today_test.go
+  s_59022576cae074::t_fa85e6cb4482f6 1-266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4d8dd8aa32f0c41e0c620af13d571e9fa25294f4",
+  "prompts": {},
+  "sessions": {
+    "s_59022576cae074": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b30246cc-eb48-412e-a0a0-eb7201c3e082",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,89 @@
+internal/tui/today.go
+  s_59022576cae074::t_38c8700895d399 1-34,36-205,208-209,213-218,220,222-488,490-541,543-554,556,560-570
+  s_59022576cae074::t_ee48f9c4a12a58 489
+  s_59022576cae074::t_a8db79cd2e01b0 219,221
+  s_59022576cae074::t_861322f8cc9606 35,206-207,210-212,542,555,557-559
+docs/specs/README.md
+  s_59022576cae074::t_2820db0e0887eb 25
+docs/specs/10-today-panel.md
+  s_59022576cae074::t_d3165d9d3fea93 26-28,41,68-79,103-112,129-140,176-177,180-181
+  s_59022576cae074::t_2820db0e0887eb 62-64,122-123,148-149
+  s_59022576cae074::t_eb80f6179fc75d 42-45,178-179
+  s_59022576cae074::t_5c7cd2b560d437 169-173
+  s_59022576cae074::t_c9b858a7b27704 1-6,10-25,29-40,46-61,65-67,80-102,113-121,124-128,141-147,150-168,174-175,182-185
+  s_59022576cae074::t_0cff90759afce1 7-9
+internal/keymap/catalog.go
+  s_59022576cae074::t_a8db79cd2e01b0 21,49,71
+internal/asana/types.go
+  s_59022576cae074::t_90eb14970a3d92 269-291
+  s_59022576cae074::t_6183caf78c8f1b 4,6
+  s_59022576cae074::t_5c1625fcc8e799 292
+internal/config/config.go
+  s_59022576cae074::t_e19b50a8617828 80,243-271,274,475-488
+  s_59022576cae074::t_d9cfe0c8abd4a4 328
+internal/setup/setup.go
+  s_59022576cae074::t_53b33e861dde68 434-435
+  s_59022576cae074::t_d9c506f53d4ca9 424-431,433,436-437
+  s_59022576cae074::t_ee4367956bc049 432
+cmd/asanamate/main_test.go
+  s_59022576cae074::t_b9499b484fcbc6 63-70,72-78
+  s_59022576cae074::t_1effc6e2fbf84b 4-5
+  s_59022576cae074::t_186fe9a55a9450 71
+  s_59022576cae074::t_80d7e786a40e03 79
+internal/config/config_test.go
+  s_59022576cae074::t_4d96cb5ce12cc2 196-198,615-624,627,629-633
+  s_59022576cae074::t_05447369bee956 625-626,628
+  s_59022576cae074::t_e7bcc81febd27e 634
+internal/repo/repo_test.go
+  s_59022576cae074::t_a9e690cbf35fef 217-250
+internal/tui/statusline.go
+  s_59022576cae074::t_a8db79cd2e01b0 52-53
+cmd/asanamate/main.go
+  s_59022576cae074::t_186fe9a55a9450 705-709
+  s_59022576cae074::t_d5711d33227f98 31,568,693-704,710
+  s_59022576cae074::t_1f67cf414b35e1 711-712
+internal/tui/cards.go
+  s_59022576cae074::t_ee48f9c4a12a58 526-532
+internal/asana/client_test.go
+  s_59022576cae074::t_6183caf78c8f1b 319-335
+README.md
+  s_59022576cae074::t_ee4367956bc049 289,595
+  s_59022576cae074::t_53b33e861dde68 596
+  s_59022576cae074::t_d9c506f53d4ca9 593-594
+  s_59022576cae074::t_7221eb0d66e899 35-38,40,44-46,240-241,257-258,430-465
+  s_59022576cae074::t_46ab196a0e417c 466
+internal/tui/today_test.go
+  s_59022576cae074::t_80b057c10f377e 204
+  s_59022576cae074::t_ee48f9c4a12a58 200
+  s_59022576cae074::t_9c8715e66830da 1-21,23-30,34-199,209-266
+  s_59022576cae074::t_4f0e1f68703e4b 201-203,205-208
+  s_59022576cae074::t_ae998e62e9476d 22,31-33
+internal/tui/activity.go
+  s_59022576cae074::t_c89e4c48ba52c8 666,842-853
+  s_59022576cae074::t_934f66ae43cc02 854
+internal/repo/repo.go
+  s_59022576cae074::t_a9e690cbf35fef 12,14,140-193
+  s_59022576cae074::t_9c57a0cdcf959a 194
+internal/tui/model.go
+  s_59022576cae074::t_833e3484f1def1 93
+  s_59022576cae074::t_a8db79cd2e01b0 94,111,206,219,234-239,243,378-381,463,602-606,674,1065,1074,1085-1096,1111
+internal/tui/keys.go
+  s_59022576cae074::t_fe30e3fc47d520 205
+  s_59022576cae074::t_a8db79cd2e01b0 108-111,146-147,301,319
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a38a15a65e72f3b4959097c023ca53a007a16fb9",
+  "prompts": {},
+  "sessions": {
+    "s_59022576cae074": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b30246cc-eb48-412e-a0a0-eb7201c3e082",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,55 @@
+internal/setup/setup.go
+  s_68259ea90b30d4::t_8601096588684b 356
+  s_68259ea90b30d4::t_bda83a082015bf 355,357
+  s_68259ea90b30d4::t_be0c1c3bb3ee5b 358
+internal/tui/listview.go
+  s_68259ea90b30d4::t_b6bc38bdb7c2f8 85,181,200,202
+internal/tui/listrow_test.go
+  s_68259ea90b30d4::t_29c29302895bbb 282
+internal/config/config_test.go
+  s_68259ea90b30d4::t_bda83a082015bf 603,606
+internal/tui/model.go
+  s_68259ea90b30d4::t_9beb38b89f5b32 1066,1071,1079,1090,1097-1099,1103,1108,1112-1113,1119
+internal/tui/cards.go
+  s_68259ea90b30d4::t_277bfcf93638f6 522-523,525-527,529,531-539,541,557-566
+  s_68259ea90b30d4::t_bda83a082015bf 524,540
+  s_68259ea90b30d4::t_9beb38b89f5b32 530
+  s_68259ea90b30d4::t_b6bc38bdb7c2f8 79,166,486-489,494-495,501
+  s_68259ea90b30d4::t_1d7a9cf2a10ed6 481
+  s_68259ea90b30d4::t_33ef7329469e72 484-485,490
+  s_68259ea90b30d4::t_4b6d6135e3e6eb 482-483,567-568
+internal/tui/model_test.go
+  s_68259ea90b30d4::t_c675d2e87d5108 424,431
+  s_68259ea90b30d4::t_bda83a082015bf 430,432
+  s_68259ea90b30d4::t_885c7c3f9625b0 11
+  s_68259ea90b30d4::t_34a0e1d24dd375 419-423,425-429,433-442
+internal/config/config.go
+  s_68259ea90b30d4::t_bda83a082015bf 161,163-171,326
+internal/tui/keys.go
+  s_68259ea90b30d4::t_b6bc38bdb7c2f8 305-306,324-326
+internal/tui/nav.go
+  s_68259ea90b30d4::t_b6bc38bdb7c2f8 200,204,237,241
+internal/tui/feedpanel.go
+  s_68259ea90b30d4::t_b6bc38bdb7c2f8 587,589,636
+internal/tui/activity.go
+  s_68259ea90b30d4::t_b6bc38bdb7c2f8 745,756-757,759
+README.md
+  s_68259ea90b30d4::t_bda83a082015bf 230,238-240,586
+  s_68259ea90b30d4::t_8601096588684b 231-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9b4decefcae2ac07ff1b4e7bd8e5b6858d2860a",
+  "prompts": {},
+  "sessions": {
+    "s_68259ea90b30d4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "894c7e8b-ec4b-4d00-be1a-27cc8078182f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

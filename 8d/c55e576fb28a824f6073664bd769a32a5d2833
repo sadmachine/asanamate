@@ -1,0 +1,66 @@
+internal/tui/edit.go
+  s_8d5881c56a9b40::t_53af166ea87a57 480
+  s_8d5881c56a9b40::t_0770d40d914437 94,492
+internal/writeback/writeback.go
+  s_8d5881c56a9b40::t_d5b6e1232625cd 65-67,120-126,223,226,245-251,253,255
+internal/drafts/comment.go
+  s_8d5881c56a9b40::t_5bcd2cf616443d 1-135
+internal/tui/model.go
+  s_8d5881c56a9b40::t_0770d40d914437 300-301,524-525,617-618
+  s_8d5881c56a9b40::t_125427022c7cee 135,523,616,1001-1002
+internal/tui/comment_test.go
+  s_8d5881c56a9b40::t_ab86e7b44d2e02 19,241,246
+  s_8d5881c56a9b40::t_01222820ebfd11 1-3,5-14,16-18,20-34,36-37,39-57,59-61,63-115,117-123,125-134,145-160,162-240,242-245,247-273,335-336
+  s_8d5881c56a9b40::t_fa119e56a58db2 309-313
+  s_8d5881c56a9b40::t_a181e267a12a85 15,35,38,58,62,116
+  s_8d5881c56a9b40::t_7f29d12bec5541 4,124,135-144,161,274-283,285-308,314-334
+  s_8d5881c56a9b40::t_c4c982ecf45da1 284
+internal/tui/inputbox.go
+  s_8d5881c56a9b40::t_0770d40d914437 23,53-56
+  s_8d5881c56a9b40::t_ca7638a0326d58 10,31,60-63,81-83,112-123,125,145
+internal/tui/scopes_test.go
+  s_8d5881c56a9b40::t_ca7638a0326d58 167-173
+internal/drafts/comment_test.go
+  s_8d5881c56a9b40::t_114b66282812d1 1-101
+internal/config/config_test.go
+  s_8d5881c56a9b40::t_ab86e7b44d2e02 563-569
+internal/keymap/keymap.go
+  s_8d5881c56a9b40::t_a181e267a12a85 114
+internal/tui/inputbox_test.go
+  s_8d5881c56a9b40::t_ca7638a0326d58 21,94-95,108,173-175
+  s_8d5881c56a9b40::t_e0c21face5b118 176
+internal/tui/comment.go
+  s_8d5881c56a9b40::t_53af166ea87a57 122,124-125,128-131,134-136,170-172
+  s_8d5881c56a9b40::t_ff90cba56c0397 1-6,8-23,25-56,58-75,77-86,88-113,115-121,123,126-127,132-133,137-138,140-143,145-158,160-167,169,173-176,178,180,182-183,185-217,219-227,236-238,240-246,248,260-263,265-270,272-282
+  s_8d5881c56a9b40::t_125427022c7cee 76,87,114,144,168,239,264
+  s_8d5881c56a9b40::t_7f29d12bec5541 7,139,159,218,228-235
+  s_8d5881c56a9b40::t_fa119e56a58db2 24,57,177,179,181,184,247,249-259,271
+internal/keymap/catalog.go
+  s_8d5881c56a9b40::t_0770d40d914437 108
+internal/setup/setup.go
+  s_8d5881c56a9b40::t_a181e267a12a85 197
+  s_8d5881c56a9b40::t_ca7638a0326d58 198
+internal/keymap/keymap_test.go
+  s_8d5881c56a9b40::t_a181e267a12a85 125
+internal/writeback/writeback_test.go
+  s_8d5881c56a9b40::t_ab86e7b44d2e02 106-126
+README.md
+  s_8d5881c56a9b40::t_5a16f507ed74b8 307-326
+  s_8d5881c56a9b40::t_8763bb13ab64dc 562-563
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8dc55e576fb28a824f6073664bd769a32a5d2833",
+  "prompts": {},
+  "sessions": {
+    "s_8d5881c56a9b40": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ec8-0468-76d2-ac81-0b1e5c0d777b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

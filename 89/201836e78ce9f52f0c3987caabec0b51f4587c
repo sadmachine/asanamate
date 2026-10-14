@@ -1,0 +1,27 @@
+docs/migrations.md
+  s_9e4e5665ecb7f6::t_14967977084e6f 1-59
+README.md
+  s_9e4e5665ecb7f6::t_b8c68fe603357f 131-132
+  s_9e4e5665ecb7f6::t_14967977084e6f 519,521-525
+.github/workflows/release.yml
+  s_9e4e5665ecb7f6::t_ce07964e1605a8 21-23
+  s_9e4e5665ecb7f6::t_b8c68fe603357f 17-20,24-25,29
+AGENTS.md
+  s_9e4e5665ecb7f6::t_db2e89eb524dc8 24-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "89201836e78ce9f52f0c3987caabec0b51f4587c",
+  "prompts": {},
+  "sessions": {
+    "s_9e4e5665ecb7f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c8450e3e-7e65-437a-b071-04a977d40f61",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

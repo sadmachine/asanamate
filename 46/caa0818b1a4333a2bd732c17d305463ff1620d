@@ -1,0 +1,44 @@
+docs/extensions.md
+  s_9e4e5665ecb7f6::t_3695bddb8b27bd 337-339
+internal/setup/setup.go
+  s_9e4e5665ecb7f6::t_84ff74892625ea 208,475-476,478-479,542,549
+  s_9e4e5665ecb7f6::t_3695bddb8b27bd 459-460
+  s_9e4e5665ecb7f6::t_4fd1333ffb4a27 535-538
+  s_9e4e5665ecb7f6::t_df7b4f0afc8b9e 539-540
+docs/specs/README.md
+  s_9e4e5665ecb7f6::t_33c5bdec93f87a 25
+docs/specs/10-portability-release.md
+  s_9e4e5665ecb7f6::t_cf539554c9af20 59
+  s_9e4e5665ecb7f6::t_7724e1c33ec4d4 4,34-37,39-42,270-275,289
+docs/specs/10-portability-release-plan.md
+  s_9e4e5665ecb7f6::t_3761ed17c845c5 4-5,79,84,86,88,91,93,104,109,112,114,116,118,120,129-144,214-216
+README.md
+  s_9e4e5665ecb7f6::t_23240a80e9db66 82-85,134
+  s_9e4e5665ecb7f6::t_6c9710eda4a503 146-149,168-170,174,183-185,191-193,815-817,1334-1336,1340-1343,1346-1353
+  s_9e4e5665ecb7f6::t_1b5f7b191c872b 569-571
+  s_9e4e5665ecb7f6::t_1b794a6711de30 33,873,877,880-883
+  s_9e4e5665ecb7f6::t_0aa13eca3d4528 917-919
+  s_9e4e5665ecb7f6::t_da3a174cee1721 1344-1345
+internal/setup/setup_test.go
+  s_9e4e5665ecb7f6::t_5d30fd11888b24 55,58-65,77-78,92-94
+.github/workflows/ci.yml
+  s_9e4e5665ecb7f6::t_4c87dbfd99e512 82
+.goreleaser.yaml
+  s_9e4e5665ecb7f6::t_4c87dbfd99e512 71,77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "46caa0818b1a4333a2bd732c17d305463ff1620d",
+  "prompts": {},
+  "sessions": {
+    "s_9e4e5665ecb7f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c8450e3e-7e65-437a-b071-04a977d40f61",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

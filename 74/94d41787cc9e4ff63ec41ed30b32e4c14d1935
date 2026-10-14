@@ -1,0 +1,62 @@
+cmd/asanamate/main.go
+  s_1369518676a4b6::t_e5dabc6d86e5b7 57-58,95,177-180,209,217,237,243,246,252-253
+  s_1369518676a4b6::t_9d1157d71d37fa 254
+internal/asana/client_test.go
+  s_1369518676a4b6::t_3bfbf96508512e 138-141,144
+internal/asana/types.go
+  s_1369518676a4b6::t_2e2567361217a7 223-224
+internal/tui/comment.go
+  s_1369518676a4b6::t_e5dabc6d86e5b7 25,54-62,67,69-73,79-80,208-210,245-249,304-308
+  s_1369518676a4b6::t_859694d7bbd8e9 26,68,96-98,100,137,164-167,171-174,183
+  s_1369518676a4b6::t_25469298191227 311-313
+internal/tui/edit_test.go
+  s_1369518676a4b6::t_ed9e6196d7f4f9 30-31
+cmd/asanamate/main_test.go
+  s_1369518676a4b6::t_ed9e6196d7f4f9 64-76,80-91,95-115
+  s_1369518676a4b6::t_6f531543e99e28 77-79,92-94
+internal/writeback/markdown.go
+  s_1369518676a4b6::t_2e2567361217a7 23-24,116-118,135-140,191-195
+  s_1369518676a4b6::t_da66485c074211 196-197
+internal/writeback/writeback_test.go
+  s_1369518676a4b6::t_859694d7bbd8e9 43-44,113-191
+  s_1369518676a4b6::t_ed9e6196d7f4f9 18
+  s_1369518676a4b6::t_8e9726894d4b93 192
+internal/tui/commentmenu.go
+  s_1369518676a4b6::t_e5dabc6d86e5b7 15-18,28-31,37-38,41
+internal/asana/api.go
+  s_1369518676a4b6::t_2e2567361217a7 87,193-197,207,209
+internal/tui/comment_test.go
+  s_1369518676a4b6::t_ed9e6196d7f4f9 24-39,41-42,49-148
+  s_1369518676a4b6::t_e5d15d2029bbc8 40,43-48
+  s_1369518676a4b6::t_73228fac605162 149
+internal/ticket/ticket_test.go
+  s_1369518676a4b6::t_e5d15d2029bbc8 64-82
+internal/ticket/markdown.go
+  s_1369518676a4b6::t_2e2567361217a7 196-232
+README.md
+  s_1369518676a4b6::t_a0ebd5165819a4 1234-1236
+  s_1369518676a4b6::t_26360afd58e29d 19,1217,1233,1237-1247
+  s_1369518676a4b6::t_9f91dbb2e7cd84 23
+  s_1369518676a4b6::t_6c3dc8a4f4d3c5 1248
+internal/writeback/writeback.go
+  s_1369518676a4b6::t_a0ebd5165819a4 62,67
+  s_1369518676a4b6::t_e5dabc6d86e5b7 110-119,124-137,143-145,162-170,186-190,195-197,211,215-219
+internal/writeback/markdown_test.go
+  s_1369518676a4b6::t_3bfbf96508512e 29-32,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7494d41787cc9e4ff63ec41ed30b32e4c14d1935",
+  "prompts": {},
+  "sessions": {
+    "s_1369518676a4b6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13b34-ba88-7080-a0f5-31b82fb8c7fa",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

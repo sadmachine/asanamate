@@ -1,0 +1,260 @@
+internal/tui/flow.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 607-639
+internal/config/themes/light.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 2-4,18-19,25-28
+internal/feed/testdata/feed.sh
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-16
+docs/extensions.md
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 14,73-76,238,244,255-266,272-273,280-281,285-291,337-339,412-502
+internal/tui/picker_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 328-350
+themes/tokyo-day.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/tui/cards.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 24-25,31-33,38-40,61-62,66,76,92,95,111-112,121,128,131,133-147,151-159,162,168-173,175,237-240,252,258-261,268-295,329,339-340,342-344,393-420,461-471,487-496,500-501,507,528-533,535-547,554-572,621-628
+  s_8d5881c56a9b40::t_d2a8d7ac9ebfec 629
+themes/solarized-dark.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/config/themes/dark.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 2-4,18-19,25-28
+internal/feed/feed_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-71
+internal/tui/activity_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 32-98
+internal/tui/settings_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 4,8-9,23,29-30,37-104
+internal/ticket/ticket_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 214-228
+cmd/asanamate/main_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 4-5,63-78
+  s_8d5881c56a9b40::t_89a6069d0dd438 79
+internal/tui/flow_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 75-84
+internal/tui/model_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 11,419-442
+internal/tui/feedpanel.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-707
+.goreleaser.yaml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 43-52,71,75,77
+internal/dateinput/dateinput_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-38
+internal/tui/form_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 11,78-120,392,466
+internal/setup/setup_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 10,55,58-65,77-78,92-94,407-473
+  s_8d5881c56a9b40::t_c4be7c88868fa2 474
+internal/writeback/writeback_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 14,17,243-245,253-273,411,593
+docs/specs/10-portability-release-plan.md
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-251
+internal/tui/styles.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 4,6-7,12,14,31,34-36,57,65-84,86-87,115-158,169-186
+AGENTS.md
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 24-26
+internal/writeback/writeback.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 17,367-368,373-375,443,464-466,468,617,691-694,725-727,729
+themes/rose-pine.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/config/config.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 80,98-100,103-111,173,175-186,195-203,220-225,235,237-248,273-301,304,332,348,355,358,465-469,498-503,510-523
+cmd/asanamate-hrvst/main_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 15,17,51,58-62,77,80,84,87-90
+  s_8d5881c56a9b40::t_3ec86d053f8d62 91
+internal/tui/edit.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 13,116,146,153,372-394,473,578-581
+  s_8d5881c56a9b40::t_46ede96d42d013 95
+internal/tui/refresh_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 195-201
+.github/workflows/release.yml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 17-25,29
+internal/tui/edit_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 257-258,266,357-418,564-565
+themes/solarized-light.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/tui/agents_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 4,10,77-125,319-333
+  s_8d5881c56a9b40::t_3e62ba29a37733 334
+internal/repo/repo.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 12,14,140-193
+  s_8d5881c56a9b40::t_52366c73d3f32e 194
+cmd/asanamate/main.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 31,63-65,73,275,568,693-710
+  s_8d5881c56a9b40::t_86787aedd5e8d3 711-712
+internal/feed/feed.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-127
+themes/dracula.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/tui/actionbuilder.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 191,199,204,222-226,229,236
+internal/config/theme_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 32-169,256-304
+internal/ticket/markdown.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 327-365
+internal/tui/history.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 61-63,70-75
+README.md
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 33,35-38,40,44-46,76,78,82-85,111-112,115-120,129-132,135,147-150,169-171,175,184-186,192-194,231-237,243-246,252-253,267,269-270,275,289,299,303,372-374,445-447,466-507,548,550-554,566,573-574,577,588-589,594-597,602-603,607,674,676-720,723-724,747-771,776,778,784-788,803-805,819-823,826-827,829-832,836-841,866,870,873-876,910-912,959-961,984-985,991,998-1011,1014-1028,1240-1247,1254-1255,1327-1329,1333-1346
+docs/specs/README.md
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 25-26
+internal/timetracking/provider.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 47-49,66,78-81
+internal/asana/types.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 4,6,27-29,38-45,67,196-204,266,269-292
+internal/tui/listonly_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 165-192
+internal/tui/markdown_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 5-6,20-41,45,65,138-140
+themes/one-light.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+themes/sonokai-shusia.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-36
+internal/state/state.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 81,84
+cmd/asanamate-hrvst/main.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-4,17-19
+themes/nord.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/tui/symbols.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 33-45,54,56,61,127-128,133,136-141,144-148
+internal/tui/listrow.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 5,19-21,27,120-121,131-153
+internal/tui/styles_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 4,8-12,62-121
+  s_8d5881c56a9b40::t_2d3b5fa108a8a2 122
+themes/sonokai-andromeda.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-36
+internal/tui/form.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 4,6,8,15,39-51,81,103-113,133-134,140-142,168-170
+docs/specs/10-portability-release.md
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-308
+cmd/asanamate-hrvst/harvest.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 20,68-71,73-76,81-86,113,142-146,152,158,307,316-318,323,328,331,338,341-343,345-347,350-381,383-384,387,390,394-478,480
+themes/catppuccin-mocha.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+themes/gruvbox-light.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/tui/time.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 207-211,224-230,233-253
+themes/one-dark.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/tui/listview.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 14,27-28,33-34,40-45,58-60,92,152-160,196,212-213,215-216,218,220,281,300,303,305-307,309,314,316,401-466,478-486
+internal/action/action.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 93-95,100-101,104-108,114,118,124
+internal/asana/api.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 15,55
+themes/sonokai-atlantis.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-36
+internal/tui/nav.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 200,204,207-209,237,241
+docs/specs/11-feed-panel.md
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-185
+internal/dateinput/dateinput.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-49
+internal/tui/statusline.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 38-46,52-53,107,115
+docs/migrations.md
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-59
+themes/LICENSE.sonokai
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-21
+themes/catppuccin-latte.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/asana/client_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 319-335
+themes/tokyo-night.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/config/config_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 196-205,218-224,233-234,240,243,317-323,599,603,625,628,637-655
+  s_8d5881c56a9b40::t_9245cf1eeb1d67 656
+themes/sonokai.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+install.sh
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-10
+internal/repo/repo_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 217-250
+internal/tui/model.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 50-53,97-99,116,131,178-181,192,206-208,214,227,242-247,251,316,388-391,473,525,528-530,535,619-623,694,729-730,732-734,740,748-749,830-838,842-844,853,990-994,1103-1104,1109,1112,1117,1123-1130,1132-1137,1141,1146,1150-1151,1157
+internal/tui/group.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 29-30,34,172-201,205-207,209-211
+internal/tui/scopes_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 10,63-75,115-120,247-251,283-293
+  s_8d5881c56a9b40::t_cee2cc80548f16 294
+internal/tui/time_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 138,146,166,173-190,240-241,249,256-274
+themes/gruvbox-dark.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/tui/columns.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 38
+internal/keymap/catalog.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 21,29,43,51,71,73,80-84,97
+themes/sonokai-espresso.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-36
+themes/sonokai-maia.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-36
+internal/tui/keys.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 108-111,146-147,161,175,207,228-229,236-239,246-247,303,306-308,323,326-329
+internal/tui/reader.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 28,33-35,95,103-107,112
+themes/monokai.toml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-35
+internal/timetracking/testdata/provider.sh
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 8
+internal/tui/settings.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 6,39-47,59,63,66
+install-themes.sh
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-26
+internal/form/form.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 12,18-21,32-37,44,82-90,104-132,138-145
+  s_8d5881c56a9b40::t_64ff6c72bcb849 146
+internal/tui/feedpanel_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 1-361
+internal/tui/comment.go
+  s_8d5881c56a9b40::t_46ede96d42d013 51
+.github/workflows/ci.yml
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 48-52,82,85-87
+internal/config/theme.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 44-45,47,49,53-66,88-89,103,162-163,220-234,238-240
+  s_8d5881c56a9b40::t_b1f068632d1c64 241
+cmd/asanamate-hrvst/harvest_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 12,15,17,59,74,86,98,111-116,129,136,153,155,166,182-184,196,217,222,228-250,261-314
+internal/form/form_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 5-29,55-58
+internal/timetracking/provider_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 62,65,79,141-172
+  s_8d5881c56a9b40::t_6c52a47058e1e4 173
+internal/tui/pins.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 85-93
+internal/tui/keys_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 264-394
+internal/setup/setup.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 208-210,245-250,268-269,273-275,290-293,295-311,322-323,328,342-348,384-389,398-405,424-437,465-467,471-472,487-488,490-491,495-496,547-552,554,561
+internal/action/action_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 124-157
+internal/tui/picker.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 17-22,32,53,97,216-222,343-348
+internal/tui/seen.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 6-8,40-78
+  s_8d5881c56a9b40::t_0e3529703c3720 79
+internal/tui/listrow_test.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 15,191-238,330,338,457-579
+internal/tui/cmds.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 106,111-115,275-277
+internal/tui/activity.go
+  s_8d5881c56a9b40::t_3e8d1add4a6a14 40-41,60-69,92,247-248,253-271,287-289,291-299,301-302,471-478,532,538,557,620,629-634,636-682,690-704,706-714,716-717,719,721,745,752-753,756-757,759,776,822,842-854
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "34c2d94beb698c6ee0155d4f86a8c39c826dd003",
+  "prompts": {},
+  "sessions": {
+    "s_8d5881c56a9b40": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ec8-0468-76d2-ac81-0b1e5c0d777b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

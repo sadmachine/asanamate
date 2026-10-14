@@ -1,0 +1,27 @@
+docs/extensions.md
+  s_24d298515ed287::t_eb5b62a6d7d086 464-465
+internal/tui/feedpanel.go
+  s_24d298515ed287::t_711f16f80c3856 678,680-682
+internal/tui/feedpanel_test.go
+  s_24d298515ed287::t_6bfbee07af022a 95-98
+cmd/asanamate-hrvst/harvest.go
+  s_24d298515ed287::t_d4ddac45507292 449-453
+cmd/asanamate-hrvst/harvest_test.go
+  s_24d298515ed287::t_d4ddac45507292 294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5bab17622769d91a31f29ccc1b92c43a27285546",
+  "prompts": {},
+  "sessions": {
+    "s_24d298515ed287": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2b16badd-7266-4fd7-813e-3b23a8f26c41",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+docs/specs/10-portability-release-plan.md
+  s_9e4e5665ecb7f6::t_22737a6907abf6 5,144-145,149-150,155,157,160,163,167,169,172,175,178-189,231-247
+docs/specs/10-portability-release.md
+  s_9e4e5665ecb7f6::t_22737a6907abf6 5
+docs/specs/README.md
+  s_9e4e5665ecb7f6::t_22737a6907abf6 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "814f7f57b0f76c59ae7804e4ec1279ae4fc7d118",
+  "prompts": {},
+  "sessions": {
+    "s_9e4e5665ecb7f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c8450e3e-7e65-437a-b071-04a977d40f61",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

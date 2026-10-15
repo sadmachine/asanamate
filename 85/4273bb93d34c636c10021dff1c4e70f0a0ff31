@@ -1,0 +1,19 @@
+AGENTS.md
+  s_d34803f6e8a570::t_711cfd88e63537 32-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "854273bb93d34c636c10021dff1c4e70f0a0ff31",
+  "prompts": {},
+  "sessions": {
+    "s_d34803f6e8a570": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a140d2-cf43-7a32-9a2b-2b4ec876e4ff",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

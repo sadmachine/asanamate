@@ -1,0 +1,43 @@
+README.md
+  s_6b8b184cae258a::t_37c4d8ffdad954 17-18,24-25,51,281,1242-1243,1262-1263,1266,1271-1284
+cmd/asanamate/main.go
+  s_6b8b184cae258a::t_2703aded2241bc 58-60,103,215,274-276,288-290
+cmd/asanamate/main_test.go
+  s_6b8b184cae258a::t_c81f3ab8a61970 49-90
+internal/asana/api.go
+  s_6b8b184cae258a::t_ae0ff6ef7fb11e 250-259
+internal/ticket/markdown.go
+  s_6b8b184cae258a::t_8737886d7faffb 200-211,213,215
+internal/tui/batch.go
+  s_6b8b184cae258a::t_212d3d9065ef26 126-127,309-312
+internal/tui/batch_test.go
+  s_6b8b184cae258a::t_5621fa30ff540e 31-60
+internal/tui/edit.go
+  s_6b8b184cae258a::t_225d5d49ded849 6,34-35,83-84,103-104,152-204
+internal/tui/edit_test.go
+  s_6b8b184cae258a::t_3fcf481c786c95 21-62,161-187
+internal/writeback/batch.go
+  s_6b8b184cae258a::t_670fe6393c3666 63-75
+internal/writeback/batch_test.go
+  s_6b8b184cae258a::t_99f8f204b538a6 14-16
+internal/writeback/writeback.go
+  s_6b8b184cae258a::t_6572ee5e55ace9 412-459,577-579
+internal/writeback/writeback_test.go
+  s_6b8b184cae258a::t_efb4737a8b2274 84-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "80a7741e7f352b092f3387bd3b8a05083172817f",
+  "prompts": {},
+  "sessions": {
+    "s_6b8b184cae258a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14010-5761-7220-893a-601e7eb99f2a",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

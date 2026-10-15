@@ -1,0 +1,35 @@
+internal/writeback/markdown.go
+  s_53cb5b37bfc57f::t_c99c26b9defc34 18,88-96
+README.md
+  s_53cb5b37bfc57f::t_c99c26b9defc34 1317-1319,1343
+internal/ticket/markdown.go
+  s_53cb5b37bfc57f::t_c99c26b9defc34 14,240
+internal/writeback/markdown_test.go
+  s_53cb5b37bfc57f::t_4cabc15ce0e42d 14,90-106,108-109
+  s_53cb5b37bfc57f::t_b8fd58ccb189a1 45-49,71-89,107
+  s_d10f12c7e6bf96::t_47af2b401c7b95 110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ede2f4a6983a42b5cb63e262a2c60718047e1310",
+  "prompts": {},
+  "sessions": {
+    "s_53cb5b37bfc57f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14018-0692-7fa0-b1bb-f95777b9b462",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    },
+    "s_d10f12c7e6bf96": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13b83-0d81-7da0-8ab9-fc562927061f",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

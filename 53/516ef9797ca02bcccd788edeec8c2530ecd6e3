@@ -1,0 +1,27 @@
+docs/specs/README.md
+  s_7f24296510a963::t_61d3fa58d0749a 31-34,36-49
+docs/specs/16-conversation-history.md
+  s_7f24296510a963::t_ca8b20e8e718eb 1-318
+docs/specs/17-conversation-companion.md
+  s_7f24296510a963::t_dec0493e7bf167 1-268
+docs/specs/18-conversation-plugins.md
+  s_7f24296510a963::t_7bfe171a28e82a 1-241
+docs/specs/19-conversation-ui.md
+  s_7f24296510a963::t_4b4955cc8a975d 1-193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "53516ef9797ca02bcccd788edeec8c2530ecd6e3",
+  "prompts": {},
+  "sessions": {
+    "s_7f24296510a963": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a140e3-b70a-77c3-8a33-c000c5a9b5af",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

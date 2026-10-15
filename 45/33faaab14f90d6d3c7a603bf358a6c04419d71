@@ -1,0 +1,101 @@
+internal/tui/model_test.go
+  s_d34803f6e8a570::t_0e1a93b166b2f2 4,38-42,63,113,155
+AGENTS.md
+  s_d34803f6e8a570::t_7d1bcb924e42a8 10,15-17,24-27,80-81
+README.md
+  s_d34803f6e8a570::t_22b25d7b446b30 300,411,547,570-573,578-580,586,592,597-599,621-642,665-666,670-671,709-710,743,745-752,757-758,769-771
+cmd/asanamate/config_test.go
+  s_d34803f6e8a570::t_1ce2111d4a290f 1-100
+cmd/asanamate/main.go
+  s_d34803f6e8a570::t_7885d46ea7ad07 26,50-51,435-439,459-462,519,541,605-612
+cmd/asanamate/migrate.go
+  s_d34803f6e8a570::t_03584863f829c4 1-78
+cmd/asanamate/migrate_test.go
+  s_d34803f6e8a570::t_d2b7a1c7649114 1-178
+docs/deferred-ideas.md
+  s_d34803f6e8a570::t_1ff468b4709f69 121,123-125
+docs/deprecated.md
+  s_d34803f6e8a570::t_0f1c891a1921cc 7
+docs/migrations.md
+  s_d34803f6e8a570::t_04c87145f2994f 8-50
+docs/specs/README.md
+  s_d34803f6e8a570::t_5fc3ebec856f0a 27-30
+internal/config/config.go
+  s_d34803f6e8a570::t_849055299223c7 57,191,194-209,349-354,357,379-389,391-395,401-409,412-419,426,558-559,561-562,564
+internal/config/config_test.go
+  s_d34803f6e8a570::t_a2a4765f461345 51,230-240,278,286,559-562,570-571,625
+internal/config/moves.go
+  s_d34803f6e8a570::t_19e7918a54b833 10,25-30,72-73
+internal/config/moves_test.go
+  s_d34803f6e8a570::t_779698facfa65f 64-65
+internal/config/settings.go
+  s_d34803f6e8a570::t_128855addb1653 1-142
+internal/config/settings_test.go
+  s_d34803f6e8a570::t_8d304a3f0c37ca 1-174
+internal/config/theme.go
+  s_d34803f6e8a570::t_7a079200499b37 17,20,22-27,94,108,118,128,158,166,168-170,195,207,214,234-235,240,242,250
+internal/config/theme_test.go
+  s_d34803f6e8a570::t_4364f83e99ad75 4-5,25,27,31,34,63,114,139,156,175,204,217,225,238,246-247,253,265,291,301,309-310,322,328,342,349-369
+internal/config/updates.go
+  s_d34803f6e8a570::t_c111330f64b658 1-144
+internal/setup/settings_test.go
+  s_d34803f6e8a570::t_8517c1b6a4c11e 1-138
+internal/setup/setup.go
+  s_d34803f6e8a570::t_0b026b09cf1bad 71-77,246,254,334,340,347,349-354,357,364,366,375
+internal/setup/setup_test.go
+  s_d34803f6e8a570::t_69c44b2b969927 195,206,213,217-218,227,237,253,256,261,270,281,289,296,335-337,355,361-369,392,473-476
+internal/setup/update.go
+  s_d34803f6e8a570::t_0378a1e5b17e66 39,43-66,69-71,79,87-91,93-119,128-165,173-175,179,181-183,209,228,236,239,246,249,251
+internal/state/state.go
+  s_d34803f6e8a570::t_b4006142f2a218 69-70,75-77
+internal/tui/group.go
+  s_d34803f6e8a570::t_982585c115d625 121
+internal/tui/keys.go
+  s_d34803f6e8a570::t_914a7498062515 208
+internal/tui/listonly_test.go
+  s_d34803f6e8a570::t_2b32b74243b41e 17,77,81,89
+internal/tui/listrow_test.go
+  s_d34803f6e8a570::t_87347ea52bc11c 153,200,208,231,240,288,293,313,529
+internal/tui/markdown_test.go
+  s_d34803f6e8a570::t_f606915f72f6ce 21,34-37,86,119,142,156,181
+internal/tui/model.go
+  s_d34803f6e8a570::t_302f8e62410847 81-82,174-175,180,187,937,941
+internal/tui/nav.go
+  s_d34803f6e8a570::t_c1a0d2b7225921 131,144
+internal/tui/pins_test.go
+  s_d34803f6e8a570::t_765c26e29f8646 23,54,169
+internal/tui/refresh.go
+  s_d34803f6e8a570::t_2f774163f7f5cd 71
+internal/tui/refresh_test.go
+  s_d34803f6e8a570::t_c0a8903ac65569 123
+internal/tui/savedviews_test.go
+  s_d34803f6e8a570::t_1aeafb8ec89538 18-38
+internal/tui/settings.go
+  s_d34803f6e8a570::t_f94655a71090ef 23,25,31-33,39,46,48,62-66,68
+internal/tui/settings_test.go
+  s_d34803f6e8a570::t_2c32832615c464 4-6,39,82-84,96,101,110-173
+internal/tui/sort.go
+  s_d34803f6e8a570::t_de82995c975ab7 71
+internal/tui/sort_test.go
+  s_d34803f6e8a570::t_6f02873c1e6870 50,84,117
+internal/tui/theme.go
+  s_d34803f6e8a570::t_6a86cd08d4002c 101
+internal/tui/theme_test.go
+  s_d34803f6e8a570::t_f1e9cebee15284 57-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4533faaab14f90d6d3c7a603bf358a6c04419d71",
+  "prompts": {},
+  "sessions": {
+    "s_d34803f6e8a570": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a140d2-cf43-7a32-9a2b-2b4ec876e4ff",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

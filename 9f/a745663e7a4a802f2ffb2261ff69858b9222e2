@@ -1,0 +1,37 @@
+internal/tui/ticketonly_test.go
+  s_50f575774013eb::t_66a2e50e190b9b 8,35-37
+  s_50f575774013eb::t_64c9e6937fb1b9 1-7,9-32,34,38-60
+  s_50f575774013eb::t_7fcf101aacbfe7 33
+cmd/asanamate/main_test.go
+  s_50f575774013eb::t_2d278f8ac083e8 7,15,176-186
+  s_50f575774013eb::t_2d095ece1a532c 187
+internal/tui/model.go
+  s_50f575774013eb::t_91646cc6b35472 84-86,216-219,223-224,231-232,236,763-765,1011
+  s_50f575774013eb::t_5f463146b0176c 230,233-235
+  s_50f575774013eb::t_54cf54a74d45fa 225
+internal/tui/keys.go
+  s_50f575774013eb::t_82d721324270fd 15-16,21,28,46,146-147,149-152,154,159,162-164,167,208-209,212-217,222-224,263-265
+cmd/asanamate/main.go
+  s_50f575774013eb::t_236e212e7c9ba9 53,120-121,438-460,491-498
+README.md
+  s_50f575774013eb::t_7f796b8275fdca 555-561,563
+  s_50f575774013eb::t_de1aa1ae051f48 562
+internal/tui/statusline.go
+  s_50f575774013eb::t_a5f9116824c656 23-25,75-77,79-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9fa745663e7a4a802f2ffb2261ff69858b9222e2",
+  "prompts": {},
+  "sessions": {
+    "s_50f575774013eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2e328c86-740a-445b-a7db-68372e972057",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

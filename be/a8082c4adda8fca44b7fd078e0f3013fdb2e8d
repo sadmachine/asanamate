@@ -1,0 +1,70 @@
+internal/setup/setup_test.go
+  s_6033c3860362b9::t_eedd3db1bd1fc5 310-328
+README.md
+  s_6033c3860362b9::t_98613cfe5e612a 595-596
+docs/specs/19-conversation-ui.md
+  s_6033c3860362b9::t_80839e5265b5f0 82-85
+docs/specs/17-conversation-companion.md
+  s_6033c3860362b9::t_da96eed1b78135 13-14,19
+  s_6033c3860362b9::t_ff3991c92350c4 15-18,231-234
+internal/config/config.go
+  s_6033c3860362b9::t_98613cfe5e612a 69-70,145-157,366,586-591
+internal/jsoncmd/jsoncmd.go
+  s_6033c3860362b9::t_0c00f17d4038d4 9,11,14-18,42-107,109-113,117-118,120,122-124,126-128
+  s_6033c3860362b9::t_98613cfe5e612a 108,114-116,119,121,125
+internal/action/conversation_test.go
+  s_6033c3860362b9::t_eedd3db1bd1fc5 1-108,121-126
+  s_6033c3860362b9::t_8d18bea1c40069 109-120
+internal/conversations/conversations.go
+  s_6033c3860362b9::t_0c00f17d4038d4 1-268
+internal/action/action.go
+  s_6033c3860362b9::t_aa8b1e88bec9fd 32-34,141-169
+  s_6033c3860362b9::t_98613cfe5e612a 24,35,48-49,170-175
+docs/extensions.md
+  s_6033c3860362b9::t_ff3991c92350c4 11,66,119-306
+  s_6033c3860362b9::t_b949d24dd6bbff 307
+docs/specs/16-conversation-history.md
+  s_6033c3860362b9::t_ff3991c92350c4 33-39,227-229,281-283
+  s_6033c3860362b9::t_80839e5265b5f0 10-15,305-308
+  s_6033c3860362b9::t_a5346ea712cd4c 284
+  s_6033c3860362b9::t_10105bee9adc53 309
+internal/jsoncmd/jsoncmd_test.go
+  s_6033c3860362b9::t_80839e5265b5f0 76-85
+  s_6033c3860362b9::t_40bc424e726e4a 1-75,86-96
+docs/specs/README.md
+  s_6033c3860362b9::t_80839e5265b5f0 31,40-42
+internal/conversations/testdata/source.sh
+  s_6033c3860362b9::t_40bc424e726e4a 1-4
+docs/specs/17-provider-feasibility.md
+  s_6033c3860362b9::t_ff3991c92350c4 13-15,85,87-88
+  s_6033c3860362b9::t_da96eed1b78135 1-12,16-84,86,89-95
+internal/action/conversation.go
+  s_6033c3860362b9::t_98613cfe5e612a 1-50
+internal/config/config_test.go
+  s_6033c3860362b9::t_aa8b1e88bec9fd 77-78
+  s_6033c3860362b9::t_eedd3db1bd1fc5 66-76,79-87
+internal/action/testdata/conversation.sh
+  s_6033c3860362b9::t_eedd3db1bd1fc5 1-8
+internal/setup/setup.go
+  s_6033c3860362b9::t_98613cfe5e612a 442-449
+internal/conversations/conversations_test.go
+  s_6033c3860362b9::t_80839e5265b5f0 59-73
+  s_6033c3860362b9::t_40bc424e726e4a 1-58,74-75,83,87-187
+  s_6033c3860362b9::t_aa8b1e88bec9fd 76-82,84-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bea8082c4adda8fca44b7fd078e0f3013fdb2e8d",
+  "prompts": {},
+  "sessions": {
+    "s_6033c3860362b9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a145c8-bc00-7c60-8924-865644dce899",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

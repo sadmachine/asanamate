@@ -1,0 +1,59 @@
+themes/solarized-light.toml
+  s_2fc83556386428::t_e119eeb120f6cc 3
+themes/dracula.toml
+  s_2fc83556386428::t_e119eeb120f6cc 3
+themes/rose-pine.toml
+  s_2fc83556386428::t_050555875924b9 3
+themes/LICENSE.dracula
+  s_2fc83556386428::t_e119eeb120f6cc 1-21
+themes/tokyo-day.toml
+  s_2fc83556386428::t_050555875924b9 3
+themes/LICENSE.solarized
+  s_2fc83556386428::t_e119eeb120f6cc 1-20
+themes/catppuccin-latte.toml
+  s_2fc83556386428::t_050555875924b9 3
+themes/catppuccin-mocha.toml
+  s_2fc83556386428::t_050555875924b9 3
+themes/monokai.toml
+  s_2fc83556386428::t_e119eeb120f6cc 2-3,10,17
+themes/one-dark.toml
+  s_2fc83556386428::t_e119eeb120f6cc 3
+themes/nord.toml
+  s_2fc83556386428::t_e119eeb120f6cc 3
+themes/LICENSE.monokai
+  s_2fc83556386428::t_e119eeb120f6cc 1-21
+themes/tokyo-night.toml
+  s_2fc83556386428::t_050555875924b9 3
+themes/LICENSE.gruvbox
+  s_2fc83556386428::t_e119eeb120f6cc 1-21
+themes/gruvbox-light.toml
+  s_2fc83556386428::t_e119eeb120f6cc 2-3
+themes/LICENSE.one
+  s_2fc83556386428::t_e119eeb120f6cc 1-20
+themes/solarized-dark.toml
+  s_2fc83556386428::t_e119eeb120f6cc 3
+themes/sonokai.toml
+  s_2fc83556386428::t_050555875924b9 3
+themes/one-light.toml
+  s_2fc83556386428::t_e119eeb120f6cc 3
+themes/LICENSE.nord
+  s_2fc83556386428::t_e119eeb120f6cc 1-21
+themes/gruvbox-dark.toml
+  s_2fc83556386428::t_e119eeb120f6cc 2-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e7d39aa8bc7689ecb9dad46d0d8a86f03e0b3a29",
+  "prompts": {},
+  "sessions": {
+    "s_2fc83556386428": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b3edb76b-ecbb-45a8-be31-c1e28aec7405",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

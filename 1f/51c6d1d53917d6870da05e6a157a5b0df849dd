@@ -1,0 +1,24 @@
+docs/specs/README.md
+  s_2eb002a9eb5ca0::t_7579240bc749cb 35-36,53-54
+  s_2eb002a9eb5ca0::t_1f1abb75eb6acc 55
+docs/specs/20-addon-discovery.md
+  s_2eb002a9eb5ca0::t_4ee1fbd7e26b7b 1-205
+docs/specs/21-native-harvest.md
+  s_2eb002a9eb5ca0::t_0b2eac482550f5 1-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1f51c6d1d53917d6870da05e6a157a5b0df849dd",
+  "prompts": {},
+  "sessions": {
+    "s_2eb002a9eb5ca0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a141e2-eb74-7ec2-8fb1-c4299b8e625a",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

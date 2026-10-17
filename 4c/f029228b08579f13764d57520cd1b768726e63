@@ -1,0 +1,138 @@
+packages/asana-sessions/src/codex.js
+  s_20facd44240c9d::t_1a3425fbc427e4 3
+  s_d3ac571b93f7b0::t_972314c44038cc 29
+  s_20facd44240c9d::t_01be2dc3bcff8a 44-46,49
+  s_20facd44240c9d::t_583a48890e21b3 47-48
+  s_d3ac571b93f7b0::t_b1cd9bd7a87805 2,18-19,42-43,89-98
+packages/asana-sessions/src/input.js
+  s_20facd44240c9d::t_93de3026415534 1-14
+README.md
+  s_d3ac571b93f7b0::t_88e7f5bfa17b02 1528-1531
+docs/specs/17-provider-feasibility.md
+  s_d3ac571b93f7b0::t_3628fcc3d53107 193,215-266
+  s_d3ac571b93f7b0::t_e7f0bbab1011f3 10,12-15,267-307
+  s_d3ac571b93f7b0::t_d068b7717a1a5b 189-192,194-214
+packages/asana-sessions/src/pending.js
+  s_d3ac571b93f7b0::t_d068b7717a1a5b 43,45,47-51
+  s_20facd44240c9d::t_54c6f540ed9534 1-3,5-6,9-19,24-29,37-42,52-56,62-68,72-82
+  s_d3ac571b93f7b0::t_b105f8911c6140 4,8,20-23,30-36,44,46,57-61,69-71
+  s_d3ac571b93f7b0::t_d0e82e4d7e9e97 7
+packages/asana-sessions/plugins/codex/asana-sessions/.codex-plugin/plugin.json
+  s_20facd44240c9d::t_f3e26f3f0b911f 1-4,8-11
+  s_20facd44240c9d::t_cdb7965c620b07 5-7
+packages/asana-sessions/src/asanamate.js
+  s_20facd44240c9d::t_93de3026415534 7,42
+packages/asana-sessions/plugins/claude/asana-sessions/skills/link-asana-task/SKILL.md
+  s_d3ac571b93f7b0::t_5faa13edc9fea2 1-20
+packages/asana-sessions/src/claude.js
+  s_20facd44240c9d::t_583a48890e21b3 54-55
+  s_d3ac571b93f7b0::t_3dfc20389f5068 24,37-42
+  s_20facd44240c9d::t_01be2dc3bcff8a 51-53,56
+  s_20facd44240c9d::t_23026e15be869c 26-33
+  s_d3ac571b93f7b0::t_3286bef1cc7322 49-50
+packages/asana-sessions/test/hook.test.js
+  s_d3ac571b93f7b0::t_711103c6114adb 82-101
+  s_d3ac571b93f7b0::t_8f668d37a0c138 1-81
+packages/asana-sessions/src/marker.js
+  s_20facd44240c9d::t_4953f16e3774e6 43-59
+packages/asana-sessions/src/cli.js
+  s_20facd44240c9d::t_aac57c8e26b2f8 13,26-29,33-34,60,63,87,90-91,102,137-138,142-143,146-154,171-185,228-230,232
+  s_d3ac571b93f7b0::t_41eab3ff045477 15,209-211
+  s_20facd44240c9d::t_ad2f79d13aa290 61-62
+  s_d3ac571b93f7b0::t_3f44236a19bc8d 186-187
+packages/asana-sessions/README.md
+  s_d3ac571b93f7b0::t_3628fcc3d53107 232-234
+  s_d3ac571b93f7b0::t_e7f0bbab1011f3 15-17,166-175,225-226
+  s_d3ac571b93f7b0::t_88e7f5bfa17b02 26-27,33-38,49-50,138-143,177-201,204-224,227-231,235-261,267,272
+  s_d3ac571b93f7b0::t_d068b7717a1a5b 32
+  s_d3ac571b93f7b0::t_b75e5e8d8c6536 202-203
+  s_d3ac571b93f7b0::t_616aa354cb5506 176,273
+packages/asana-sessions/CHANGELOG.md
+  s_d3ac571b93f7b0::t_88e7f5bfa17b02 5-12
+AGENTS.md
+  s_d3ac571b93f7b0::t_92a941574f39ec 53
+  s_d3ac571b93f7b0::t_5faa13edc9fea2 49-52
+packages/asana-sessions/package.json
+  s_d3ac571b93f7b0::t_5faa13edc9fea2 14,22-23,27-29
+  s_d3ac571b93f7b0::t_3a41d3a9c17b48 17
+  s_d3ac571b93f7b0::t_152219e2529551 18-19
+packages/asana-sessions/scripts/check-pack.sh
+  s_d3ac571b93f7b0::t_a9b2fcc3caf386 10,15,20-44
+  s_d3ac571b93f7b0::t_ad3f4c752ab8e4 6
+packages/asana-sessions/plugins/claude/.claude-plugin/marketplace.json
+  s_20facd44240c9d::t_f3e26f3f0b911f 1-13
+packages/asana-sessions/plugins/codex/asana-sessions/hooks/hooks.json
+  s_20facd44240c9d::t_f3e26f3f0b911f 1-3,13-15
+  s_d3ac571b93f7b0::t_5faa13edc9fea2 4-12
+packages/asana-sessions/src/lock.js
+  s_d3ac571b93f7b0::t_61a0a017be2572 19,25,40,44
+  s_20facd44240c9d::t_4779d911e67f0f 14-18,22
+packages/asana-sessions/RELEASING.md
+  s_d3ac571b93f7b0::t_3d3fc39fc8debb 1-18,20-65
+  s_d3ac571b93f7b0::t_ac32d326582ee8 19
+packages/asana-sessions/scripts/check-plugins.js
+  s_d3ac571b93f7b0::t_a9b2fcc3caf386 1-41
+packages/asana-sessions/src/setup.js
+  s_d3ac571b93f7b0::t_41eab3ff045477 180-184,191,193-200,203-205
+  s_d3ac571b93f7b0::t_ece0d4297d063f 228-234
+  s_d3ac571b93f7b0::t_3dfc20389f5068 34,111,121,128
+  s_d3ac571b93f7b0::t_b75e5e8d8c6536 201-202,220,247,261
+  s_d3ac571b93f7b0::t_afb94a0184baec 5,185-190,192,206-207
+  s_20facd44240c9d::t_a685049f85cc1c 1-4,6-33,35-43,45-110,112-120,122-127,129-179,208-219,221-227,235-246,248-260,262-285
+  s_d3ac571b93f7b0::t_811f221774b7c0 44
+packages/asana-sessions/test/setup.test.js
+  s_d3ac571b93f7b0::t_02a9d063124fb6 75-83
+  s_d3ac571b93f7b0::t_d021d95ebb785a 1,3-44,46-74
+  s_d3ac571b93f7b0::t_61a0a017be2572 2
+  s_d3ac571b93f7b0::t_b75e5e8d8c6536 45
+.github/workflows/asana-sessions-ci.yml
+  s_d3ac571b93f7b0::t_3d3fc39fc8debb 1-24
+  s_d3ac571b93f7b0::t_ac32d326582ee8 25-41
+packages/asana-sessions/src/engine.js
+  s_d3ac571b93f7b0::t_61a0a017be2572 121,137,154
+packages/asana-sessions/plugins/claude/asana-sessions/hooks/hooks.json
+  s_20facd44240c9d::t_f3e26f3f0b911f 1-10
+packages/asana-sessions/plugins/codex/.agents/plugins/marketplace.json
+  s_20facd44240c9d::t_f3e26f3f0b911f 1-12
+.github/workflows/asana-sessions-release.yml
+  s_d3ac571b93f7b0::t_3d3fc39fc8debb 1-35
+packages/asana-sessions/plugins/codex/asana-sessions/skills/link-asana-task/SKILL.md
+  s_d3ac571b93f7b0::t_5faa13edc9fea2 1-20
+packages/asana-sessions/test/cli.test.js
+  s_d3ac571b93f7b0::t_ac32d326582ee8 120-136
+packages/asana-sessions/plugins/claude/asana-sessions/.claude-plugin/plugin.json
+  s_20facd44240c9d::t_f3e26f3f0b911f 1-4,8-9
+  s_20facd44240c9d::t_cdb7965c620b07 5-7
+packages/asana-sessions/src/hook.js
+  s_d3ac571b93f7b0::t_61a0a017be2572 21-22,60,78-85
+  s_d3ac571b93f7b0::t_3dfc20389f5068 27-28,54-56,62-64,86,102-104
+  s_20facd44240c9d::t_43356ee19de5f2 1-20,23-26,29-36,38-45,47-50,61,65-77,87-101,105-111,113-129
+  s_d3ac571b93f7b0::t_972314c44038cc 37
+  s_20facd44240c9d::t_ad2f79d13aa290 46,51-53,57-59,112
+packages/asana-sessions/npm-shrinkwrap.json
+  s_d3ac571b93f7b0::t_45a937bd28924f 16-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4cf029228b08579f13764d57520cd1b768726e63",
+  "prompts": {},
+  "sessions": {
+    "s_20facd44240c9d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "47d8182c-ef6c-467a-bf00-8ee9508a3b78",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    },
+    "s_d3ac571b93f7b0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1466d-6327-7250-bff3-5210ac697195",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

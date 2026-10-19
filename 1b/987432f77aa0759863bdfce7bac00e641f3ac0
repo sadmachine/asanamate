@@ -1,0 +1,19 @@
+packages/asana-sessions/CHANGELOG.md
+  s_5e0a0e3530e7d8::t_4aff95ed7cdaba 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1b987432f77aa0759863bdfce7bac00e641f3ac0",
+  "prompts": {},
+  "sessions": {
+    "s_5e0a0e3530e7d8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "58c653d7-49b2-44b7-8980-dcb611de6ff1",
+        "model": "unknown"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

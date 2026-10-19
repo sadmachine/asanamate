@@ -1,0 +1,34 @@
+packages/asana-sessions/plugins/claude/asana-sessions/.claude-plugin/plugin.json
+  s_7f24296510a963::t_37d622dfd77d1b 3
+packages/asana-sessions/plugins/claude/.claude-plugin/marketplace.json
+  s_7f24296510a963::t_37d622dfd77d1b 10
+packages/asana-sessions/package.json
+  s_7f24296510a963::t_37d622dfd77d1b 3
+packages/asana-sessions/CHANGELOG.md
+  s_7f24296510a963::t_35f191dc2b5409 4-10
+  s_7f24296510a963::t_37d622dfd77d1b 3
+packages/asana-sessions/npm-shrinkwrap.json
+  s_7f24296510a963::t_37d622dfd77d1b 3,9
+docs/specs/17-provider-feasibility.md
+  s_7f24296510a963::t_37d622dfd77d1b 345-371
+packages/asana-sessions/plugins/codex/asana-sessions/.codex-plugin/plugin.json
+  s_7f24296510a963::t_37d622dfd77d1b 3
+packages/asana-sessions/README.md
+  s_7f24296510a963::t_37d622dfd77d1b 15-17,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0b2a949d9d2a150cbc0b104d360a08e42256c89f",
+  "prompts": {},
+  "sessions": {
+    "s_7f24296510a963": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a140e3-b70a-77c3-8a33-c000c5a9b5af",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+packages/asana-sessions/RELEASING.md
+  s_7f24296510a963::t_35f191dc2b5409 24
+  s_7f24296510a963::t_24ad93fdbecae4 25-27
+.github/workflows/asana-sessions-release.yml
+  s_7f24296510a963::t_ede48daa125cb6 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c75b681184c684fdb9c5b9e3d943ccfdbbd3502b",
+  "prompts": {},
+  "sessions": {
+    "s_7f24296510a963": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a140e3-b70a-77c3-8a33-c000c5a9b5af",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

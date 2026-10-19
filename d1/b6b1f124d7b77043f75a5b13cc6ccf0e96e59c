@@ -1,0 +1,23 @@
+packages/asana-sessions/README.md
+  s_5e0a0e3530e7d8::t_e3cba1e1f8675b 107-108
+packages/asana-sessions/test/engine.test.js
+  s_5e0a0e3530e7d8::t_73614a7fbafd93 179-180,182-184
+packages/asana-sessions/src/engine.js
+  s_5e0a0e3530e7d8::t_bb47b63242ccf6 195-198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d1b6b1f124d7b77043f75a5b13cc6ccf0e96e59c",
+  "prompts": {},
+  "sessions": {
+    "s_5e0a0e3530e7d8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "58c653d7-49b2-44b7-8980-dcb611de6ff1",
+        "model": "unknown"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

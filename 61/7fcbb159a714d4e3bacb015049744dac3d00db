@@ -1,0 +1,24 @@
+docs/specs/README.md
+  s_5e0a0e3530e7d8::t_9048ad088a0c0d 34,42-43
+  s_5e0a0e3530e7d8::t_c17873a06f78e9 31,33,40-41
+docs/specs/17-provider-feasibility.md
+  s_5e0a0e3530e7d8::t_9048ad088a0c0d 332-337
+  s_5e0a0e3530e7d8::t_02a4394a4abd83 342
+  s_5e0a0e3530e7d8::t_821f3c0599e9f2 173,307-331,338-341,343-344
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "617fcbb159a714d4e3bacb015049744dac3d00db",
+  "prompts": {},
+  "sessions": {
+    "s_5e0a0e3530e7d8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "58c653d7-49b2-44b7-8980-dcb611de6ff1",
+        "model": "unknown"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

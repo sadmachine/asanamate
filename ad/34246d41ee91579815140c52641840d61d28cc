@@ -1,0 +1,37 @@
+packages/asana-sessions/src/hook.js
+  s_7f24296510a963::t_ede48daa125cb6 9,12,65,103-111
+  s_7f24296510a963::t_24ad93fdbecae4 114
+packages/asana-sessions/README.md
+  s_7f24296510a963::t_35f191dc2b5409 90-91
+packages/asana-sessions/test/hook.test.js
+  s_7f24296510a963::t_35f191dc2b5409 101-127
+  s_7f24296510a963::t_24ad93fdbecae4 99,128-137
+  s_7f24296510a963::t_9f4a8ca2b30a9d 7,53-98
+  s_aae30dfdf8259f::t_2076ded2903237 100
+packages/asana-sessions/src/engine.js
+  s_7f24296510a963::t_ede48daa125cb6 13,121-135,137-139,141,145-195,197-198,202-203,205-207,211
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ad34246d41ee91579815140c52641840d61d28cc",
+  "prompts": {},
+  "sessions": {
+    "s_7f24296510a963": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a140e3-b70a-77c3-8a33-c000c5a9b5af",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    },
+    "s_aae30dfdf8259f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15546-0f5e-7e01-bbb2-b7d74bb9ac08",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

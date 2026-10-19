@@ -1,0 +1,25 @@
+packages/asana-sessions/scripts/live-reentrancy.sh
+  s_5e0a0e3530e7d8::t_617a5fcdc6a17b 133
+  s_5e0a0e3530e7d8::t_e5f05fd97c0278 23,132
+  s_5e0a0e3530e7d8::t_62fbd8cc547d1a 130-131
+  s_5e0a0e3530e7d8::t_0bd7360ad6eed0 24,129
+  s_5e0a0e3530e7d8::t_a8d9420651955c 1-22,25-128,134-139
+packages/asana-sessions/RELEASING.md
+  s_5e0a0e3530e7d8::t_821f3c0599e9f2 58-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ec184a8d56a46f43d7c17f52d328947317695f46",
+  "prompts": {},
+  "sessions": {
+    "s_5e0a0e3530e7d8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "58c653d7-49b2-44b7-8980-dcb611de6ff1",
+        "model": "unknown"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

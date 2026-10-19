@@ -1,0 +1,22 @@
+internal/tui/feedpanel.go
+  s_aae30dfdf8259f::t_d097321791f9d4 678
+  s_aae30dfdf8259f::t_040757f1434602 680
+internal/tui/feedpanel_test.go
+  s_aae30dfdf8259f::t_b477a4ef4f12f7 71-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f1a95af33948fa0ca14ece857f1f6d5c54deac0",
+  "prompts": {},
+  "sessions": {
+    "s_aae30dfdf8259f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15546-0f5e-7e01-bbb2-b7d74bb9ac08",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

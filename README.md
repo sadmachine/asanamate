@@ -27,6 +27,8 @@ and coding agents can do what you can. macOS and Linux only.
   [Writing back to Asana](#writing-back-to-asana).
 - **Act** on a ticket: run your own commands with the ticket as context, such
   as starting a coding agent in its repo. See [Actions](#actions).
+- **Discover addons**: browse optional integrations, setup guides and local
+  checks from Settings or `asanamate addons`. See [Addons](#addons).
 - **Show agents** (optional): coding agents running in ccmux or any other tool
   appear next to their tickets. See [Agents](#agents-optional).
 - **Resume conversations** (optional): find a ticket's saved Claude Code and
@@ -78,21 +80,17 @@ archive=asanamate_${os}_${arch}.tar.gz
 base=https://github.com/sadmachine/asanamate/releases/download/$version
 curl -fL -O "$base/$archive" -O "$base/checksums.txt"
 grep " $archive\$" checksums.txt | sha256sum -c   # macOS: shasum -a 256 -c
-tar -xzf "$archive" asanamate themes install-themes.sh
-mkdir -p ~/.local/bin && mv asanamate ~/.local/bin/
+tar -xzf "$archive" asanamate asanamate-hrvst asanamate-ccmux themes install-themes.sh
+mkdir -p ~/.local/bin && mv asanamate asanamate-hrvst asanamate-ccmux ~/.local/bin/
 sh ./install-themes.sh
 asanamate version
 ```
 
-The archive also holds two optional binaries: `asanamate-hrvst`, the Harvest
+Normal installation includes two adapter binaries: `asanamate-hrvst`, the Harvest
 provider for [Time tracking](#time-tracking-optional), and `asanamate-ccmux`,
-the ccmux adapter for [Agents](#agents-optional). Extract and move the ones
-you use the same way:
-
-```sh
-tar -xzf "$archive" asanamate-hrvst && mv asanamate-hrvst ~/.local/bin/
-tar -xzf "$archive" asanamate-ccmux && mv asanamate-ccmux ~/.local/bin/
-```
+the ccmux adapter for [Agents](#agents-optional). Installing adapters does not
+enable integrations, authenticate them, or install external dependencies.
+Run `asanamate addons` or open **Settings > Addons** for guided setup.
 
 If `asanamate version` is not found, add `~/.local/bin` to your `PATH` in your
 shell's startup file (`~/.zshrc`, `~/.bashrc`), then open a new shell:
@@ -107,8 +105,8 @@ quarantine flag once:
 
 ```sh
 xattr -d com.apple.quarantine ~/.local/bin/asanamate
-xattr -d com.apple.quarantine ~/.local/bin/asanamate-hrvst   # if you use it
-xattr -d com.apple.quarantine ~/.local/bin/asanamate-ccmux   # if you use it
+xattr -d com.apple.quarantine ~/.local/bin/asanamate-hrvst
+xattr -d com.apple.quarantine ~/.local/bin/asanamate-ccmux
 ```
 
 ### From source
@@ -119,10 +117,8 @@ are available alongside the binaries:
 ```sh
 git clone https://github.com/sadmachine/asanamate.git
 cd asanamate
-go install ./cmd/asanamate
+go install ./cmd/...
 sh ./install-themes.sh
-go install ./cmd/asanamate-hrvst   # Harvest time tracking
-go install ./cmd/asanamate-ccmux   # ccmux agents
 ```
 
 This installs to `$(go env GOBIN)`, else `$(go env GOPATH)/bin` (usually
@@ -136,8 +132,8 @@ to add any new themes; existing theme files are never overwritten. Upgrades
 never touch your config, actions, or state. See [Upgrading](#upgrading) for each
 release's steps.
 
-To uninstall, delete the binaries (`asanamate`, plus `asanamate-hrvst`,
-and `asanamate-ccmux` if you installed them). Your
+To uninstall, delete the binaries (`asanamate`, `asanamate-hrvst`,
+and `asanamate-ccmux`). Your
 files stay until you delete them yourself: the config and actions in
 `~/.config/asanamate`, the state, ticket exports, and logs in
 `~/.local/state/asanamate`, and the Codex hook, if you added it, in
@@ -154,6 +150,9 @@ files stay until you delete them yourself: the config and actions in
    `~/.config/asanamate/actions/`. Rename one to `.toml` to enable it (see
    [Actions](#actions)).
 3. Run `asanamate`. `asanamate doctor` checks the setup if something fails.
+
+Discover optional integrations with `asanamate addons` or **Settings > Addons**
+(`s`, then `o`). No addon is required for core setup.
 
 ### Token
 
@@ -187,8 +186,8 @@ shows; see [Troubleshooting](#troubleshooting) for what its results prove.
 | Paste into input (`Ctrl+V`) | macOS `pbpaste`; Linux `xclip` or `xsel` (X11) or `wl-clipboard` (Wayland) | always on | not needed | not checked | the input shows why, and your terminal's paste still works |
 | Agent status | an agents command, such as `asanamate-ccmux` for ccmux; see [Agents](#agents-optional) | `agents.command` | remove `[agents]` keys | `agents` | off |
 | Conversations | the [asana-sessions](packages/asana-sessions/README.md) package (Node 22+); see [Conversations](#conversations-optional) | `[conversations]` | remove `[conversations]` keys | `conversations` (shown only when on) | no Conversations entry |
-| Time tracking | `asanamate-hrvst` and [hrvst](https://github.com/kgajera/hrvst-cli) 3.x, or your own provider; see [Time tracking](#time-tracking-optional) | `[time_tracking]` | remove `[time_tracking]` keys | `time_tracking` (unchecked) | off |
-| Project link suggestions | a project links command, such as imarc's `asanamate-hub`; see [Project links](#project-links-optional) | `project_links.command` | remove `project_links.command` | `project_links` (unchecked) | no suggestions |
+| Time tracking | `asanamate-hrvst` and [hrvst](https://github.com/kgajera/hrvst-cli) 3.x, or your own provider; see [Time tracking](#time-tracking-optional) | `[time_tracking]` | remove `[time_tracking]` keys | `time_tracking`, `addon harvest` (local check) | off |
+| Project link suggestions | a project links command, such as imarc's `asanamate-hub`; see [Project links](#project-links-optional) | `project_links.command` | remove `project_links.command` | `project_links`, `addon hub` (local check) | no suggestions |
 | Relative dates (`tomorrow`, `+1 day`) | GNU `date`; on macOS, `gdate` from `brew install coreutils` | install it | not needed | not checked | type dates as `YYYY-MM-DD` |
 | Inline images | a kitty-graphics terminal ([kitty](https://sw.kovidgoyal.net/kitty/), [Ghostty](https://ghostty.org)); in tmux, `set -g allow-passthrough on` | `images.mode = "auto"` (default) | `images.mode = "off"` | not checked | links shown instead |
 | Nerd Font symbols | a [Nerd Font](https://www.nerdfonts.com) | `symbols = "nerd"` | `symbols = "unicode"` or `"ascii"` | not checked | unicode or ascii symbols |
@@ -210,6 +209,41 @@ file is saved beside it as a timestamped backup, such as
 `config.toml.2026-10-06--14-30-05.bak`; copy any comments of your own back
 from it.
 Actions live in their own files, so updates never touch them.
+
+## Addons
+
+Run `asanamate addons` to see every shipped integration and its local status,
+or open **Settings > Addons** (`s`, then `o`). Both use the same catalog:
+
+- `asanamate addons harvest`: [Harvest time tracking](#time-tracking-optional)
+  and [today's feed](#feed-panel), configured independently.
+- `asanamate addons ccmux`: [coding agent status](#agents-optional).
+- `asanamate addons hub`: [imarc project links](#project-links-optional).
+  Hub is private and requires imarc access.
+- `asanamate addons actions`: the action builder and
+  [custom extension commands](docs/extensions.md).
+
+Each guide includes requirements, exact commands, configuration examples,
+first use, and removal. `asanamate addons check <id>` explicitly runs the
+documented, bounded local checks; failed checks exit nonzero. Installed,
+configured, local check passed, and connection unverified are separate states.
+Local credential checks do not prove live authentication. `doctor` reuses
+these checks for recognized configured addons; optional failures are warnings.
+Custom commands retain their existing doctor behavior.
+
+Listing and guides need no Asana token or core config and never run providers.
+Invalid existing config remains visible alongside the guides. In TUI details,
+scroll with the picker navigation keys and press Enter for Recheck, copy,
+guide URL, config editor, or supported provider setup. Setup displays its
+command and resolved executable before running in the foreground. Cancel
+returns to details. If clipboard or browser access fails, the text and URL
+remain available; the CLI prints the same guide for copying yourself.
+
+Addon settings stay in their existing files. Examples are never merged
+automatically. Hand edits require restarting asanamate; addon details inspect
+saved config, which can differ from the current session's active config.
+Arbitrary providers remain supported without catalog registration. Clipboard,
+images, and terminal features remain under [Optional features](#optional-features).
 
 ## Layout
 
@@ -1545,14 +1579,16 @@ the workspace is reachable. For optional features it checks less:
   tool is on your `PATH`; `doctor` does not try it.
 - `repo_source` lists the repos in `repo_source.root`; a custom
   `repo_source.command` is `unchecked`.
-- `agents` runs `agents.command`, and each `feed` row runs its feed command,
-  once. Both protocols are read-only.
-- `off` features are not configured. `unchecked` ones, time tracking and
-  project links, run your own commands, which `doctor` does not run. Check
-  them yourself: `asanamate-hrvst check` confirms hrvst and its saved login,
-  and a provider's own check, such as `asanamate-hub check`, confirms its
-  settings. Neither calls the remote service; opening the time form (`t`) or
-  the repo picker (`L`) on a ticket does, and shows any error.
+- Recognized addons reuse `asanamate addons check <id>` checks. Harvest and
+  Hub checks confirm local credential availability without contacting either
+  service. ccmux checks its local session list. `connection unverified` means
+  remote access was not checked. Opening the time form (`t`) or repo picker
+  (`L`) on a ticket contacts the configured service and shows any error.
+- `agents` also lists agents for branch matching. Custom agent and feed
+  commands retain their existing read-only queries. Known Harvest feeds use
+  the local addon check instead of contacting Harvest.
+- `off` features are not configured. Custom time tracking and project links
+  remain `unchecked`; follow their own verification instructions.
 - Copy to clipboard, image paste, inline images, and Nerd Font symbols
   depend on your terminal, which `doctor` cannot test.
 - An `agents` warning ending in `exit status 127` means the shell cannot

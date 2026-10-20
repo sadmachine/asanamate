@@ -32,7 +32,7 @@ can run in parallel, each on its own branch.
 | [17-conversation-companion](17-conversation-companion.md) (implemented, gate pending) | Standalone `asana-sessions` package/CLI for native history, linking, and resumption | 16's adapter contract only; provider feasibility gate first | no |
 | [18-conversation-plugins](18-conversation-plugins.md) (implemented, release gate pending) | `asana-sessions` native hook plugins, skill, installation, and independent releases | 17 | no |
 | [19-conversation-ui](19-conversation-ui.md) (done) | Native ticket conversation picker, CLI, foreground opening, and end-to-end proof | 16, 17 | no |
-| [20-addon-discovery](20-addon-discovery.md) | Shared CLI/TUI addon catalog, guided installation, setup instructions, and readiness checks | none | no |
+| [20-addon-discovery](20-addon-discovery.md) (done) | Shared CLI/TUI addon catalog, guided installation, setup instructions, and readiness checks | none | no |
 | [21-native-harvest](21-native-harvest.md) | Direct Harvest API, independent credentials, task selection, and compatible legacy setup | existing protocols; independent of 20 | no |
 
 Specs 12 to 15 are complete and shipped together in v0.3.0.

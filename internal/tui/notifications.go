@@ -166,7 +166,7 @@ func (m *Model) noticeVisible() bool {
 }
 
 func (m *Model) statusObscured() bool {
-	return m.input != nil || m.form != nil || m.builder != nil || m.composer != nil || m.modal != nil ||
+	return m.input != nil || m.form != nil || m.builder != nil || m.composer != nil || m.modal != nil || m.addon != nil ||
 		m.filtering || m.help || (m.activityOpen && m.activity.filtering)
 }
 

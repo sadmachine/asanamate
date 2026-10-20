@@ -1,5 +1,9 @@
 # Extensions
 
+For installation and onboarding, use `asanamate addons` or **Settings > Addons**.
+See [Addons](../README.md#addons) for the shared catalog. This page remains the
+protocol contract; custom commands need no catalog registration.
+
 asanamate is extended by external commands: any program or shell snippet you
 name in the config. This page is the contract between asanamate and those
 commands, one section per extension point:

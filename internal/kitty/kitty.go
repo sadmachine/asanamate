@@ -121,9 +121,9 @@ func Encode(data []byte, maxCols, maxRows int, cell CellSize, inTmux bool) (stri
 // A zero value uses the previous 8x16 estimate.
 type CellSize struct{ Width, Height int }
 
-// RequestCellSize asks the outer terminal for its cell dimensions, bypassing
-// tmux's pane/window pixel geometry.
-func RequestCellSize(inTmux bool) string { return wrap("\x1b[16t", inTmux) }
+// RequestCellSize asks the terminal for its cell dimensions. Inside tmux,
+// let tmux answer: an outer terminal reply can be re-encoded as keystrokes.
+func RequestCellSize() string { return "\x1b[16t" }
 
 // inlineSize fits an image to the available cells at the original eight-pixel
 // column scale. Only the cell aspect ratio affects its shape, so Retina pixel

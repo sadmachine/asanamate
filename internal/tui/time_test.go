@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
@@ -36,6 +37,58 @@ func TestTimeKeyOnlyWhenConfigured(t *testing.T) {
 	m, _ = timeModel(t, asana.Membership{Project: asana.Ref{GID: "1", Name: "Asana Web"}})
 	if _, ok := m.bindingFor("t"); !ok || !strings.Contains(m.helpView(), "log time") {
 		t.Fatal("time key missing while enabled")
+	}
+}
+
+func TestFontResizeDoesNotOpenTimeForm(t *testing.T) {
+	for _, shortcut := range []rune{'=', '-', '0'} {
+		t.Run(string(shortcut), func(t *testing.T) {
+			m, _ := timeModel(t, asana.Membership{Project: asana.Ref{GID: "1", Name: "Web"}})
+			m.deps.Images, m.deps.InTmux, m.deps.Config.Images.Inline = true, true, true
+			m.Update(tea.KeyPressMsg{Code: shortcut, Mod: tea.ModSuper})
+			_, cmd := m.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+			var reply string
+			for _, msg := range commandMessages(cmd) {
+				if raw, ok := msg.(tea.RawMsg); ok {
+					// Captured from tmux with extended-keys on and csi-u encoding.
+					// A bypassed query's reply is interpreted as keyboard input.
+					switch raw.Msg {
+					case "\x1b[16t":
+						reply = "\x1b[6;32;16t"
+					case "\x1bPtmux;\x1b\x1b[16t\x1b\\":
+						reply = "\x1b[91;3u6;18;9t"
+					default:
+						t.Fatalf("unexpected terminal query: %q", raw.Msg)
+					}
+				}
+			}
+			if reply == "" {
+				t.Fatal("resize did not query cell size")
+			}
+			var decoder uv.EventDecoder
+			for data := []byte(reply); len(data) > 0; {
+				n, event := decoder.Decode(data)
+				if n == 0 {
+					t.Fatalf("undecoded terminal reply: %q", data)
+				}
+				if key, ok := event.(uv.KeyPressEvent); ok {
+					m.Update(tea.KeyPressMsg(key))
+				} else {
+					m.Update(event)
+				}
+				data = data[n:]
+			}
+			if m.waiting != "" || m.form != nil || m.timeEntry != nil {
+				t.Fatalf("font resize opened time tracking: waiting %q, form %v, entry %v", m.waiting, m.form, m.timeEntry)
+			}
+			if m.imageCell.Width != 16 || m.imageCell.Height != 32 {
+				t.Fatalf("cell dimensions not updated: %+v", m.imageCell)
+			}
+			m.Update(key("t"))
+			if m.waiting != "Loading time form…" {
+				t.Fatal("intentional time shortcut stopped working")
+			}
+		})
 	}
 }
 

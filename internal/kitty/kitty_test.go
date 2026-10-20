@@ -234,11 +234,8 @@ func TestInlineSize(t *testing.T) {
 }
 
 func TestRequestCellSize(t *testing.T) {
-	if got := RequestCellSize(false); got != "\x1b[16t" {
+	if got := RequestCellSize(); got != "\x1b[16t" {
 		t.Fatalf("query = %q", got)
-	}
-	if got := RequestCellSize(true); got != "\x1bPtmux;\x1b\x1b[16t\x1b\\" {
-		t.Fatalf("tmux query = %q", got)
 	}
 }
 

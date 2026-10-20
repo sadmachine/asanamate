@@ -39,7 +39,7 @@ func (m *Model) requestImageCellSize() tea.Cmd {
 	if !m.inlineImagesOn() {
 		return nil
 	}
-	return tea.Raw(kitty.RequestCellSize(m.deps.InTmux))
+	return tea.Raw(kitty.RequestCellSize())
 }
 
 func (m *Model) imageCellSizeChanged(cell kitty.CellSize) tea.Cmd {

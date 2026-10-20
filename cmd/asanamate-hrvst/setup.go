@@ -84,12 +84,12 @@ func setupHarvest(ctx context.Context, in io.Reader, out io.Writer, endpoint str
 	if err != nil {
 		return err
 	}
-	before, err := os.Lstat(path)
-	if err != nil && !os.IsNotExist(err) {
+	before, err := snapshotHarvestSettings(path, original)
+	if err != nil {
 		return err
 	}
-	if before != nil && !before.Mode().IsRegular() {
-		return errors.New("provider settings must be a regular file")
+	if before.file != nil {
+		defer before.file.Close()
 	}
 	reader := bufio.NewReader(in)
 	fmt.Fprintln(out, tokenInstructions)
@@ -208,7 +208,7 @@ func setupHarvest(ctx context.Context, in io.Reader, out io.Writer, endpoint str
 	if !ok {
 		return errors.New("setup cancelled; settings unchanged")
 	}
-	backup, changed, err := saveHarvestSettings(path, original, before, settings)
+	backup, changed, err := saveHarvestSettings(path, before, settings)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func setupHarvest(ctx context.Context, in io.Reader, out io.Writer, endpoint str
 	if backup != "" {
 		fmt.Fprintf(out, "Previous settings: %s\n", backup)
 	}
-	fmt.Fprintln(out, "Open core config with asanamate config; see asanamate addons harvest. Merge into existing tables; never duplicate a TOML table or replace a custom provider accidentally.")
+	fmt.Fprintln(out, "Open core config with asanamate config; see asanamate extensions harvest. Merge into existing tables; never duplicate a TOML table or replace a custom provider accidentally.")
 	if tracking {
 		fmt.Fprintln(out, `[time_tracking]
 id = "hrvst"
@@ -244,9 +244,41 @@ commands = ["asanamate-hrvst"]`)
 	return nil
 }
 
+// harvestSnapshot keeps the original inode alive throughout prompting. FileInfo
+// alone can miss a replacement when a filesystem rapidly recycles inode numbers.
+type harvestSnapshot struct {
+	file *os.File
+	info os.FileInfo
+	data []byte
+}
+
+func snapshotHarvestSettings(path string, original []byte) (harvestSnapshot, error) {
+	info, err := os.Lstat(path)
+	if os.IsNotExist(err) && original == nil {
+		return harvestSnapshot{}, nil
+	}
+	if err != nil {
+		return harvestSnapshot{}, err
+	}
+	if !info.Mode().IsRegular() {
+		return harvestSnapshot{}, errors.New("provider settings must be a regular file")
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return harvestSnapshot{}, err
+	}
+	opened, statErr := file.Stat()
+	data, readErr := io.ReadAll(file)
+	if statErr != nil || readErr != nil || !os.SameFile(info, opened) || !info.ModTime().Equal(opened.ModTime()) || !bytes.Equal(data, original) {
+		file.Close()
+		return harvestSnapshot{}, errors.New("provider settings changed while reading; rerun setup")
+	}
+	return harvestSnapshot{file: file, info: opened, data: data}, nil
+}
+
 // saveHarvestSettings serializes cooperating setup writers, detects edits since
 // prompting, and stages a private replacement before preserving the old file.
-func saveHarvestSettings(path string, original []byte, before os.FileInfo, settings harvestSettings) (string, bool, error) {
+func saveHarvestSettings(path string, before harvestSnapshot, settings harvestSettings) (string, bool, error) {
 	var encoded bytes.Buffer
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return "", false, err
@@ -259,21 +291,24 @@ func saveHarvestSettings(path string, original []byte, before os.FileInfo, setti
 	defer lock.Close()
 	unchanged := func() bool {
 		current, err := os.Lstat(path)
-		if before == nil {
+		if before.file == nil {
 			return os.IsNotExist(err)
 		}
-		if err != nil || !current.Mode().IsRegular() || !os.SameFile(before, current) || !before.ModTime().Equal(current.ModTime()) {
+		if _, statErr := before.file.Stat(); statErr != nil {
+			return false // A closed snapshot no longer protects the inode identity.
+		}
+		if err != nil || !current.Mode().IsRegular() || !os.SameFile(before.info, current) || !before.info.ModTime().Equal(current.ModTime()) {
 			return false
 		}
 		data, err := os.ReadFile(path)
-		return err == nil && bytes.Equal(data, original)
+		return err == nil && bytes.Equal(data, before.data)
 	}
 	if !unchanged() {
 		return "", false, errors.New("provider settings changed during setup; rerun setup")
 	}
 	var existing harvestSettings
-	if before != nil {
-		if _, err := toml.Decode(string(original), &existing); err == nil && existing == settings {
+	if before.file != nil {
+		if _, err := toml.Decode(string(before.data), &existing); err == nil && existing == settings {
 			return "", false, nil
 		}
 	} else if settings == (harvestSettings{}) {
@@ -308,13 +343,13 @@ func saveHarvestSettings(path string, original []byte, before os.FileInfo, setti
 		return "", false, err
 	}
 	backup := ""
-	if before != nil {
+	if before.file != nil {
 		backup = path + time.Now().Format(".2006-01-02--15-04-05.bak")
 		file, err := os.OpenFile(backup, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if err != nil {
 			return "", false, err
 		}
-		_, writeErr := file.Write(original)
+		_, writeErr := file.Write(before.data)
 		syncErr := file.Sync()
 		closeErr := file.Close()
 		if err := errors.Join(writeErr, syncErr, closeErr); err != nil {

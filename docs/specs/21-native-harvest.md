@@ -178,7 +178,15 @@ work without migration.
   Update template expectations without changing existing configured values.
 - When spec 20 is present, update only its Harvest catalog data: dependency
   list, `setup` action, local check, explicit online check, native snippets,
-  and per-capability guidance. No Harvest-specific UI branch is needed.
+  and per-capability guidance. Reference its shared Time tracking v1 and
+  Feeds v1 contracts and documentation; distinguish them from Harvest API
+  v2. List `form`/`log`, optional `summary` with daily totals, and `feed` as
+  this provider's implemented operations. No Harvest-specific UI branch is
+  needed.
+- Document that another tracker can replace this provider by implementing
+  the same asanamate contract and choosing its own provider ID. Native
+  Harvest credentials, task defaults, and API calls are implementation
+  details, not requirements for a Clockify or other compatible provider.
 - Release archives still include the same provider executable. Retain JSON
   protocol versions, request/reply shapes, provider ID, and existing saved
   choices. Core browsing remains independent of Harvest availability.
@@ -203,6 +211,9 @@ work without migration.
   summary returns correct totals, and feed returns the requested day's entries.
 - Feed-only setup works without a task ID. Local check performs no network
   request; online check and setup perform no remote writes.
+- When spec 20 is present, Harvest details link both implemented contracts
+  and the custom-provider guide. Contract metadata does not expose Harvest
+  API v2 or its task/credential settings as generic provider requirements.
 - Multi-page assignments retain every eligible project. Inactive/stale or
   forged project/task selections are rejected before entry creation.
 - Explicit `--task-id` overrides saved defaults. Existing `hrvst` IDs,

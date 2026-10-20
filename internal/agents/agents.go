@@ -114,7 +114,7 @@ func List(ctx context.Context, command string) ([]Agent, error) {
 func FetchArgs(ctx context.Context, args []string, states map[string][]string) ([]Agent, error) {
 	out, err := jsoncmd.RunArgsBounded(ctx, "agents", args, jsoncmd.Limits{Stdout: 64 << 10, Stderr: 64 << 10})
 	if err != nil {
-		return nil, fmt.Errorf("local agent check failed; run asanamate addons for verification guidance")
+		return nil, fmt.Errorf("local agent check failed; run asanamate extensions for verification guidance")
 	}
 	out = []byte(strings.Map(func(r rune) rune {
 		if unicode.IsControl(r) && r != '\n' && r != '\t' || unicode.In(r, unicode.Cf) {

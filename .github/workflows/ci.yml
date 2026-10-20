@@ -45,6 +45,7 @@ jobs:
               grep -qx asanamate files.txt
               grep -qx asanamate-hrvst files.txt
               grep -qx asanamate-ccmux files.txt
+              grep -qx docs/extensions.md files.txt
               grep -qx install-themes.sh files.txt
               for theme in ../themes/*.toml ../themes/LICENSE*; do
                 grep -qx "themes/${theme##*/}" files.txt

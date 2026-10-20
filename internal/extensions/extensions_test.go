@@ -1,4 +1,4 @@
-package addons
+package extensions
 
 import (
 	"context"
@@ -23,7 +23,7 @@ func TestDiscoveryDoesNotExecuteCommands(t *testing.T) {
 	t.Setenv("PATH", dir)
 	marker := filepath.Join(dir, "executed")
 	t.Setenv("ADDON_MARKER", marker)
-	for _, name := range []string{"asanamate-hrvst", "hrvst", "node", "npm", "asanamate-ccmux", "ccmux", "tmux", "asanamate-hub"} {
+	for _, name := range []string{"asanamate-hrvst", "hrvst", "node", "npm", "asanamate-ccmux", "ccmux", "tmux", "asanamate-hub", "asana-sessions"} {
 		tool(t, dir, name, `printf ran > "$ADDON_MARKER"; exit 1`)
 	}
 	cfg := config.Default()
@@ -76,15 +76,15 @@ func TestMissingAndInvalidConfigKeepGuides(t *testing.T) {
 	if !strings.Contains(saved.Status(), "core setup required") {
 		t.Fatal(saved.Status())
 	}
-	if err := os.WriteFile(path, []byte("workspace = \"1\"\nunknown_addon_key = true\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("workspace = \"1\"\nunknown_extension_key = true\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	saved = Load(path)
-	if !strings.Contains(saved.Status(), "unknown_addon_key") {
+	if !strings.Contains(saved.Status(), "unknown_extension_key") {
 		t.Fatal(saved.Status())
 	}
 	for _, e := range Catalog() {
-		if text := Detail(e, saved, Inspect(e, saved)); !strings.Contains(text, e.Snippet) || !strings.Contains(text, "unknown_addon_key") {
+		if text := Detail(e, saved, Inspect(e, saved)); !strings.Contains(text, e.Snippet) || !strings.Contains(text, "unknown_extension_key") {
 			t.Fatalf("guide hidden for %s: %s", e.ID, text)
 		}
 	}

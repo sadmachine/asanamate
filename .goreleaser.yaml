@@ -42,6 +42,7 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
     files:
       - README.md
+      - docs/extensions.md
       - LICENSE*
       - install-themes.sh
       - src: themes/*.toml

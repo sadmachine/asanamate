@@ -7,6 +7,12 @@ so links here are absolute. Steps for changes not yet released wait under
 
 ## Unreleased
 
+Optional integrations are now listed under **Settings > Extensions** and
+`asanamate extensions`. The previous `asanamate addons` command remains an
+alias. Guides include per-contract references, implementation instructions,
+and the separately installed conversation-history helper. No config migration
+is required. See [Extensions](https://github.com/sadmachine/asanamate#extensions).
+
 Harvest now supports native personal access tokens and guided
 `asanamate-hrvst setup`, without Node.js, npm, or hrvst-cli. The optional
 `harvest.toml` beside core config stores only account/task defaults. Existing

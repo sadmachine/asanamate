@@ -25,11 +25,11 @@ import (
 
 	"github.com/charmbracelet/x/term"
 	"github.com/sadmachine/asanamate/internal/action"
-	"github.com/sadmachine/asanamate/internal/addons"
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/browser"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/extensions"
 	"github.com/sadmachine/asanamate/internal/feed"
 	"github.com/sadmachine/asanamate/internal/filter"
 	"github.com/sadmachine/asanamate/internal/kitty"
@@ -53,8 +53,9 @@ const usage = `usage:
   asanamate show [--format md|json] <gid>          print one ticket
   asanamate read [--exit-on-action] <gid>          open one ticket's reader, without the list
   asanamate setup                                  create the config file
-  asanamate addons [<id>]                          list addons or show setup and removal instructions
-  asanamate addons check <id>                      run documented local addon checks
+  asanamate extensions [<id>]                      list extensions or show setup and contract guides
+  asanamate extensions check <id>                  run documented local extension checks
+                                                   addons remains a compatibility alias for extensions
   asanamate config                                 edit the config file in $VISUAL or $EDITOR
   asanamate config update [--yes]                  refresh the config's comments and new defaults,
                                                    keeping your values (old file saved as .<time>.bak)
@@ -104,8 +105,8 @@ func run(args []string) int {
 	switch name {
 	case "setup":
 		err = runSetup(args[1:])
-	case "addons":
-		err = runAddons(args[1:], os.Stdout)
+	case "extensions", "addons":
+		err = runExtensions(args[1:], os.Stdout)
 	case "config":
 		err = runConfig(args[1:])
 	case "comment", "edit-comment", "move", "field", "batch":
@@ -471,6 +472,7 @@ func runRead(args []string) error {
 // startTUI fills in d's config, state, and services, runs the TUI, then runs
 // the command an exit-mode action left.
 func startTUI(d tui.Deps) error {
+	d.Version = currentVersion()
 	configPath, err := config.Path()
 	if err != nil {
 		return err
@@ -646,7 +648,7 @@ func runDoctor(args []string) error {
 	row(w, "state", "ok: "+stateDir)
 	client := checkAsana(ctx, w, cfg.Workspace)
 	checkFeatures(w, cfg)
-	checkAddons(ctx, w, path)
+	checkExtensions(ctx, w, path)
 	if cfg.BranchField == "" {
 		row(w, "branch_field", "unset: tickets use their ID field or title slug as the branch")
 	} else {
@@ -658,7 +660,7 @@ func runDoctor(args []string) error {
 		row(w, "agents", "off: set agents.command")
 	} else {
 		source := "command " + strconv.Quote(cfg.Agents.Command)
-		if args, known := addons.KnownCommand("agents.command", cfg.Agents.Command); known {
+		if args, known := extensions.KnownCommand("agents.command", cfg.Agents.Command); known {
 			localCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			list, err = agents.FetchArgs(localCtx, args, cfg.Agents.States)
 			cancel()
@@ -778,35 +780,35 @@ func checkFeatures(w io.Writer, cfg config.Config) {
 	tool("browser", browser.Opener(), "opening tickets in a browser needs it; on Linux, install xdg-utils and a desktop browser")
 	if cfg.TimeTracking.Command == "" {
 		row(w, "time_tracking", "off")
-	} else if _, known := addons.KnownCommand("time_tracking.command", cfg.TimeTracking.Command); known {
-		row(w, "time_tracking", "configured: see addon local check below; connection unverified")
+	} else if _, known := extensions.KnownCommand("time_tracking.command", cfg.TimeTracking.Command); known {
+		row(w, "time_tracking", "configured: see extension local check below; connection unverified")
 	} else {
 		row(w, "time_tracking", "unchecked: command "+strconv.Quote(cfg.TimeTracking.Command)+" (not run)")
 	}
 	if cfg.ProjectLinks.Command == "" {
 		row(w, "project_links", "off")
-	} else if _, known := addons.KnownCommand("project_links.command", cfg.ProjectLinks.Command); known {
-		row(w, "project_links", "configured: see addon local check below; connection unverified")
+	} else if _, known := extensions.KnownCommand("project_links.command", cfg.ProjectLinks.Command); known {
+		row(w, "project_links", "configured: see extension local check below; connection unverified")
 	} else {
 		row(w, "project_links", "unchecked: command "+strconv.Quote(cfg.ProjectLinks.Command)+" (not run)")
 	}
 }
 
-// checkAddons reuses only cataloged local checks for recognized commands.
+// checkExtensions reuses only cataloged local checks for recognized commands.
 // Existing custom feed and agent checks below retain their behavior.
-func checkAddons(ctx context.Context, w io.Writer, path string) {
-	saved := addons.Load(path)
-	for _, e := range addons.Catalog() {
-		r := addons.Inspect(e, saved)
+func checkExtensions(ctx context.Context, w io.Writer, path string) {
+	saved := extensions.Load(path)
+	for _, e := range extensions.Catalog() {
+		r := extensions.Inspect(e, saved)
 		if !r.Configured() {
 			continue
 		}
-		r = addons.Check(ctx, e, saved)
+		r = extensions.Check(ctx, e, saved)
 		prefix := ""
 		if r.Failed {
 			prefix = "warning: "
 		}
-		row(w, "addon "+e.ID, prefix+r.Summary()+"; "+r.Check)
+		row(w, "extension "+e.ID, prefix+r.Summary()+"; "+r.Check)
 	}
 }
 
@@ -816,8 +818,8 @@ func checkFeeds(ctx context.Context, w io.Writer, feeds []string) {
 		row(w, "feeds", "none: set feed.commands")
 	}
 	for _, command := range feeds {
-		if _, known := addons.KnownCommand("feed.commands", command); known {
-			row(w, "feed", "local readiness checked under addon; connection unverified (asanamate addons)")
+		if _, known := extensions.KnownCommand("feed.commands", command); known {
+			row(w, "feed", "local readiness checked under extension; connection unverified (asanamate extensions)")
 			continue
 		}
 		source := "command " + strconv.Quote(command)

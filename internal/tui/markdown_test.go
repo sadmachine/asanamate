@@ -161,6 +161,21 @@ func TestMarkdownProseUnchanged(t *testing.T) {
 	}
 }
 
+func TestMarkdownKeepsHardLineBreaks(t *testing.T) {
+	m, _ := testModel(t, config.Config{Theme: config.Theme{Name: "ansi-dark"}})
+	for _, md := range []string{"**Class**  \nPerson", "- **Class**  \n  Person"} {
+		var rows []string
+		for _, row := range strings.Split(ansi.Strip(m.glamour(md, 40, true)), "\n") {
+			if row = strings.TrimSpace(row); row != "" {
+				rows = append(rows, row)
+			}
+		}
+		if len(rows) != 2 || !strings.HasSuffix(rows[0], "Class") || rows[1] != "Person" {
+			t.Fatalf("%q rendered as %q", md, rows)
+		}
+	}
+}
+
 func TestMarkdownListHangingIndent(t *testing.T) {
 	for _, theme := range []string{"dark", "light"} {
 		for _, bare := range []bool{true, false} {

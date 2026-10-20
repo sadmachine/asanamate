@@ -62,7 +62,8 @@ func newMarkdownRenderer(p config.Palette, width int, bare bool, wrapMark string
 	)
 	md.SetRenderer(renderer.NewRenderer(renderer.WithNodeRenderers(
 		util.Prioritized(glamouransi.NewRenderer(glamouransi.Options{
-			Styles: style, WordWrap: width,
+			// Asana line breaks reach Markdown as hard breaks; keep them.
+			Styles: style, WordWrap: width, PreserveNewLines: true,
 		}), 1000),
 	)))
 	return &markdownRenderer{markdown: md, style: style, width: width, wrapMark: wrapMark}
@@ -156,7 +157,7 @@ func (r *markdownRenderer) renderLists(source []byte, doc ast.Node) ([]byte, err
 			style.Document.BlockPrefix, style.Document.BlockSuffix = "", ""
 			var rendered bytes.Buffer
 			itemRenderer := renderer.NewRenderer(renderer.WithNodeRenderers(util.Prioritized(
-				glamouransi.NewRenderer(glamouransi.Options{Styles: style, WordWrap: max(r.contentWidth(list)-len(indent), 1)}), 1000,
+				glamouransi.NewRenderer(glamouransi.Options{Styles: style, WordWrap: max(r.contentWidth(list)-len(indent), 1), PreserveNewLines: true}), 1000,
 			)))
 			err := itemRenderer.Render(&rendered, source, itemDoc)
 			for _, child := range children {

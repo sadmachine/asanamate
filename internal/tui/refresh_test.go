@@ -176,7 +176,7 @@ func TestAutoRefreshPreservesReader(t *testing.T) {
 				m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
 				m.Update(tasksMsg{tasks: []asana.Task{openTask}})
 				detail := ticket.Ticket{Task: openTask}
-				detail.HTMLNotes = "<body>" + strings.Repeat("Reading this ticket.<br>", 100) + "</body>"
+				detail.HTMLNotes = "<body>" + strings.Repeat(strings.Repeat("Reading this ticket. ", 8)+"<br>", 100) + "</body>"
 				m.Update(detailMsg{gid: openTask.GID, ticket: detail})
 				m.focusReader = true
 				m.fieldKey, m.showEmpty = "description", true

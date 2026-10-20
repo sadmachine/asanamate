@@ -1,0 +1,23 @@
+cmd/asanamate-hrvst/setup.go
+  s_2eb002a9eb5ca0::t_4af7a892017275 223
+  s_2eb002a9eb5ca0::t_2b82a6998ea560 87-88,91-92,211,247-278,281,294,297-300,304,310-311,346,352
+cmd/asanamate-hrvst/setup_test.go
+  s_2eb002a9eb5ca0::t_a2558d2b6461e6 261-308
+  s_2eb002a9eb5ca0::t_2b82a6998ea560 197-201,213,222-226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ebe86c367866cb9fa197eb354916205dc4a3434",
+  "prompts": {},
+  "sessions": {
+    "s_2eb002a9eb5ca0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a141e2-eb74-7ec2-8fb1-c4299b8e625a",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

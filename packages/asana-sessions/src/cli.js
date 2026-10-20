@@ -7,6 +7,7 @@ import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { parseArgs, promisify } from 'node:util';
 import { asanamateList, asanamateOpen } from './asanamate.js';
+import { asanamateAgents } from './agent-links.js';
 import { display } from './display.js';
 import { Cancelled, createProviders, link, lookup, open, unlink } from './engine.js';
 import { ProviderError, UsageError } from './errors.js';
@@ -34,6 +35,7 @@ Usage:
 
   asana-sessions asanamate list   asanamate conversations.command adapter
   asana-sessions asanamate open   asanamate conversations.open adapter
+  asana-sessions asanamate agents -- <agent-source> [args...]   optional ticket-link decorator
 `;
 
 // terminalIO asks on the controlling terminal. Prompts and notices go to stderr.
@@ -156,13 +158,16 @@ async function dispatch([command, ...rest], c) {
       parse(rest, []);
       return doctor(c);
     case 'asanamate':
+      if (rest[0] === 'agents') {
+        return asanamateAgents(c, rest.slice(1));
+      }
       if (rest.length === 1 && rest[0] === 'list') {
         return asanamateList(c);
       }
       if (rest.length === 1 && rest[0] === 'open') {
         return asanamateOpen(c);
       }
-      throw new UsageError('expected `asanamate list` or `asanamate open`');
+      throw new UsageError('expected `asanamate list`, `asanamate open`, or `asanamate agents -- <agent-source>`');
     default:
       throw new UsageError(`unknown command ${JSON.stringify(display(command))}`);
   }

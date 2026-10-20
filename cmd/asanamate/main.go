@@ -675,7 +675,7 @@ func runDoctor(args []string) error {
 		if err == nil {
 			fmt.Fprintf(w, "\n%d running:\n", len(list))
 			for _, a := range list {
-				fmt.Fprintf(w, "  %s  branch %s  %s  repo %s\n", a.Path, orNone(a.Branch), a.State, orNone(a.Repo))
+				fmt.Fprintf(w, "  %s  branch %s  %s  repo %s  task %s\n", a.Path, orNone(a.Branch), a.State, orNone(a.Repo), orNone(a.TaskGID))
 			}
 		}
 	}
@@ -711,13 +711,13 @@ func runDoctor(args []string) error {
 	if !cfg.AgentsEnabled() {
 		return nil
 	}
-	linked := agents.MatchAll(list, branch, repos)
+	linked := agents.MatchAll(list, t.GID, branch, repos)
 	fmt.Fprintf(w, "linked  %d agent(s)\n", len(linked))
 	for _, a := range linked {
 		fmt.Fprintf(w, "  %s  %s\n", a.Path, a.State)
 	}
 	if len(linked) == 0 {
-		for _, a := range agents.Unlinked(list, branch, repos) {
+		for _, a := range agents.Unlinked(list, t.GID, branch, repos) {
 			fmt.Fprintf(w, "  %s\n", agents.Hint(a, branch))
 		}
 	}

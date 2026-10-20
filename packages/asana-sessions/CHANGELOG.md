@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Optional `asanamate agents -- <source> [args...]` decorator joins live agents
+  to explicit conversation ticket links, with repo/branch fallback for missing
+  identity or unavailable metadata. Conflicts suppress matching.
+
 ## 0.1.1
 
 - Explicit unlink cancels deferred Claude links, including before the first

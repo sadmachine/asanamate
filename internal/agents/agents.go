@@ -1,6 +1,6 @@
 // Package agents reads running coding agents from an agents command (an
 // adapter such as asanamate-ccmux, or a script) and links them to tickets by
-// git branch.
+// explicit task identity, with git branch and repository as a fallback.
 package agents
 
 import (
@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/jsoncmd"
 )
 
@@ -35,13 +36,16 @@ var States = []State{Waiting, Working, Completed, Idle, Unknown}
 
 // Agent is one running agent as reported by the agents source.
 type Agent struct {
-	Path   string // working directory the agent runs in
-	Status string // raw status from the tool, e.g. "running"
-	Target string // optional id the tool uses to jump to the agent
-	Branch string // branch to link by: the source's, else git's at Path; "" if none
-	Repo   string // main repository to link by (worktrees resolve to their repo)
-	State  State  // Status mapped to a State by Classify
-	Title  string // optional short description from the tool
+	TaskGID   string // explicit task GID; empty uses git, "-" disables matching
+	Provider  string // optional conversation provider, opaque to core
+	SessionID string // optional native conversation ID, scoped to Provider
+	Path      string // working directory the agent runs in
+	Status    string // raw status from the tool, e.g. "running"
+	Target    string // optional id the tool uses to jump to the agent
+	Branch    string // branch to link by: the source's, else git's at Path; "" if none
+	Repo      string // main repository to link by (worktrees resolve to their repo)
+	State     State  // Status mapped to a State by Classify
+	Title     string // optional short description from the tool
 }
 
 const maxTitle = 60
@@ -96,7 +100,7 @@ func classify(raw string, extra map[string][]string) State {
 }
 
 // List runs command with /bin/sh and parses
-// "<path>\t<status>[\t<target>[\t<title>[\t<branch>\t<repo>]]]" lines.
+// "<path>\t<status>[\t<target>\t<title>\t<branch>\t<repo>\t<task_gid>\t<provider>\t<session_id>]" lines.
 // Lines without a tab are skipped. A line that sets both branch and repo
 // links by them; otherwise git reads them at path, so worktrees resolve to
 // the repository they belong to, and a set branch is kept only when git finds
@@ -106,7 +110,7 @@ func List(ctx context.Context, command string) ([]Agent, error) {
 	if err != nil {
 		return nil, fmt.Errorf("agents command failed: %w", err)
 	}
-	return parseList(ctx, out), nil
+	return parseList(ctx, out)
 }
 
 // FetchArgs is the bounded, shell-free path for known read-only agent sources.
@@ -122,12 +126,15 @@ func FetchArgs(ctx context.Context, args []string, states map[string][]string) (
 		}
 		return r
 	}, ansi.Strip(string(out))))
-	list := parseList(ctx, out)
+	list, err := parseList(ctx, out)
+	if err != nil {
+		return nil, fmt.Errorf("local agent check returned invalid metadata; run asanamate extensions for verification guidance")
+	}
 	Classify(list, states)
 	return list, nil
 }
 
-func parseList(ctx context.Context, out []byte) []Agent {
+func parseList(ctx context.Context, out []byte) ([]Agent, error) {
 	var agents []Agent
 	for _, line := range strings.Split(string(out), "\n") {
 		cols := strings.Split(strings.TrimRight(line, "\r"), "\t")
@@ -144,6 +151,18 @@ func parseList(ctx context.Context, out []byte) []Agent {
 		if len(cols) > 5 {
 			a.Branch, a.Repo = strings.TrimSpace(cols[4]), strings.TrimSpace(cols[5])
 		}
+		if len(cols) > 6 {
+			a.TaskGID = strings.TrimSpace(cols[6])
+			if a.TaskGID != "" && a.TaskGID != "-" && !asana.ValidGID(a.TaskGID) {
+				return nil, fmt.Errorf("agents command: invalid task_gid %q", a.TaskGID)
+			}
+		}
+		if len(cols) > 7 {
+			a.Provider = strings.TrimSpace(cols[7])
+		}
+		if len(cols) > 8 {
+			a.SessionID = strings.TrimSpace(cols[8])
+		}
 		agents = append(agents, a)
 	}
 	inParallel(len(agents), func(i int) {
@@ -156,7 +175,7 @@ func parseList(ctx context.Context, out []byte) []Agent {
 			a.Branch = fallback
 		}
 	})
-	return agents
+	return agents, nil
 }
 
 // maxGit caps the git processes run at once while resolving agents.
@@ -188,15 +207,20 @@ func gitInfo(ctx context.Context, path string) (branch, repo string) {
 	return lines[0], common
 }
 
-// MatchAll returns the agents on branch whose repository is one of repos (any
-// repository when repos is empty), most urgent state first.
-func MatchAll(list []Agent, branch string, repos []string) []Agent {
-	if branch == "" {
-		return nil
+// matches gives an explicit task link precedence over repository and branch.
+func matches(a Agent, taskGID, branch string, repos []string) bool {
+	if a.TaskGID != "" {
+		return a.TaskGID != "-" && a.TaskGID == taskGID
 	}
+	return branch != "" && a.Branch == branch && (len(repos) == 0 || slices.Contains(repos, a.Repo))
+}
+
+// MatchAll returns explicitly linked agents plus agents without an explicit
+// link on branch in repos (any repository when repos is empty), urgency first.
+func MatchAll(list []Agent, taskGID, branch string, repos []string) []Agent {
 	var out []Agent
 	for _, a := range list {
-		if a.Branch == branch && (len(repos) == 0 || slices.Contains(repos, a.Repo)) {
+		if matches(a, taskGID, branch, repos) {
 			out = append(out, a)
 		}
 	}
@@ -204,13 +228,12 @@ func MatchAll(list []Agent, branch string, repos []string) []Agent {
 	return out
 }
 
-// Unlinked returns the agents in repos that are not on branch: the ones a
-// ticket without linked agents most likely meant to match. It returns nil
-// when repos is empty, since any repo would qualify.
-func Unlinked(list []Agent, branch string, repos []string) []Agent {
+// Unlinked returns agents in the ticket's repos that do not match the ticket.
+// Without linked repos there are no useful nearby candidates.
+func Unlinked(list []Agent, taskGID, branch string, repos []string) []Agent {
 	var out []Agent
 	for _, a := range list {
-		if a.Branch != branch && slices.Contains(repos, a.Repo) {
+		if slices.Contains(repos, a.Repo) && !matches(a, taskGID, branch, repos) {
 			out = append(out, a)
 		}
 	}
@@ -219,6 +242,12 @@ func Unlinked(list []Agent, branch string, repos []string) []Agent {
 
 // Hint explains why a is not linked to a ticket on branch.
 func Hint(a Agent, branch string) string {
+	if a.TaskGID == "-" {
+		return fmt.Sprintf("%s has a conflicting ticket link; repair it explicitly", filepath.Base(a.Path))
+	}
+	if a.TaskGID != "" {
+		return fmt.Sprintf("%s links to ticket %s", filepath.Base(a.Path), a.TaskGID)
+	}
 	on := "on " + a.Branch
 	switch a.Branch {
 	case "HEAD":

@@ -60,7 +60,7 @@ func parse(data []byte, reported map[string]live) ([]agents.Agent, error) {
 	}
 	list := make([]agents.Agent, 0, len(sessions))
 	for _, s := range sessions {
-		a := agents.Agent{Path: s.Cwd, Status: s.Status, Target: s.ID, Title: agents.Title(s.PaneTitle)}
+		a := agents.Agent{Provider: s.AgentType, SessionID: s.NativeID, Path: s.Cwd, Status: s.Status, Target: s.ID, Title: agents.Title(s.PaneTitle)}
 		var paneStatus string
 		if s.AgentType == "codex" && s.TrackingMode == "pane" {
 			paneStatus, a.Title = codexPane(s.PaneTitle)
@@ -93,12 +93,12 @@ func parse(data []byte, reported map[string]live) ([]agents.Agent, error) {
 }
 
 // Print writes list as agents command lines,
-// "<path>\t<status>\t<target>\t<title>\t<branch>\t<repo>". ccmux's branch
-// and repo link a session the way ccmux sees it, such as a nested repo
+// path, status, target, title, branch, repo, task GID, provider, session ID.
+// ccmux's branch and repo link a session the way ccmux sees it, such as a nested repo
 // linking to the project around it.
 func Print(w io.Writer, list []agents.Agent) error {
 	for _, a := range list {
-		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", field(a.Path), field(a.Status), field(a.Target), field(a.Title), field(a.Branch), field(a.Repo)); err != nil {
+		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", field(a.Path), field(a.Status), field(a.Target), field(a.Title), field(a.Branch), field(a.Repo), field(a.TaskGID), field(a.Provider), field(a.SessionID)); err != nil {
 			return err
 		}
 	}

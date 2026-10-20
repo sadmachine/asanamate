@@ -177,6 +177,32 @@ disable/removal and missing-helper checks are recorded in the
 [feasibility notes](../../docs/specs/17-provider-feasibility.md). Remote
 Node/platform CI remains a separate release gate.
 
+## Live agent ticket links
+
+`asana-sessions asanamate agents -- <agent-source> [args...]` runs an existing
+asanamate agent source and fills explicit task GIDs from native conversation
+metadata. For example:
+
+```toml
+[agents]
+command = "asana-sessions asanamate agents -- asanamate-ccmux"
+```
+
+The source supplies live status, terminal focus and optional exact provider/session
+identity. The companion adds ticket identity only; it never infers identity from
+a directory, branch, newest session, or display title. Core remains provider
+independent, and `conversations.command` need not be enabled. Any source can
+provide the same optional columns or explicit task GIDs directly.
+
+Missing identities, unsupported providers, absent history and metadata errors
+retain repo/branch matching. Conflicting metadata suppresses matching until
+repaired. Source failures fail the refresh, preserving the previous agent list.
+Limits are 2 seconds and 4 MiB for the source, then 6 seconds for metadata lookup.
+Diagnostics go to stderr; run the command directly to inspect them. The TUI
+does not display successful commands' stderr. See the
+[extension contract](../../docs/extensions.md#optional-conversation-links) for
+column details and automatic fallback when this executable is missing.
+
 ## Optional native plugins
 
 The helper works on its own. Install plugins only when you want automatic links:

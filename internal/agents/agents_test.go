@@ -25,6 +25,19 @@ func TestFetchArgsPreservesMatchingAndCleansOutput(t *testing.T) {
 	if _, err := FetchArgs(context.Background(), []string{path}, nil); err == nil || strings.Contains(err.Error(), "SECRET") {
 		t.Fatalf("provider diagnostics leaked: %v", err)
 	}
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf '/repo\\tbusy\\ts1\\tTitle\\tfeat\\t/outer\\t42\\tcodex\\tnative\\n'\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	list, err = FetchArgs(context.Background(), []string{path}, nil)
+	if err != nil || len(list) != 1 || list[0].TaskGID != "42" || list[0].SessionID != "native" {
+		t.Fatalf("explicit identity through bounded source: %+v, %v", list, err)
+	}
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf '/repo\\tidle\\t\\t\\tfeat\\t/outer\\tSECRET\\n'\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := FetchArgs(context.Background(), []string{path}, nil); err == nil || strings.Contains(err.Error(), "SECRET") {
+		t.Fatalf("invalid metadata must fail without exposing provider data: %v", err)
+	}
 }
 
 func git(t *testing.T, args ...string) {
@@ -133,17 +146,49 @@ func TestMatchAll(t *testing.T) {
 		{Path: "/a/wt2", State: Waiting, Branch: "fix", Repo: "/a"},
 		{Path: "/a/wt3", State: Working, Branch: "other", Repo: "/a"},
 	}
-	if got := MatchAll(list, "fix", []string{"/a"}); len(got) != 2 || got[0].Path != "/a/wt2" || got[1].Path != "/a/wt" {
+	if got := MatchAll(list, "42", "fix", []string{"/a"}); len(got) != 2 || got[0].Path != "/a/wt2" || got[1].Path != "/a/wt" {
 		t.Fatalf("repo-scoped, urgency order = %+v", got)
 	}
-	if got := MatchAll(list, "fix", nil); len(got) != 3 {
+	if got := MatchAll(list, "42", "fix", nil); len(got) != 3 {
 		t.Fatalf("unscoped = %+v", got)
 	}
-	if got := MatchAll(list, "fix", []string{"/c"}); len(got) != 0 {
+	if got := MatchAll(list, "42", "fix", []string{"/c"}); len(got) != 0 {
 		t.Fatalf("other repo matched: %+v", got)
 	}
-	if got := MatchAll(list, "", nil); len(got) != 0 {
+	if got := MatchAll(list, "42", "", nil); len(got) != 0 {
 		t.Fatalf("empty branch matched: %+v", got)
+	}
+}
+
+func TestExplicitTicketLinks(t *testing.T) {
+	list := []Agent{
+		{Target: "explicit", TaskGID: "42", Branch: "other", Repo: "/other", State: Waiting},
+		{Target: "fallback", Branch: "fix", Repo: "/a", State: Idle},
+		{Target: "elsewhere", TaskGID: "99", Branch: "fix", Repo: "/a"},
+		{Target: "conflict", TaskGID: "-", Branch: "fix", Repo: "/a"},
+	}
+	got := MatchAll(list, "42", "fix", []string{"/a"})
+	if len(got) != 2 || got[0].Target != "explicit" || got[1].Target != "fallback" {
+		t.Fatalf("explicit links and fallback = %+v", got)
+	}
+	if got := MatchAll(list, "42", "", nil); len(got) != 1 || got[0].Target != "explicit" {
+		t.Fatalf("explicit link without git = %+v", got)
+	}
+	if got := Unlinked(list, "42", "fix", []string{"/a"}); len(got) != 2 || got[0].Target != "elsewhere" || got[1].Target != "conflict" {
+		t.Fatalf("unlinked explicit identities = %+v", got)
+	}
+	if got := Hint(list[3], "fix"); !strings.Contains(got, "conflicting ticket link") {
+		t.Fatalf("conflict hint = %q", got)
+	}
+}
+
+func TestListTicketLinkColumns(t *testing.T) {
+	got, err := List(context.Background(), "printf '/missing\\tidle\\tx\\ttitle\\tmain\\t/repo\\t42\\tcodex\\tnative\\n'")
+	if err != nil || len(got) != 1 || got[0].TaskGID != "42" || got[0].Provider != "codex" || got[0].SessionID != "native" {
+		t.Fatalf("identity = %+v, %v", got, err)
+	}
+	if _, err := List(context.Background(), "printf '/missing\\tidle\\t\\t\\tmain\\t/repo\\tinvalid\\n'"); err == nil {
+		t.Fatal("invalid explicit link must not fall back to git")
 	}
 }
 

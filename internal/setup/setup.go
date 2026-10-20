@@ -418,8 +418,9 @@ refresh_interval = "1m"
 commands = []
 
 # Optional: show running coding agents next to their tickets. Off unless
-# command is set. A ticket matches agents on its branch (see branch_field) in
-# one of its linked repos. See the README for agent actions.
+# command is set. Explicit task GIDs from the source take precedence; otherwise
+# tickets match agents on their branch in linked repos. See the README for
+# optional conversation links and agent actions.
 # The command prints one line per agent,
 #   path<TAB>status[<TAB>target[<TAB>title]]
 # such as the ccmux adapter, asanamate-ccmux, or your own tool.

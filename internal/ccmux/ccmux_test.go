@@ -13,7 +13,7 @@ import (
 
 // Trimmed from real `ccmux show --json` output (ccmux 1.4.1).
 const ccmuxJSON = `[
- {"id":"d48f","cwd":"/r/.claude/worktrees/wicpa","status":"idle","attentionState":"unread",
+ {"id":"d48f","agentType":"claude","nativeSessionId":"01a14609-3a63-7c02-bd2b-c313bedc3c37","cwd":"/r/.claude/worktrees/wicpa","status":"idle","attentionState":"unread",
   "gitBranch":"update/3068","mainRepoRoot":"/r","isWorktree":true,"tmuxTarget":"amagent:1.0",
   "summary":"Fix license headings","prompts":["first prompt"],"paneTitle":"claude"},
  {"id":"e19a","cwd":"/nowhere","status":"working","attentionState":null,"gitBranch":"main","mainRepoRoot":null,
@@ -50,15 +50,15 @@ func TestParse(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []agents.Agent{
-		{Path: "/r/.claude/worktrees/wicpa", Status: "completed", Target: "d48f", Branch: "update/3068", Repo: "/r", Title: "Fix license headings"},
+		{Path: "/r/.claude/worktrees/wicpa", Status: "completed", Provider: "claude", SessionID: "01a14609-3a63-7c02-bd2b-c313bedc3c37", Target: "d48f", Branch: "update/3068", Repo: "/r", Title: "Fix license headings"},
 		{Path: "/nowhere", Status: "working", Target: "e19a", Branch: "main", Title: "Fix the queue timeout"},
 		{Path: "/r", Status: "idle", Target: "f2c0", Branch: "main", Repo: "/r", Title: "✳ Claude Code"},
-		{Path: "/r", Status: "waiting", Target: "codex_pane1", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
-		{Path: "/r", Status: "working", Target: "codex_pane2", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
-		{Path: "/r", Status: "idle", Target: "codex_pane3", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
-		{Path: "/r", Status: "waiting", Target: "codex_pane4", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
-		{Path: "/r", Status: "idle", Target: "codex_pane5", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
-		{Path: "/r", Status: "idle", Target: "n6", Branch: "main", Repo: "/r", Title: "claude"},
+		{Path: "/r", Status: "waiting", Provider: "codex", Target: "codex_pane1", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
+		{Path: "/r", Status: "working", Provider: "codex", Target: "codex_pane2", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
+		{Path: "/r", Status: "idle", Provider: "codex", Target: "codex_pane3", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
+		{Path: "/r", Status: "waiting", Provider: "codex", Target: "codex_pane4", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
+		{Path: "/r", Status: "idle", Provider: "codex", SessionID: "n5", Target: "codex_pane5", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
+		{Path: "/r", Status: "idle", SessionID: "n6", Target: "n6", Branch: "main", Repo: "/r", Title: "claude"},
 		{Path: "/r", Status: "starting", Target: "s7", Title: "tab here"},
 	}
 	if len(got) != len(want) {

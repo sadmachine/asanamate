@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import test from 'node:test';
 import { VERSION, main } from '../src/cli.js';
-import { ID, failing, fakeIO, fakeProvider, lockEnv, session } from './fakes.js';
+import { ID, ID2, failing, fakeIO, fakeProvider, lockEnv, session } from './fakes.js';
 
 function sink() {
   const out = { text: '', write: (s) => { out.text += s; return true; } };
@@ -28,6 +28,71 @@ test('help and version need no providers', async () => {
   assert.equal((await run(['help'])).code, 0);
   assert.match((await run([])).stdout, /asana-sessions list/);
   assert.equal((await run(['version'])).stdout, `${VERSION}\n`);
+});
+
+const agentRow = (provider, id, gid = '') => ['/repo', 'working', 'pane', 'title', 'main', '/repo', gid, provider, id].join('\t');
+const agentCommand = (text) => ['asanamate', 'agents', '--', process.execPath, '-e', 'process.stdout.write(process.argv[1])', text];
+
+test('agent decorator uses exact provider/session identity and preserves status and focus', async () => {
+  const providers = {
+    codex: fakeProvider('codex', [session({ name: 'Fix [asana:42]' })]),
+    claude: fakeProvider('claude', [session({ name: 'Other [asana:99]' })]),
+  };
+  const rows = [agentRow('codex', ID), agentRow('claude', ID), agentRow('codex', ID2), '/legacy\tidle'].join('\n');
+  const result = await run(agentCommand(rows), { providers });
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, [agentRow('codex', ID, '42'), agentRow('claude', ID, '99'), agentRow('codex', ID2), '/legacy\tidle', ''].join('\n'));
+  assert.deepEqual(providers.codex.calls, [['list', undefined]]);
+});
+
+test('agent decorator preserves explicit source links and blocks conflicting metadata', async () => {
+  const providers = { codex: fakeProvider('codex', [session({ name: 'Fix [asana:42]', tag: 'asana:99' })]) };
+  const rows = [agentRow('codex', ID), agentRow('codex', ID, '77')].join('\n');
+  const result = await run(agentCommand(rows), { providers });
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, `${agentRow('codex', ID, '-')}\n${agentRow('codex', ID, '77')}\n`);
+  assert.match(result.stderr, /conflicting ticket links/);
+});
+
+test('agent decorator falls back for unavailable providers, unsupported providers, and missing identity', async () => {
+  const providers = { codex: failing('codex', 'unavailable') };
+  const rows = [agentRow('codex', ID), agentRow('other', ID), agentRow('codex', ''), '/legacy\tidle'].join('\n');
+  const result = await run(agentCommand(rows), { providers });
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, `${rows}\n`);
+  assert.match(result.stderr, /using repo\/branch fallback/);
+});
+
+test('agent decorator does not hide source failures or execute source arguments as shell text', async () => {
+  const failure = await run(['asanamate', 'agents', '--', process.execPath, '-e', 'process.stdout.write("/repo\\tidle"); process.exit(3)']);
+  assert.equal(failure.code, 1);
+  assert.equal(failure.stdout, '');
+  const legacy = '/repo\tidle\t$(exit 7)';
+  const ok = await run(agentCommand(legacy));
+  assert.equal(ok.code, 0);
+  assert.equal(ok.stdout, `${legacy}\n`);
+  const eof = await run(['asanamate', 'agents', '--', process.execPath, '-e', 'process.stdin.resume(); process.stdin.on("end", () => process.stdout.write("/repo\\tidle\\n"))']);
+  assert.equal(eof.code, 0);
+  assert.equal(eof.stdout, '/repo\tidle\n');
+});
+
+test('agent decorator queries no history without usable native identity', async () => {
+  const providers = { codex: fakeProvider('codex') };
+  const result = await run(agentCommand(agentRow('codex', '')), { providers });
+  assert.equal(result.code, 0);
+  assert.deepEqual(providers.codex.calls, []);
+});
+
+test('agent decorator keeps successful links when another provider times out', async () => {
+  const providers = {
+    codex: fakeProvider('codex', [session({ name: 'Fix [asana:42]' })]),
+    claude: fakeProvider('claude', [], { list: () => new Promise(() => {}) }),
+  };
+  const rows = [agentRow('codex', ID), agentRow('claude', ID)].join('\n');
+  const result = await run(agentCommand(rows), { providers });
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, `${agentRow('codex', ID, '42')}\n${agentRow('claude', ID)}\n`);
+  assert.match(result.stderr, /timed out.*fallback/);
 });
 
 test('usage errors exit 2', async () => {

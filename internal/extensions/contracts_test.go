@@ -97,7 +97,7 @@ printf 'info: codex plugin: untrusted: optional\n'`)
 	cfg.Conversations.Command, cfg.Conversations.Open = "asana-sessions asanamate list", "asana-sessions asanamate open"
 	saved := Saved{Config: cfg}
 	r := Inspect(e, saved)
-	if len(r.Capabilities) != 2 || !r.Capabilities[0].Configured || !r.Capabilities[1].Configured {
+	if len(r.Capabilities) != 3 || !r.Capabilities[0].Configured || !r.Capabilities[1].Configured || r.Capabilities[2].Configured {
 		t.Fatal("discovery and foreground open must each expose their config status")
 	}
 	guide := Detail(e, saved, r)
@@ -119,5 +119,38 @@ printf 'info: codex plugin: untrusted: optional\n'`)
 		if _, known := KnownCommand("conversations.command", command); known {
 			t.Errorf("mistook custom/wrong operation for discovery: %s", command)
 		}
+	}
+}
+
+func TestAgentConversationLinksAreIndependentAndRecognizedExactly(t *testing.T) {
+	e, _ := Find("asana-sessions")
+	cfg := config.Default()
+	cfg.Agents.Command = "asana-sessions asanamate agents -- asanamate-ccmux"
+	saved := Saved{Config: cfg}
+	report := Inspect(e, saved)
+	if len(report.Capabilities) != 3 || report.Capabilities[0].Configured || report.Capabilities[1].Configured || !report.Capabilities[2].Configured {
+		t.Fatalf("agent links must not enable history: %+v", report.Capabilities)
+	}
+	args, known := KnownCommand("agents.command", cfg.Agents.Command)
+	if !known || strings.Join(args, " ") != cfg.Agents.Command {
+		t.Fatal("documented decorator must resolve to its exact argument vector")
+	}
+	for _, command := range []string{
+		cfg.Agents.Command + "; echo extra",
+		"asana-sessions asanamate agents -- custom-source",
+		"custom-source | asana-sessions asanamate agents",
+	} {
+		if _, known := KnownCommand("agents.command", command); known {
+			t.Errorf("custom command mistaken for a cataloged source: %s", command)
+		}
+	}
+	guide := Detail(e, saved, report)
+	for _, want := range []string{"Agent sources (unversioned)", "Agent ticket links", cfg.Agents.Command, "repo/branch fallback", "command -v asana-sessions", "restore", "unrelated agent commands"} {
+		if !strings.Contains(guide, want) {
+			t.Errorf("missing agent setup/removal guidance: %q", want)
+		}
+	}
+	if strings.Contains(e.Remove, "Leave agents.command unchanged") {
+		t.Fatal("removing the helper must not strand a decorated agent source")
 	}
 }

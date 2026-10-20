@@ -61,6 +61,20 @@ func RunBounded(ctx context.Context, label, command string, req any, limits Limi
 	defer cancel()
 	cmd := exec.CommandContext(runCtx, "/bin/sh", "-c", command)
 	cmd.Stdin = bytes.NewReader(input)
+	return runBounded(ctx, label, cmd, cancel, limits)
+}
+
+// RunArgsBounded runs a known argument vector without a shell or stdin.
+func RunArgsBounded(ctx context.Context, label string, args []string, limits Limits) ([]byte, error) {
+	if len(args) == 0 || limits.Stdout <= 0 || limits.Stderr <= 0 {
+		return nil, fmt.Errorf("%s: arguments and positive output limits required", label)
+	}
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	return runBounded(ctx, label, exec.CommandContext(runCtx, args[0], args[1:]...), cancel, limits)
+}
+
+func runBounded(ctx context.Context, label string, cmd *exec.Cmd, cancel context.CancelFunc, limits Limits) ([]byte, error) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	killGroup := func() error {
 		err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
@@ -75,7 +89,7 @@ func RunBounded(ctx context.Context, label, command string, req any, limits Limi
 	stdout := boundedBuffer{limit: limits.Stdout, cancel: cancel}
 	stderr := boundedBuffer{limit: limits.Stderr, cancel: cancel}
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	err = cmd.Run()
+	err := cmd.Run()
 	if cmd.Process != nil {
 		_ = killGroup()
 	}

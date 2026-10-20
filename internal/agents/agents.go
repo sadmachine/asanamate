@@ -12,7 +12,10 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/charmbracelet/x/ansi"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/sadmachine/asanamate/internal/jsoncmd"
 )
 
 // State is asanamate's normalized view of an agent's status.
@@ -103,6 +106,28 @@ func List(ctx context.Context, command string) ([]Agent, error) {
 	if err != nil {
 		return nil, fmt.Errorf("agents command failed: %w", err)
 	}
+	return parseList(ctx, out), nil
+}
+
+// FetchArgs is the bounded, shell-free path for known read-only agent sources.
+// Provider diagnostics are withheld because they can contain secrets.
+func FetchArgs(ctx context.Context, args []string, states map[string][]string) ([]Agent, error) {
+	out, err := jsoncmd.RunArgsBounded(ctx, "agents", args, jsoncmd.Limits{Stdout: 64 << 10, Stderr: 64 << 10})
+	if err != nil {
+		return nil, fmt.Errorf("local agent check failed; run asanamate addons for verification guidance")
+	}
+	out = []byte(strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) && r != '\n' && r != '\t' || unicode.In(r, unicode.Cf) {
+			return -1
+		}
+		return r
+	}, ansi.Strip(string(out))))
+	list := parseList(ctx, out)
+	Classify(list, states)
+	return list, nil
+}
+
+func parseList(ctx context.Context, out []byte) []Agent {
 	var agents []Agent
 	for _, line := range strings.Split(string(out), "\n") {
 		cols := strings.Split(strings.TrimRight(line, "\r"), "\t")
@@ -131,7 +156,7 @@ func List(ctx context.Context, command string) ([]Agent, error) {
 			a.Branch = fallback
 		}
 	})
-	return agents, nil
+	return agents
 }
 
 // maxGit caps the git processes run at once while resolving agents.

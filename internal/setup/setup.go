@@ -215,8 +215,8 @@ Defaults:
   - Actions: one file each in %s. Rename a .example file to enable it.
   - Themes: "auto" follows the terminal background. Edit the installed presets
     in themes/, or copy the example to make your own.
-  - Agent status and time tracking are off. See the Agents and Time tracking
-    sections of the README to turn them on.
+  - Agent status and time tracking are off. Run asanamate addons or open
+    Settings > Addons to discover optional integrations and setup guides.
   - Repo links and recent projects are stored in %s.
 
 Run asanamate to start.

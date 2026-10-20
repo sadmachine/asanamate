@@ -2,11 +2,30 @@ package agents
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestFetchArgsPreservesMatchingAndCleansOutput(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "known-agent")
+	script := "#!/bin/sh\nprintf '/repo\\tbusy\\ts1\\tTitle\\tfeat\\t/outer\\033[2J\\n'\n"
+	if err := os.WriteFile(path, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	list, err := FetchArgs(context.Background(), []string{path}, map[string][]string{"working": {"busy"}})
+	if err != nil || len(list) != 1 || list[0].State != Working || list[0].Branch != "feat" || list[0].Repo != "/outer" {
+		t.Fatalf("list = %+v, err = %v", list, err)
+	}
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf 'SECRET' >&2; exit 1\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := FetchArgs(context.Background(), []string{path}, nil); err == nil || strings.Contains(err.Error(), "SECRET") {
+		t.Fatalf("provider diagnostics leaked: %v", err)
+	}
+}
 
 func git(t *testing.T, args ...string) {
 	t.Helper()

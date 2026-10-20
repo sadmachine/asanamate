@@ -32,7 +32,7 @@ can run in parallel, each on its own branch.
 | [17-conversation-companion](17-conversation-companion.md) (implemented, gate pending) | Standalone `asana-sessions` package/CLI for native history, linking, and resumption | 16's adapter contract only; provider feasibility gate first | no |
 | [18-conversation-plugins](18-conversation-plugins.md) (implemented, release gate pending) | `asana-sessions` native hook plugins, skill, installation, and independent releases | 17 | no |
 | [19-conversation-ui](19-conversation-ui.md) (done) | Native ticket conversation picker, CLI, foreground opening, and end-to-end proof | 16, 17 | no |
-| [20-addon-discovery](20-addon-discovery.md) (done) | Shared CLI/TUI addon catalog, guided installation, setup instructions, and readiness checks | none | no |
+| [20-extension-discovery](20-extension-discovery.md) (done) | Shared CLI/TUI extension catalog, guided setup, contract documentation, and readiness checks | none | no |
 | [21-native-harvest](21-native-harvest.md) (implemented, native live gate pending) | Direct Harvest API, independent credentials, task selection, and compatible legacy setup | existing protocols; independent of 20 | no |
 
 Specs 12 to 15 are complete and shipped together in v0.3.0.
@@ -55,6 +55,8 @@ core/package compatibility is not tied to matching release numbers.
 
 Specs 20 and 21 can ship independently. When both are present, 21 updates
 the Harvest catalog entry from 20 to use native setup and checks.
+Spec 20 also covers discovery of specs 16–19's conversation extension,
+with availability following the independent core, helper, and hook gates.
 
 ## Rules for every task
 

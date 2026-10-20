@@ -61,6 +61,7 @@ const listGutter = 1
 
 // Deps are the services the TUI uses.
 type Deps struct {
+	Version    string // core release for documentation links; empty means development
 	Config     config.Config
 	ConfigPath string // configuration path; empty uses config.Path
 	State      *state.State
@@ -144,7 +145,7 @@ type Model struct {
 
 	// Modals, and the actions, edits, and time entries they collect.
 	modal          *picker
-	addon          *addonDetail
+	extension      *extensionDetail
 	input          *inputBox // free-text modal for input actions
 	composer       *commentComposer
 	builder        *actionBuilder
@@ -318,9 +319,9 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 			m.waiting = ""
 			m.openRepoPicker(msg)
 		}
-	case addonCheckedMsg:
-		if m.addon == msg.detail {
-			m.addon.report, m.addon.busy = msg.report, false
+	case extensionCheckedMsg:
+		if m.extension == msg.detail {
+			m.extension.report, m.extension.busy = msg.report, false
 		}
 	case conversationsMsg:
 		m.gotConversations(msg)
@@ -655,8 +656,8 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	if m.modal != nil {
 		return m.updateModal(msg)
 	}
-	if m.addon != nil {
-		return m.updateAddon(msg)
+	if m.extension != nil {
+		return m.updateExtension(msg)
 	}
 	if m.help {
 		m.help = false
@@ -1151,8 +1152,8 @@ func (m *Model) body() string {
 			w = max(min(m.width-4, 140), 10)
 		}
 		content = m.modal.view(w, mh, m.accentStyle)
-	case m.addon != nil:
-		content = m.addon.view(w, mh)
+	case m.extension != nil:
+		content = m.extension.view(w, mh)
 	case m.composer != nil:
 		content = "Loading task details…\n" + hintLine(m.accentStyle, [2]string{keyLabel("picker", "cancel"), "cancel"})
 	case m.help:

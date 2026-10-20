@@ -27,8 +27,8 @@ and coding agents can do what you can. macOS and Linux only.
   [Writing back to Asana](#writing-back-to-asana).
 - **Act** on a ticket: run your own commands with the ticket as context, such
   as starting a coding agent in its repo. See [Actions](#actions).
-- **Discover addons**: browse optional integrations, setup guides and local
-  checks from Settings or `asanamate addons`. See [Addons](#addons).
+- **Discover extensions**: browse optional integrations, setup guides and local
+  checks from Settings or `asanamate extensions`. See [Extensions](#extensions).
 - **Show agents** (optional): coding agents running in ccmux or any other tool
   appear next to their tickets. See [Agents](#agents-optional).
 - **Resume conversations** (optional): find a ticket's saved Claude Code and
@@ -90,7 +90,7 @@ Normal installation includes two adapter binaries: `asanamate-hrvst`, the Harves
 provider for [Time tracking](#time-tracking-optional), and `asanamate-ccmux`,
 the ccmux adapter for [Agents](#agents-optional). Installing adapters does not
 enable integrations, authenticate them, or install external dependencies.
-Run `asanamate addons` or open **Settings > Addons** for guided setup.
+Run `asanamate extensions` or open **Settings > Extensions** for guided setup.
 
 If `asanamate version` is not found, add `~/.local/bin` to your `PATH` in your
 shell's startup file (`~/.zshrc`, `~/.bashrc`), then open a new shell:
@@ -151,8 +151,8 @@ files stay until you delete them yourself: the config and actions in
    [Actions](#actions)).
 3. Run `asanamate`. `asanamate doctor` checks the setup if something fails.
 
-Discover optional integrations with `asanamate addons` or **Settings > Addons**
-(`s`, then `o`). No addon is required for core setup.
+Discover optional integrations with `asanamate extensions` or **Settings > Extensions**
+(`s`, then `o`). No extension is required for core setup.
 
 ### Token
 
@@ -186,8 +186,8 @@ shows; see [Troubleshooting](#troubleshooting) for what its results prove.
 | Paste into input (`Ctrl+V`) | macOS `pbpaste`; Linux `xclip` or `xsel` (X11) or `wl-clipboard` (Wayland) | always on | not needed | not checked | the input shows why, and your terminal's paste still works |
 | Agent status | an agents command, such as `asanamate-ccmux` for ccmux; see [Agents](#agents-optional) | `agents.command` | remove `[agents]` keys | `agents` | off |
 | Conversations | the [asana-sessions](packages/asana-sessions/README.md) package (Node 22+); see [Conversations](#conversations-optional) | `[conversations]` | remove `[conversations]` keys | `conversations` (shown only when on) | no Conversations entry |
-| Time tracking | `asanamate-hrvst` and a Harvest personal access token, or your own provider; see [Time tracking](#time-tracking-optional) | `[time_tracking]` | remove `[time_tracking]` keys | `time_tracking`, `addon harvest` (local check) | off |
-| Project link suggestions | a project links command, such as imarc's `asanamate-hub`; see [Project links](#project-links-optional) | `project_links.command` | remove `project_links.command` | `project_links`, `addon hub` (local check) | no suggestions |
+| Time tracking | `asanamate-hrvst` and a Harvest personal access token, or your own provider; see [Time tracking](#time-tracking-optional) | `[time_tracking]` | remove `[time_tracking]` keys | `time_tracking`, `extension harvest` (local check) | off |
+| Project link suggestions | a project links command, such as imarc's `asanamate-hub`; see [Project links](#project-links-optional) | `project_links.command` | remove `project_links.command` | `project_links`, `extension hub` (local check) | no suggestions |
 | Relative dates (`tomorrow`, `+1 day`) | GNU `date`; on macOS, `gdate` from `brew install coreutils` | install it | not needed | not checked | type dates as `YYYY-MM-DD` |
 | Inline images | a kitty-graphics terminal ([kitty](https://sw.kovidgoyal.net/kitty/), [Ghostty](https://ghostty.org)); in tmux, `set -g allow-passthrough on` | `images.mode = "auto"` (default) | `images.mode = "off"` | not checked | links shown instead |
 | Nerd Font symbols | a [Nerd Font](https://www.nerdfonts.com) | `symbols = "nerd"` | `symbols = "unicode"` or `"ascii"` | not checked | unicode or ascii symbols |
@@ -210,37 +210,58 @@ file is saved beside it as a timestamped backup, such as
 from it.
 Actions live in their own files, so updates never touch them.
 
-## Addons
+## Extensions
 
-Run `asanamate addons` to see every shipped integration and its local status,
-or open **Settings > Addons** (`s`, then `o`). Both use the same catalog:
+Run `asanamate extensions` to see every shipped integration and its local status,
+or open **Settings > Extensions** (`s`, then `o`). Both use the same catalog:
 
-- `asanamate addons harvest`: [Harvest time tracking](#time-tracking-optional)
+- `asanamate extensions harvest`: [Harvest time tracking](#time-tracking-optional)
   and [today's feed](#feed-panel), configured independently.
-- `asanamate addons ccmux`: [coding agent status](#agents-optional).
-- `asanamate addons hub`: [imarc project links](#project-links-optional).
+- `asanamate extensions ccmux`: [coding agent status](#agents-optional).
+- `asanamate extensions hub`: [imarc project links](#project-links-optional).
   Hub is private and requires imarc access.
-- `asanamate addons actions`: the action builder and
+- `asanamate extensions asana-sessions`: [conversation history](#conversations-optional).
+  The standalone helper is installed separately; automatic-linking plugins
+  are optional and have their own setup and trust steps.
+- `asanamate extensions actions`: the action builder and
   [custom extension commands](docs/extensions.md).
 
+`asanamate addons` remains a compatibility alias. New instructions use
+`extensions`; no existing command or configuration needs to be renamed.
+
+Each entry names its implemented contracts, transport, protocol version,
+required/optional operations, configuration keys, and reference links.
+Harvest implements Time tracking and Feeds independently. Its Harvest API
+version is separate from either asanamate contract version. **Build your own
+extension** opens the [implementation guide](docs/extensions.md#implementing-an-extension),
+including a hypothetical Clockify replacement. Custom providers need no
+catalog registration. Conversation discovery and foreground opening are
+separate contracts, distinct from running-agent status.
+
+Contract links use the installed core release when known; development builds
+label their default-branch fallback. Essential summaries work offline, and
+release archives include `docs/extensions.md` for a full offline reference.
+
 Each guide includes requirements, exact commands, configuration examples,
-first use, and removal. `asanamate addons check <id>` explicitly runs the
+first use, and removal. `asanamate extensions check <id>` explicitly runs the
 documented, bounded local checks; failed checks exit nonzero. Installed,
 configured, local check passed, and connection unverified are separate states.
 Local credential checks do not prove live authentication. `doctor` reuses
-these checks for recognized configured addons; optional failures are warnings.
+these checks for recognized configured extensions; optional failures are warnings.
 Custom commands retain their existing doctor behavior.
 
 Listing and guides need no Asana token or core config and never run providers.
 Invalid existing config remains visible alongside the guides. In TUI details,
 scroll with the picker navigation keys and press Enter for Recheck, copy,
-guide URL, config editor, or supported provider setup. Setup displays its
-command and resolved executable before running in the foreground. Cancel
+guide URL, contract references, implementation guide, config editor, or
+supported provider setup. The conversation entry also offers detailed helper
+diagnostics; optional linking setup remains separate from history. Setup
+displays its command and resolved executable before running in the foreground. Cancel
 returns to details. If clipboard or browser access fails, the text and URL
 remain available; the CLI prints the same guide for copying yourself.
 
-Addon settings stay in their existing files. Examples are never merged
-automatically. Hand edits require restarting asanamate; addon details inspect
+Extension settings stay in their existing files. Examples are never merged
+automatically. Hand edits require restarting asanamate; extension details inspect
 saved config, which can differ from the current session's active config.
 Arbitrary providers remain supported without catalog registration. Clipboard,
 images, and terminal features remain under [Optional features](#optional-features).
@@ -1622,14 +1643,14 @@ the workspace is reachable. For optional features it checks less:
   tool is on your `PATH`; `doctor` does not try it.
 - `repo_source` lists the repos in `repo_source.root`; a custom
   `repo_source.command` is `unchecked`.
-- Recognized addons reuse `asanamate addons check <id>` checks. Harvest and
+- Recognized extensions reuse `asanamate extensions check <id>` checks. Harvest and
   Hub checks confirm local credential availability without contacting either
   service. ccmux checks its local session list. `connection unverified` means
   remote access was not checked. Opening the time form (`t`) or repo picker
   (`L`) on a ticket contacts the configured service and shows any error.
 - `agents` also lists agents for branch matching. Custom agent and feed
   commands retain their existing read-only queries. Known Harvest feeds use
-  the local addon check instead of contacting Harvest.
+  the local extension check instead of contacting Harvest.
 - `off` features are not configured. Custom time tracking and project links
   remain `unchecked`; follow their own verification instructions.
 - Copy to clipboard, image paste, inline images, and Nerd Font symbols

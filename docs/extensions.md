@@ -1,7 +1,7 @@
 # Extensions
 
-For installation and onboarding, use `asanamate addons` or **Settings > Addons**.
-See [Addons](../README.md#addons) for the shared catalog. This page remains the
+For installation and onboarding, use `asanamate extensions` or **Settings > Extensions**.
+See [Extensions](../README.md#extensions) for the shared catalog. This page remains the
 protocol contract; custom commands need no catalog registration.
 
 asanamate is extended by external commands: any program or shell snippet you
@@ -21,6 +21,71 @@ commands, one section per extension point:
 Each format is covered by a test that runs a small fixture script through the
 real code path (`internal/*/testdata/`), so a format change cannot slip in
 unnoticed. Changes are called out in the release notes.
+
+## Implementing an extension
+
+An extension implements an asanamate contract, independently of the external
+service or tool it uses. A provider can implement one contract or several.
+Bundled commands use the same contracts as custom commands; no registration,
+special executable prefix, or core code change is required.
+
+1. Choose the capability in the table above and read its full contract.
+   [Conversation discovery](#discovery) and [foreground opening](#foreground-opening)
+   are separate interfaces; persisted conversations are not running agents.
+2. Start from that contract's fixture example. JSON protocols declare their
+   version and operation, while actions, agent sources, and repo sources are
+   unversioned. Do not confuse an asanamate protocol version with a provider
+   release or remote API version. Time tracking requires `form` and `log`;
+   `summary` is optional, and a summary's daily total is optional too.
+3. Parse structured input rather than matching raw text. Treat task text,
+   record IDs, URLs, and paths as untrusted data. Pass them through argument
+   arrays or files, never interpolated shell syntax. Own your credentials
+   and remote API client; do not copy another provider's credential format.
+4. Keep JSON/line-protocol stdout free of prompts and logs. Use sanitized
+   stderr for diagnostics. Follow the contract's lifecycle, timeout, error,
+   partial-result, and compatibility rules. Noninteractive requests cannot
+   run a login flow. Conversation open instead inherits the terminal and
+   reads its selected-record snapshot from the environment.
+5. Validate against a fixture or fake server first. Repository examples under
+   `internal/*/testdata/` and their protocol tests demonstrate real core
+   transport paths without live credentials. A fixture's no-op `log` branch
+   is not a working time logger: a production provider exits zero only once
+   its entry exists. Do not automatically retry a possibly completed write.
+6. Put the command on PATH, or configure a quoted absolute path, and edit
+   only the relevant config slot. Restart asanamate after editing. Inspect
+   forms/lookup and error handling before making any explicit real write or
+   opening a native conversation. Discovery must not rename/link sessions,
+   resume a provider, start a model turn, or grant plugin trust.
+
+### Replacing a time provider
+
+For example, you could write `asanamate-clockify` against the
+[Time tracking contract](#time-tracking). This is a hypothetical adapter,
+not a shipped or advertised Clockify integration. Configure it as:
+
+```toml
+[time_tracking]
+id = "clockify"
+command = "asanamate-clockify"
+```
+
+Use a new provider ID so remembered choices remain separate from Harvest.
+Keep the old ID's saved choices and credentials if you want to revert.
+Your adapter needs its own Clockify authentication and must implement the
+asanamate request/reply contract; a Clockify API client alone is not enough.
+It need not implement Harvest flags, task defaults, or credential files.
+
+Replacing time tracking leaves `feed.commands` unchanged. Only add your
+command as a feed if it also implements [Feeds](#feeds), replacing just the
+intended entry and preserving other sources. Tracker-specific project links
+such as `harvest_project` are not translated into another tracker's IDs.
+You may explicitly return `{"unsupported":true}` for optional time totals.
+Open the time form and cancel to verify configuration without logging time.
+
+The same substitution rule applies to conversation sources/openers. Implement
+their documented interfaces and configure both `conversations.command` and
+`conversations.open`. A custom implementation need not use the standalone
+`asana-sessions` CLI, its SDKs, or its optional native linking plugins.
 
 ## Rules for every command
 

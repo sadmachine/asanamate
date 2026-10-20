@@ -1,4 +1,4 @@
-package addons
+package extensions
 
 import (
 	"context"
@@ -20,6 +20,8 @@ type Saved struct {
 	Path   string
 	Config config.Config
 	Err    error
+	// Version selects release documentation; empty/development uses main.
+	Version string
 }
 
 func Load(path string) Saved {
@@ -109,12 +111,12 @@ func Inspect(e Entry, saved Saved) Report {
 		r.Next = saved.Status() + ". Guides remain available; edit " + Clean(saved.Path) + "."
 	}
 	if r.Next == "" {
-		r.Next = "Run asanamate addons check " + e.ID + ", then follow the first-use example."
+		r.Next = "Run asanamate extensions check " + e.ID + ", then follow the first-use example."
 	}
 	return r
 }
 
-// Configured reports whether any documented capability uses this addon.
+// Configured reports whether any documented capability uses this extension.
 func (r Report) Configured() bool {
 	for _, c := range r.Capabilities {
 		if c.Configured {
@@ -199,7 +201,7 @@ func Check(ctx context.Context, e Entry, saved Saved) Report {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	r.Next = e.CheckFailure
 	defer cancel()
-	out, err := jsoncmd.RunArgsBounded(ctx, "addon check", e.Check, jsoncmd.Limits{Stdout: 64 << 10, Stderr: 64 << 10})
+	out, err := jsoncmd.RunArgsBounded(ctx, "extension check", e.Check, jsoncmd.Limits{Stdout: 64 << 10, Stderr: 64 << 10})
 	if err != nil {
 		// Never expose provider diagnostics, including tokens printed on stderr.
 		reason := "command failed; follow verification steps to diagnose locally"
@@ -219,7 +221,7 @@ func Check(ctx context.Context, e Entry, saved Saved) Report {
 	r.Check = "local check passed: " + strings.Join(e.Check, " ") + "; connection unverified"
 	r.Next = next
 	if r.Configured() {
-		r.Next = "Follow the first-use example to verify access; hand edits require restarting asanamate. Other capabilities remain independently configurable."
+		r.Next = "Follow the first-use example to verify access; hand edits require restarting asanamate. See each contract's configuration requirements."
 	}
 	return r
 }
@@ -229,14 +231,39 @@ func Detail(e Entry, saved Saved, r Report) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s (%s)\n%s\n", e.Name, e.ID, e.Benefit)
 	for _, c := range e.Capabilities {
-		fmt.Fprintf(&b, "- %s (%s), independently configurable\n", c.Name, c.Key)
+		fmt.Fprintf(&b, "- %s (%s)\n", c.Name, c.Key)
 	}
+	label := "Implemented contracts"
+	if e.Builder {
+		label = "Available contracts for your own commands"
+	}
+	fmt.Fprintf(&b, "\n%s\n", label)
+	for _, c := range e.Contracts() {
+		fmt.Fprintf(&b, "%s [%s]\n  Transport: %s\n  Configure: %s\n  Operations: %s\n  Contract: %s\n", c.Label(), c.ID, c.Transport, c.Configuration, c.Operations, DocumentURL(saved.Version, "docs/extensions.md", c.Anchor))
+	}
+	if e.Supports != "" {
+		fmt.Fprintln(&b, e.Supports)
+	}
+	if documentationRevision(saved.Version) == "main" {
+		b.WriteString("Documentation: development build; default-branch reference may differ from this checkout.\n")
+	}
+	fmt.Fprintf(&b, "Build your own extension: %s\nConforming custom commands need no catalog registration or core changes. Optional capabilities are implementation-specific, not discovered by executing commands.\n", DocumentURL(saved.Version, "docs/extensions.md", "implementing-an-extension"))
 	fmt.Fprintf(&b, "\nRequirements and current local status\n%s\nConfig: %s\n%s\n", e.Availability, Clean(saved.Path), saved.Status())
 	for _, t := range r.Tools {
 		fmt.Fprintf(&b, "%s: %s %s\n", t.Name, t.Status, Clean(t.Path))
 	}
 	for _, c := range r.Capabilities {
 		fmt.Fprintf(&b, "%s: %s\n", c.Name, c.Status)
+		if c.Custom {
+			for _, capability := range e.Capabilities {
+				if capability.Key == c.Key {
+					fmt.Fprintf(&b, "  Custom command contract: %s; implementation and optional capabilities unverified.\n", capability.ContractID)
+				}
+			}
+		}
+	}
+	for _, note := range e.Notes {
+		fmt.Fprintln(&b, note)
 	}
 	fmt.Fprintf(&b, "%s\nNext: %s\n\nInstallation, authentication and configuration\n", r.Check, r.Next)
 	for i, step := range e.Steps {
@@ -245,12 +272,12 @@ func Detail(e Entry, saved Saved, r Report) string {
 	if len(e.Adapters) > 0 {
 		b.WriteString("Bundled adapter installation (macOS/Linux amd64/arm64): normal installation includes adapters. If missing, re-extract your SAME release archive, without downloading another release:\n")
 		fmt.Fprintf(&b, "tar -xzf asanamate_<os>_<arch>.tar.gz %s\nmkdir -p ~/.local/bin\nmv %s ~/.local/bin/\nexport PATH=\"$HOME/.local/bin:$PATH\"\n", strings.Join(e.Adapters, " "), strings.Join(e.Adapters, " "))
-		b.WriteString("From the same source checkout (Go 1.26+): sh ./install.sh\nInstalls all commands to $(go env GOBIN), else $(go env GOPATH)/bin, plus themes. Add that bin directory to PATH. Installation does not enable or authenticate addons.\nOn macOS, if browser download quarantine blocks an adapter:\n")
+		b.WriteString("From the same source checkout (Go 1.26+): sh ./install.sh\nInstalls all commands to $(go env GOBIN), else $(go env GOPATH)/bin, plus themes. Add that bin directory to PATH. Installation does not enable or authenticate extensions.\nOn macOS, if browser download quarantine blocks an adapter:\n")
 		for _, name := range e.Adapters {
 			fmt.Fprintf(&b, "xattr -d com.apple.quarantine ~/.local/bin/%s\n", name)
 		}
-		b.WriteString("Recheck after each step: asanamate addons check " + e.ID + "\n\n")
+		b.WriteString("Recheck after each step: asanamate extensions check " + e.ID + "\n\n")
 	}
-	fmt.Fprintf(&b, "%s\n\nEdit %s with asanamate config, or your editor. Hand edits require restarting asanamate. Saved configuration shown here may differ from the current session's active configuration. No snippets are applied automatically.\n\nChecks and first use\n%s\n%s\n\nDisable, uninstall and help\n%s\nGuide: %s\nExtension protocols: %s\n", e.Snippet, Clean(saved.Path), e.Verify, e.Example, e.Remove, e.Guide, Extensions)
+	fmt.Fprintf(&b, "%s\n\nEdit %s with asanamate config, or your editor. Hand edits require restarting asanamate. Saved configuration shown here may differ from the current session's active configuration. No snippets are applied automatically.\n\nChecks and first use\n%s\n%s\n\nDisable, uninstall and help\n%s\nGuide: %s\nExtension protocols: %s\n", e.Snippet, Clean(saved.Path), e.Verify, e.Example, e.Remove, e.Guide, DocumentURL(saved.Version, "docs/extensions.md", ""))
 	return b.String()
 }

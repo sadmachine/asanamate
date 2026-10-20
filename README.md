@@ -1304,6 +1304,25 @@ agent's title is ccmux's session summary, else its first prompt (one line, cut
 to 60 characters), else its pane title. Agents link by the branch and repo
 ccmux reports, so a session in a nested repo links to the project around it.
 
+### Explicit conversation links
+
+To link agents by the ticket attached to their saved conversation instead of
+relying on Git branches, use the separately installed
+[asana-sessions](packages/asana-sessions/README.md) companion:
+
+```toml
+[agents]
+command = "asana-sessions asanamate agents -- asanamate-ccmux"
+```
+
+An exact provider/session match supplies the task GID. Explicit links override
+branch and repo matching; status and terminal focus still come from the agent
+source. Agents without a conversation link or usable native identity keep
+branch/repo matching. Conflicting links match no ticket. Metadata lookup
+failures also use branch/repo fallback. No conversation configuration is
+required. See [extension contract](docs/extensions.md#optional-conversation-links)
+for limits and automatic fallback when the companion is not installed.
+
 ### Agent status
 
 ccmux can report a busy session as `idle`, Codex sessions most of all.
@@ -1334,7 +1353,8 @@ reported itself, when that report is newer than ccmux's:
 Any status other than `idle` from ccmux is passed on as is, so
 `[agents.states]` can map it.
 
-**Linking.** A ticket matches every agent whose working directory has
+**Linking.** An explicit task GID from the agent source takes precedence.
+Otherwise, a ticket matches every agent whose working directory has
 `$ASANAMATE_BRANCH` checked out, in the ticket's own repo when set, else a
 repo linked to one of the ticket's projects (worktrees count as their repo). A project shared across repos that
 is linked to just one of them pulls that repo's agents into every ticket it

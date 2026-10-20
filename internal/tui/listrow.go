@@ -27,14 +27,13 @@ func (m *Model) rowContext() rowContext {
 	return rowContext{projectGID: view, preferred: m.projectFields[view], branchField: m.deps.Config.BranchField}
 }
 
-// ticketAgents returns the running agents on the ticket's branch in the repos
-// linked to the ticket's projects (any repo if none are linked), most urgent
+// ticketAgents returns explicit task links with repo/branch fallback, urgency
 // first. preferred picks between same-named branch fields.
 func (m *Model) ticketAgents(t asana.Task, preferred map[string]bool) []agents.Agent {
 	if len(m.agents) == 0 {
 		return nil
 	}
-	return agents.MatchAll(m.agents, action.Branch(t, m.deps.State.TaskBranches[t.GID], m.deps.Config.BranchField, preferred), m.deps.State.LinkedRepos(t))
+	return agents.MatchAll(m.agents, t.GID, action.Branch(t, m.deps.State.TaskBranches[t.GID], m.deps.Config.BranchField, preferred), m.deps.State.LinkedRepos(t))
 }
 
 // viewAgents returns the agents linked to t in the current view. Results are
@@ -56,8 +55,8 @@ func (m *Model) viewAgents(t asana.Task) []agents.Agent {
 }
 
 // agentNotes explains, in the current view, why t may be missing agents: an
-// empty branch field, and the agents in t's repos that are on another branch.
-// The other-branch agents stay hidden until shown, and hidden counts them.
+// empty branch field, and unlinked agents in t's repos.
+// Unlinked agents stay hidden until shown, and hidden counts them.
 func (m *Model) agentNotes(t asana.Task) (notes []string, hidden int) {
 	if !m.deps.Config.AgentsEnabled() {
 		return nil, 0
@@ -68,7 +67,7 @@ func (m *Model) agentNotes(t asana.Task) (notes []string, hidden int) {
 		notes = append(notes, w)
 	}
 	branch := action.Branch(t, saved, m.deps.Config.BranchField, preferred)
-	others := agents.Unlinked(m.agents, branch, m.deps.State.LinkedRepos(t))
+	others := agents.Unlinked(m.agents, t.GID, branch, m.deps.State.LinkedRepos(t))
 	if !m.showOthers {
 		return notes, len(others)
 	}
@@ -78,12 +77,12 @@ func (m *Model) agentNotes(t asana.Task) (notes []string, hidden int) {
 	return notes, 0
 }
 
-// otherAgents names n agents on other branches.
+// otherAgents names n nearby agents not linked to this ticket.
 func otherAgents(n int) string {
 	if n == 1 {
-		return "1 agent on another branch"
+		return "1 unlinked agent"
 	}
-	return fmt.Sprintf("%d agents on other branches", n)
+	return fmt.Sprintf("%d unlinked agents", n)
 }
 
 // agentStates lists the states of t's agents, for filter terms.

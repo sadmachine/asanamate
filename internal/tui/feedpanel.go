@@ -385,11 +385,11 @@ func (m *Model) feedCursor(rows []feedRow) int {
 // agentItems lists each agent once, from when it entered its state: linked
 // to its ticket, or marked "no ticket" when it links to no loaded ticket.
 func (m *Model) agentItems(byGID map[string]*asana.Task) []feedRow {
-	linked := map[string]*asana.Task{}
+	linked := map[agents.Agent]*asana.Task{}
 	for _, t := range m.tasks {
 		for _, a := range m.viewAgents(t) {
-			if _, ok := linked[a.Path]; !ok {
-				linked[a.Path] = byGID[t.GID]
+			if _, ok := linked[a]; !ok {
+				linked[a] = byGID[t.GID]
 			}
 		}
 	}
@@ -404,7 +404,7 @@ func (m *Model) agentItems(byGID map[string]*asana.Task) []feedRow {
 		case agents.Idle, agents.Unknown:
 			it.Tone = feed.ToneMuted
 		}
-		task := linked[a.Path]
+		task := linked[a]
 		if task == nil {
 			parts := []string{m.sym.robot + " " + filepath.Base(a.Path)}
 			if a.Branch != "" {

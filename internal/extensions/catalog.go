@@ -115,30 +115,40 @@ func Catalog() []Entry {
 			Remove:       "Remove project_links.command and restart to disable. Delete asanamate-hub from its bin directory to uninstall. Follow the private guide to revoke or remove provider credentials; core stores none.",
 		},
 		{
-			ID: "asana-sessions", Name: "Conversation history", Benefit: "Find and resume saved conversations linked to a ticket",
+			ID: "asana-sessions", Name: "Conversation history", Benefit: "Find saved conversations and link running agents to tickets",
 			Availability: "Separately installed asana-sessions package; macOS/Linux. Core supports the conversation contracts described below. Helper/package and optional native plugins have independent compatibility checks.",
 			Guide:        repository + "/blob/main/packages/asana-sessions/README.md", Dependencies: []string{"asana-sessions", "node"},
 			Capabilities: []Capability{
 				{Name: "History lookup", ContractID: "conversation-discovery", Key: "conversations.command", Executable: "asana-sessions", Arguments: []string{"asanamate", "list"}, Commands: func(c config.Config) []string { return []string{c.Conversations.Command} }},
 				{Name: "Terminal resume", ContractID: "conversation-open", Key: "conversations.open", Executable: "asana-sessions", Arguments: []string{"asanamate", "open"}, Commands: func(c config.Config) []string { return []string{c.Conversations.Open} }},
+				{Name: "Agent ticket links", ContractID: "agent-sources", Key: "agents.command", Executable: "asana-sessions", Arguments: []string{"asanamate", "agents", "--", "asanamate-ccmux"}, Commands: func(c config.Config) []string { return []string{c.Agents.Command} }},
 			},
 			Notes: []string{
 				"Core support: both conversation contracts described above are implemented by this core build. A helper's version is not its protocol version.",
 				"Optional automatic linking: unchecked by discovery and independent of history lookup/resume. Missing, disabled, or untrusted Claude/Codex plugins do not disable manually linked history. Run detailed diagnostics to see each plugin's actual state.",
 				"A successful local check is not proof that a selected conversation is inactive or safe to resume. Only a deliberate Conversations action opens a session.",
+				"Agent ticket links are independent of history lookup/resume. The source still supplies live status and terminal focus; the helper joins exact provider/session identity to a task GID. Missing identity or unavailable metadata retains repo/branch fallback; conflicting links match no ticket. Source requirements belong to the chosen source: the ccmux example needs asanamate-ccmux and ccmux, but history does not.",
+				"For automatic fallback when the helper is missing, set only agents.command to this shell text (merge into the existing [agents] table): if command -v asana-sessions >/dev/null 2>&1; then asana-sessions asanamate agents -- asanamate-ccmux; else asanamate-ccmux; fi. Shell wrappers and other agent sources remain custom commands with unverified implementation; the documented plain decorator is recognized exactly.",
 			},
 			Steps: []string{
 				"Install the standalone asana-sessions .tgz and verify its checksums using the package guide. It is not bundled with Go archives. From a checkout: cd packages/asana-sessions; npm ci; npm pack; npm install --global ./asana-sessions-<version>.tgz. Replace <version> with the packed version. Package CI targets Node 22/24 on macOS/Linux; use the guide's verified provider/SDK compatibility requirements. No public npm registry name is reserved.",
 				"Put the helper on PATH in the environment starting asanamate. Run asana-sessions doctor for runtime, history, provider version, and optional plugin diagnostics. No Asana token or automatic-linking plugin is required for history.",
-				"Add both conversation commands below, preserving any custom source/opener. They are separate contracts: lookup receives JSON on stdin; resume receives a private snapshot and terminal input. Restart asanamate after editing config.",
+				"For history, add both conversation commands below, preserving any custom source/opener. They are separate contracts: lookup receives JSON on stdin; resume receives a private snapshot and terminal input. Restart asanamate after editing config.",
+				"Optional agent ticket links: use asana-sessions asanamate agents -- asanamate-ccmux as agents.command, preserving any custom source until you choose to replace it. The helper and source adapter must support the optional identity columns; older sources retain repo/branch fallback. Any compatible source can be decorated; custom sources need no catalog registration. Neither conversation setting nor automatic-linking plugins are required.",
 				"Optional: set up automatic linking with asana-sessions setup. It registers selected native Claude/Codex plugins and prints remaining enable/trust/restart steps. It does not configure core. Review trust yourself; helper installation and manually linked history work without these plugins.",
 			},
-			Snippet: "[conversations]\ncommand = \"asana-sessions asanamate list\"\nopen = \"asana-sessions asanamate open\"",
-			Check:   []string{"asana-sessions", "doctor"}, Diagnostics: []string{"asana-sessions", "doctor"}, Setup: []string{"asana-sessions", "setup"}, SetupLabel: "Set up automatic linking (optional)…",
+			Snippet: `[conversations]
+command = "asana-sessions asanamate list"
+open = "asana-sessions asanamate open"
+
+# Optional agent ticket links; independent of history. Merge into existing [agents].
+# [agents]
+# command = "asana-sessions asanamate agents -- asanamate-ccmux"`,
+			Check: []string{"asana-sessions", "doctor"}, Diagnostics: []string{"asana-sessions", "doctor"}, Setup: []string{"asana-sessions", "setup"}, SetupLabel: "Set up automatic linking (optional)…",
 			CheckFailure: "Run detailed diagnostics (asana-sessions doctor) for exact runtime, history, compatibility, and optional plugin states. A failed hook check does not establish that history lookup failed. Follow the package guide; do not resume a session to test readiness.",
 			Verify:       "asanamate extensions check asana-sessions runs bounded nonmutating helper diagnostics. Run detailed diagnostics for separate plugin statuses. It never links, renames, unarchives, resumes, or starts a model turn. Terminal opening remains unverified; configured custom sources/openers are never executed by this check.",
 			Example:      "On a ticket with an existing [asana:<gid>] title marker, open Conversations from its action menu, inspect history and diagnostics, then cancel. Manual title markers work without hooks. A selected history record is not proof of inactivity; terminal resume is a separate explicit action.",
-			Remove:       "Remove both conversations.command and conversations.open to disable core integration, then restart. asana-sessions remove removes only its optional native plugin registrations/pending state; existing histories and ticket markers remain. Removing plugins keeps standalone lookup/open available. Uninstall the helper separately with npm uninstall --global asana-sessions after disabling core commands. Leave agents.command unchanged.",
+			Remove:       "Remove both conversations.command and conversations.open to disable core integration, then restart. asana-sessions remove removes only its optional native plugin registrations/pending state; existing histories and ticket markers remain. Removing plugins keeps standalone lookup/open available. Before uninstalling the helper, if agents.command uses its decorator, restore the underlying source (for example command = \"asanamate-ccmux\") or retain the documented missing-helper fallback. Preserve unrelated agent commands. Then uninstall with npm uninstall --global asana-sessions after disabling its core commands.",
 		},
 		{
 			ID: "actions", Name: "Actions and custom commands", Benefit: "Build actions or bring your own extension commands",

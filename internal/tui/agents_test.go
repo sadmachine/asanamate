@@ -41,6 +41,29 @@ func onBranch(state agents.State, target string) agents.Agent {
 	return agents.Agent{Path: "/code/web/wt", Status: string(state), State: state, Target: target, Branch: "feat/x", Repo: "/code/web"}
 }
 
+func TestConversationLinkOverridesBranchAndRepo(t *testing.T) {
+	m := agentModel(t, config.SymbolsUnicode, true)
+	a := onBranch(agents.Waiting, "explicit")
+	a.TaskGID, a.Branch, a.Repo = "1", "other", "/other"
+	other := onBranch(agents.Working, "different-ticket")
+	other.TaskGID = "2"
+	other.Path = a.Path // Several conversations can share one working directory.
+	m.Update(agentsMsg{list: []agents.Agent{a, other}})
+	if got := m.viewAgents(agentTask("feat/x")); len(got) != 1 || got[0].Target != "explicit" {
+		t.Fatalf("ticket links = %+v", got)
+	}
+	rows := m.agentItems(m.feedLinks().byGID)
+	if len(rows) != 2 || rows[0].task == nil || rows[0].task.GID != "1" || rows[1].task == nil || rows[1].task.GID != "2" {
+		t.Fatalf("feed must preserve exact links: %+v", rows)
+	}
+	m.details["1"] = ticket.Ticket{Task: agentTask("feat/x")}
+	m.openActionMenu()
+	m.Update(key("x"))
+	if env := m.ExitCommand().Env; !slices.Contains(env, "ASANAMATE_AGENT_TARGET=explicit") {
+		t.Fatalf("action did not retain live target: %v", env)
+	}
+}
+
 func TestAgentColumnOrdersByUrgency(t *testing.T) {
 	m := agentModel(t, config.SymbolsUnicode, true)
 	other := onBranch(agents.Working, "elsewhere")
@@ -348,13 +371,13 @@ func TestAgentsOnOtherBranchesHideUntilShown(t *testing.T) {
 				list = append(list, onBranch(agents.Working, "w1"))
 			}
 			m.Update(agentsMsg{list: list})
-			if content := ansi.Strip(m.reader.GetContent()); strings.Contains(content, "o1 is on") || !strings.Contains(content, "+ Show 2 agents on other branches") {
+			if content := ansi.Strip(m.reader.GetContent()); strings.Contains(content, "o1 is on") || !strings.Contains(content, "+ Show 2 unlinked agents") {
 				t.Fatalf("width %d, linked %v: other-branch agents must start hidden:\n%s", width, linked, content)
 			}
 			m.focusReader, m.fieldKey = true, otherAgentsKey
 			m.renderDetail(true)
 			lines := strings.Split(ansi.Strip(m.reader.GetContent()), "\n")
-			if line := lines[m.fieldLines[otherAgentsKey]]; !strings.Contains(line, "+ Show 2 agents") {
+			if line := lines[m.fieldLines[otherAgentsKey]]; !strings.Contains(line, "+ Show 2 unlinked agents") {
 				t.Fatalf("width %d, linked %v: Show row is not on line %d: %q", width, linked, m.fieldLines[otherAgentsKey], line)
 			}
 			press(m, "enter")

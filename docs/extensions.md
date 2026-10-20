@@ -394,7 +394,7 @@ release checks are still required; this core contract is not their approval.
 ## Agent sources
 
 Set `agents.command` to list running coding agents; asanamate links each one
-to the ticket whose branch it has checked out. asanamate has no built-in
+by explicit task GID when supplied, otherwise by branch and repo. asanamate has no built-in
 sources: `asanamate-ccmux` (`cmd/asanamate-ccmux`), the ccmux adapter, is an
 agents command like any other.
 
@@ -406,7 +406,7 @@ finishes, while the TUI is open. `asanamate doctor` runs it once.
 **Output.** One line per agent on stdout:
 
 ```
-<path>\t<status>[\t<target>[\t<title>[\t<branch>\t<repo>]]]
+<path>\t<status>[\t<target>\t<title>\t<branch>\t<repo>\t<task_gid>\t<provider>\t<session_id>]
 ```
 
 - `path`: the agent's working directory. asanamate asks git for its branch
@@ -425,8 +425,16 @@ finishes, while the TUI is open. `asanamate doctor` runs it once.
   `path`. When both are set, asanamate uses them and skips git; otherwise git
   decides, and a set `branch` is used only when git finds none.
 
+- `task_gid`: optional explicit decimal task GID. It overrides both branch
+  and repo matching, including outside Git. Empty preserves branch/repo fallback.
+  `-` suppresses all matching, for example when conversation metadata conflicts.
+  Any other value fails the refresh rather than silently falling back.
+- `provider`, `session_id`: optional native conversation identity, scoped by
+  provider. Core treats these as opaque strings; it never parses provider titles
+  or accesses native history. A decorator can use them to fill `task_gid`.
+
 Fields are trimmed, and a trailing `\r` is dropped. Lines with no tab or an
-empty path are skipped; columns past the sixth are ignored. An empty output
+empty path are skipped; columns past the ninth are ignored. An empty output
 means no agents. Leave a column empty to skip it, such as `title` before
 `branch`.
 
@@ -454,6 +462,50 @@ command = '~/bin/my-agents.sh'
 working = ["busy"]
 waiting = ["permission"]
 ```
+
+### Optional conversation links
+
+`asanamate-ccmux` includes the provider and native session ID when ccmux knows
+those fields. The separately installed companion can decorate any compatible
+agent source, without enabling or calling `conversations.command`:
+
+```toml
+[agents]
+command = "asana-sessions asanamate agents -- asanamate-ccmux"
+```
+
+The decorator executes the source directly, with its arguments as separate
+values and empty stdin. Source failure, output over 4 MiB, or a source taking
+more than 2 seconds fails the refresh. It queries each supported provider in
+parallel once, only when the source includes a usable native identity, with a
+6-second metadata deadline. Status, focus target, and existing explicit task
+links stay intact. An exact `(provider, session_id)` match supplies the task
+GID using the same title/tag rules as conversation discovery. Conflicts supply
+`-`; no guessed ticket association is made.
+
+Unknown providers, missing identities, missing history, metadata failures and
+timeouts preserve branch/repo fallback for affected agents. Such fallback can
+still associate an agent heuristically even when its explicit metadata could
+not be read. Diagnostics go to stderr (visible when running the command directly;
+the TUI does not display successful commands' stderr).
+
+To fall back automatically when the companion executable is missing:
+
+```toml
+[agents]
+command = """
+if command -v asana-sessions >/dev/null 2>&1; then
+  asana-sessions asanamate agents -- asanamate-ccmux
+else
+  asanamate-ccmux
+fi
+"""
+```
+
+Older sources without native identity still work through branch/repo matching.
+Older core versions ignore the extra columns and retain their existing matching.
+Other tools can supply `task_gid` directly; no dependency on this companion,
+ccmux, Claude Code, or Codex is required by core.
 
 ## Repo sources
 

@@ -5,6 +5,14 @@ workflow copies a version's section to the top of its GitHub release notes,
 so links here are absolute. Steps for changes not yet released wait under
 `## Unreleased`, which becomes the version's heading when it is tagged.
 
+## Unreleased
+
+Harvest now supports native personal access tokens and guided
+`asanamate-hrvst setup`, without Node.js, npm, or hrvst-cli. The optional
+`harvest.toml` beside core config stores only account/task defaults. Existing
+legacy logins, explicit `--task-id` commands, and provider IDs remain supported;
+no migration is required. See [native setup](https://github.com/sadmachine/asanamate#time-tracking-optional).
+
 ## v0.3.0
 
 This breaking release moves settings into `settings.toml` next to `config.toml`.

@@ -1,7 +1,6 @@
 // Command asanamate-hrvst is asanamate's Harvest time tracking provider and
 // feed. It serves one request of the time tracking or feed protocol
-// (docs/extensions.md) on stdin, using the login of hrvst
-// (https://github.com/kgajera/hrvst-cli).
+// (docs/extensions.md) on stdin, using native or legacy credentials.
 package main
 
 import (
@@ -14,10 +13,10 @@ import (
 )
 
 const usage = `usage:
-  asanamate-hrvst --task-id <id>   serve one time tracking or feed request on
-                                   stdin (set as time_tracking.command, and
-                                   add to feed.commands; feeds need no task ID)
-  asanamate-hrvst check            check that hrvst is installed and logged in
+  asanamate-hrvst [--task-id <id>]  serve one time tracking or feed request on stdin
+  asanamate-hrvst setup           connect Harvest and select a default task
+  asanamate-hrvst check           validate local settings/credentials (no network)
+  asanamate-hrvst check --online  verify account and assignments (read-only)
 `
 
 func main() { os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr)) }
@@ -36,12 +35,17 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 }
 
 func serve(args []string, in io.Reader, out io.Writer) error {
-	if len(args) == 1 && args[0] == "check" {
-		if err := checkHarvest(); err != nil {
-			return err
+	if len(args) > 0 && args[0] == "setup" {
+		if len(args) != 1 {
+			return fmt.Errorf("unexpected setup arguments\n%s", usage)
 		}
-		fmt.Fprintln(out, "ok: hrvst installed and logged in")
-		return nil
+		return setupHarvest(context.Background(), in, out, harvestEndpoint)
+	}
+	if len(args) > 0 && args[0] == "check" {
+		if len(args) != 1 && !(len(args) == 2 && args[1] == "--online") {
+			return fmt.Errorf("unexpected check arguments\n%s", usage)
+		}
+		return checkHarvest(context.Background(), out, len(args) == 2, harvestEndpoint)
 	}
 	fs := flag.NewFlagSet("asanamate-hrvst", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)

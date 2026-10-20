@@ -33,7 +33,7 @@ can run in parallel, each on its own branch.
 | [18-conversation-plugins](18-conversation-plugins.md) (implemented, release gate pending) | `asana-sessions` native hook plugins, skill, installation, and independent releases | 17 | no |
 | [19-conversation-ui](19-conversation-ui.md) (done) | Native ticket conversation picker, CLI, foreground opening, and end-to-end proof | 16, 17 | no |
 | [20-addon-discovery](20-addon-discovery.md) (done) | Shared CLI/TUI addon catalog, guided installation, setup instructions, and readiness checks | none | no |
-| [21-native-harvest](21-native-harvest.md) | Direct Harvest API, independent credentials, task selection, and compatible legacy setup | existing protocols; independent of 20 | no |
+| [21-native-harvest](21-native-harvest.md) (implemented, native live gate pending) | Direct Harvest API, independent credentials, task selection, and compatible legacy setup | existing protocols; independent of 20 | no |
 
 Specs 12 to 15 are complete and shipped together in v0.3.0.
 
@@ -88,3 +88,8 @@ the Harvest catalog entry from 20 to use native setup and checks.
 - **Action builder or schema.** The action builder (`A`) guides users through
   action files. A JSON Schema for action files would give completion and docs
   in any TOML editor with less code to maintain. No decision yet; no spec.
+
+Spec 21 has passed local protocol, setup safety, and failure-path tests, plus a
+read-only check against an untouched real legacy login. Fresh native setup still
+needs manual verification with a personal access token. No live time entry has
+been created for validation.

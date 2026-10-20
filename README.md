@@ -186,7 +186,7 @@ shows; see [Troubleshooting](#troubleshooting) for what its results prove.
 | Paste into input (`Ctrl+V`) | macOS `pbpaste`; Linux `xclip` or `xsel` (X11) or `wl-clipboard` (Wayland) | always on | not needed | not checked | the input shows why, and your terminal's paste still works |
 | Agent status | an agents command, such as `asanamate-ccmux` for ccmux; see [Agents](#agents-optional) | `agents.command` | remove `[agents]` keys | `agents` | off |
 | Conversations | the [asana-sessions](packages/asana-sessions/README.md) package (Node 22+); see [Conversations](#conversations-optional) | `[conversations]` | remove `[conversations]` keys | `conversations` (shown only when on) | no Conversations entry |
-| Time tracking | `asanamate-hrvst` and [hrvst](https://github.com/kgajera/hrvst-cli) 3.x, or your own provider; see [Time tracking](#time-tracking-optional) | `[time_tracking]` | remove `[time_tracking]` keys | `time_tracking`, `addon harvest` (local check) | off |
+| Time tracking | `asanamate-hrvst` and a Harvest personal access token, or your own provider; see [Time tracking](#time-tracking-optional) | `[time_tracking]` | remove `[time_tracking]` keys | `time_tracking`, `addon harvest` (local check) | off |
 | Project link suggestions | a project links command, such as imarc's `asanamate-hub`; see [Project links](#project-links-optional) | `project_links.command` | remove `project_links.command` | `project_links`, `addon hub` (local check) | no suggestions |
 | Relative dates (`tomorrow`, `+1 day`) | GNU `date`; on macOS, `gdate` from `brew install coreutils` | install it | not needed | not checked | type dates as `YYYY-MM-DD` |
 | Inline images | a kitty-graphics terminal ([kitty](https://sw.kovidgoyal.net/kitty/), [Ghostty](https://ghostty.org)); in tmux, `set -g allow-passthrough on` | `images.mode = "auto"` (default) | `images.mode = "off"` | not checked | links shown instead |
@@ -542,7 +542,7 @@ such as `3h 10m logged · 4 new · 2 unpushed`, each led by an icon when
   no upstream shows `not pushed`.
 - **Feeds:** lines from each `feed.commands` command; see
   [Feeds](docs/extensions.md#feeds). For Harvest time entries, add
-  `asanamate-hrvst`.
+  `asanamate-hrvst` after [native setup](#time-tracking-optional); feed-only setup needs no task ID.
 
 Items linked to a ticket show its title. With `feed.expand = "auto"`, the
 panel opens when the list leaves `feed.height` empty rows; it decides when a
@@ -923,30 +923,73 @@ and is discarded when the app exits; it is not written to `actions.log` or state
 
 ### Time tracking (optional)
 
-Harvest support is a separate provider binary, `asanamate-hrvst`, shipped
-with asanamate (see [Install](#install)). It uses
-[hrvst](https://github.com/kgajera/hrvst-cli) 3.x
-(`npm install -g hrvst-cli`), which needs Node.js 20 or later. Set it up:
+Harvest support is the bundled `asanamate-hrvst` provider (see [Install](#install)).
+It calls Harvest API v2 directly; Node.js, npm, and hrvst-cli are not required.
 
-1. Install `asanamate-hrvst` on your `PATH`.
-2. Run `hrvst login` and authorize your Harvest account. hrvst stores the
-   credentials in `~/.hrvst/config.json`; `asanamate-hrvst` reads them from
-   there to create entries with the Asana link, and never stores them itself.
-   `asanamate-hrvst check` confirms hrvst is installed and its saved login is
-   readable. It does not call Harvest; opening the time form (`t`) on a
-   ticket does, and shows any login or permission error.
-3. Find the numeric ID of the Harvest task you log time to. Run
-   `hrvst users project-assignments me --output=json` and pick the `task.id`
-   under `task_assignments`.
-4. Add to the config:
+1. Put `asanamate-hrvst` on `PATH`.
+2. Create a personal access token at <https://id.getharvest.com/developers>.
+   Export `HARVEST_ACCESS_TOKEN` in the environment that starts asanamate.
+   Note the account ID; optionally export it as `HARVEST_ACCOUNT_ID`.
+   Never put the token in config or command arguments.
+3. Run `asanamate-hrvst setup`. It verifies your user and account with read-only
+   requests, asks which capabilities to enable, and lists tasks by name, ID,
+   and number of eligible projects. Feed-only setup skips task selection.
+   Review and confirm nonsecret settings before saving. Setup never creates
+   time entries or edits core config or shell startup files. Current exports
+   do not persist into future shells.
+4. Open `asanamate config` and merge the chosen snippets into existing tables;
+   preserve custom providers and other feed commands. Do not duplicate tables:
 
 ```toml
 [time_tracking]
 id = "hrvst"
-command = "asanamate-hrvst --task-id YOUR_TASK_ID"
+command = "asanamate-hrvst"
+
+# Optional: add to existing feed.commands, preserving other commands.
+[feed]
+commands = ["asanamate-hrvst"]
 ```
 
-To turn time tracking off, remove the `[time_tracking]` keys.
+Provider settings live in `$XDG_CONFIG_HOME/asanamate/harvest.toml`, default
+`~/.config/asanamate/harvest.toml`, beside core config:
+
+```toml
+account_id = "123456"
+task_id = "987654"
+```
+
+Both keys are optional; missing file means empty defaults. Present values must
+be quoted positive numeric IDs. Unknown keys or malformed files fail with their
+path. No secrets belong here. Setup saves with private permissions and atomic
+replacement, backs up changed files as `harvest.toml.yyyy-mm-dd--hh-mm-ss.bak`,
+refuses concurrent edits and existing backup names, and writes nothing when
+values are unchanged. Cancellation or validation/network failure keeps settings.
+
+`HARVEST_ACCOUNT_ID` overrides saved `account_id`. If any native credential
+input exists (either environment variable, even empty, or saved account ID),
+a complete valid native token/account pair is required; no legacy fallback
+occurs. Otherwise the existing `~/.hrvst/config.json` login is read without
+requiring hrvst-cli. Tokens are never copied. Legacy-only setup can explicitly
+retain that login and saves no native account ID. Existing commands, provider
+ID `hrvst`, and remembered choices continue working unchanged.
+
+`--task-id ID` overrides saved `task_id`, including existing commands such as
+`command = "asanamate-hrvst --task-id 987654"`. To adopt the saved default,
+remove that flag yourself. Only form/log need a task; summary/feed do not.
+
+`asanamate-hrvst check` validates local settings and credentials without network
+access, reports remote access unverified, and succeeds without a default task.
+`asanamate-hrvst check --online` explicitly verifies account/user identity and
+assignments with read-only requests. Verify first use by opening `t` on a ticket
+and pressing Esc without submitting, or checking today's feed. Entry creation
+always requires a separate explicit form submission.
+
+To disable tracking, remove the `[time_tracking]` keys. To disable the Harvest
+feed, remove only its command from `feed.commands`. Restart after edits. To
+remove native credentials, unset both environment variables in your launch
+environment and remove `account_id` (or the provider file). Remove the legacy
+login only if you also want to discard that fallback; revoke tokens in Harvest
+when needed. Core browsing works independently of Harvest.
 
 To be asked for time when you hand a ticket off, add
 `prompt_after = ["assign", "complete"]`. Assigning a ticket to someone else or
@@ -1605,9 +1648,22 @@ the workspace is reachable. For optional features it checks less:
 
 With a ticket gid, it also explains why each agent links to that ticket or not.
 
+Harvest diagnostics: run `asanamate-hrvst check` for local settings, then
+`asanamate-hrvst check --online` for explicit read-only account checks.
+Incomplete native credentials never fall back to a legacy account. Authentication
+rejection means check your token; inaccessible accounts mean check account ID
+and permissions. Empty assignments or an ineligible task need an admin assignment
+or rerunning setup. For rate limiting, wait before retrying. Network failures,
+timeouts, and server failures do not mean you must replace credentials. If entry
+creation has uncertain success, check Harvest before submitting again; the
+provider never retries creation automatically.
+
 ## Moving to another machine
 
-1. Install asanamate on the new machine (see [Install](#install)).
+1. Install asanamate on the new machine (see [Install](#install)). For Harvest,
+   include `asanamate-hrvst`, export your token in its launch environment, and
+   run `asanamate-hrvst setup` or copy the nonsecret `harvest.toml` defaults.
+   A legacy login remains usable without hrvst-cli; no token import is needed.
 2. Set `ASANA_ACCESS_TOKEN` there the same way as before (see [Token](#token)).
    Never copy the token inside a file with the others; create a new token at
    <https://app.asana.com/0/my-apps> if you prefer.

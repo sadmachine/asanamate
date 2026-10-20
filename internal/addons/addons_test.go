@@ -52,6 +52,11 @@ func TestHarvestCapabilitiesIndependentAndCustomSafe(t *testing.T) {
 	if !r.Capabilities[0].Configured || r.Capabilities[1].Configured || r.Capabilities[1].Status != "not configured" {
 		t.Fatalf("tracker-only statuses: %+v", r.Capabilities)
 	}
+	cfg.TimeTracking.Command = "asanamate-hrvst"
+	r = Inspect(e, Saved{Config: cfg})
+	if !r.Capabilities[0].Configured || len(e.Dependencies) != 0 || strings.Join(e.Setup, " ") != "asanamate-hrvst setup" || !strings.Contains(e.Verify, "check --online") {
+		t.Fatalf("native catalog: %+v", r)
+	}
 	cfg.TimeTracking.Command = "custom-tracker"
 	cfg.Feed.Commands = []string{"asanamate-hrvst"}
 	r = Inspect(e, Saved{Config: cfg})

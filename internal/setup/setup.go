@@ -452,7 +452,8 @@ commands = []
 # stdin and writes a form spec as JSON. See README for the protocol.
 [time_tracking]
 # id = "hrvst"
-# command = "asanamate-hrvst --task-id YOUR_TASK_ID"
+# Run asanamate-hrvst setup first. --task-id ID remains an explicit override.
+# command = "asanamate-hrvst"
 # Open the log time form after these edits succeed in the TUI: "assign" (to
 # someone else) and "complete". esc skips it.
 # prompt_after = ["assign", "complete"]

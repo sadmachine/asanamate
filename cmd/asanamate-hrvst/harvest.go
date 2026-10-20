@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -41,20 +40,6 @@ type harvestEntryRequest struct {
 	ExternalReference harvestExternalReference `json:"external_reference"`
 }
 
-// checkHarvest reports whether hrvst is installed and logged in, without
-// calling Harvest.
-func checkHarvest() error {
-	if _, err := exec.LookPath("hrvst"); err != nil {
-		return errors.New("hrvst is not installed; run `npm install -g hrvst-cli`")
-	}
-	configPath, err := harvestConfigPath()
-	if err != nil {
-		return err
-	}
-	_, err = loadHarvestCredentials(configPath)
-	return err
-}
-
 // harvestConfigPath is where hrvst 3.x keeps its login; it has no override.
 func harvestConfigPath() (string, error) {
 	home, err := os.UserHomeDir()
@@ -64,12 +49,19 @@ func harvestConfigPath() (string, error) {
 	return filepath.Join(home, ".hrvst", "config.json"), nil
 }
 
-// runHarvest serves one provider request using hrvst's project assignments
-// and credentials: a time tracking request, or a feed request (its "feed"
-// operation and date). Harvest's API needs a nested external_reference
-// object; hrvst's create command flattens its bracketed flags and drops the
-// link.
+// runHarvest serves one time tracking or feed request. Entry creation uses
+// Harvest's nested external_reference to preserve the Asana link.
 func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, configPath, endpoint string) error {
+	settings, _, _, err := readHarvestSettings()
+	if err != nil {
+		return err
+	}
+	if taskID == "" {
+		taskID = settings.TaskID
+	}
+	if taskID != "" && !positiveID(taskID) {
+		return errors.New("Harvest default task ID must be positive numeric (--task-id or harvest.toml task_id)")
+	}
 	var req struct {
 		timetracking.Request
 		Date string `json:"date"`
@@ -86,16 +78,13 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 		return json.NewEncoder(out).Encode(reply)
 	case "form":
 		if !digits(taskID) {
-			return errors.New("hrvst needs a numeric default task ID (--task-id)")
+			return errors.New("Harvest needs a default task; run asanamate-hrvst setup or pass --task-id")
 		}
-		cmd := exec.CommandContext(ctx, "hrvst", "users", "project-assignments", "me", "--output=json", "--page=all")
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
-		data, err := cmd.Output()
+		assignments, err := harvestAssignments(ctx, configPath, endpoint)
 		if err != nil {
-			return fmt.Errorf("hrvst project assignments: %s: %w", strings.TrimSpace(stderr.String()), err)
+			return err
 		}
-		projects, task, err := parseAssignments(data, taskID)
+		projects, task, err := assignments.options(taskID)
 		if err != nil {
 			return err
 		}
@@ -123,7 +112,7 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 		return json.NewEncoder(out).Encode(summary)
 	case "log":
 		if !digits(taskID) {
-			return errors.New("hrvst needs a numeric default task ID (--task-id)")
+			return errors.New("Harvest needs a default task; run asanamate-hrvst setup or pass --task-id")
 		}
 		if req.Asana == nil || req.Asana.TaskGID == "" || req.Asana.ProjectGID == "" || req.Asana.URL == "" {
 			return errors.New("hrvst log needs an Asana task, project, and URL")
@@ -143,17 +132,34 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 		if _, err := time.Parse(time.DateOnly, spentDate); err != nil {
 			return errors.New("hrvst log needs spent_date as YYYY-MM-DD")
 		}
-		return createHarvestEntry(ctx, configPath, endpoint, projectID, selectedTask, spentDate, hours, *req.Asana)
+		credentials, err := loadHarvestCredentials(configPath)
+		if err != nil {
+			return err
+		}
+		assignments, err := credentials.assignments(ctx, endpoint)
+		if err != nil {
+			return err
+		}
+		projects, _, err := assignments.options(taskID)
+		if err != nil {
+			return err
+		}
+		eligible := false
+		for _, project := range projects {
+			if project.ID == projectID {
+				eligible = true
+			}
+		}
+		if !eligible {
+			return errors.New("Harvest project/task is inactive or unassigned; reopen the time form")
+		}
+		return credentials.createEntry(ctx, endpoint, projectID, selectedTask, spentDate, hours, *req.Asana)
 	default:
 		return fmt.Errorf("unknown time provider operation %q", req.Operation)
 	}
 }
 
-func createHarvestEntry(ctx context.Context, configPath, endpoint, projectID, taskID, spentDate string, hours float64, asana timetracking.Asana) error {
-	credentials, err := loadHarvestCredentials(configPath)
-	if err != nil {
-		return err
-	}
+func (credentials harvestCredentials) createEntry(ctx context.Context, endpoint, projectID, taskID, spentDate string, hours float64, asana timetracking.Asana) error {
 	body, err := json.Marshal(harvestEntryRequest{
 		ProjectID: projectID, TaskID: taskID, SpentDate: spentDate, Hours: hours, Notes: asana.Title,
 		ExternalReference: harvestExternalReference{ID: asana.TaskGID, GroupID: asana.ProjectGID, Permalink: asana.URL},
@@ -163,7 +169,7 @@ func createHarvestEntry(ctx context.Context, configPath, endpoint, projectID, ta
 	}
 	result, err := credentials.call(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
-		return err
+		return fmt.Errorf("%w; entry creation may have succeeded; do not submit again without checking Harvest", err)
 	}
 	var entry struct {
 		ID                json.Number `json:"id"`
@@ -175,7 +181,7 @@ func createHarvestEntry(ctx context.Context, configPath, endpoint, projectID, ta
 	if err := json.Unmarshal(result, &entry); err != nil {
 		return fmt.Errorf("Harvest created time entry, but response could not be checked: %w; do not submit again", err)
 	}
-	if entry.ExternalReference == nil || entry.ExternalReference.ID != asana.TaskGID || entry.ExternalReference.Permalink == "" {
+	if !positiveID(entry.ID.String()) || entry.ExternalReference == nil || entry.ExternalReference.ID != asana.TaskGID || entry.ExternalReference.Permalink != asana.URL {
 		return fmt.Errorf("Harvest created time entry %s without the Asana link; do not submit again", entry.ID)
 	}
 	return nil
@@ -199,65 +205,6 @@ type harvestRef struct {
 	Name string      `json:"name"`
 }
 
-// parseAssignments accepts hrvst's JSON array of active assignments. Some
-// versions may print the Harvest response wrapper instead of its array. It
-// returns the projects where taskID is an active task, and that task.
-func parseAssignments(data []byte, taskID string) ([]form.Option, form.Option, error) {
-	type assignment struct {
-		IsActive        *bool      `json:"is_active"`
-		Project         harvestRef `json:"project"`
-		TaskAssignments []struct {
-			IsActive *bool      `json:"is_active"`
-			Task     harvestRef `json:"task"`
-		} `json:"task_assignments"`
-	}
-	var assignments []assignment
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&assignments); err != nil {
-		var wrapped struct {
-			Assignments []assignment `json:"project_assignments"`
-		}
-		decoder := json.NewDecoder(bytes.NewReader(data))
-		decoder.UseNumber()
-		if err := decoder.Decode(&wrapped); err != nil || wrapped.Assignments == nil {
-			return nil, form.Option{}, errors.New("hrvst project assignments: invalid JSON response")
-		}
-		assignments = wrapped.Assignments
-	}
-	seen := map[string]bool{}
-	var projects []form.Option
-	task := form.Option{ID: taskID}
-	active := 0
-	for _, a := range assignments {
-		if a.IsActive != nil && !*a.IsActive {
-			continue
-		}
-		active++
-		id := a.Project.ID.String()
-		if !digits(id) || a.Project.Name == "" {
-			return nil, form.Option{}, errors.New("hrvst project assignments: missing project ID or name")
-		}
-		for _, ta := range a.TaskAssignments {
-			if ta.Task.ID.String() != taskID || (ta.IsActive != nil && !*ta.IsActive) {
-				continue
-			}
-			task.Name = ta.Task.Name
-			if !seen[id] {
-				seen[id] = true
-				projects = append(projects, form.Option{ID: id, Name: a.Project.Name})
-			}
-		}
-	}
-	if active == 0 {
-		return nil, form.Option{}, errors.New("Harvest lists no active projects for you; ask a Harvest admin to assign you to one")
-	}
-	if len(projects) == 0 {
-		return nil, form.Option{}, fmt.Errorf("Harvest task %s is not active on any of your projects; set --task-id to a task ID from `hrvst users project-assignments me`", taskID)
-	}
-	return projects, task, nil
-}
-
 // harvestCredentials are shared by entry creation and summary retrieval.
 type harvestCredentials struct {
 	AccessToken string `json:"accessToken"`
@@ -265,13 +212,20 @@ type harvestCredentials struct {
 }
 
 func loadHarvestCredentials(configPath string) (harvestCredentials, error) {
+	settings, _, _, err := readHarvestSettings()
+	if err != nil {
+		return harvestCredentials{}, err
+	}
+	if credentials, native, err := nativeCredentials(settings); native || err != nil {
+		return credentials, err
+	}
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return harvestCredentials{}, fmt.Errorf("hrvst credentials: %w", err)
+		return harvestCredentials{}, errors.New("Harvest credentials unavailable; run asanamate-hrvst setup with HARVEST_ACCESS_TOKEN and HARVEST_ACCOUNT_ID")
 	}
 	var credentials harvestCredentials
-	if err := json.Unmarshal(data, &credentials); err != nil || credentials.AccessToken == "" || credentials.AccountID == "" {
-		return harvestCredentials{}, errors.New("hrvst credentials: missing access token or account ID; run `hrvst login`")
+	if err := json.Unmarshal(data, &credentials); err != nil || !validToken(credentials.AccessToken) || !positiveID(credentials.AccountID) {
+		return harvestCredentials{}, errors.New("legacy Harvest credentials invalid; run asanamate-hrvst setup")
 	}
 	return credentials, nil
 }
@@ -285,20 +239,37 @@ func (credentials harvestCredentials) call(ctx context.Context, method, endpoint
 	request.Header.Set("Harvest-Account-ID", credentials.AccountID)
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("User-Agent", "asanamate")
-	response, err := http.DefaultClient.Do(request)
+	client := &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	response, err := client.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("Harvest time entry: %w", err)
+		if errors.Is(err, context.Canceled) {
+			return nil, errors.New("Harvest request cancelled")
+		}
+		var networkError interface{ Timeout() bool }
+		if errors.As(err, &networkError) && networkError.Timeout() {
+			return nil, errors.New("Harvest request timed out; check Harvest status and network")
+		}
+		return nil, errors.New("Harvest network failure; check connectivity and Harvest status")
 	}
 	defer response.Body.Close()
 	result, err := io.ReadAll(io.LimitReader(response.Body, (1<<20)+1))
 	if err != nil {
-		return nil, fmt.Errorf("Harvest time entry response: %w", err)
+		return nil, errors.New("Harvest response could not be read; check connectivity")
 	}
 	if len(result) > 1<<20 {
 		return nil, errors.New("Harvest response exceeds 1 MiB")
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, fmt.Errorf("Harvest time entry: %s: %s", response.Status, strings.TrimSpace(string(result)))
+		switch response.StatusCode {
+		case 401:
+			return nil, errors.New("Harvest 401: authentication rejected; check your access token")
+		case 403, 404:
+			return nil, fmt.Errorf("Harvest %d: account or resource inaccessible; check account ID and permissions", response.StatusCode)
+		case 429:
+			return nil, errors.New("Harvest 429: rate limited; wait before trying again (no automatic retry)")
+		default:
+			return nil, fmt.Errorf("Harvest HTTP %d; check Harvest status (credentials not rechecked)", response.StatusCode)
+		}
 	}
 	return result, nil
 }
@@ -360,11 +331,16 @@ func harvestSummary(ctx context.Context, configPath, endpoint, gid string) (time
 	return timetracking.Summary{TotalSeconds: int64(seconds), TodaySeconds: &todaySeconds}, nil
 }
 
-// eachPage gets every page of the time entries at base with query, 100 per
+// eachPage gets every page at base with query, 100 per
 // page, and passes each page's body to fn. It fails rather than return part
 // of the pages. label prefixes errors.
 func eachPage(ctx context.Context, credentials harvestCredentials, base *url.URL, query url.Values, label string, fn func([]byte) error) error {
-	for page := 1; ; {
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+	for page, count := 1, 0; ; count++ {
+		if count >= 1000 {
+			return fmt.Errorf("%s: pagination exceeds 1000 pages", label)
+		}
 		query.Set("per_page", "100")
 		query.Set("page", strconv.Itoa(page))
 		u := *base
@@ -386,7 +362,7 @@ func eachPage(ctx context.Context, credentials harvestCredentials, base *url.URL
 		if nextPage == nil {
 			return nil
 		}
-		if *nextPage <= page {
+		if *nextPage != page+1 {
 			return fmt.Errorf("%s: invalid next_page", label)
 		}
 		page = *nextPage
@@ -414,7 +390,7 @@ func harvestFeed(ctx context.Context, configPath, endpoint, date string) (feed.R
 	var me struct {
 		ID json.Number `json:"id"`
 	}
-	if err := json.Unmarshal(data, &me); err != nil || me.ID == "" {
+	if err := json.Unmarshal(data, &me); err != nil || !positiveID(me.ID.String()) {
 		return feed.Reply{}, errors.New("Harvest feed: missing user id")
 	}
 	reply := feed.Reply{Source: "hrvst", Icon: "clock", Items: []feed.Item{}}
@@ -460,6 +436,9 @@ func harvestFeed(ctx context.Context, configPath, endpoint, date string) (feed.R
 	})
 	if err != nil {
 		return feed.Reply{}, err
+	}
+	if math.IsInf(total*3600, 0) || total*3600 >= float64(math.MaxInt64) {
+		return feed.Reply{}, errors.New("Harvest feed: duration overflow")
 	}
 	reply.Summary = durationLabel(total) + " logged"
 	return reply, nil

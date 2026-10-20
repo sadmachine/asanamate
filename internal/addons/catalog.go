@@ -22,7 +22,7 @@ type Capability struct {
 
 func (c Capability) recognizes(command string) bool {
 	words := strings.Fields(command)
-	if len(words) == 1 && words[0] == c.Executable && !c.TaskID {
+	if len(words) == 1 && words[0] == c.Executable {
 		return true
 	}
 	if !c.TaskID || len(words) != 3 || words[0] != c.Executable || words[1] != "--task-id" || words[2] == "" {
@@ -55,23 +55,23 @@ func Catalog() []Entry {
 		{
 			ID: "harvest", Name: "Harvest", Benefit: "Log ticket time and show today's Harvest entries",
 			Availability: "macOS/Linux (amd64/arm64); Harvest account with project access",
-			Guide:        readme + "time-tracking-optional", Adapters: []string{"asanamate-hrvst"}, Dependencies: []string{"hrvst", "node", "npm"},
+			Guide:        readme + "time-tracking-optional", Adapters: []string{"asanamate-hrvst"}, Dependencies: nil,
 			Capabilities: []Capability{
 				{Name: "Time tracking", Key: "time_tracking.command", Executable: "asanamate-hrvst", TaskID: true, Commands: func(c config.Config) []string { return []string{c.TimeTracking.Command} }},
 				{Name: "Today's feed", Key: "feed.commands", Executable: "asanamate-hrvst", Commands: func(c config.Config) []string { return c.Feed.Commands }},
 			},
 			Steps: []string{
-				"Install the bundled adapter using the same asanamate archive or source checkout (instructions below).",
-				"Install Node.js 20+ from https://nodejs.org/en/download, then hrvst 3.x from https://github.com/kgajera/hrvst-cli:\nnpm install -g hrvst-cli@3\nThe npm global bin directory must be on PATH (npm prefix -g; bin/ on macOS/Linux).",
-				"Run hrvst login to authorize your Harvest account. Provider setup below runs this command. Credentials stay in ~/.hrvst/config.json; core never reads them.",
-				"Find your numeric task.id under task_assignments:\nhrvst users project-assignments me --output=json\nAdd either or both capabilities below to config.toml. Replace YOUR_TASK_ID; keep your existing provider ID if already configured. Merge into existing tables; do not create duplicate tables or replace custom commands.",
+				"Install the bundled adapter using the same asanamate archive or source checkout (instructions below). No Node.js, npm, or hrvst-cli is needed.",
+				"Create a personal access token at https://id.getharvest.com/developers. Export HARVEST_ACCESS_TOKEN in the environment starting asanamate; optionally export HARVEST_ACCOUNT_ID. Never put the token in config or command arguments.",
+				"Run asanamate-hrvst setup: verify account access, choose time tracking, feeds, or both, and select a default task by name. It previews nonsecret harvest.toml settings beside core config; it never writes core config. Existing legacy ~/.hrvst/config.json logins remain supported without hrvst-cli.",
+				"Add either or both capabilities below. Merge existing tables and preserve other feed commands and custom providers. Time tracking uses the saved default; an existing --task-id override still wins. Feed-only setup needs no task.",
 			},
-			Snippet: "[time_tracking]\nid = \"hrvst\"\ncommand = \"asanamate-hrvst --task-id YOUR_TASK_ID\"\n\n[feed]\ncommands = [\"asanamate-hrvst\"]",
-			Check:   []string{"asanamate-hrvst", "check"}, Setup: []string{"hrvst", "login"},
-			CheckFailure: "Run hrvst login, then asanamate addons check harvest. For live account diagnostics, run hrvst users project-assignments me --output=json.",
-			Verify:       "asanamate addons check harvest runs asanamate-hrvst check: installed hrvst and readable local login only, no Harvest API call. Connection remains unverified. Explicit live verification contacts your authorized Harvest account: hrvst users project-assignments me --output=json.",
-			Example:      "Restart asanamate. Press t on a ticket: a form listing your Harvest projects proves live read access; Esc cancels without logging time. Enable the feed separately to see today's entries. Saving the time form creates an entry, so do so only when intended.",
-			Remove:       "Remove the time_tracking keys to disable tracking; remove only asanamate-hrvst from feed.commands to disable its feed. Restart. Delete asanamate-hrvst from your bin directory to uninstall the adapter. npm uninstall -g hrvst-cli removes the dependency. Remove ~/.hrvst/config.json only if you want to discard its login; revoke authorization in Harvest if needed.",
+			Snippet: "[time_tracking]\nid = \"hrvst\"\ncommand = \"asanamate-hrvst\"\n\n[feed]\ncommands = [\"asanamate-hrvst\"]",
+			Check:   []string{"asanamate-hrvst", "check"}, Setup: []string{"asanamate-hrvst", "setup"},
+			CheckFailure: "Run asanamate-hrvst setup with HARVEST_ACCESS_TOKEN exported. For explicit read-only account and assignment verification: asanamate-hrvst check --online.",
+			Verify:       "asanamate addons check harvest runs asanamate-hrvst check: validates local settings and credential source only, no network. Remote access remains unverified. No default task is valid for feeds. Run asanamate-hrvst check --online explicitly to verify account/user identity and task eligibility without writes.",
+			Example:      "Restart asanamate. Press t on a ticket: inspect the Harvest projects, then Esc without logging time. Enable the feed separately to see today's entries. Saving the form creates an entry, so do so only when intended.",
+			Remove:       "Remove time_tracking keys to disable tracking; remove only asanamate-hrvst from feed.commands to disable its feed. Restart. Delete the adapter binary to uninstall. Unset HARVEST_ACCESS_TOKEN/HARVEST_ACCOUNT_ID in your launch environment and remove harvest.toml to discard native settings. Legacy ~/.hrvst/config.json remains untouched; remove it only to discard that login. Revoke tokens in Harvest when needed.",
 		},
 		{
 			ID: "ccmux", Name: "ccmux", Benefit: "Show coding agents beside their tickets",

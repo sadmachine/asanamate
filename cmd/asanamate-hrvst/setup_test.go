@@ -194,7 +194,11 @@ func TestSaveHarvestSettingsGuardsAndBackups(t *testing.T) {
 			if err := os.WriteFile(path, original, 0o600); err != nil {
 				t.Fatal(err)
 			}
-			before, _ := os.Lstat(path)
+			before, err := snapshotHarvestSettings(path, original)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { before.file.Close() })
 			expected := string(original)
 			switch scenario {
 			case "edit":
@@ -206,8 +210,7 @@ func TestSaveHarvestSettingsGuardsAndBackups(t *testing.T) {
 			case "delete":
 				os.Remove(path)
 			case "new file":
-				before = nil
-				original = nil
+				// The file appeared after an originally absent snapshot.
 			case "lock":
 				os.WriteFile(path+".lock", []byte("occupied"), 0o600)
 			case "backup collision":
@@ -216,7 +219,11 @@ func TestSaveHarvestSettingsGuardsAndBackups(t *testing.T) {
 					os.WriteFile(path+when.Format(".2006-01-02--15-04-05.bak"), []byte("existing backup"), 0o600)
 				}
 			}
-			backup, changed, err := saveHarvestSettings(path, original, before, harvestSettings{AccountID: "789", TaskID: "456"})
+			attempt := before
+			if scenario == "new file" {
+				attempt = harvestSnapshot{}
+			}
+			backup, changed, err := saveHarvestSettings(path, attempt, harvestSettings{AccountID: "789", TaskID: "456"})
 			if scenario == "success" {
 				if err != nil || !changed || backup == "" {
 					t.Fatalf("save: %s %v %v", backup, changed, err)
@@ -249,5 +256,53 @@ func TestSaveHarvestSettingsGuardsAndBackups(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestHarvestSnapshotRejectsReplacementWithSameContentsAndTime(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "harvest.toml")
+	original := []byte("account_id = \"123\"\n")
+	if err := os.WriteFile(path, original, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	before, err := snapshotHarvestSettings(path, original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer before.file.Close()
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, original, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(path, before.info.ModTime(), before.info.ModTime()); err != nil {
+		t.Fatal(err)
+	}
+	if _, changed, err := saveHarvestSettings(path, before, harvestSettings{AccountID: "789"}); err == nil || changed {
+		t.Fatal("replacement with preserved bytes and mtime was overwritten")
+	}
+	current, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(current, original) {
+		t.Fatal("concurrently replaced settings were changed")
+	}
+}
+
+func TestHarvestSnapshotRequiresTheOriginalReadAndOpenFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "harvest.toml")
+	original := []byte("account_id = \"123\"\n")
+	if err := os.WriteFile(path, original, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := snapshotHarvestSettings(path, []byte("account_id = \"456\"\n")); err == nil {
+		t.Fatal("snapshot accepted settings changed since parsing")
+	}
+	before, err := snapshotHarvestSettings(path, original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before.file.Close()
+	if _, changed, err := saveHarvestSettings(path, before, harvestSettings{AccountID: "789"}); err == nil || changed {
+		t.Fatal("save accepted a snapshot after its identity protection was closed")
 	}
 }

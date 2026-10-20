@@ -71,7 +71,7 @@ func TestAddonSetupCancellationAndSavedConfigIsolation(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	dir := t.TempDir()
 	t.Setenv("PATH", dir)
-	if err := os.WriteFile(dir+"/hrvst", []byte("#!/bin/sh\nexit 1\n"), 0o700); err != nil {
+	if err := os.WriteFile(dir+"/asanamate-hrvst", []byte("#!/bin/sh\nexit 1\n"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	before, err := os.ReadFile(m.deps.ConfigPath)
@@ -81,7 +81,7 @@ func TestAddonSetupCancellationAndSavedConfigIsolation(t *testing.T) {
 	e, _ := addons.Find("harvest")
 	m.openAddon(e)
 	m.confirmAddonSetup()
-	if m.modal == nil || !strings.Contains(m.modal.notice, dir+"/hrvst") || !strings.Contains(m.modal.items[0].Label, "hrvst login") {
+	if m.modal == nil || !strings.Contains(m.modal.notice, dir+"/asanamate-hrvst") || !strings.Contains(m.modal.items[0].Label, "asanamate-hrvst setup") {
 		t.Fatal("setup confirmation must show command and resolved path")
 	}
 	m.Update(key("esc"))

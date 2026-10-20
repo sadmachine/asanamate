@@ -26,17 +26,30 @@ func TestMain(m *testing.M) {
 		harvestEndpoint = endpoint
 		os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 	}
-	os.Exit(m.Run())
+	dir, err := os.MkdirTemp("", "harvest-tests-")
+	if err != nil {
+		panic(err)
+	}
+	os.Setenv("XDG_CONFIG_HOME", dir)
+	os.Unsetenv("HARVEST_ACCESS_TOKEN")
+	os.Unsetenv("HARVEST_ACCOUNT_ID")
+	code := m.Run()
+	os.RemoveAll(dir)
+	os.Exit(code)
 }
 
 // TestProviderProtocol runs asanamate-hrvst as time_tracking.command through
 // asanamate's provider client, like the protocol test in
 // internal/timetracking: form, log, then summary.
 func TestProviderProtocol(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "hrvst"), []byte("#!/bin/sh\nprintf '%s' '"+assignmentJSON+"'\n"), 0o700); err != nil {
-		t.Fatal(err)
+	for _, native := range []bool{false, true} {
+		t.Run(fmt.Sprintf("native=%v", native), func(t *testing.T) { exerciseProviderProtocol(t, native) })
 	}
+}
+
+func exerciseProviderProtocol(t *testing.T, native bool) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
 	home := filepath.Join(dir, "home")
 	if err := os.MkdirAll(filepath.Join(home, ".hrvst"), 0o700); err != nil {
 		t.Fatal(err)
@@ -44,8 +57,17 @@ func TestProviderProtocol(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(home, ".hrvst", "config.json"), []byte(`{"accessToken":"test-token","accountId":"789"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	if native {
+		t.Setenv("HARVEST_ACCESS_TOKEN", "test-token")
+		t.Setenv("HARVEST_ACCOUNT_ID", "789")
+		writeProviderSettings(t, "task_id = \"456\"\n")
+	}
 	var logged atomic.Bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/users/me/project_assignments" {
+			fmt.Fprintf(w, `{"project_assignments":%s,"next_page":null}`, assignmentJSON)
+			return
+		}
 		if r.Method == http.MethodPost {
 			var payload harvestEntryRequest
 			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil || payload.ProjectID != "123" || payload.TaskID != "456" || payload.SpentDate != "2026-10-05" || payload.Hours != 1.25 || payload.ExternalReference.ID != "42" {
@@ -62,14 +84,18 @@ func TestProviderProtocol(t *testing.T) {
 		fmt.Fprintf(w, `{"time_entries":[{"hours":3.75,"spent_date":%q,"is_running":false,"created_at":"2026-10-12T18:05:00Z","project":{"name":"Web"},"external_reference":{"id":"42"}}],"next_page":null}`, time.Now().Format(time.DateOnly))
 	}))
 	defer server.Close()
-	t.Setenv("PATH", dir+":"+os.Getenv("PATH"))
+	t.Setenv("PATH", dir)
 	t.Setenv("HOME", home)
 	t.Setenv("ASANAMATE_HRVST_TEST_ENDPOINT", server.URL)
 	exe, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
 	}
-	provider := timetracking.Provider{Command: "'" + exe + "' --task-id 456"}
+	command := "'" + exe + "'"
+	if !native {
+		command += " --task-id 456"
+	}
+	provider := timetracking.Provider{Command: command}
 	ctx := context.Background()
 	asana := timetracking.Asana{TaskGID: "42", ProjectGID: "7", Title: "Fix login", URL: "https://app.asana.com/0/7/42"}
 

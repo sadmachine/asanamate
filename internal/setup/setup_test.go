@@ -512,3 +512,15 @@ func TestThemeInstallerKeepsEditsAndAddsMissingFiles(t *testing.T) {
 		t.Fatal("installed themes must load local edits and restore missing files")
 	}
 }
+
+func TestHarvestTemplateUsesNativeSetup(t *testing.T) {
+	template := Render(asana.Ref{GID: "1", Name: "W"}, "")
+	for _, want := range []string{"# Run asanamate-hrvst setup first.", "# command = \"asanamate-hrvst\"", "--task-id ID remains an explicit override"} {
+		if !strings.Contains(template, want) {
+			t.Errorf("template missing %q", want)
+		}
+	}
+	if strings.Contains(template, "YOUR_TASK_ID") {
+		t.Fatal("template requires manual task ID")
+	}
+}

@@ -26,59 +26,41 @@ const assignmentJSON = `[{"is_active":true,"project":{"id":123,"name":"Web"},"ta
 
 // Only active projects with the configured task are offered, under the
 // task's real name.
-func TestParseHarvestAssignments(t *testing.T) {
-	projects, task, err := parseAssignments([]byte(assignmentJSON), "456")
+func TestHarvestAssignmentOptions(t *testing.T) {
+	var all assignments
+	if err := json.Unmarshal([]byte(assignmentJSON), &all); err != nil {
+		t.Fatal(err)
+	}
+	projects, task, err := all.options("456")
 	if err != nil || len(projects) != 1 || projects[0] != (form.Option{ID: "123", Name: "Web"}) || task != (form.Option{ID: "456", Name: "Development"}) {
-		t.Fatalf("projects = %+v, task = %+v, err = %v", projects, task, err)
+		t.Fatalf("projects=%+v task=%+v err=%v", projects, task, err)
 	}
-	if _, _, err := parseAssignments([]byte(assignmentJSON), "8"); err == nil || !strings.Contains(err.Error(), "Harvest task 8 is not active") {
-		t.Fatalf("unassigned task err = %v", err)
+	if _, _, err := all.options("8"); err == nil || !strings.Contains(err.Error(), "Harvest task 8 is not active") {
+		t.Fatalf("unassigned: %v", err)
 	}
-	if _, _, err := parseAssignments([]byte(`[]`), "456"); err == nil || !strings.Contains(err.Error(), "no active projects") {
-		t.Fatalf("no assignments err = %v", err)
-	}
-	if _, _, err := parseAssignments([]byte("not JSON"), "456"); err == nil {
-		t.Fatal("unrecognized assignment output accepted")
+	if _, _, err := (assignments{}).options("456"); err == nil || !strings.Contains(err.Error(), "no active projects") {
+		t.Fatalf("empty: %v", err)
 	}
 }
 
 func TestHarvestAdapterUsesExternalReference(t *testing.T) {
 	dir := t.TempDir()
-	script := filepath.Join(dir, "hrvst")
-	projectCall := filepath.Join(dir, "project-args")
-	body := "#!/bin/sh\nif [ \"$1\" = users ]; then printf '%s\\n' \"$@\" > '" + projectCall + "'; echo 'update warning' >&2; printf '%s' '" + assignmentJSON + "'; else exit 1; fi\n"
-	if err := os.WriteFile(script, []byte(body), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("PATH", dir+":"+os.Getenv("PATH"))
-	var out bytes.Buffer
-	if err := runHarvest(context.Background(), strings.NewReader(`{"operation":"form"}`), &out, "456", "", ""); err != nil {
-		t.Fatal(err)
-	}
-	var spec form.Spec
-	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || len(spec.Fields) != 4 || spec.Fields[3].Type != form.Date || spec.Fields[0].Options[0].ID != "123" || spec.Fields[1].Options[0] != (form.Option{ID: "456", Name: "Development"}) || !spec.Fields[0].Remember || !spec.Fields[1].Remember {
-		t.Fatalf("response = %s, err = %v", out.String(), err)
-	}
-	out.Reset()
-	// The first suggested Harvest project that is offered becomes the default.
-	if err := runHarvest(context.Background(), strings.NewReader(`{"operation":"form","links":[{"type":"harvest_project","value":"999"},{"type":"harvest_project","value":"123"}]}`), &out, "456", "", ""); err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || spec.Fields[0].Default != "123" || spec.Fields[1].Default != "" {
-		t.Fatalf("suggested response = %s, err = %v", out.String(), err)
-	}
-	projectArgs, _ := os.ReadFile(projectCall)
-	if string(projectArgs) != "users\nproject-assignments\nme\n--output=json\n--page=all\n" {
-		t.Fatalf("assignment command args = %s", projectArgs)
-	}
+	t.Setenv("PATH", dir)
 	request := `{"operation":"log","values":{"project_id":"123","task_id":"456","hours":"1.25","spent_date":"2026-10-05"},"asana":{"task_gid":"1","project_gid":"2","title":"Fix login","url":"https://app.asana.com/0/2/1"}}`
 	credentials := filepath.Join(dir, "config.json")
 	if err := os.WriteFile(credentials, []byte(`{"accessToken":"test-token","accountId":"789"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost || r.Header.Get("Authorization") != "Bearer test-token" || r.Header.Get("Harvest-Account-ID") != "789" {
+		if r.Header.Get("Authorization") != "Bearer test-token" || r.Header.Get("Harvest-Account-ID") != "789" {
 			t.Errorf("Harvest request headers = %+v", r.Header)
+		}
+		if r.Method == http.MethodGet {
+			if r.URL.Path != "/users/me/project_assignments" {
+				t.Errorf("unexpected path %s", r.URL.Path)
+			}
+			fmt.Fprintf(w, `{"project_assignments":%s,"next_page":null}`, assignmentJSON)
+			return
 		}
 		var payload struct {
 			ProjectID         string  `json:"project_id"`
@@ -102,6 +84,22 @@ func TestHarvestAdapterUsesExternalReference(t *testing.T) {
 		w.Write([]byte(`{"id":987,"external_reference":{"id":"1","permalink":"https://app.asana.com/0/2/1"}}`))
 	}))
 	defer server.Close()
+	var out bytes.Buffer
+	if err := runHarvest(context.Background(), strings.NewReader(`{"operation":"form"}`), &out, "456", credentials, server.URL); err != nil {
+		t.Fatal(err)
+	}
+	var spec form.Spec
+	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || len(spec.Fields) != 4 || spec.Fields[3].Type != form.Date || spec.Fields[0].Options[0].ID != "123" || spec.Fields[1].Options[0] != (form.Option{ID: "456", Name: "Development"}) || !spec.Fields[0].Remember || !spec.Fields[1].Remember {
+		t.Fatalf("response = %s, err = %v", out.String(), err)
+	}
+	out.Reset()
+	// The first suggested Harvest project that is offered becomes the default.
+	if err := runHarvest(context.Background(), strings.NewReader(`{"operation":"form","links":[{"type":"harvest_project","value":"999"},{"type":"harvest_project","value":"123"}]}`), &out, "456", credentials, server.URL); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || spec.Fields[0].Default != "123" || spec.Fields[1].Default != "" {
+		t.Fatalf("suggested response = %s, err = %v", out.String(), err)
+	}
 	if err := runHarvest(context.Background(), strings.NewReader(request), &out, "456", credentials, server.URL); err != nil {
 		t.Fatal(err)
 	}
@@ -117,16 +115,11 @@ func TestHarvestAdapterUsesExternalReference(t *testing.T) {
 }
 
 func TestHarvestRejectsCreatedEntryWithoutAsanaLink(t *testing.T) {
-	dir := t.TempDir()
-	credentials := filepath.Join(dir, "config.json")
-	if err := os.WriteFile(credentials, []byte(`{"accessToken":"test-token","accountId":"789"}`), 0o600); err != nil {
-		t.Fatal(err)
-	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{"id":987,"external_reference":null}`))
 	}))
 	defer server.Close()
-	err := createHarvestEntry(context.Background(), credentials, server.URL, "123", "456", "2026-10-05", 1.25, timetracking.Asana{TaskGID: "1", ProjectGID: "2", URL: "https://app.asana.com/0/2/1"})
+	err := (harvestCredentials{AccessToken: "test-token", AccountID: "789"}).createEntry(context.Background(), server.URL, "123", "456", "2026-10-05", 1.25, timetracking.Asana{TaskGID: "1", ProjectGID: "2", URL: "https://app.asana.com/0/2/1"})
 	if err == nil || !strings.Contains(err.Error(), "without the Asana link") || !strings.Contains(err.Error(), "do not submit again") {
 		t.Fatalf("missing link error = %v", err)
 	}

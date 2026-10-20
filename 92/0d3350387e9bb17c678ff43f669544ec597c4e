@@ -1,0 +1,57 @@
+internal/extensions/contracts_test.go
+  s_3d0c7060c7d2ae::t_1a126ccbe06dc1 100,124-155
+  s_3d0c7060c7d2ae::t_1a47b561a5bf5f 156
+internal/agents/agents.go
+  s_3d0c7060c7d2ae::t_b3f83eaed73cdc 3,18,39-48,103,113,129-130,132,137,154-165,178,210-213,215-220,223,231-233,236,245-250
+  s_3d0c7060c7d2ae::t_8aeb9851043280 131
+internal/agents/agents_test.go
+  s_3d0c7060c7d2ae::t_3e9e7fdfd85121 28-40,149,152,155,158,163-193
+  s_3d0c7060c7d2ae::t_3ce3bb23ab07c3 194
+internal/extensions/catalog.go
+  s_3d0c7060c7d2ae::t_b3f83eaed73cdc 130-131,140,147
+  s_3d0c7060c7d2ae::t_a4f5d3f6b87c7b 118,124,136-137,141-146,151
+README.md
+  s_3d0c7060c7d2ae::t_db409f54fdf953 1307-1325,1356-1357
+cmd/asanamate/main.go
+  s_3d0c7060c7d2ae::t_1bc5d55148af80 678,714,720
+docs/extensions.md
+  s_3d0c7060c7d2ae::t_473c456ced2898 397,409,428-435,437,466-509
+internal/ccmux/ccmux.go
+  s_3d0c7060c7d2ae::t_b53b04dff608e2 63,96-97,101
+internal/ccmux/ccmux_test.go
+  s_3d0c7060c7d2ae::t_c2f26b2bf4e66d 16,53,56-61
+internal/setup/setup.go
+  s_3d0c7060c7d2ae::t_d18e52778b1a6a 421-423
+internal/tui/agents_test.go
+  s_3d0c7060c7d2ae::t_c6674c442e2fe8 44-66,374,380
+internal/tui/feedpanel.go
+  s_3d0c7060c7d2ae::t_89b9ed4fecb836 388,391-392,407
+internal/tui/listrow.go
+  s_3d0c7060c7d2ae::t_54f7dbd6b266c5 30,36,58-59,70,80,83,85
+packages/asana-sessions/CHANGELOG.md
+  s_3d0c7060c7d2ae::t_f23c4c26c258ed 3-8
+packages/asana-sessions/README.md
+  s_3d0c7060c7d2ae::t_f7562a2f546843 180-205
+packages/asana-sessions/src/agent-links.js
+  s_3d0c7060c7d2ae::t_1828e9c85497a5 1-64
+packages/asana-sessions/src/cli.js
+  s_3d0c7060c7d2ae::t_86481a8e3a7760 10,38,161-163,170
+packages/asana-sessions/test/cli.test.js
+  s_3d0c7060c7d2ae::t_85bb3e66afb336 8,33-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "920d3350387e9bb17c678ff43f669544ec597c4e",
+  "prompts": {},
+  "sessions": {
+    "s_3d0c7060c7d2ae": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15a4b-03b3-71c0-a974-5f8f20c8809a",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

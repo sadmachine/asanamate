@@ -1,0 +1,82 @@
+docs/extensions.md
+  s_d97ff4b2bb33ae::t_d3ea8a8fb634dd 3-6
+cmd/asanamate/main.go
+  s_d97ff4b2bb33ae::t_9ad5b951bb611e 661-667,819,821-822
+  s_d97ff4b2bb33ae::t_263556445496da 28,56-57,107-108,649,795-809
+  s_d97ff4b2bb33ae::t_17a389bd2c24d7 781-782,788-789
+  s_d97ff4b2bb33ae::t_913afeab128fa4 820
+  s_d97ff4b2bb33ae::t_d5d2e6933a3ffa 810-812
+internal/tui/notifications.go
+  s_d97ff4b2bb33ae::t_ee0a574563c6f6 169
+README.md
+  s_d97ff4b2bb33ae::t_17a389bd2c24d7 190,1582-1591
+  s_d97ff4b2bb33ae::t_7c1e33a102145e 189,213-246
+  s_d97ff4b2bb33ae::t_d3ea8a8fb634dd 83-84,89,91-93,108-109,120,135-136,154-156
+  s_d97ff4b2bb33ae::t_9d5103c072f691 30-31
+  s_d97ff4b2bb33ae::t_06b95dee4b191d 247
+internal/tui/settings.go
+  s_d97ff4b2bb33ae::t_263556445496da 55
+cmd/asanamate/addons.go
+  s_d97ff4b2bb33ae::t_fb41563925122a 1-37,39-52
+  s_d97ff4b2bb33ae::t_cd959d63765f4f 38
+internal/addons/catalog.go
+  s_d97ff4b2bb33ae::t_6116f770a05175 15-16
+  s_d97ff4b2bb33ae::t_9ad5b951bb611e 49,87,137-149
+  s_d97ff4b2bb33ae::t_cd959d63765f4f 71,88,106
+  s_d97ff4b2bb33ae::t_abe2b23e2ee1eb 1-14,17-18,21-42,46,50-57,59-69,75-78,80-82,84-86,92-95,97-99,102-103,110-119,121,123-136,150
+  s_d97ff4b2bb33ae::t_76bf19ea9abbbb 47,72-74,89-91,104-105,107-109
+  s_d97ff4b2bb33ae::t_86913aab933cc0 79,83,100-101
+  s_d97ff4b2bb33ae::t_bbce522fe5bd02 19-20,43-45,48,58,70,96,120,122
+internal/tui/addons_test.go
+  s_d97ff4b2bb33ae::t_0a65cce4c67e3f 1-106
+internal/setup/setup.go
+  s_d97ff4b2bb33ae::t_263556445496da 218-219
+internal/agents/agents.go
+  s_d97ff4b2bb33ae::t_6116f770a05175 15,119-124
+  s_d97ff4b2bb33ae::t_913afeab128fa4 117
+  s_d97ff4b2bb33ae::t_9ad5b951bb611e 17-18,109-116,125-130,159
+  s_d97ff4b2bb33ae::t_d22e95ce5fe9f2 118
+internal/addons/status.go
+  s_d97ff4b2bb33ae::t_cd959d63765f4f 200
+  s_d97ff4b2bb33ae::t_17a389bd2c24d7 55,89,96,99,158-159,195,198,220-223
+  s_d97ff4b2bb33ae::t_9ad5b951bb611e 213,216
+  s_d97ff4b2bb33ae::t_2e9d3c4b4ebd60 100,139-157,160-171
+  s_d97ff4b2bb33ae::t_247b8df583f636 54
+  s_d97ff4b2bb33ae::t_fb41563925122a 1-53,56-88,90-95,97-98,101-138,172-194,196-197,199,201-212,214-215,217-219,224-256
+internal/tui/addons.go
+  s_d97ff4b2bb33ae::t_913afeab128fa4 64,69,71,75
+  s_d97ff4b2bb33ae::t_263556445496da 1-8,10-47,49-63,65-68,70,72-74,76-139,143-197
+  s_d97ff4b2bb33ae::t_cd959d63765f4f 48
+  s_d97ff4b2bb33ae::t_17da5e13721b7b 9,140-142
+internal/tui/model.go
+  s_d97ff4b2bb33ae::t_263556445496da 147,321-324,658-660,1154-1155
+docs/specs/README.md
+  s_d97ff4b2bb33ae::t_9d5103c072f691 35
+cmd/asanamate/addons_test.go
+  s_d97ff4b2bb33ae::t_0a65cce4c67e3f 1-86
+internal/jsoncmd/jsoncmd.go
+  s_d97ff4b2bb33ae::t_9ad5b951bb611e 92
+  s_d97ff4b2bb33ae::t_c4055fd0d7bec9 64-77
+internal/agents/agents_test.go
+  s_d97ff4b2bb33ae::t_6116f770a05175 5,12-28
+  s_d97ff4b2bb33ae::t_ff3b73423a1601 29
+internal/addons/addons_test.go
+  s_d97ff4b2bb33ae::t_ee0a574563c6f6 1-150
+  s_d97ff4b2bb33ae::t_6116f770a05175 151-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fcc330bc992b136ab229b4fded369e7b69b80151",
+  "prompts": {},
+  "sessions": {
+    "s_d97ff4b2bb33ae": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15a08-89d0-74e2-a16b-6227cedff095",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

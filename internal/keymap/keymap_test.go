@@ -77,6 +77,27 @@ func TestResolveOverridesAndUnbinds(t *testing.T) {
 	}
 }
 
+func TestToolsPreservesExistingCommaOverrides(t *testing.T) {
+	for _, binding := range []string{"settings", "quit"} {
+		t.Run(binding, func(t *testing.T) {
+			k, err := Resolve(map[string]map[string][]string{"main": {binding: {","}}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if k.Name("main", ",") != binding || len(k.Keys("main", "tools")) != 0 {
+				t.Fatal("new tools default claimed an existing override")
+			}
+		})
+	}
+	k, err := Resolve(map[string]map[string][]string{"main": {"settings": {","}, "tools": {";"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k.Name("main", ",") != "settings" || k.Name("main", ";") != "tools" {
+		t.Fatal("explicit menu bindings lost")
+	}
+}
+
 func TestResolveErrors(t *testing.T) {
 	for name, tc := range map[string]struct {
 		o    map[string]map[string][]string
@@ -86,6 +107,7 @@ func TestResolveErrors(t *testing.T) {
 		"unknown binding": {map[string]map[string][]string{"main": {"dwon": {"j"}}}, "keys.main.dwon: unknown binding"},
 		"bad key":         {map[string]map[string][]string{"main": {"quit": {"ctrl+qq"}}}, "keys.main.quit"},
 		"conflict":        {map[string]map[string][]string{"main": {"quit": {"j"}}}, `keys.main: "j" is bound to both down and quit`},
+		"menu conflict":   {map[string]map[string][]string{"main": {"settings": {","}, "tools": {","}}}, `keys.main: "," is bound to both settings and tools`},
 		"chord":           {map[string]map[string][]string{"main": {"top": {"g g"}}}, "not supported yet"},
 	} {
 		if _, err := Resolve(tc.o); err == nil || !strings.Contains(err.Error(), tc.want) {

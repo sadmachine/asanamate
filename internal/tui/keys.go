@@ -227,6 +227,7 @@ func handlers() map[string]handler {
 		"repos":            {run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestProjects(m.openLinks) }},
 		"action_builder":   {run: do((*Model).openActionBuilder)},
 		"settings":         {run: do(func(m *Model) { m.openSettings(0) })},
+		"tools":            {run: do((*Model).openTools)},
 		"group_by":         {listOnly: true, run: do((*Model).openGroupPicker)},
 		"sort_by":          {listOnly: true, run: do((*Model).openSortPicker)},
 		"fit_list":         {listOnly: true, run: do((*Model).fitList)},

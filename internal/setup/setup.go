@@ -216,7 +216,7 @@ Defaults:
   - Themes: "auto" follows the terminal background. Edit the installed presets
     in themes/, or copy the example to make your own.
   - Agent status and time tracking are off. Run asanamate extensions or open
-    Settings > Extensions to discover optional integrations and setup guides.
+    Settings & tools > Extensions (comma, then o) to discover optional integrations and setup guides.
   - Repo links and recent projects are stored in %s.
 
 Run asanamate to start.
@@ -337,7 +337,7 @@ list_width = 0
 resize = true
 
 [list]
-# Auto-update interval lives in settings.toml (list.refresh_interval); R and settings save it.
+# Auto-update interval lives in settings.toml (list.refresh_interval); R and Settings & tools save it.
 # "single": one line per ticket. "multi": title on line one, fields on line two.
 layout = "single"
 # Values shown with the title (the title is always shown), in this order.

@@ -1,6 +1,6 @@
 # Extensions
 
-For installation and onboarding, use `asanamate extensions` or **Settings > Extensions**.
+For installation and onboarding, use `asanamate extensions` or **Settings & tools > Extensions** (`,`, then `o`).
 See [Extensions](../README.md#extensions) for the shared catalog. This page remains the
 protocol contract; custom commands need no catalog registration.
 

@@ -11,11 +11,11 @@ import (
 	"github.com/sadmachine/asanamate/internal/extensions"
 )
 
-func TestDisabledExtensionsDiscoverableFromSettings(t *testing.T) {
+func TestDisabledExtensionsDiscoverableFromTools(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.loading = false
 	t.Setenv("PATH", t.TempDir())
-	m.Update(key("s"))
+	m.Update(key(","))
 	m.Update(key("o"))
 	if m.modal == nil || m.modal.title != "Extensions" || len(m.modal.items) != len(extensions.Catalog()) {
 		t.Fatal("extension catalog missing or incomplete")

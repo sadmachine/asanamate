@@ -208,8 +208,8 @@ func TestActionBuilderCreatesEditsAndReloads(t *testing.T) {
 	if m.builder != nil || len(m.deps.Config.Actions) != 1 || !reflect.DeepEqual(m.deps.Config.Actions[0], want) || m.lastAction != -1 {
 		t.Fatalf("saved actions: %+v, builder: %+v", m.deps.Config.Actions, m.builder)
 	}
-	// Open the existing action through Settings, then edit its nested option.
-	m.Update(key("s"))
+	// Open the existing action through Settings & tools, then edit its nested option.
+	m.Update(key(","))
 	m.Update(key("a"))
 	m.Update(key("down"))
 	m.Update(key("enter"))

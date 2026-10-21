@@ -7,7 +7,8 @@ so links here are absolute. Steps for changes not yet released wait under
 
 ## Unreleased
 
-Optional integrations are now listed under **Settings > Extensions** and
+Visual settings remain under `s`; program settings and tools open with `,`.
+Optional integrations are now listed under **Settings & tools > Extensions** and
 `asanamate extensions`. The previous `asanamate addons` command remains an
 alias. Guides include per-contract references, implementation instructions,
 and the separately installed conversation-history helper. No config migration

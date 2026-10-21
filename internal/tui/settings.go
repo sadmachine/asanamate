@@ -31,12 +31,7 @@ func (m *Model) openSettings(cursor int) {
 		{Label: "Separators", Hint: onOff(m.separator), Key: "s", Value: toggle(0, "list.separator", func() any { m.separator = !m.separator; return m.separator })},
 		{Label: "Header spacing", Hint: onOff(m.spacing), Key: "h", Value: toggle(1, "list.header.spacing", func() any { m.spacing = !m.spacing; return m.spacing })},
 		{Label: "Reader view", Hint: m.readerView, Key: "v", Value: toggle(2, "reader.view", func() any { m.toggleReaderView(); return m.readerView })},
-		{Label: "Auto-update interval", Hint: shortDuration(m.refreshInterval), Key: "i", Value: func() tea.Cmd {
-			m.modal = nil
-			m.openRefreshInterval()
-			return nil
-		}},
-		{Label: "Selection style", Hint: m.selectionStyle, Key: "l", Value: toggle(4, "list.selection.style", func() any {
+		{Label: "Selection style", Hint: m.selectionStyle, Key: "l", Value: toggle(3, "list.selection.style", func() any {
 			if m.selectionStyle == config.StyleBar {
 				m.selectionStyle = config.StyleMarker
 			} else {
@@ -45,19 +40,33 @@ func (m *Model) openSettings(cursor int) {
 			m.fitList()
 			return m.selectionStyle
 		})},
-		{Label: "Dim unfocused panes", Hint: onOff(m.focusDim), Key: "d", Value: toggle(5, "layout.focus.dim", func() any { m.focusDim = !m.focusDim; return m.focusDim })},
+		{Label: "Dim unfocused panes", Hint: onOff(m.focusDim), Key: "d", Value: toggle(4, "layout.focus.dim", func() any { m.focusDim = !m.focusDim; return m.focusDim })},
 		{Label: "Theme", Hint: cmp.Or(m.deps.Config.Theme.Name, config.ThemeAuto), Key: "t", Value: func() tea.Cmd {
 			m.modal = nil
 			return m.openThemes()
 		}},
+		{Label: "List columns for this project", Key: "c", Value: m.openColumns},
 	}
-	items = append(items, pickItem{Label: "Build / edit actions", Key: "a", Value: func() tea.Cmd { m.modal = nil; m.openActionBuilder(); return nil }})
-	items = append(items, pickItem{Label: "Extensions", Key: "o", Value: func() tea.Cmd { m.openExtensions(); return nil }})
-	items = append(items, pickItem{Label: "List columns for this project", Key: "c", Value: m.openColumns})
-	items = append(items, pickItem{Label: "Status history", Key: "n", Value: func() tea.Cmd { m.openStatusHistory(); return nil }})
-	p := newPicker(pickValue(func(open func() tea.Cmd) tea.Cmd { return open() }), "Settings", items)
+	p := newPicker(pickValue(func(open func() tea.Cmd) tea.Cmd { return open() }), "Visual settings", items)
 	p.keySelect = true
 	p.cursor = cursor
+	m.modal = p
+}
+
+// openTools shows program settings and tools independently of display settings.
+func (m *Model) openTools() {
+	items := []pickItem{
+		{Label: "Build / edit actions", Key: "a", Value: func() tea.Cmd { m.modal = nil; m.openActionBuilder(); return nil }},
+		{Label: "Extensions", Key: "o", Value: func() tea.Cmd { m.openExtensions(); return nil }},
+		{Label: "Auto-update interval", Hint: shortDuration(m.refreshInterval), Key: "i", Value: func() tea.Cmd {
+			m.modal = nil
+			m.openRefreshInterval()
+			return nil
+		}},
+		{Label: "Status history", Key: "n", Value: func() tea.Cmd { m.openStatusHistory(); return nil }},
+	}
+	p := newPicker(pickValue(func(open func() tea.Cmd) tea.Cmd { return open() }), "Settings & tools", items)
+	p.keySelect = true
 	m.modal = p
 }
 

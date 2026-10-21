@@ -38,7 +38,7 @@ func runExtensions(args []string, out io.Writer) error {
 			r := extensions.Inspect(entry, saved)
 			fmt.Fprintf(out, "\n%s (%s) — %s\n  %s\n  %s\n", entry.Name, entry.ID, entry.Benefit, r.Summary(), r.Check)
 		}
-		fmt.Fprintln(out, "\nSetup and removal: asanamate extensions <id>\nLocal checks: asanamate extensions check <id>\nTUI: Settings > Extensions")
+		fmt.Fprintln(out, "\nSetup and removal: asanamate extensions <id>\nLocal checks: asanamate extensions check <id>\nTUI: Settings & tools > Extensions (comma, then o)")
 		return nil
 	}
 	r := extensions.Inspect(e, saved)

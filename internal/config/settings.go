@@ -20,7 +20,7 @@ var SettingKeys = []string{
 	"list.refresh_interval", "reader.view", "layout.focus.dim",
 }
 
-const settingsHeader = `# Settings you can also change in asanamate (press s).
+const settingsHeader = `# Settings you can also change in asanamate (s for visuals; comma for tools).
 # asanamate rewrites this file when you change a setting there. It keeps
 # every value, but not comments below this header.
 

@@ -337,7 +337,7 @@ list_width = 0
 resize = true
 
 [list]
-# Auto-update interval lives in settings.toml (list.refresh_interval); R and settings save it.
+# Auto-update interval lives in settings.toml (list.refresh_interval); R and Settings & tools save it.
 # "single": one line per ticket. "multi": title on line one, fields on line two.
 layout = "single"
 # Values shown with the title (the title is always shown), in this order.

@@ -103,11 +103,14 @@ func Resolve(overrides map[string]map[string][]string) (Keymap, error) {
 			raw, ok := overrides[s.Name][b.Name]
 			if !ok {
 				raw = b.Keys
-				// Preserve explicit legacy copy keys when the new yank defaults
-				// would otherwise claim the same key.
+				// Preserve legacy copy keys and existing overrides when the new
+				// yank or tools defaults would otherwise claim the same key.
 				legacy := map[string]string{"yank": "copy_link", "copy_selection": "copy_comment"}[b.Name]
-				if s.Name == "main" && legacy != "" {
-					for _, r := range overrides[s.Name][legacy] {
+				for name, explicit := range overrides[s.Name] {
+					if s.Name != "main" || (name != legacy && b.Name != "tools") {
+						continue
+					}
+					for _, r := range explicit {
 						key, err := Normalize(r)
 						if err == nil {
 							raw = slices.DeleteFunc(slices.Clone(raw), func(v string) bool { return v == key })

@@ -11,15 +11,68 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/state"
 )
+
+func TestSettingsMenusSeparateAndRebind(t *testing.T) {
+	for _, rebound := range []bool{false, true} {
+		for _, menu := range []struct {
+			binding, key, title string
+			otherKeys           []string
+		}{
+			{"settings", "s", "Visual settings", []string{"a", "i", "n"}},
+			{"tools", ",", "Settings & tools", []string{"s", "h", "v", "l", "d", "t", "c"}},
+		} {
+			name := menu.binding
+			if rebound {
+				name += "/rebound"
+			}
+			t.Run(name, func(t *testing.T) {
+				cfg := config.Default()
+				openKey := menu.key
+				if rebound {
+					var err error
+					cfg.Keymap, err = keymap.Resolve(map[string]map[string][]string{"main": {"settings": {"S"}, "tools": {";"}}})
+					if err != nil {
+						t.Fatal(err)
+					}
+					openKey = cfg.Keymap.Keys("main", menu.binding)[0]
+				}
+				m, _ := testModel(t, cfg)
+				m.loading = false
+				if rebound {
+					m.Update(key(menu.key))
+					if m.modal != nil {
+						t.Fatal("default key still opens the rebound menu")
+					}
+				}
+				m.Update(key(openKey))
+				if m.modal == nil || m.modal.title != menu.title {
+					t.Fatalf("%s did not open %s", openKey, menu.title)
+				}
+				opened := m.modal
+				for _, otherKey := range menu.otherKeys {
+					m.Update(key(otherKey))
+					if m.modal != opened || m.input != nil || m.builder != nil {
+						t.Fatalf("%s handled another menu's key %s", menu.title, otherKey)
+					}
+				}
+				m.Update(key("esc"))
+				if m.modal != nil {
+					t.Fatal("escape did not close the menu")
+				}
+			})
+		}
+	}
+}
 
 func TestSettingsTogglesPersist(t *testing.T) {
 	m, st := testModel(t, config.Default())
 	m.loading = false
 	m.Update(key("s"))
-	if m.modal == nil || m.modal.title != "Settings" {
-		t.Fatal("s did not open settings")
+	if m.modal == nil || m.modal.title != "Visual settings" {
+		t.Fatal("s did not open visual settings")
 	}
 	m.Update(key("s"))
 	m.Update(key("h"))
@@ -62,7 +115,7 @@ func TestSelectionSettingsToggleAndPersist(t *testing.T) {
 					want = config.StyleMarker
 				}
 				m.Update(key("l"))
-				if m.modal == nil || m.modal.cursor != 4 || m.modal.items[4].Hint != want {
+				if m.modal == nil || m.modal.cursor != 3 || m.modal.items[3].Hint != want {
 					t.Fatalf("selection toggle did not reopen on its updated row: %+v", m.modal)
 				}
 				row := strings.Split(m.listView(20, 1), "\n")[0]
@@ -127,7 +180,7 @@ func TestSettingsLeaveStateUntouched(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, keyName := range []string{"s", "s", "h", "d", "v", "l", "i"} {
+	for _, keyName := range []string{"s", "s", "h", "d", "v", "l", "esc", ",", "i"} {
 		m.Update(key(keyName))
 	}
 	if m.input == nil {

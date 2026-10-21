@@ -511,10 +511,10 @@ func TestBackgroundErrorsRearmAfterRecovery(t *testing.T) {
 
 func TestStatusHistoryBoundedSearchableAndSessionOnly(t *testing.T) {
 	m := splitModel(t)
-	m.Update(key("s"))
+	m.Update(key(","))
 	m.Update(key("n"))
 	if m.modal == nil || !strings.HasPrefix(m.modal.title, "Status history") || len(m.modal.items) != 0 {
-		t.Fatal("empty session history must open from Settings")
+		t.Fatal("empty session history must open from Settings & tools")
 	}
 	m.Update(key("esc"))
 	now := testToday

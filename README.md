@@ -281,7 +281,7 @@ key press.
 | `i` | select the next ticket with a `NEW` badge, wrapping around |
 | `L` | repo links: link, relink, or unlink each project's repo (starts on the viewed project), or give the selected ticket its own repo that overrides its projects' links without changing them |
 | `space`, `a` | run an action on the selected ticket |
-| `A` | create or edit action files (also available in Settings) |
+| `A` | create or edit action files (also available in Settings & tools) |
 | `P` | pin / unpin the selected ticket; pins persist locally per project or My Tasks, above filtered tickets |
 | `e` | edit the selected ticket: change its title or description, add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), assign it, mark it complete or reopen it, or set its branch (saved locally, overrides `branch_field`; empty removes it) |
 | `c` | add a comment to the selected ticket, from the list or the reader; in the comment box, `alt+v` pastes a clipboard image (see [Writing back to Asana](#writing-back-to-asana)) |
@@ -302,7 +302,8 @@ key press.
 | `V` | recall or manage saved views |
 | `]` / `[` | apply the next/previous saved view, in name order |
 | `ctrl+s` | save the current filter, grouping, and sorting under a name |
-| `s` | settings: separators, header spacing, reader view, auto-update interval, selection style, dim unfocused panes, and theme save in `settings.toml`; list columns save per project in state; `n` opens session status history |
+| `s` | visual settings: separators, header spacing, reader view, selection style, dim unfocused panes, and theme save in `settings.toml`; list columns save per project in state |
+| `,` | settings & tools: `a` builds / edits actions, `i` sets the auto-update interval (saved in `settings.toml`), and `n` opens session status history |
 | `o` | open the ticket in the browser |
 | `y` | open yank menu: `y` selection, `u` ticket URL, `g` ticket GID, `t` ticket title, `c` latest comment; `Esc` cancels (requires terminal OSC 52 support) |
 | `Y` | copy current selection directly: ticket title in list, targeted comment as Markdown, project/section value, or reader field value; unsupported targets do nothing (requires terminal OSC 52 support) |
@@ -317,13 +318,16 @@ or `tab` and confirm with `enter`. In the repo picker, `ctrl+s` (or the
 `Use "<path>"` row) uses the typed path. Set `picker.type_first = true` to
 open pickers in search mode.
 
-The action menu, the `e` edit menu, and the settings menu work differently:
+The action menu, the `e` edit menu, and both settings menus work differently:
 each item has its own key, shown in brackets, which picks it at once. They
 have no search; arrows and `ctrl+n`/`ctrl+p` move, and `esc` closes. Action
 keys come from each action file; edit and settings menu keys are fixed.
 
 Every key above can be changed in the `[keys]` tables of `config.toml`; see
 [Configuration](#configuration).
+The visual menu uses `keys.main.settings`; Settings & tools uses
+`keys.main.tools`. An existing binding for `,` takes priority over the new
+tools default; bind `tools` to another key to open that menu.
 
 In text editors (comments, field values, action input, and action builder text),
 press `ctrl+e` to edit the current draft in `$VISUAL`, then `$EDITOR`, or `vim`
@@ -640,7 +644,8 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 ### settings.toml
 
 `settings.toml` lives next to `config.toml`. A missing file uses defaults.
-Edit it by hand or press `s` in the TUI. Each app write rereads the file,
+Edit it by hand or use Visual settings (`s`) and Settings & tools (`,`) in
+the TUI. Each app write rereads the file,
 keeps every other value, and rewrites it with the standard header. Custom
 comments below the header are lost. Hand edits are not reloaded while running;
 they take effect at the next start or the next app write.
@@ -653,7 +658,7 @@ they take effect at the next start or the next app write.
 | `list.separator` | `false` | frame tickets with shared separator lines; `s`, then `s` toggles |
 | `list.header.spacing` | `false` | blank lines around group headers; `s`, then `h` toggles |
 | `list.selection.style` | `"marker"` | `marker` or `bar`; `s`, then `l` toggles |
-| `list.refresh_interval` | `"30s"` | automatic list reload interval, at least `1s`; `R` or `s`, then `i` saves a duration such as `"15s"` or `"1m"` with `ctrl+s` |
+| `list.refresh_interval` | `"30s"` | automatic list reload interval, at least `1s`; `R` or `,`, then `i` saves a duration such as `"15s"` or `"1m"` with `ctrl+s` |
 | `reader.view` | `"cards"` | `cards` or `markdown`; `v` or `s`, then `v` switches and saves |
 | `layout.focus.dim` | `true` | draw unfocused panes faint; `s`, then `d` toggles |
 
@@ -666,7 +671,7 @@ initials as a colored badge, handy in shared projects), `project`, `tags`, and
 case and surrounding spaces. A column shows only when some visible ticket has
 a value for it.
 
-Open settings with `s`, then press `c` to choose columns for the current
+Open visual settings with `s`, then press `c` to choose columns for the current
 project (or My Tasks). Press `space` or `tab` to toggle a column,
 `ctrl+up`/`ctrl+down` to change its order, and `enter` to save. Press `/` to
 search; clear the search before reordering. `esc` clears search or cancels.
@@ -766,7 +771,7 @@ palette's license. The license texts ship beside the theme files as
 `themes/LICENSE.<family>`, such as `LICENSE.catppuccin` and
 `LICENSE.tokyonight`.
 
-To try themes without restarting, open settings with `s` and press `t`. The
+To try themes without restarting, open visual settings with `s` and press `t`. The
 theme picker lists every built-in theme and file in `themes/` beside a preview
 of the highlighted one; `enter` applies it at once and keeps it for later
 sessions in `settings.toml` as `theme.name`.
@@ -881,7 +886,7 @@ Errors open an acknowledgment modal. Unrelated errors wait until the current
 editor or picker closes; errors belonging to an editor stay inline. Repeated
 identical background failures do not reopen a modal until that source recovers.
 
-Open Settings (`s`), then Status history (`n`) to search the latest 100 messages
+Open Settings & tools (`,`), then Status history (`n`) to search the latest 100 messages
 from this session, newest first, with timestamps and severity. Consecutive
 identical messages share an entry with a repeat count. Selecting an entry copies
 its full text to the clipboard. Progress is excluded. History stays in memory
@@ -979,7 +984,7 @@ request on stdin and prints the project's links. See
 
 ## Actions
 
-Press `A`, or choose **Build / edit actions** in Settings (`s`, then `a`).
+Press `A`, or choose **Build / edit actions** in Settings & tools (`,`, then `a`).
 Choose **Create action** or an existing action. The builder provides every
 standard action setting, including ordered form fields and select options.
 Use j/k or arrows to move, Enter to edit, and Ctrl+S to accept a text

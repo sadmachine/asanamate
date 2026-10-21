@@ -24,7 +24,7 @@ The package lives in the asanamate repository for now. With Node and npm:
 cd packages/asana-sessions
 npm ci
 npm pack
-node install.mjs ./asana-sessions-0.1.1.tgz
+node install.mjs ./asana-sessions-0.1.2.tgz
 asana-sessions doctor
 ```
 

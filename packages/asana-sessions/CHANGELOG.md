@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 - Install packed releases with the shared `install.mjs` installer, which uses
   `npm ci` to preserve every shrinkwrapped dependency. Failed upgrades retain

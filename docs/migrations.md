@@ -5,6 +5,13 @@ workflow copies a version's section to the top of its GitHub release notes,
 so links here are absolute. Steps for changes not yet released wait under
 `## Unreleased`, which becomes the version's heading when it is tagged.
 
+## Unreleased
+
+The Extensions guide now uses the standalone companion's `install.mjs` installer
+instead of npm's global tarball install, preserving its shrinkwrapped dependencies.
+Existing configuration is unchanged. See the
+[companion installation guide](https://github.com/sadmachine/asanamate/blob/main/packages/asana-sessions/README.md#install).
+
 ## v0.3.2
 
 Visual settings remain under `s`; program settings and tools open with `,`.

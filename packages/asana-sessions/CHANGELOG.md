@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Install packed releases with the shared `install.mjs` installer, which uses
+  `npm ci` to preserve every shrinkwrapped dependency. Failed upgrades retain
+  the current executable; release assets include the installer and its checksum.
 - Optional `asanamate agents -- <source> [args...]` decorator joins live agents
   to explicit conversation ticket links, with repo/branch fallback for missing
   identity or unavailable metadata. Conflicts suppress matching.

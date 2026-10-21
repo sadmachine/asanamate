@@ -12,6 +12,7 @@
     "bin/",
     "src/",
     "plugins/",
+    "install.mjs",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",

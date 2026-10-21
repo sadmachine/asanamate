@@ -26,10 +26,11 @@ jobs:
         run: |
           mkdir -p dist
           npm pack --pack-destination dist
+          cp install.mjs dist/install.mjs
           cd dist
-          sha256sum *.tgz > checksums.txt
+          sha256sum *.tgz install.mjs > checksums.txt
           sha256sum -c checksums.txt
       - name: Publish standalone assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/*.tgz dist/checksums.txt --verify-tag --title "$GITHUB_REF_NAME" --notes-file CHANGELOG.md --latest=false
+        run: gh release create "$GITHUB_REF_NAME" dist/*.tgz dist/install.mjs dist/checksums.txt --verify-tag --title "$GITHUB_REF_NAME" --notes-file CHANGELOG.md --latest=false

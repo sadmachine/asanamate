@@ -247,6 +247,9 @@ func (m *Model) openStatusHistory() {
 	p := newPicker(pickValue(func(message statusMessage) tea.Cmd {
 		return tea.SetClipboard(message.text)
 	}), "Status history (select to copy)", items)
+	p.onCopy = func(item *pickItem) tea.Cmd {
+		return tea.SetClipboard(item.Value.(statusMessage).text)
+	}
 	p.listMaxWidth = 56
 	p.preview = func(item *pickItem, width, height int) string {
 		if item == nil {

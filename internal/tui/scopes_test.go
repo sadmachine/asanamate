@@ -251,6 +251,12 @@ func TestEveryScopeBindingRuns(t *testing.T) {
 			},
 		},
 		"notice": {
+			"copy": func(t *testing.T) {
+				m := splitModel(t)
+				m.setStatus(statusError, "hello")
+				_, cmd := m.Update(firstKey("notice", "copy"))
+				expect(t, cmd != nil && len(m.notices) == 1, "copy without dismissing")
+			},
 			"dismiss": func(t *testing.T) {
 				m := splitModel(t)
 				m.setStatus(statusError, "hello")

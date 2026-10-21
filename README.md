@@ -935,11 +935,15 @@ and while navigating.
 Errors open an acknowledgment modal. Unrelated errors wait until the current
 editor or picker closes; errors belonging to an editor stay inline. Repeated
 identical background failures do not reopen a modal until that source recovers.
+Press `y` to copy the full modal message without dismissing it; remap
+these keys with `keys.notice.copy`.
 
 Open Settings (`s`), then Status history (`n`) to search the latest 100 messages
 from this session, newest first, with timestamps and severity. Consecutive
 identical messages share an entry with a repeat count. Selecting an entry copies
-its full text to the clipboard. Progress is excluded. History stays in memory
+its full text to the clipboard. Press `y` to copy the highlighted message
+without closing history (`keys.picker.copy`); while searching, use `ctrl+y`
+or leave search with `esc` first. Progress is excluded. History stays in memory
 and is discarded when the app exits; it is not written to `actions.log` or state.
 
 ### Time tracking (optional)

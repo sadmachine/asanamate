@@ -96,7 +96,7 @@ var catalog = []Scope{
 		{Name: "bottom", Keys: []string{"G", "end"}, Desc: "last item"},
 		{Name: "choose", Keys: []string{"enter"}, Desc: "pick; in multi-select pickers, confirm the checked items", Typing: true},
 		{Name: "toggle", Keys: []string{"space", "tab"}, Desc: "multi-select pickers: check or uncheck", Typing: true},
-		{Name: "copy", Keys: []string{"y", "ctrl+y"}, Desc: "link pickers: copy the link instead of opening it", Typing: true},
+		{Name: "copy", Keys: []string{"y", "ctrl+y"}, Desc: "copy the link or selected status message", Typing: true},
 		{Name: "use_typed", Keys: []string{"ctrl+s"}, Desc: "pickers that accept typed values: use the search text", Typing: true},
 		{Name: "search", Keys: []string{"/"}, Desc: "search"},
 		{Name: "cancel", Keys: []string{"esc"}, Desc: "stop searching, or close", Typing: true},
@@ -127,5 +127,6 @@ var catalog = []Scope{
 	}},
 	{Name: "notice", Doc: "Notice popups.", Bindings: []Binding{
 		{Name: "dismiss", Keys: []string{"enter", "esc"}, Desc: "dismiss"},
+		{Name: "copy", Keys: []string{"y"}, Desc: "copy the full message without dismissing"},
 	}},
 }

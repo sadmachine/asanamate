@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -548,6 +549,77 @@ func TestStatusHistoryBoundedSearchableAndSessionOnly(t *testing.T) {
 	fresh := splitModel(t)
 	if len(fresh.statusHistory) != 0 {
 		t.Fatal("history must not survive a new app session")
+	}
+}
+
+func TestNoticeCopyKeepsFullMessageAndModal(t *testing.T) {
+	for _, copyKey := range []string{"y"} {
+		t.Run(copyKey, func(t *testing.T) {
+			m := splitModel(t)
+			text := strings.Repeat("failed request: details ", 40)
+			m.setStatus(statusError, text)
+			m.setStatus(statusError, "next error")
+			want := m.notices[0].text
+			view := ansi.Strip(m.body())
+			if !strings.Contains(view, "y copy") {
+				t.Fatal("notice footer must advertise copy keys")
+			}
+			_, cmd := m.Update(key(copyKey))
+			if !slices.Contains(commandMessages(cmd), tea.SetClipboard(want)()) {
+				t.Fatal("copy must send the full visible notice message")
+			}
+			if len(m.notices) != 2 || m.notices[0].text != want || len(m.statusHistory) != 2 {
+				t.Fatal("copy must preserve notice queue and history")
+			}
+		})
+	}
+}
+
+func TestStatusHistoryCopyKeysPreserveSelectionAndSearch(t *testing.T) {
+	for _, copyKey := range []string{"y", "ctrl+y"} {
+		t.Run(copyKey, func(t *testing.T) {
+			m := splitModel(t)
+			text := strings.Repeat("selected status details ", 40)
+			m.setStatus(statusInfo, text)
+			m.setStatus(statusWarning, "newest status")
+			m.openStatusHistory()
+			p := m.modal
+			m.Update(key("j"))
+			if hints := ansi.Strip(p.controls(m.accentStyle)); !strings.Contains(hints, "y copy") {
+				t.Fatal("history footer must advertise copy keys")
+			}
+			_, cmd := m.Update(key(copyKey))
+			if !slices.Contains(commandMessages(cmd), tea.SetClipboard(m.statusHistory[0].text)()) {
+				t.Fatal("copy must send the selected full message")
+			}
+			if m.modal != p || p.cursor != 1 || len(m.statusHistory) != 2 {
+				t.Fatal("copy must preserve history, modal, and selection")
+			}
+			m.Update(key("/"))
+			m.Update(key("c"))
+			m.Update(key("y"))
+			if p.input.Value() != "cy" {
+				t.Fatal("printable copy keys must type while searching")
+			}
+			p.input.SetValue("selected")
+			p.refilter()
+			_, cmd = m.Update(key("ctrl+y"))
+			if !slices.Contains(commandMessages(cmd), tea.SetClipboard(m.statusHistory[0].text)()) || m.modal != p || !p.searching {
+				t.Fatal("ctrl+y must copy the filtered selection without leaving search")
+			}
+			p.input.SetValue("no matching message")
+			p.refilter()
+			if _, cmd = p.update(key("ctrl+y")); cmd != nil {
+				t.Fatal("empty search must not copy")
+			}
+		})
+	}
+	m := splitModel(t)
+	m.openStatusHistory()
+	for _, copyKey := range []string{"y", "ctrl+y"} {
+		if _, cmd := m.modal.update(key(copyKey)); cmd != nil {
+			t.Fatal("empty history must not copy")
+		}
 	}
 }
 

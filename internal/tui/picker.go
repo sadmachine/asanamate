@@ -39,6 +39,7 @@ type pickResult struct {
 // returned as is. With multi, toggle checks items and choose returns them.
 type picker struct {
 	onPick     func(pickResult) tea.Cmd // runs on the returned choice
+	onCopy     func(*pickItem) tea.Cmd  // copies the highlighted item without choosing it
 	title      string
 	items      []pickItem
 	matches    []int
@@ -224,6 +225,12 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 		}
 		return pickResult{}, nil
 	case "copy":
+		if p.onCopy != nil {
+			if item := p.current(); item != nil {
+				return pickResult{}, p.onCopy(item)
+			}
+			return pickResult{}, nil
+		}
 		if p.links && p.cursor < len(p.matches) {
 			res := p.choose(p.matches[p.cursor])
 			res.copy = true
@@ -397,6 +404,13 @@ func (p *picker) controls(accent lipgloss.Style) string {
 		hints = append(hints, [2]string{keyLabel("picker", "choose"), "open"}, [2]string{copyKey, "copy"})
 	} else {
 		hints = append(hints, [2]string{keyLabel("picker", "choose"), "select"})
+	}
+	if p.onCopy != nil && !p.links {
+		copyKey := keyLabel("picker", "copy")
+		if p.searching {
+			copyKey = typedLabel("picker", "copy")
+		}
+		hints = append(hints, [2]string{copyKey, "copy"})
 	}
 	if p.allowFree {
 		hints = append(hints, [2]string{keyLabel("picker", "use_typed"), "use typed path"})

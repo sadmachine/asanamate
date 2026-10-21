@@ -602,8 +602,11 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return tea.Quit
 	}
 	if m.noticeVisible() {
-		if keys.Name("notice", k) == "dismiss" {
+		switch keys.Name("notice", k) {
+		case "dismiss":
 			m.notices = m.notices[1:]
+		case "copy":
+			return tea.SetClipboard(m.notices[0].text)
 		}
 		return nil
 	}
@@ -1130,7 +1133,7 @@ func (m *Model) body() string {
 		notice := m.notices[0]
 		noticeStyle, _ := m.statusAppearance(notice.level)
 		content = noticeStyle.Bold(true).Render("Error") + "\n\n" + ansi.Wrap(m.renderStatus(notice.level, notice.text), w, "") +
-			"\n\n" + hintLine(m.accentStyle, [2]string{keyLabel("notice", "dismiss"), "dismiss"})
+			"\n\n" + hintLine(m.accentStyle, [2]string{keyLabel("notice", "dismiss"), "dismiss"}, [2]string{keyLabel("notice", "copy"), "copy"})
 		style = modalStyle.BorderForeground(noticeStyle.GetForeground())
 	case m.builder != nil:
 		content = m.builder.view(w, mh, m.accentStyle)

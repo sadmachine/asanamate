@@ -1,0 +1,37 @@
+internal/keymap/catalog.go
+  s_c98e0058dc6f14::t_cc1d4fcc7b7bde 99,130
+internal/tui/model.go
+  s_c98e0058dc6f14::t_aca3181e6335ec 605-606,608-609,1136
+internal/tui/notifications.go
+  s_c98e0058dc6f14::t_aca3181e6335ec 250-252
+internal/tui/picker.go
+  s_c98e0058dc6f14::t_bb407e2a9b67ec 42
+  s_c98e0058dc6f14::t_aca3181e6335ec 228-233,408-413
+  s_c98e0058dc6f14::t_36aa7f3369dbaf 414
+internal/tui/statusline_test.go
+  s_c98e0058dc6f14::t_529ee0ac8122b7 7,555,557-563,565-578,580-587,589-618,620-624
+  s_c98e0058dc6f14::t_cc1d4fcc7b7bde 556,579,619
+  s_c98e0058dc6f14::t_f2b37f1435e54d 564,588
+  s_c98e0058dc6f14::t_4456b3faac22d7 625
+README.md
+  s_c98e0058dc6f14::t_aca3181e6335ec 939,945-946
+  s_c98e0058dc6f14::t_cc1d4fcc7b7bde 938,944
+internal/tui/scopes_test.go
+  s_c98e0058dc6f14::t_529ee0ac8122b7 254-259
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7471ab31fd43a1d54c59255534e8e34fcadfde1d",
+  "prompts": {},
+  "sessions": {
+    "s_c98e0058dc6f14": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15ebd-2da3-7702-9bbc-7ec3d31d3b0f",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

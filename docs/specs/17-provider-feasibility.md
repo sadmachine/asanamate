@@ -369,3 +369,36 @@ The release workflow now opts out of GitHub Latest designation. The existing
 core `v0.3.1` release was restored as Latest without moving either tag or
 replacing published assets. Version 0.1.1 publication still requires the
 exact-main package/platform CI and downloaded-artifact checks.
+
+## 0.1.2 locked-install verification (2026-10-21)
+
+The installer now extracts the release tarball into an isolated project root and
+runs `npm ci --omit=dev` against its shipped shrinkwrap. The former global npm
+install could re-resolve dependencies, including the Anthropic SDK and
+transitive packages. The packaged installer check verified all 106 installed
+package manifests against the shrinkwrap. All 71 package tests passed, including
+five installer regressions covering upgrades, failed installs, unsafe targets,
+archive validation, and concurrent installs.
+
+The packed 0.1.2 helper passed `scripts/live-reentrancy.sh both` using Node
+24.18.0, the pinned Claude Agent SDK 0.3.301, and Codex CLI 0.163.0. Claude Code
+2.1.306 also passed native plugin validation, with only the optional icon
+warning. Claude used a synthetic transcript and real SDK metadata operations;
+it did not spend a model turn. With explicit user authorization, Codex created
+one disposable conversation through `caveman`, copying only `auth.json` into its
+isolated home. No personal history or provider configuration was copied.
+
+Both providers passed all concurrent-hook, conflicting-task, explicit replace,
+raw native rename, and unlink checks. Eight parallel hooks linked exactly once,
+with exactly one success notice and all hooks exiting 0. The measured batches
+finished in 1 second for Claude and 2 seconds for Codex, below the 10-second
+helper deadline. Saved titles matched operation results, human titles survived,
+no hook claimed an unverified success, and neither provider left a metadata lock.
+Disposable homes and working files were removed after verification.
+
+Dependencies, native hook definitions, and CLI resume behavior are unchanged
+from 0.1.1. Earlier native lifecycle, trust, Stop, skill, resume, removal, and
+interactive-open observations above remain the host integration evidence;
+those interactive checks were not repeated for this packaging-only fix.
+Publication still requires all package/platform and integration CI jobs on the
+exact release commit, followed by downloaded-artifact verification.

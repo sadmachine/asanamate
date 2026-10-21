@@ -48,7 +48,8 @@ jobs:
           work=$(mktemp -d)
           go build -o "$work/bin/asanamate" ./cmd/asanamate
           tarball=$(cd packages/asana-sessions && npm pack --silent --pack-destination "$work")
-          npm install --global --silent --no-audit --no-fund --prefix "$work/prefix" "$work/$tarball"
+          tar -xOf "$work/$tarball" package/install.mjs > "$work/install.mjs"
+          node "$work/install.mjs" "$work/$tarball" --prefix "$work/prefix"
           id=7d1f6a2e-1c3b-4f5a-9e8d-2b4c6a8e0f13
           mkdir -p "$work/home/.claude/projects/p" "$work/home/.claude/sessions" "$work/repo" "$work/config/asanamate"
           printf '{"type":"user","message":{"role":"user","content":"hi"},"uuid":"a1b2c3d4-0000-4000-8000-000000000001","parentUuid":null,"sessionId":"%s","cwd":"%s","timestamp":"2026-10-17T10:00:00.000Z","isSidechain":false,"userType":"external"}\n' "$id" "$work/repo" > "$work/home/.claude/projects/p/$id.jsonl"

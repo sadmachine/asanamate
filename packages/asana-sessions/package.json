@@ -1,6 +1,6 @@
 {
   "name": "asana-sessions",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Find, link, and resume Claude Code and Codex conversations by Asana ticket",
   "private": true,
   "license": "GPL-3.0-or-later",
@@ -12,6 +12,7 @@
     "bin/",
     "src/",
     "plugins/",
+    "install.mjs",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",

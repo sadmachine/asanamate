@@ -9,7 +9,8 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 node "$pkg/scripts/check-plugins.js"
 tarball=$(cd "$pkg" && npm pack --silent --pack-destination "$work")
-npm install --global --silent --no-audit --no-fund --prefix "$work/prefix" "$work/$tarball"
+tar -xOf "$work/$tarball" package/install.mjs > "$work/install.mjs"
+node "$work/install.mjs" "$work/$tarball" --prefix "$work/prefix"
 
 run() {
   (cd "$work" && env -i HOME="$work/home" PATH="$work/prefix/bin:$nodebin:/usr/bin:/bin" asana-sessions "$@")
@@ -17,7 +18,7 @@ run() {
 id=01a14609-3a63-7c02-bd2b-c313bedc3c37
 mkdir "$work/home"
 
-installed="$work/prefix/lib/node_modules/asana-sessions"
+installed=$(node -p 'require("node:path").dirname(require("node:path").dirname(require("node:fs").realpathSync(process.argv[1])))' "$work/prefix/bin/asana-sessions")
 test -f "$installed/npm-shrinkwrap.json"
 node --input-type=module - "$installed" <<'CHECK'
 import assert from 'node:assert/strict';

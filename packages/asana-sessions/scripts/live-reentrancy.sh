@@ -24,8 +24,9 @@ source_codex=${SOURCE_CODEX_HOME:-${CODEX_HOME:-$HOME/.codex}}
 real_codex=${REAL_CODEX:-$(command -v codex || true)}
 
 tarball=$(cd "$pkg" && npm pack --silent --pack-destination "$work")
-npm install --global --silent --no-audit --no-fund --prefix "$work/prefix" "$work/$tarball"
-installed="$work/prefix/lib/node_modules/asana-sessions"
+tar -xOf "$work/$tarball" package/install.mjs > "$work/install.mjs"
+node "$work/install.mjs" "$work/$tarball" --prefix "$work/prefix"
+installed=$(node -p 'require("node:path").dirname(require("node:path").dirname(require("node:fs").realpathSync(process.argv[1])))' "$work/prefix/bin/asana-sessions")
 mkdir -p "$work/shims" "$work/repo" "$work/state" "$work/claude/projects/p" "$work/claude/sessions" "$work/codex"
 export XDG_STATE_HOME="$work/state" CLAUDE_CONFIG_DIR="$work/claude" CODEX_HOME="$work/codex"
 export PATH="$work/shims:$work/prefix/bin:$nodebin:/usr/bin:/bin"

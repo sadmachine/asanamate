@@ -24,17 +24,31 @@ The package lives in the asanamate repository for now. With Node and npm:
 cd packages/asana-sessions
 npm ci
 npm pack
-npm install --global ./asana-sessions-0.1.1.tgz
+node install.mjs ./asana-sessions-0.1.2.tgz
 asana-sessions doctor
 ```
 
-Install it where each provider's process can find it on `PATH`. Dependencies
-install only at installation time. Package CI targets Node 22 and 24 on macOS and Linux. The tarball includes `npm-shrinkwrap.json`, pinning runtime and
-peer dependencies. No registry account is needed to build or install locally.
+The installer needs Node 22 or later, npm, and tar. It defaults to `~/.local`;
+pass `--prefix /your/directory` to choose another prefix. Put `<prefix>/bin`
+on every provider's `PATH`, before any older npm-global installation.
 
-Standalone releases use `asana-sessions/vX.Y.Z` tags and supply a `.tgz` and
-`checksums.txt`. Verify downloaded assets with `sha256sum -c checksums.txt`
-(or `shasum -a 256 -c checksums.txt` on macOS), then install the `.tgz` globally.
+The installer unpacks into a separate directory under
+`<prefix>/lib/asana-sessions`, runs `npm ci --omit=dev` against the shipped
+shrinkwrap, and switches the executable symlink only after installation succeeds.
+An unsuccessful install leaves the current command intact. Existing ordinary
+files or directories at the command path are never replaced. Previous install
+directories remain available to processes already using them.
+
+Dependencies install only at installation time. Package CI targets Node 22 and
+24 on macOS and Linux. Use this installer rather than `npm install --global`:
+global tarball installs can re-resolve dependencies despite the included
+shrinkwrap. No registry account is needed to build or install locally.
+
+Standalone releases use `asana-sessions/vX.Y.Z` tags and supply a `.tgz`,
+`install.mjs`, and `checksums.txt`. Download all three from the same release.
+Verify downloaded assets with `sha256sum -c checksums.txt`
+(or `shasum -a 256 -c checksums.txt` on macOS), then run
+`node install.mjs ./asana-sessions-<version>.tgz`.
 No public npm registry name is reserved or published.
 
 ## Commands
@@ -247,10 +261,9 @@ Codex can run hooks in its shared background app-server daemon. The daemon keeps
 the PATH it started with, which may differ from your shell's PATH. A Codex hook
 that fails with exit code 127 could not find `asana-sessions`. This happens when
 a Node version manager such as mise or nvm installed the helper under one Node
-version's `bin`, and the daemon's PATH names another Node version. Link the
-helper into a directory on every PATH, such as
-`ln -s "$(npm prefix -g)/bin/asana-sessions" ~/.local/bin/`, or restart the
-daemon from a shell where `asana-sessions` resolves.
+version's `bin`, and the daemon's PATH names another Node version. Install the
+helper into a directory on every PATH, such as the installer's default
+`~/.local/bin`, or restart the daemon from a shell where `asana-sessions` resolves.
 
 Codex writes immediately through its native metadata API. Claude can submit the
 first prompt before the session is saved; only Claude has a Stop hook to finish
@@ -266,16 +279,23 @@ failures and timeouts produce sanitized nonblocking notices. A timeout can leave
 write status uncertain; inspect the saved title. Hooks never prompt or deny chat.
 All linking stays local; GUI/Paseo title synchronization is not promised.
 
-Upgrade by installing the new package tarball, then rerun setup. Doctor reports
-stale versions or source paths. Setup replaces only this addon's stale
+Upgrade by running the installer with the new package tarball and the same
+prefix, then rerun setup. Doctor reports stale versions or source paths.
+Setup replaces only this addon's stale
 registration before reinstalling. Native hash checks retain trust for unchanged
 hooks; changed definitions require review again.
 Existing skills and AGENTS.md/CLAUDE.md files are left alone.
 
 ```sh
 asana-sessions remove --provider both
-npm uninstall --global asana-sessions # optional, after disabling core commands
+# For the default installer prefix, after disabling core commands:
+rm ~/.local/bin/asana-sessions
+rm -rf ~/.local/lib/asana-sessions
 ```
+
+Use your chosen prefix instead of `~/.local` when different. An older
+npm-global installation is removed separately with
+`npm uninstall --global asana-sessions`.
 
 You can also disable the plugin through its host. Removing or disabling plugins
 preserves conversation titles, tags and transcripts. The installed helper still

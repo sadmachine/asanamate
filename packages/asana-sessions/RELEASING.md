@@ -23,8 +23,11 @@ No npm registry name is reserved or published; the actual local package name is
    `asana-sessions/vX.Y.Z` tag and push only that tag.
 6. Publish standalone releases with `--latest=false` so GitHub's Latest release
    remains the core asanamate release. Verify `asana-sessions-release` succeeds
-   and the release contains the tarball and `checksums.txt`. Verify checksums
-   and install the downloaded artifact.
+   and the release contains the tarball, `install.mjs`, and `checksums.txt`.
+   Verify checksums and install the downloaded artifact with
+   `node install.mjs <archive.tgz> --prefix <disposable-prefix>`. Do not use
+   npm's global tarball install, which can re-resolve dependencies rather than
+   reproduce the shipped shrinkwrap.
    Keep pushed tags immutable; correct failures under a new patch version.
 
 Core releases still require every job of the core `ci` workflow on their exact

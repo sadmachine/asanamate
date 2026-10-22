@@ -1,0 +1,19 @@
+docs/migrations.md
+  s_f1f1bd27d645b9::t_38e0e8c95ece6e 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "31ea0d17106c861a006cdf616b9a0145f51f6c3a",
+  "prompts": {},
+  "sessions": {
+    "s_f1f1bd27d645b9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16500-3fee-78f2-8d80-3be152abcd5d",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

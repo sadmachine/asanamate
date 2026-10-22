@@ -67,6 +67,7 @@ const usage = `usage:
                                                    validate and submit several task edits
   asanamate edit-comment [--yes] <comment-gid> <text | ->
                                                    replace a comment's text ("-" reads stdin)
+  asanamate delete-comment [--yes] <comment-gid>  permanently delete a comment
   asanamate move    [--yes] [--project <gid> | --my-tasks] <gid> <section>
   asanamate field   [--yes] [--project <gid>] <gid> <field> <value>
                                                    set a custom field ("a, b" for multi-select
@@ -109,7 +110,7 @@ func run(args []string) int {
 		err = runExtensions(args[1:], os.Stdout)
 	case "config":
 		err = runConfig(args[1:])
-	case "comment", "edit-comment", "move", "field", "batch":
+	case "comment", "edit-comment", "delete-comment", "move", "field", "batch":
 		err = writeCommand(name, args[1:])
 	case "assign", "due", "project", "title", "description":
 		err = writeCommand(name, args[1:])
@@ -226,7 +227,7 @@ func runWrite(name string, args []string, stdin io.Reader, writer func(bool) (wr
 		return err
 	}
 	rest := fs.Args()
-	want := map[string]int{"comment": 2, "edit-comment": 2, "title": 2, "description": 2, "batch": 2, "move": 2, "field": 3, "assign": 2, "due": 2, "project add": 2, "project remove": 2, "react": 2}[name]
+	want := map[string]int{"comment": 2, "edit-comment": 2, "delete-comment": 1, "title": 2, "description": 2, "batch": 2, "move": 2, "field": 3, "assign": 2, "due": 2, "project add": 2, "project remove": 2, "react": 2}[name]
 	if name == "complete" {
 		want = 1
 	}
@@ -234,7 +235,7 @@ func runWrite(name string, args []string, stdin io.Reader, writer func(bool) (wr
 		return fmt.Errorf("%s: wrong number of arguments\n%s", name, usage)
 	}
 	gid, noun := rest[0], "task"
-	if name == "react" || name == "edit-comment" {
+	if name == "react" || name == "edit-comment" || name == "delete-comment" {
 		noun = "comment"
 	}
 	if !asana.ValidGID(gid) {
@@ -287,6 +288,8 @@ func runWrite(name string, args []string, stdin io.Reader, writer func(bool) (wr
 		return err
 	case "title":
 		return svc.SetTitle(ctx, gid, rest[1])
+	case "delete-comment":
+		return svc.DeleteComment(ctx, gid)
 	case "comment", "edit-comment", "description":
 		text := rest[1]
 		if text == "-" {

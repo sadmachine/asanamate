@@ -49,6 +49,75 @@ func TestCommentEditMenuAndSave(t *testing.T) {
 	}
 }
 
+func TestCommentDeleteMenuAndRefresh(t *testing.T) {
+	m, writes := editModel(t)
+	tk := m.details["1"]
+	tk.Comments = []asana.Story{editableComment()}
+	m.details["1"] = tk
+	m.fieldKey, m.focusReader = "comment:9", true
+	press(m, "enter", "d")
+	if m.modal == nil || m.modal.title != "Delete Amy's comment?" || m.modal.cursor != 0 || len(*writes) != 0 {
+		t.Fatalf("modal = %+v, writes = %v", m.modal, *writes)
+	}
+	press(m, "d")
+	if m.modal != nil || len(*writes) != 1 || (*writes)[0] != "DELETE /stories/9 " {
+		t.Fatalf("modal = %+v, writes = %v", m.modal, *writes)
+	}
+	if len(m.details["1"].Comments) != 0 || m.status != "delete comment: done" {
+		t.Fatalf("comments = %+v, status = %q", m.details["1"].Comments, m.status)
+	}
+}
+
+func TestCommentDeleteCancel(t *testing.T) {
+	for _, cancel := range []string{"enter", "esc", "c"} {
+		t.Run(cancel, func(t *testing.T) {
+			m, writes := editModel(t)
+			typeFirst = true
+			defer func() { typeFirst = false }()
+			m.openCommentMenu("1", editableComment())
+			press(m, "d")
+			if m.modal == nil || m.modal.searching {
+				t.Fatal("confirmation missing or opened in search mode")
+			}
+			press(m, cancel)
+			if m.modal != nil || len(*writes) != 0 {
+				t.Fatalf("modal = %+v, writes = %v", m.modal, *writes)
+			}
+		})
+	}
+}
+
+func TestCommentDeleteFailureKeepsComment(t *testing.T) {
+	for _, failure := range []string{"permission", "api"} {
+		t.Run(failure, func(t *testing.T) {
+			m, _ := editModel(t)
+			tk := m.details["1"]
+			tk.Comments = []asana.Story{editableComment()}
+			m.details["1"] = tk
+			writes := 0
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodGet {
+					json.NewEncoder(w).Encode(map[string]any{"data": asana.Story{Type: "comment", IsEditable: failure != "permission"}})
+					return
+				}
+				writes++
+				w.WriteHeader(http.StatusForbidden)
+				io.WriteString(w, `{"errors":[{"message":"Delete denied"}]}`)
+			}))
+			t.Cleanup(srv.Close)
+			m.deps.Client.BaseURL = srv.URL
+			m.fieldKey, m.focusReader = "comment:9", true
+			press(m, "enter", "d", "d")
+			if len(m.details["1"].Comments) != 1 || !strings.Contains(m.status, "delete comment failed:") || m.statusLevel != statusError {
+				t.Fatalf("comments = %+v, status = %q", m.details["1"].Comments, m.status)
+			}
+			if (writes == 0) != (failure == "permission") {
+				t.Fatalf("writes = %d after %s", writes, failure)
+			}
+		})
+	}
+}
+
 func TestCommentEditDraftsAreIndependent(t *testing.T) {
 	m, writes := editModel(t)
 	press(m, "c")

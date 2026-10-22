@@ -145,6 +145,54 @@ func TestEditCommentCLI(t *testing.T) {
 	}
 }
 
+func TestDeleteCommentCLI(t *testing.T) {
+	for _, yes := range []bool{false, true} {
+		writes := 0
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/stories/9" {
+				t.Errorf("path = %q", r.URL.Path)
+			}
+			if r.Method == http.MethodGet {
+				io.WriteString(w, `{"data":{"type":"comment","is_editable":true}}`)
+				return
+			}
+			writes++
+			if r.Method != http.MethodDelete {
+				t.Errorf("method = %s", r.Method)
+			}
+			io.WriteString(w, `{"data":{}}`)
+		}))
+		t.Cleanup(srv.Close)
+		client := asana.New("tok")
+		client.BaseURL = srv.URL
+		writer := func(gotYes bool) (writeback.Service, error) {
+			if gotYes != yes {
+				t.Errorf("yes = %v, want %v", gotYes, yes)
+			}
+			return writeback.Service{Client: client}, nil
+		}
+		args := []string{"9"}
+		if yes {
+			args = append([]string{"--yes"}, args...)
+		}
+		if err := runWrite("delete-comment", args, strings.NewReader(""), writer); err != nil || writes != 1 {
+			t.Fatalf("err = %v, writes = %d", err, writes)
+		}
+	}
+}
+
+func TestDeleteCommentCLIRejectsBadArguments(t *testing.T) {
+	for _, args := range [][]string{{}, {"9", "extra"}, {"bad"}, {"../9"}} {
+		writer := func(bool) (writeback.Service, error) {
+			t.Fatal("invalid arguments loaded writer")
+			return writeback.Service{}, nil
+		}
+		if err := runWrite("delete-comment", args, strings.NewReader(""), writer); err == nil {
+			t.Errorf("accepted %q", args)
+		}
+	}
+}
+
 func TestEditCommentCLIRejectsBadArguments(t *testing.T) {
 	for _, args := range [][]string{{}, {"9"}, {"9", "text", "extra"}, {"bad", "text"}} {
 		writer := func(bool) (writeback.Service, error) {

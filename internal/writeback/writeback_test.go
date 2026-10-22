@@ -173,6 +173,74 @@ func TestCommentPosts(t *testing.T) {
 	}
 }
 
+func TestDeleteComment(t *testing.T) {
+	for _, mode := range []string{"no confirmation", "confirmed", "declined", "confirmation error"} {
+		t.Run(mode, func(t *testing.T) {
+			c, writes := fake(t)
+			svc := Service{Client: c}
+			var question string
+			confirmErr := errors.New("confirmation failed")
+			if mode != "no confirmation" {
+				svc.Confirm = func(p string) (bool, error) {
+					question = p
+					if mode == "confirmation error" {
+						return false, confirmErr
+					}
+					return mode == "confirmed", nil
+				}
+			}
+			err := svc.DeleteComment(ctx, "9")
+			if mode == "declined" || mode == "confirmation error" {
+				want := ErrDeclined
+				if mode == "confirmation error" {
+					want = confirmErr
+				}
+				if !errors.Is(err, want) || len(*writes) != 0 {
+					t.Fatalf("err = %v, writes = %+v", err, *writes)
+				}
+			} else if err != nil || len(*writes) != 1 || (*writes)[0].method != http.MethodDelete || (*writes)[0].path != "/stories/9" {
+				t.Fatalf("err = %v, writes = %+v", err, *writes)
+			}
+			if mode != "no confirmation" && (!strings.Contains(question, "Amy") || !strings.Contains(question, "Original")) {
+				t.Fatalf("confirmation = %q", question)
+			}
+		})
+	}
+}
+
+func TestDeleteCommentChecksPermissionAndPropagatesErrors(t *testing.T) {
+	for _, tc := range []struct {
+		name, story, failedMethod, wantError string
+		wantWrites                           int
+	}{
+		{"not editable", `{"type":"comment","is_editable":false}`, "", "cannot be deleted", 0},
+		{"system story", `{"type":"system","is_editable":true}`, "", "cannot be deleted", 0},
+		{"read denied", "", http.MethodGet, "Denied", 0},
+		{"delete denied", `{"type":"comment","is_editable":true}`, http.MethodDelete, "Denied", 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			writes := 0
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodGet {
+					writes++
+				}
+				if r.Method == tc.failedMethod {
+					w.WriteHeader(http.StatusForbidden)
+					io.WriteString(w, `{"errors":[{"message":"Denied"}]}`)
+					return
+				}
+				io.WriteString(w, `{"data":`+tc.story+`}`)
+			}))
+			t.Cleanup(srv.Close)
+			c := asana.New("tok")
+			c.BaseURL = srv.URL
+			if err := (Service{Client: c}).DeleteComment(ctx, "9"); err == nil || !strings.Contains(err.Error(), tc.wantError) || writes != tc.wantWrites {
+				t.Fatalf("err = %v, writes = %d", err, writes)
+			}
+		})
+	}
+}
+
 func TestEditCommentPreservesStoryAndRichContent(t *testing.T) {
 	c, writes := fake(t)
 	original := asana.Story{HTMLText: `<body><strong>Before</strong> <a data-asana-gid="7" data-asana-type="user" href="https://app.asana.com/0/7/list">Amy</a><img data-asana-gid="123" src="https://expired.test/image"/></body>`}

@@ -42,6 +42,7 @@ var catalog = []Scope{
 		{Name: "attachments", Keys: []string{"f"}, Desc: "attachments", Group: "Ticket"},
 		{Name: "links", Keys: []string{"u"}, Desc: "links in description and comments", Group: "Ticket"},
 		{Name: "open_browser", Keys: []string{"o"}, Desc: "open in browser", Group: "Ticket"},
+		{Name: "agents", Keys: []string{"w"}, Desc: "agents and saved conversations", Group: "Ticket"},
 		{Name: "yank", Keys: []string{"y"}, Desc: "yank menu", Hint: "yank", Group: "Ticket"},
 		{Name: "copy_selection", Keys: []string{"Y"}, Desc: "copy current selection", Hint: "copy selection", Group: "Ticket"},
 		{Name: "copy_link", Keys: []string{}, Desc: "copy link", Hint: "copy link", Group: "Ticket"},

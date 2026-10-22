@@ -182,6 +182,7 @@ func handlers() map[string]handler {
 			}
 			return nil
 		}},
+		"agents": {run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestMenu(m.openAgents) }},
 		"yank": {run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			if m.focusNav {
 				m.openYankMenu()
@@ -238,7 +239,8 @@ func handlers() map[string]handler {
 
 // open focuses the reader from the list. In the reader, it edits the
 // targeted row, shows the targeted comment in full or opens its menu, or shows
-// the empty fields, older comments, or agents on other branches.
+// the empty fields, older comments, or agents on other branches, or opens
+// the agents modal from the Agents section.
 func (m *Model) open(tea.KeyPressMsg) tea.Cmd {
 	if !m.focusReader {
 		m.focusReaderPane()
@@ -261,6 +263,8 @@ func (m *Model) open(tea.KeyPressMsg) tea.Cmd {
 		m.showEmptyFields()
 	case m.fieldKey == otherAgentsKey:
 		m.showOtherAgents()
+	case m.fieldKey == agentsKey:
+		return m.openAgents()
 	case m.fieldKey != "" && m.editableTarget():
 		return m.openField(m.fieldKey)
 	}

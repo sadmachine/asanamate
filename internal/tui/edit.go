@@ -491,6 +491,10 @@ const emptyFieldsKey = "empty_fields"
 // branches row.
 const otherAgentsKey = "other_agents"
 
+// agentsKey is the field key of the cards view's Agents section; enter on
+// it opens the agents modal.
+const agentsKey = "section:agents"
+
 // fieldTargets are the keys of the rows the cards view can tab to, in the
 // order they render: editable details rows, the Show empty fields row while
 // empty fields are hidden, then the Add comment row.
@@ -561,7 +565,7 @@ func (m *Model) showEmptyFields() {
 // showOtherAgents reveals the selected ticket's agents on other branches and
 // selects the Agents section.
 func (m *Model) showOtherAgents() {
-	m.showOthers, m.fieldKey = true, "section:agents"
+	m.showOthers, m.fieldKey = true, agentsKey
 	m.showTarget()
 }
 

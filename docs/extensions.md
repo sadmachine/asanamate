@@ -188,7 +188,7 @@ command = '~/bin/show-ticket.sh | less'
 ## Conversation history
 
 This is the generic core contract, version **1**. When both commands are set,
-the action menu (`a`) gains a built-in **Conversations** entry, and
+the agents modal (`w`) lists saved conversations under the running agents, and
 `asanamate conversations` and `asanamate conversation open` use the same
 lookup and opener ([README](../README.md#conversations-optional)). The
 provider companion and plugins are separate
@@ -196,7 +196,8 @@ provider companion and plugins are separate
 Core has no Claude/Codex SDK, provider title parser, transcript index, or disk
 cache. The TUI keeps each ticket's last successful lookup in memory only, shown
 as stale while a refresh runs. Running agents and persisted conversations
-remain different extension points.
+remain different extension points; the modal joins them only by an exact
+`provider` and `session_id` match from the [agent source](#agent-sources).
 
 Both settings default to empty, leaving the extension off. Set both together:
 
@@ -432,6 +433,9 @@ finishes, while the TUI is open. `asanamate doctor` runs it once.
 - `provider`, `session_id`: optional native conversation identity, scoped by
   provider. Core treats these as opaque strings; it never parses provider titles
   or accesses native history. A decorator can use them to fill `task_gid`.
+  The agents modal (`w`) also uses them: a saved conversation with the same
+  exact pair shows once, as the running agent, and `agents.focus` switches to
+  it instead of resuming a second copy.
 
 Fields are trimmed, and a trailing `\r` is dropped. Lines with no tab or an
 empty path are skipped; columns past the ninth are ignored. An empty output

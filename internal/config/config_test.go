@@ -387,14 +387,18 @@ name = "Production"
 }
 
 func TestAgentsValidation(t *testing.T) {
-	cfg, err := Load(writeFile(t, "workspace = \"1\"\n[agents]\ncommand = \"asanamate-ccmux\"\n[agents.states]\nworking = [\"busy\"]\n[agents.symbols]\nwaiting = \"!!\"\n"))
-	if err != nil || !cfg.AgentsEnabled() || cfg.Agents.States["working"][0] != "busy" || cfg.Agents.Symbols["waiting"] != "!!" {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n[agents]\ncommand = \"asanamate-ccmux\"\nfocus = \"switch\"\n[agents.states]\nworking = [\"busy\"]\n[agents.symbols]\nwaiting = \"!!\"\n"))
+	if err != nil || !cfg.AgentsEnabled() || cfg.Agents.Focus != "switch" || cfg.Agents.States["working"][0] != "busy" || cfg.Agents.Symbols["waiting"] != "!!" {
 		t.Fatalf("cfg = %+v, err = %v", cfg.Agents, err)
 	}
 	// The removed preset names its replacement, like the moved keys.
 	_, err = Load(writeFile(t, "workspace = \"1\"\n[agents]\npreset = \"ccmux\"\n"))
 	if err == nil || !strings.Contains(err.Error(), "agents.preset was replaced by agents.command") || !strings.Contains(err.Error(), "asanamate config update") {
 		t.Fatalf("preset err = %v", err)
+	}
+	_, err = Load(writeFile(t, "workspace = \"1\"\n[agents]\nfocus = \"switch\"\n"))
+	if err == nil || !strings.Contains(err.Error(), "agents.command is required when agents.focus is set") {
+		t.Fatalf("focus without command err = %v", err)
 	}
 	for name, body := range map[string]string{
 		"bad state":       "[agents]\ncommand = \"x\"\n[agents.states]\nsleeping = [\"z\"]\n",

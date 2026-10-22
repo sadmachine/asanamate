@@ -2,11 +2,14 @@ package tui
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/sadmachine/asanamate/internal/action"
+	"github.com/sadmachine/asanamate/internal/agents"
+	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/conversations"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
@@ -17,7 +20,7 @@ import (
 type conversationLookup struct {
 	ticket ticket.Ticket
 	cancel context.CancelFunc
-	stale  *picker // last result shown while refreshing; nil shows a loading modal
+	shown  *picker // picker shown while looking, with the last result if any
 }
 
 type conversationsMsg struct {
@@ -34,8 +37,24 @@ const (
 	conversationsCancel
 )
 
-// conversationsEntry is the action menu's built-in Conversations entry.
-type conversationsEntry struct{}
+// openAgents lists the selected ticket's running agents, then its saved
+// conversations, which load in the background when the source is on.
+func (m *Model) openAgents() tea.Cmd {
+	t, ok := m.selectedDetail()
+	if !ok {
+		return nil
+	}
+	cfg := m.deps.Config
+	if !cfg.AgentsEnabled() && !cfg.ConversationsEnabled() {
+		m.setStatus(statusWarning, "no agents or conversations configured; set [agents] or [conversations] in config.toml")
+		return nil
+	}
+	if !cfg.ConversationsEnabled() {
+		m.modal = m.conversationPicker(t, conversations.Result{}, nil, "")
+		return nil
+	}
+	return m.lookupConversations(t, nil)
+}
 
 // lookupConversations starts a fresh lookup for t. A previous successful
 // result for t stays visible, marked stale, until the reply arrives.
@@ -50,12 +69,14 @@ func (m *Model) lookupConversations(t ticket.Ticket, highlighted any) tea.Cmd {
 		result, err := source.List(ctx, t.GID)
 		return conversationsMsg{lookup: l, result: result, err: err}
 	}
-	if last, ok := m.conversationResults[t.GID]; ok {
-		l.stale = m.conversationPicker(t, last, highlighted, "Refreshing… showing the last result.")
-		m.modal = l.stale
-		return cmd
+	notice := "Finding conversations…"
+	last, ok := m.conversationResults[t.GID]
+	if ok {
+		notice = "Refreshing… showing the last result."
 	}
-	return m.wait("Finding conversations…", cmd)
+	l.shown = m.conversationPicker(t, last, highlighted, notice)
+	m.modal = l.shown
+	return cmd
 }
 
 // stopConversations cancels the lookup in flight, if any.
@@ -72,9 +93,7 @@ func (m *Model) gotConversations(msg conversationsMsg) {
 		return
 	}
 	m.stopConversations()
-	if l.stale == nil {
-		m.waiting = ""
-	} else if m.modal != l.stale {
+	if m.modal != l.shown {
 		return
 	}
 	if t, ok := m.selected(); !ok || t.GID != l.ticket.GID {
@@ -82,9 +101,9 @@ func (m *Model) gotConversations(msg conversationsMsg) {
 		m.setStatus(statusInfo, "selection changed; conversations closed")
 		return
 	}
-	// Refresh keeps the row highlighted in the stale picker when still present.
+	// Refresh keeps the row highlighted in the shown picker when still present.
 	var highlighted any
-	if it := l.stale.current(); it != nil {
+	if it := l.shown.current(); it != nil {
 		highlighted = it.Value
 	}
 	gid := l.ticket.GID
@@ -102,17 +121,37 @@ func (m *Model) gotConversations(msg conversationsMsg) {
 	m.modal = m.conversationPicker(l.ticket, last, highlighted, notice)
 }
 
-// conversationPicker lists result's records with Refresh and Cancel rows.
-// notice explains a stale or failed lookup; otherwise the picker tells an
-// empty complete lookup from a partial one.
+// conversationPicker lists t's running agents, then result's records that
+// are not running, with Refresh (when the source is on) and Cancel rows. A
+// record running as an agent, by exact provider and session ID, shows once
+// as the agent. notice explains a pending, stale, or failed lookup; otherwise
+// the picker tells an empty complete lookup from a partial one.
 func (m *Model) conversationPicker(t ticket.Ticket, result conversations.Result, highlighted any, notice string) *picker {
-	items := make([]pickItem, 0, len(result.Conversations)+2)
-	for _, c := range result.Conversations {
-		items = append(items, conversationItem(c))
+	running := m.viewAgents(t.Task)
+	items := make([]pickItem, 0, len(running)+len(result.Conversations)+2)
+	live := map[[2]string]bool{}
+	for _, a := range running {
+		items = append(items, pickItem{
+			Label:  m.agentLabel(a, stateStyles[a.State].Bold(true)),
+			Hint:   "running · " + ticket.OneLine(filepath.Base(a.Path)),
+			Help:   ticket.OneLine(a.Path),
+			Search: a.Title + " " + a.Path,
+			Value:  a,
+		})
+		if a.Provider != "" && a.SessionID != "" {
+			live[[2]string{a.Provider, a.SessionID}] = true
+		}
 	}
-	items = append(items,
-		pickItem{Label: "Refresh", Value: conversationsRefresh},
-		pickItem{Label: "Cancel", Value: conversationsCancel})
+	for _, c := range result.Conversations {
+		if !live[[2]string{c.Provider, c.SessionID}] {
+			items = append(items, conversationItem(c))
+		}
+	}
+	conversationsOn := m.deps.Config.ConversationsEnabled()
+	if conversationsOn {
+		items = append(items, pickItem{Label: "Refresh", Value: conversationsRefresh})
+	}
+	items = append(items, pickItem{Label: "Cancel", Value: conversationsCancel})
 	cursor := 0
 	for i, it := range items {
 		if sameConversationRow(it.Value, highlighted) {
@@ -120,9 +159,14 @@ func (m *Model) conversationPicker(t ticket.Ticket, result conversations.Result,
 		}
 	}
 	var notes []string
-	if notice != "" {
+	switch {
+	case notice != "":
 		notes = append(notes, notice)
-	} else if len(result.Conversations) == 0 && result.Complete() {
+	case !conversationsOn:
+		if len(running) == 0 {
+			notes = append(notes, "No running agents.")
+		}
+	case len(result.Conversations) == 0 && result.Complete():
 		notes = append(notes, "No linked conversations.")
 	}
 	if !result.Complete() {
@@ -132,7 +176,7 @@ func (m *Model) conversationPicker(t ticket.Ticket, result conversations.Result,
 		notes = append(notes, diagnosticNotice(d))
 	}
 	p := newPicker(func(res pickResult) tea.Cmd { return m.pickedConversation(t, res.item.Value) },
-		"Resume in terminal: "+ticket.Clean(t.Name), items)
+		"Agents: "+ticket.Clean(t.Name), items)
 	p.helpIcon, p.notice = m.sym.info, strings.Join(notes, "\n")
 	p.cursor = cursor
 	return p
@@ -193,8 +237,9 @@ func diagnosticNotice(d conversations.Diagnostic) string {
 	return line
 }
 
-// pickedConversation refreshes, closes, or opens a record through the
-// foreground action handoff, which restores the TUI when the opener exits.
+// pickedConversation refreshes, closes, focuses a running agent, or opens a
+// record through the foreground action handoff, which restores the TUI when
+// the opener exits.
 func (m *Model) pickedConversation(t ticket.Ticket, value any) tea.Cmd {
 	m.modal = nil
 	switch v := value.(type) {
@@ -204,11 +249,30 @@ func (m *Model) pickedConversation(t ticket.Ticket, value any) tea.Cmd {
 		}
 		m.stopConversations()
 		return nil
+	case agents.Agent:
+		m.stopConversations()
+		return m.focusAgent(t, v)
 	case conversations.Record:
 		m.stopConversations()
 		return m.openConversation(t, v)
 	}
 	return nil
+}
+
+// focusAgent runs agents.focus in the background for a, with the exports an
+// agent = true action gets.
+func (m *Model) focusAgent(t ticket.Ticket, a agents.Agent) tea.Cmd {
+	focus := m.deps.Config.Agents.Focus
+	if strings.TrimSpace(focus) == "" {
+		m.setStatus(statusInfo, "set agents.focus in config.toml to switch to a running agent")
+		return nil
+	}
+	return m.launch(&pendingRun{
+		action:  config.Action{Name: "Focus agent", Mode: config.ModeBackground, Agent: true, Command: focus},
+		ticket:  t,
+		agent:   &a,
+		project: action.DefaultProject(t.Task, gidOf(m.viewProject)),
+	})
 }
 
 func (m *Model) openConversation(t ticket.Ticket, c conversations.Record) tea.Cmd {

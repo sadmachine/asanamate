@@ -1,0 +1,25 @@
+internal/tui/hints.go
+  s_a65c73206f93dc::t_0914435ddab9c2 60-81,88
+  s_a65c73206f93dc::t_128591afe86562 8
+internal/tui/inputbox.go
+  s_a65c73206f93dc::t_3563a20360a6a7 123-126,131,133-134
+  s_a65c73206f93dc::t_a15a5466d53268 154
+  s_a65c73206f93dc::t_edc75f8986d084 122,127-128
+  s_a65c73206f93dc::t_dbfee10b8aa2e6 132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "699ca321c9efc4e94fd5d4ef53820b2970619584",
+  "prompts": {},
+  "sessions": {
+    "s_a65c73206f93dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa574016-2f29-42d1-aa52-01e30f6d6114",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -18,7 +18,10 @@ so it cannot be published to npm by accident.
 
 ## Install
 
-The package lives in the asanamate repository for now. With Node and npm:
+The package lives in the asanamate repository for now. From the repository
+root, `sh ./install.sh --interactive` builds and installs it as below, then runs
+`asana-sessions setup`; later `sh ./install.sh` runs update it. By hand, with
+Node and npm:
 
 ```sh
 cd packages/asana-sessions

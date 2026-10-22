@@ -1,0 +1,32 @@
+internal/tui/keys_test.go
+  s_1a669a60af245b::t_88511be6fc5ebb 296
+  s_1a669a60af245b::t_a66bbfd17312e2 262-294,297-301
+  s_1a669a60af245b::t_e4ce27903c7d9d 295
+README.md
+  s_1a669a60af245b::t_8b189af53ca0dc 329
+docs/migrations.md
+  s_1a669a60af245b::t_8b189af53ca0dc 8-14
+internal/keymap/catalog.go
+  s_1a669a60af245b::t_89ff8686021ae4 25
+internal/tui/jumpmenu.go
+  s_1a669a60af245b::t_07fc8a4d0543d9 56,58-60,62
+  s_1a669a60af245b::t_0e446d180c443c 1-55,57,61,63-67
+internal/tui/keys.go
+  s_1a669a60af245b::t_59af884402a7e0 154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc5be2e8ff42007afc54df0af755cfc1a8f890da",
+  "prompts": {},
+  "sessions": {
+    "s_1a669a60af245b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f2616df9-8856-4ba6-969c-471d82628ddb",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

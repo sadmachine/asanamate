@@ -357,7 +357,7 @@ key press.
 | `.` | run the last picked action again on the selected ticket |
 | `t` | log completed time for the selected ticket (only when time tracking is configured) |
 | `f` | attachments: view images inline (`j`/`k` step between them) or open in the browser |
-| `u` | links in the selected ticket's description and comments, in order, by label and URL (the ticket's own link and user mentions are left out); search matches either, `enter` opens the link in the browser, and `y` (`ctrl+y` while searching) copies it (requires terminal OSC 52 support) |
+| `u` | links in the selected ticket's description and comments, in order, by label and URL (the ticket's own link and user mentions are left out); search matches either, `enter` opens an Asana task link as a ticket in asanamate and any other link in the browser, and `y` (`ctrl+y` while searching) copies it (requires terminal OSC 52 support) |
 | `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) |
 | `B` | sort by field and direction, or restore Asana order |
 | `=` | fit the list pane to its content (also on project, grouping, sorting, and filter changes); does nothing while `layout.list_width` is set |

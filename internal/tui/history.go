@@ -39,23 +39,28 @@ func (m *Model) openHistory() {
 	m.modal = newPicker(pickValue(m.pickedHistory), "Ticket history", items)
 }
 
-// pickedHistory shows the chosen ticket, loading it first when the view has
-// never had it.
+// pickedHistory shows the chosen ticket.
 func (m *Model) pickedHistory(rt state.RecentTicket) tea.Cmd {
 	m.modal = nil
-	byGID := func(t asana.Task) bool { return t.GID == rt.GID }
+	return m.openTicket(rt.GID, rt.Name)
+}
+
+// openTicket shows ticket gid, loading it first when the view has never had
+// it; name labels the loading progress.
+func (m *Model) openTicket(gid, name string) tea.Cmd {
+	byGID := func(t asana.Task) bool { return t.GID == gid }
 	if i := slices.IndexFunc(m.visible, byGID); i >= 0 {
 		return m.showTicket(m.visible[i])
 	}
 	if i := slices.IndexFunc(m.tasks, byGID); i >= 0 {
 		return m.showTicket(m.tasks[i])
 	}
-	if d, ok := m.details[rt.GID]; ok {
+	if d, ok := m.details[gid]; ok {
 		return m.showTicket(d.Task)
 	}
-	m.openGID = rt.GID
-	m.setProgress("loading " + ticket.Clean(rt.Name) + "…")
-	return m.loadDetail(rt.GID)
+	m.openGID = gid
+	m.setProgress("loading " + ticket.Clean(name) + "…")
+	return m.loadDetail(gid)
 }
 
 // selectTicket selects t, keeping it in the list when the view doesn't show

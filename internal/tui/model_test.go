@@ -256,6 +256,27 @@ func TestPickingHistoryShowsTicket(t *testing.T) {
 	}
 }
 
+func TestTaskLinkOpensTicket(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	m.Update(tea.WindowSizeMsg{Width: 160, Height: 30})
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	withLink := openTask
+	withLink.HTMLNotes = `<body>See <a href="https://app.asana.com/0/0/9">Elsewhere</a></body>`
+	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: withLink}})
+
+	m.openContentLinks()
+	if m.modal == nil || m.modal.title != "Links" {
+		t.Fatalf("modal = %+v", m.modal)
+	}
+	if _, cmd := m.Update(key("enter")); cmd == nil || m.openGID != "9" {
+		t.Fatalf("openGID = %q", m.openGID)
+	}
+	m.Update(detailMsg{gid: "9", ticket: ticket.Ticket{Task: asana.Task{GID: "9", Name: "Elsewhere"}}})
+	if sel, ok := m.selected(); !ok || sel.GID != "9" || !m.focusReader {
+		t.Fatalf("selected = %v, focusReader = %v", sel.GID, m.focusReader)
+	}
+}
+
 func TestEmptyHistoryOpensNothing(t *testing.T) {
 	m, _ := testModel(t, config.Config{})
 	m.Update(tasksMsg{tasks: []asana.Task{openTask}})

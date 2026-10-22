@@ -621,7 +621,8 @@ func (m *Model) openAttachments() {
 }
 
 // openContentLinks lists the links in the ticket's description and comments,
-// by label and URL; picking one opens it, and copy copies it.
+// by label and URL; picking one opens it, an Asana task link in asanamate
+// and any other in the browser, and copy copies it.
 func (m *Model) openContentLinks() {
 	t, ok := m.selectedDetail()
 	if !ok {
@@ -646,6 +647,9 @@ func (m *Model) openContentLinks() {
 		if res.copy {
 			m.setStatus(statusInfo, "link sent to clipboard")
 			return tea.SetClipboard(url)
+		}
+		if gid := asana.TaskGIDFromURL(url); gid != "" {
+			return m.openTicket(gid, res.item.Label)
 		}
 		return openURL(url)
 	}, "Links", items)

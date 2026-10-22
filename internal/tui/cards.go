@@ -67,6 +67,14 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		m.cardTargets = append(m.cardTargets, otherAgentsKey)
 	}
 	subtaskTitle, subtasks := m.subtasks(t)
+	// flash names the section to draw in the accent color: boxed sections
+	// color their border; open ones get the reader's margin bar, from
+	// m.flashLines.
+	flash := ""
+	if m.flashGID == t.GID {
+		flash = m.flashKey
+	}
+	m.flashLines = [2]int{1, 0}
 
 	// Rows start below the head, a blank line, and the card's top edge.
 	top := lipgloss.Height(head) + 2
@@ -78,6 +86,9 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 			m.fieldEnds[key] = m.fieldLines[key] + lipgloss.Height(block) - 1
 			m.cardTargets = append(m.cardTargets, key)
 			blocks = append(blocks, block)
+			if key == flash {
+				m.flashLines = [2]int{m.fieldLines[key], m.fieldEnds[key]}
+			}
 		}
 	}
 	if width >= sideBySideW && (len(agentLines) > 0 || subtasks != "") {
@@ -89,7 +100,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 			key := agentsKey
 			m.fieldLines[key] = sideLine
 			m.cardTargets = append(m.cardTargets, key)
-			card := m.card(m.sym.robot+"   Agents", cutLines(agentLines, rightW-4), rightW, m.fieldKey == key)
+			card := m.card(m.sym.robot+"   Agents", cutLines(agentLines, rightW-4), rightW, m.fieldKey == key, flash == key)
 			side = append(side, card)
 			m.fieldEnds[key] = sideLine + lipgloss.Height(card) - 1
 			markOthers(sideLine + 1)
@@ -99,15 +110,15 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 			key := "section:subtasks"
 			m.fieldLines[key] = sideLine
 			m.cardTargets = append(m.cardTargets, key)
-			card := m.card(subtaskTitle, wrap(subtasks, rightW-4), rightW, m.fieldKey == key)
+			card := m.card(subtaskTitle, wrap(subtasks, rightW-4), rightW, m.fieldKey == key, flash == key)
 			m.fieldEnds[key] = sideLine + lipgloss.Height(card) - 1
 			side = append(side, card)
 		}
-		details := m.card("Details", m.detailsBody(t, leftW-4, top), leftW, false)
+		details := m.card("Details", m.detailsBody(t, leftW-4, top), leftW, false, flash == detailsKey)
 		blocks = []string{head, lipgloss.JoinHorizontal(lipgloss.Top, details, " ", strings.Join(side, "\n"))}
 		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 	} else {
-		blocks = []string{head, m.card("Details", m.detailsBody(t, width-4, top), width, false)}
+		blocks = []string{head, m.card("Details", m.detailsBody(t, width-4, top), width, false, flash == detailsKey)}
 		add(agentsKey, "Agents", cutLines(agentLines, width))
 		markOthers(m.fieldLines[agentsKey] + 1)
 		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
@@ -193,7 +204,11 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	}
 	addComment := m.addRow(commentKey, "+ Add comment")
 	blocks = append(blocks, m.tabs(t, width)+"\n"+addComment+"\n\n"+strings.Join(items, "\n\n"))
-	return strings.Join(blocks, "\n\n")
+	out := strings.Join(blocks, "\n\n")
+	if flash == commentKey {
+		m.flashLines = [2]int{m.fieldLines[tabsKey], lipgloss.Height(out) - 1}
+	}
+	return out
 }
 
 // branchLine is the faint line under the ticket's name naming the branch its
@@ -571,10 +586,14 @@ func (m *Model) tabs(t ticket.Ticket, width int) string {
 
 // card boxes body in a border with title set into the top edge. body must
 // already fit width-4 columns (border and padding take the rest).
-func (m *Model) card(title, body string, width int, selected bool) string {
-	box := lipgloss.NewStyle().Border(m.sym.border).BorderTop(false).BorderForeground(borderColor).
+func (m *Model) card(title, body string, width int, selected, flashed bool) string {
+	border := borderColor
+	if flashed {
+		border = m.accentStyle.GetForeground()
+	}
+	box := lipgloss.NewStyle().Border(m.sym.border).BorderTop(false).BorderForeground(border).
 		Padding(0, 1).Width(width).Render(body)
-	edge := lipgloss.NewStyle().Foreground(borderColor)
+	edge := lipgloss.NewStyle().Foreground(border)
 	head := titleStyle
 	if selected {
 		head = m.fieldStyle()

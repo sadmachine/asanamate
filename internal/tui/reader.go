@@ -37,6 +37,10 @@ type readerState struct {
 	fieldLines     map[string]int    // reader line of each cards view target, by key
 	fieldEnds      map[string]int    // last reader line of multi-line targets, by key
 	cardTargets    []string          // cards view targets in reading order
+	flashKey       string            // section the jump menu just picked, drawn in the accent color; "" for none
+	flashGID       string            // ticket flashKey belongs to
+	flashSeq       uint64            // identifies the newest flash, so older timers leave it
+	flashLines     [2]int            // first and last reader line of a flashed open section; empty when first > last
 	detailSeq      uint64            // identifies the newest detail request per ticket
 	detailRequests map[string]uint64 // in-flight detail requests by ticket gid
 }
@@ -87,10 +91,10 @@ func (m *Model) renderDetail(keepScroll bool) {
 		}
 		content = m.glamour(t.MarkdownWith(extra), width, false)
 	} else {
-		content = lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width))
+		content = m.flashGutter(lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width)))
 		if keepScroll && selectedIndex >= 0 && !slices.Contains(m.cardTargets, m.fieldKey) {
 			m.fieldKey = m.cardTargets[min(selectedIndex, len(m.cardTargets)-1)]
-			content = lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width))
+			content = m.flashGutter(lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width)))
 		}
 	}
 	lines := m.reader.TotalLineCount()

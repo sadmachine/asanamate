@@ -281,16 +281,37 @@ func TestJumpMenuFocusesReaderSections(t *testing.T) {
 	if want := []string{"t Details", "d Description", "c Comments"}; !slices.Equal(got, want) {
 		t.Fatalf("jump items = %q, want %q", got, want)
 	}
-	press(m, "c")
+	// Update, not press: press would wait out the flash timer.
+	if _, cmd := m.Update(key("c")); cmd == nil {
+		t.Fatal("c must start the flash timer")
+	}
 	if m.modal != nil || !m.focusReader || m.fieldKey != commentKey {
 		t.Fatalf("c: modal %v, reader focus %v, target %q", m.modal != nil, m.focusReader, m.fieldKey)
 	}
-	if line := m.fieldLines[commentKey] - 1; m.reader.YOffset() != min(line, m.reader.TotalLineCount()-m.reader.Height()) {
-		t.Fatalf("comments offset = %d, want the heading on line %d at the top", m.reader.YOffset(), line)
+	heading := m.fieldLines[commentKey] - 1
+	if m.reader.YOffset() != min(heading, m.reader.TotalLineCount()-m.reader.Height()) {
+		t.Fatalf("comments offset = %d, want the heading on line %d at the top", m.reader.YOffset(), heading)
 	}
-	press(m, "'", "t")
-	if m.fieldKey != "assignee" || m.reader.YOffset() != 0 {
-		t.Fatalf("t target = %q at offset %d", m.fieldKey, m.reader.YOffset())
+	bar := m.sym.border.Left
+	margin := func() string { return ansi.Strip(strings.Split(m.reader.GetContent(), "\n")[heading])[:len(bar)] }
+	if margin() != bar {
+		t.Fatalf("flashed comments margin = %q, want %q", margin(), bar)
+	}
+	m.Update(flashDoneMsg{seq: m.flashSeq - 1})
+	if margin() != bar {
+		t.Fatal("an older flash timer must not end the newest flash")
+	}
+	m.Update(flashDoneMsg{seq: m.flashSeq})
+	if margin() == bar || m.fieldKey != commentKey {
+		t.Fatalf("ended flash margin = %q, target %q", margin(), m.fieldKey)
+	}
+	m.Update(key("'"))
+	m.Update(key("t"))
+	if m.fieldKey != "assignee" || m.reader.YOffset() != 0 || m.flashKey != detailsKey {
+		t.Fatalf("t target = %q at offset %d, flash %q", m.fieldKey, m.reader.YOffset(), m.flashKey)
+	}
+	if m.flashLines[0] <= m.flashLines[1] {
+		t.Fatal("the boxed details card flashes its border, not the margin")
 	}
 	m.readerView = config.ViewMarkdown
 	press(m, "'")

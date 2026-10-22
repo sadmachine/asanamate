@@ -117,18 +117,24 @@ are available alongside the binaries:
 ```sh
 git clone https://github.com/sadmachine/asanamate.git
 cd asanamate
-go install ./cmd/...
-sh ./install-themes.sh
+sh ./install.sh
 ```
 
-This installs to `$(go env GOBIN)`, else `$(go env GOPATH)/bin` (usually
-`~/go/bin`); add that directory to your `PATH` as above.
+This installs `asanamate` and the standard themes to `$(go env GOBIN)`, else
+`$(go env GOPATH)/bin` (usually `~/go/bin`); add that directory to your `PATH`
+as above. It updates extensions that are already installed (`asanamate-hrvst`,
+`asanamate-ccmux`, and an `asana-sessions` installed into `~/.local`) and lists
+the others with the `asanamate extensions <id>` guide for each. Run
+`sh ./install.sh --interactive` to choose which extensions to install;
+`asana-sessions` needs Node 22 or later and npm, and choosing it also runs
+`asana-sessions setup` for the optional Claude and Codex plugins.
 
 ### Upgrade and uninstall
 
 Upgrade the way you installed: replace the binary with a newer archive, or
-rerun `go install` from an updated checkout. Run `sh ./install-themes.sh`
-to add any new themes; existing theme files are never overwritten. Upgrades
+rerun `sh ./install.sh` from an updated checkout. Archive installs run
+`sh ./install-themes.sh` to add any new themes; existing theme files are never
+overwritten. Upgrades
 never touch your config, actions, or state. See [Upgrading](#upgrading) for each
 release's steps.
 

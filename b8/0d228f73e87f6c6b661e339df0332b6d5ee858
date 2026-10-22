@@ -1,0 +1,56 @@
+internal/setup/setup.go
+  s_1faf62449e0aeb::t_8930d629b2d8bf 429-432
+internal/action/conversation.go
+  s_1faf62449e0aeb::t_b192ceb823da34 16,19-22
+internal/action/action.go
+  s_1faf62449e0aeb::t_b192ceb823da34 48
+docs/extensions.md
+  s_1faf62449e0aeb::t_23297007732312 394-398,471-513
+  s_1faf62449e0aeb::t_c3b1cdc8c86ba9 514
+internal/setup/setup_test.go
+  s_1faf62449e0aeb::t_54b3f3bde6c9cf 170-180
+  s_1faf62449e0aeb::t_731a1844b2d091 198
+internal/tui/conversations.go
+  s_1faf62449e0aeb::t_3fb77a43a546a5 5,7,13,25,32,76,79,85,90-93,105,113,145-148,150,224,226,232-233,235,237-268,275-276,281-290,293-306,309,312-321,340
+  s_1faf62449e0aeb::t_c1477124600971 22-24
+  s_1faf62449e0aeb::t_3561d82ee64221 6,26,225,234,236,269-274,277-280,291-292,307,325,332-339
+  s_1faf62449e0aeb::t_b192ceb823da34 211-212
+  s_1faf62449e0aeb::t_583afde9ff0cff 322-324
+internal/config/config.go
+  s_1faf62449e0aeb::t_3561d82ee64221 136
+  s_1faf62449e0aeb::t_a062f3c96773d9 137-138,369,641-643
+  s_1faf62449e0aeb::t_c1477124600971 135
+README.md
+  s_1faf62449e0aeb::t_23297007732312 671,1477-1497
+  s_1faf62449e0aeb::t_d659373383c366 1498
+internal/tui/model.go
+  s_1faf62449e0aeb::t_8c6cebe7569c37 327
+internal/tui/flow.go
+  s_1faf62449e0aeb::t_b192ceb823da34 122
+  s_1faf62449e0aeb::t_8c6cebe7569c37 209-215,218-222,224
+internal/config/config_test.go
+  s_1faf62449e0aeb::t_2dabb7128b59a1 411,415-419,421-431
+  s_1faf62449e0aeb::t_731a1844b2d091 412-414,420
+  s_1faf62449e0aeb::t_f8da125823087b 10
+internal/tui/conversations_test.go
+  s_1faf62449e0aeb::t_54b3f3bde6c9cf 227,336-398,400-401
+  s_1faf62449e0aeb::t_d1e93d495aff5b 4-5,13,182-226,228-335,399
+internal/tui/agents_test.go
+  s_1faf62449e0aeb::t_b192ceb823da34 313
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b80d228f73e87f6c6b661e339df0332b6d5ee858",
+  "prompts": {},
+  "sessions": {
+    "s_1faf62449e0aeb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16505-1212-75c2-9a2a-ea45399d6b09",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

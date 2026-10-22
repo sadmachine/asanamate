@@ -1,0 +1,49 @@
+README.md
+  s_10479c1466c918::t_379c92926590f1 35-37,195,374,683,1448-1459,1490-1492,1495-1499,1528-1529
+docs/extensions.md
+  s_10479c1466c918::t_02204b75ec79ff 191,199-200,436-438
+docs/specs/19-conversation-ui.md
+  s_10479c1466c918::t_fe6c4dc84cb831 23-30
+internal/config/config.go
+  s_10479c1466c918::t_a8561da0425802 138-140,641-643
+internal/config/config_test.go
+  s_10479c1466c918::t_76bdaeb73063a7 390-391,399-402
+internal/keymap/catalog.go
+  s_10479c1466c918::t_588c7ff1503729 45
+internal/keymap/keymap.go
+  s_10479c1466c918::t_6b9ed7c3c7d8bd 107,109,111
+internal/keymap/keymap_test.go
+  s_10479c1466c918::t_dc7d7c106f94a8 80-93
+internal/setup/setup.go
+  s_10479c1466c918::t_6e49765e914193 429-432,447-448
+internal/tui/cards.go
+  s_10479c1466c918::t_22100ab295dd05 89,111-112
+internal/tui/conversations.go
+  s_10479c1466c918::t_de4ca088cb223b 5,11-12,23,40-57,72-75,77-79,96,104,106,124-128,130-144,146-152,154,162-163,165-169,179,240-242,252-254,262-277
+internal/tui/conversations_test.go
+  s_10479c1466c918::t_d17027338a98ef 11,34,38-39,42-44,57,60,81,89-97,100,103,110,112-113,179-244
+internal/tui/edit.go
+  s_10479c1466c918::t_0c7226bd715038 494-497,581
+internal/tui/flow.go
+  s_10479c1466c918::t_dc4a2333e52198 96,98,125
+internal/tui/keys.go
+  s_10479c1466c918::t_5dc65f69da219c 185,242-243,268-269
+packages/asana-sessions/README.md
+  s_10479c1466c918::t_cdcdd06f1b18f0 332-333
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "22c16d7381e4f2028a39e4973ef180c7c12fbcef",
+  "prompts": {},
+  "sessions": {
+    "s_10479c1466c918": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e1965f5-c0f2-44d5-8e7a-8d0fbe343f2f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -37,6 +37,30 @@ test('prompt hook verifies exact session, preserves title and tag, never replace
   assert.equal(await send({ prompt: 'no task', system: 'https://app.asana.com/0/1/43' }), '');
 });
 
+test('ASANA_SESSIONS_TASK links its task when the hook runs in that session', async (t) => {
+  const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
+  const p = fakeProvider('codex', [session({ name: 'Work' })], { currentEnv: 'CODEX_THREAD_ID' });
+  const send = (e, extra) => run(p, JSON.stringify(event(e)), { ...env, CODEX_THREAD_ID: ID, ...extra });
+  assert.match(await send({ prompt: 'no task' }, { ASANA_SESSIONS_TASK: 'nope' }), /ASANA_SESSIONS_TASK is not an Asana task URL or GID/);
+  assert.equal(p.store.get(ID).name, 'Work');
+  const multi = 'https://app.asana.com/0/1/43 https://app.asana.com/0/1/44';
+  assert.match(await send({ prompt: multi }, { ASANA_SESSIONS_TASK: 'https://app.asana.com/0/1/42' }), /linked this conversation/);
+  assert.equal(p.store.get(ID).name, 'Work [asana:42]');
+  assert.equal(await send({ prompt: 'no task' }, { ASANA_SESSIONS_TASK: '42' }), '');
+  assert.match(await send({ prompt: 'no task' }, { ASANA_SESSIONS_TASK: '43' }), /already links ticket 42/);
+});
+
+test('ASANA_SESSIONS_TASK from another session falls back to the prompt', async (t) => {
+  const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
+  const p = fakeProvider('codex', [session({ name: 'Work' })], { currentEnv: 'CODEX_THREAD_ID' });
+  const send = (e, extra) => run(p, JSON.stringify(event(e)), { ...env, ASANA_SESSIONS_TASK: '43', ...extra });
+  assert.equal(await send({ prompt: 'no task' }), '');
+  assert.equal(await send({ prompt: 'no task' }, { CODEX_THREAD_ID: '00000000-0000-0000-0000-000000000000' }), '');
+  assert.equal(p.store.get(ID).name, 'Work');
+  assert.match(await send(), /linked this conversation/);
+  assert.equal(p.store.get(ID).name, 'Work [asana:42]');
+});
+
 test('Claude defers missing first record; Stop consumes only pending GID', async (t) => {
   const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
   const p = fakeProvider('claude');

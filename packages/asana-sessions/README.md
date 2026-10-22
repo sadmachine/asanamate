@@ -238,6 +238,16 @@ Only the submitted user prompt is examined. System context, tool output,
 assistant text and transcript contents are not searched. To link deliberately,
 keep hooks disabled and use the bundled `link-asana-task` skill or the CLI.
 
+A launcher can name the task instead: start the provider with
+`ASANA_SESSIONS_TASK` set to a task URL or GID, and the prompt hook links that
+task whatever the prompt contains, such as a full ticket dump with links to
+other tasks. The variable counts only when the hook runs inside that
+conversation's own process, which `CLAUDE_CODE_SESSION_ID` or `CODEX_THREAD_ID`
+matching the event's session shows; otherwise, as in a shared Codex daemon,
+the prompt rule above applies. An invalid value produces a notice and no link.
+Every conversation started with the variable links to its task, including
+nested ones.
+
 The skill supports linking, changing and unlinking. `--current` reads
 `CLAUDE_CODE_SESSION_ID` or `CODEX_THREAD_ID`; if the host does not export it,
 supply `--session <id>` explicitly. Never select the newest conversation.

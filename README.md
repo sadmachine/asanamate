@@ -1135,7 +1135,7 @@ mode = "background"     # foreground | background | exit
 repo = true             # resolve the ticket's repo and run inside it
 context = ""            # "" (everywhere) | "comment"; see below
 command = '''git switch "$ASANAMATE_BRANCH" 2>/dev/null || git switch -c "$ASANAMATE_BRANCH" &&
-tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "ASANAMATE_TICKET_MD=$ASANAMATE_TICKET_MD" -e "ASANAMATE_GID=$ASANAMATE_GID" 'claude "$(cat "$ASANAMATE_TICKET_MD")"' '''
+tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "ASANAMATE_TICKET_MD=$ASANAMATE_TICKET_MD" -e "ASANAMATE_GID=$ASANAMATE_GID" -e "ASANA_SESSIONS_TASK=$ASANAMATE_GID" 'claude "$(cat "$ASANAMATE_TICKET_MD")"' '''
 confirm_writes = false  # optional per-action override
 ```
 
@@ -1186,7 +1186,7 @@ input = "Notes for Claude"
 command = '''git switch "$ASANAMATE_BRANCH" 2>/dev/null || git switch -c "$ASANAMATE_BRANCH" &&
 p="$ASANAMATE_INPUT_FILE.prompt" &&
 { [ -s "$ASANAMATE_INPUT_FILE" ] && { cat "$ASANAMATE_INPUT_FILE"; printf '\n\nTicket information below.\n\n'; }; cat "$ASANAMATE_TICKET_MD"; } > "$p" &&
-tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "P=$p" -e "ASANAMATE_GID=$ASANAMATE_GID" 'claude "$(cat "$P")"' '''
+tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "P=$p" -e "ASANAMATE_GID=$ASANAMATE_GID" -e "ASANA_SESSIONS_TASK=$ASANAMATE_GID" 'claude "$(cat "$P")"' '''
 ```
 
 Actions can use the same form spec with static fields in TOML. Answers reach

@@ -1,6 +1,7 @@
 // The provider plugin hook: `asana-sessions hook <provider>` reads one native
-// UserPromptSubmit or Stop event and links the conversation to the single
-// Asana task URL in the submitted prompt. It never blocks the prompt: every
+// UserPromptSubmit or Stop event and links the conversation to the task in
+// ASANA_SESSIONS_TASK, else to the single Asana task URL in the submitted
+// prompt. It never blocks the prompt: every
 // outcome exits 0, and stdout carries only an optional nonblocking
 // {"systemMessage": ...} notice that both providers show to the user.
 import { isAbsolute } from 'node:path';
@@ -8,7 +9,7 @@ import { display } from './display.js';
 import { ProviderError, UsageError } from './errors.js';
 import { completePending, linkFromPrompt } from './engine.js';
 import { readBounded } from './input.js';
-import { taskGIDsInText } from './marker.js';
+import { parseTask, taskGIDsInText } from './marker.js';
 import { sweepPending } from './pending.js';
 
 export const MAX_EVENT = 1024 * 1024;
@@ -64,7 +65,7 @@ async function handle(provider, c) {
     }
     return linkNow(p, event.sessionId, null, lockOptions, true);
   }
-  const gids = taskGIDsInText(event.prompt);
+  const gids = launchTask(p, event.sessionId, c.env) ?? taskGIDsInText(event.prompt);
   if (gids.length === 0) {
     return '';
   }
@@ -73,6 +74,21 @@ async function handle(provider, c) {
   }
   await sweepPending(c.env);
   return linkNow(p, event.sessionId, gids[0], lockOptions, false);
+}
+
+// launchTask returns the task a launcher named in ASANA_SESSIONS_TASK, or null
+// when unset. The hook must run inside that session: a shared Codex daemon's
+// environment belongs to whichever process started it.
+function launchTask(p, sessionId, env) {
+  const value = env.ASANA_SESSIONS_TASK;
+  if (!value || !p.currentEnv || env[p.currentEnv] !== sessionId) {
+    return null;
+  }
+  try {
+    return [parseTask(value)];
+  } catch {
+    throw new UsageError('ASANA_SESSIONS_TASK is not an Asana task URL or GID; skipped');
+  }
 }
 
 function parseEvent(text, p) {

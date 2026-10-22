@@ -43,6 +43,22 @@ test('list reads every session across projects as normalized metadata', async ()
   assert.equal(prompt.summary, null);
 });
 
+test('generatedTitle reads the latest generated title from the transcript', async () => {
+  const env = await home();
+  const claude = createClaude({ sdk: fakeSDK([]), env });
+  assert.equal(await claude.generatedTitle(ID), null);
+  await mkdir(join(env.CLAUDE_CONFIG_DIR, 'projects', '-w'));
+  const lines = [
+    { type: 'ai-title', aiTitle: 'First', sessionId: ID },
+    { type: 'user', message: 'mentions "ai-title" in text' },
+    { type: 'ai-title', aiTitle: '  Latest  ', sessionId: ID },
+    { type: 'ai-title', aiTitle: '', sessionId: ID },
+  ];
+  await writeFile(join(env.CLAUDE_CONFIG_DIR, 'projects', '-w', `${ID}.jsonl`), `${lines.map((l) => JSON.stringify(l)).join('\n')}\n{"type":"ai-ti`);
+  assert.equal(await claude.generatedTitle(ID), 'Latest');
+  assert.equal(await claude.generatedTitle('../../etc/passwd'), null);
+});
+
 test('missing history is unavailable; resumption is refused by default', async () => {
   const claude = createClaude({ sdk: fakeSDK([]), env: { CLAUDE_CONFIG_DIR: '/nonexistent/claude-home' } });
   await assert.rejects(claude.list(), (err) => err.code === 'unavailable');

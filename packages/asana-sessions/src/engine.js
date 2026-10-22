@@ -60,7 +60,7 @@ export async function lookup(providers, gid) {
     for (const s of sessions) {
       const link = ticketLink(s.name, s.tag);
       if (link.gid === gid) {
-        conversations.push(record(s, gid));
+        conversations.push({ ...record(s, gid), title: await shownTitle(p, s, gid) });
       } else if (link.conflict.includes(gid)) {
         diagnostics.push({
           provider: p.name, code: 'metadata_conflict', severity: 'warning',
@@ -99,6 +99,22 @@ function record(s, gid) {
     archived: s.archived,
     activity: s.activity,
   };
+}
+
+// generated returns the provider's generated title for a session whose saved
+// title uses the fallback prefix, or null. It never fails a lookup or link.
+async function generated(p, s) {
+  if (!p.generatedTitle || splitTitle(s?.name).prefix !== DEFAULT_PREFIX) {
+    return null;
+  }
+  return p.generatedTitle(s.sessionId).catch(() => null);
+}
+
+// shownTitle lists a fallback-titled link by its generated title, with the
+// same marker; the native title is unchanged.
+async function shownTitle(p, s, gid) {
+  const title = await generated(p, s);
+  return title ? linkTitle(title, gid) : s.title;
 }
 
 async function mustRead(p, sessionId) {
@@ -142,12 +158,30 @@ export async function linkFromPrompt(providers, { provider, sessionId, gid }, lo
   }, lockOptions);
 }
 
+// completePending also retitles a link saved before the provider generated a
+// title, at the first Stop that finds one.
 export async function completePending(providers, { provider, sessionId }, lockOptions) {
   const p = pick(providers, provider, sessionId);
   return withLock(provider, sessionId, async () => {
     const gid = await takePending(lockOptions?.env, provider, sessionId);
-    return gid ? linkSaved(p, sessionId, gid, false, lockOptions) : null;
+    const result = gid ? await linkSaved(p, sessionId, gid, false, lockOptions) : null;
+    await retitle(p, sessionId, lockOptions);
+    return result;
   }, lockOptions);
+}
+
+// retitle replaces the fallback prefix of a single-ticket title with the
+// provider's generated title, once one exists. Call only while holding the
+// session's metadata lock. Failure keeps the fallback for a later Stop.
+async function retitle(p, sessionId, lockOptions) {
+  const s = await readIfPersisted(p, sessionId).catch(() => null);
+  const { gids } = splitTitle(s?.name);
+  const title = gids.length === 1 && await generated(p, s);
+  if (!title) {
+    return;
+  }
+  lockOptions?.signal?.throwIfAborted();
+  await p.rename(sessionId, linkTitle(title, gids[0])).catch(() => {});
 }
 
 // Claude's first prompt can precede even the projects directory.

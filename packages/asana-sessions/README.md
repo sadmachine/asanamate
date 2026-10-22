@@ -103,6 +103,13 @@ the verified `title`, and `changed`.
 - A different ticket's marker is a conflict unless you pass `--replace`.
 - An untitled conversation becomes `Conversation [asana:<GID>]`. The first
   prompt is never copied into a title.
+- Claude Code generates its own title after the conversation starts, but
+  hides it once a title is set. For a `Conversation [asana:<GID>]` link,
+  `list` shows the generated title from the transcript instead, and the Stop
+  hook renames the conversation to `<generated title> [asana:<GID>]` at the
+  first turn that has one. Only the exact fallback prefix is replaced. The
+  transcript format is not a documented API; if it changes, the fallback
+  title stays.
 - Renaming a conversation natively so the marker disappears removes the link.
 - Explicit `unlink` also cancels a deferred first-prompt link, even before
   Claude saves the transcript. A later Stop hook will not restore it.

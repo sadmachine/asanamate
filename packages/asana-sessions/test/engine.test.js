@@ -22,6 +22,18 @@ test('lookup returns exact links from both providers, newest first', async () =>
   ]);
 });
 
+test('lookup lists a fallback-titled link by its generated title without renaming', async () => {
+  const titles = { [ID]: 'Rescheduling UI', [ID2]: null };
+  const p = fakeProvider('claude', [
+    session({ name: 'Conversation [asana:42]', title: 'Conversation [asana:42]' }),
+    session({ sessionId: ID2, name: 'Conversation [asana:42]', title: 'Conversation [asana:42]' }),
+  ], { generatedTitle: async (id) => titles[id] });
+  const result = await lookup({ claude: p }, '42');
+  assert.deepEqual(result.conversations.map((c) => c.title).sort(), ['Conversation [asana:42]', 'Rescheduling UI [asana:42]']);
+  assert.equal(p.store.get(ID).name, 'Conversation [asana:42]');
+  assert.equal(p.calls.some(([method]) => method === 'rename'), false);
+});
+
 test('lookup reports conflicts and excludes the record', async () => {
   const result = await lookup({ claude: fakeProvider('claude', [session({ name: 'X [asana:42]', tag: 'asana:7' })]) }, '42');
   assert.equal(result.status, 'partial');

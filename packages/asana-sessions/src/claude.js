@@ -79,6 +79,24 @@ export function createClaude({ sdk, env = process.env, starts = processStarts } 
       });
     },
 
+    // generatedTitle returns Claude Code's latest generated title from the
+    // session transcript, or null. The SDK reports it only until a custom
+    // title is set. The transcript format is not a documented API, so anything
+    // unexpected means null.
+    async generatedTitle(id) {
+      if (!UUID.test(id)) {
+        return null;
+      }
+      const root = join(home(), 'projects');
+      for (const project of await readdir(root).catch(() => [])) {
+        const text = await readFile(join(root, project, `${id}.jsonl`), 'utf8').catch(() => null);
+        if (text !== null) {
+          return lastAITitle(text);
+        }
+      }
+      return null;
+    },
+
     rename: (id, title) => call((s) => s.renameSession(id, title)),
     setTag: (id, tag) => call((s) => s.tagSession(id, tag)),
 
@@ -155,6 +173,23 @@ function processStarts(pids) {
       return resolve(live);
     });
   });
+}
+
+function lastAITitle(text) {
+  for (const line of text.split('\n').reverse()) {
+    if (!line.includes('"ai-title"')) {
+      continue;
+    }
+    try {
+      const entry = JSON.parse(line);
+      if (entry?.type === 'ai-title' && typeof entry.aiTitle === 'string' && entry.aiTitle.trim()) {
+        return entry.aiTitle.trim();
+      }
+    } catch {
+      // A partial or foreign line is not a title.
+    }
+  }
+  return null;
 }
 
 // normalize keeps the user-set title as name: only it can carry a ticket marker.

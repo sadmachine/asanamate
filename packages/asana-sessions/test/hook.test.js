@@ -159,6 +159,24 @@ test('deferred completion preserves a conflicting native link and reports the ex
   assert.equal(p.store.get(ID).name, 'Work [asana:43]');
 });
 
+test('Stop replaces only a fallback link prefix once a generated title exists', async (t) => {
+  const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
+  let generated = null;
+  const p = fakeProvider('claude', [session({ name: 'Conversation [asana:42]' })], { generatedTitle: async () => generated });
+  const stop = () => run(p, JSON.stringify(event({ hook_event_name: 'Stop' })), env);
+  assert.equal(await stop(), '');
+  assert.equal(p.store.get(ID).name, 'Conversation [asana:42]');
+  generated = 'Rescheduling UI';
+  assert.equal(await stop(), '');
+  assert.equal(p.store.get(ID).name, 'Rescheduling UI [asana:42]');
+  generated = 'Something newer';
+  await stop();
+  assert.equal(p.store.get(ID).name, 'Rescheduling UI [asana:42]');
+  p.store.set(ID, session({ name: 'Conversation [asana:42] [asana:43]' }));
+  await stop();
+  assert.equal(p.store.get(ID).name, 'Conversation [asana:42] [asana:43]');
+});
+
 test('malformed, oversize, unreadable and unknown events never block or rename', async (t) => {
   const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
   const p = fakeProvider('codex');

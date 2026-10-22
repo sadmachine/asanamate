@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- A Claude conversation linked before Claude Code generated its title no
+  longer stays `Conversation [asana:<GID>]`: `list` shows the generated title,
+  and the Stop hook renames the conversation to it once one exists.
+
 ## 0.1.2
 
 - Install packed releases with the shared `install.mjs` installer, which uses

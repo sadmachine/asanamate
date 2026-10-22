@@ -39,6 +39,7 @@ func TestMarkdownSections(t *testing.T) {
 		"Use **SSO**.",
 		"- [x] Write test",
 		"1. [shot.png](https://app.asana.com/a/1)",
+		"## Activity",
 		"### Sam · 2026-09-20",
 		"Looks good",
 	} {
@@ -48,6 +49,19 @@ func TestMarkdownSections(t *testing.T) {
 	}
 	if strings.Contains(md, "Branch Name") {
 		t.Error("empty custom fields must be omitted")
+	}
+}
+
+func TestMarkdownInterleavesActivity(t *testing.T) {
+	tk := sample()
+	tk.Events = []asana.Story{
+		{CreatedAt: "2026-09-19T09:00:00Z", CreatedBy: &asana.Ref{Name: "Amy"}, Text: "assigned to Sam"},
+		{CreatedAt: "2026-09-21T09:00:00Z", Text: "changed the due date\nto Oct 3"},
+	}
+	md := tk.Markdown()
+	first, comment, last := strings.Index(md, "- Amy · 2026-09-19 · assigned to Sam"), strings.Index(md, "### Sam · 2026-09-20"), strings.Index(md, "- Unknown · 2026-09-21 · changed the due date to Oct 3")
+	if first < 0 || comment < first || last < comment {
+		t.Fatalf("activity out of order:\n%s", md)
 	}
 }
 
@@ -172,7 +186,7 @@ func TestFetchCombinesEndpoints(t *testing.T) {
 		case "/tasks/1":
 			io.WriteString(w, `{"data":{"gid":"1","name":"T"}}`)
 		case "/tasks/1/stories":
-			io.WriteString(w, `{"data":[{"gid":"s","type":"comment","html_text":"<body>c</body>"}]}`)
+			io.WriteString(w, `{"data":[{"gid":"e","type":"system","text":"assigned to you"},{"gid":"s","type":"comment","html_text":"<body>c</body>"}]}`)
 		case "/attachments":
 			io.WriteString(w, `{"data":[{"gid":"a","name":"f.pdf"}]}`)
 		case "/tasks/1/subtasks":
@@ -188,7 +202,8 @@ func TestFetchCombinesEndpoints(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tk.Name != "T" || len(tk.Comments) != 1 || len(tk.Attachments) != 1 || len(tk.Subtasks) != 1 {
+	if tk.Name != "T" || len(tk.Comments) != 1 || tk.Comments[0].GID != "s" || len(tk.Events) != 1 || tk.Events[0].GID != "e" ||
+		len(tk.Attachments) != 1 || len(tk.Subtasks) != 1 {
 		t.Fatalf("ticket = %+v", tk)
 	}
 }

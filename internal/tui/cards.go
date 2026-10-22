@@ -23,9 +23,9 @@ const sideBySideW = 90
 
 // renderCards renders t as the reading pane's cards view: the name, the
 // local branch, repo, and time lines, a details card with the agents and
-// subtasks beside it (or below, when narrow), titled sections, and the comments
-// as a timeline, all
-// width columns wide. It records the line of each editable row in
+// subtasks beside it (or below, when narrow), titled sections, and the
+// comments, or the whole activity timeline, under their tabs, all width
+// columns wide. It records the line of each editable row in
 // m.fieldLines, and the last line of each multi-line one in m.fieldEnds.
 func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	head := lipgloss.NewStyle().Width(width).Render(tagTitle(ticket.Clean(t.Name), titleStyle))
@@ -122,46 +122,77 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	}
 	add("section:attachments", fmt.Sprintf("Attachments %d", len(t.Attachments)), strings.Join(attachments, "\n"))
 
-	// The add row stays visible above the comment timeline.
+	// The tabs and add row stay visible above the comment timeline.
 	m.fieldLines[commentKey] = lipgloss.Height(strings.Join(blocks, "\n\n")) + 2
-	m.cardTargets = append(m.cardTargets, commentKey)
+	m.fieldLines[tabsKey] = m.fieldLines[commentKey] - 1
+	m.cardTargets = append(m.cardTargets, tabsKey, commentKey)
 	m.clipped = map[string]bool{}
-	comments := []string{dimStyle.Render("none")}
-	if len(t.Comments) > 0 {
-		comments = nil
+	var entries []ticket.Entry
+	if m.allActivity {
+		entries = t.Timeline()
+	} else {
+		for _, c := range t.Comments {
+			entries = append(entries, ticket.Entry{Story: c, Comment: true})
+		}
+	}
+	items := []string{dimStyle.Render("none")}
+	if len(entries) > 0 {
+		items = nil
 		line := m.fieldLines[commentKey] + 2
 		first := 0
 		opts := m.deps.Config.Reader.Comments
-		if latest := opts.Latest; !m.showComments && latest > 0 && len(t.Comments) > latest {
-			first = len(t.Comments) - latest
+		if latest := opts.Latest; !m.showComments && latest > 0 && len(entries) > latest {
+			first = len(entries) - latest
 			m.fieldLines[allCommentsKey] = line
 			m.cardTargets = append(m.cardTargets, allCommentsKey)
 			style := dimStyle.Italic(true)
 			if m.fieldKey == allCommentsKey {
 				style = m.fieldStyle()
 			}
-			comments = append(comments, style.Render(fmt.Sprintf("+ Show all %d comments", len(t.Comments))))
+			items = append(items, style.Render(fmt.Sprintf("+ Show all %d", len(entries))))
 			line += 2
 		}
-		for i := first; i < len(t.Comments); i++ {
-			c := t.Comments[i]
+		// i counts comments, keeping their keys the same in either tab;
+		// consecutive events share one block, a line each.
+		i, event := 0, false
+		for n, e := range entries {
+			if !e.Comment {
+				if n < first {
+					continue
+				}
+				row := dimStyle.Render(ansi.Truncate(ticket.Author(e.Story)+" · "+m.storyDay(e.CreatedAt)+" · "+ticket.OneLine(e.Text), width, "…"))
+				if event {
+					items[len(items)-1] += "\n" + row
+					line++
+				} else {
+					items = append(items, row)
+					line += 2
+				}
+				event = true
+				continue
+			}
+			c, last := e.Story, i == len(t.Comments)-1
 			key := commentTarget(c, i)
+			i++
+			if n < first {
+				continue
+			}
+			event = false
 			m.fieldLines[key] = line
 			m.cardTargets = append(m.cardTargets, key)
 			preview := 0
-			if i < len(t.Comments)-1 && !m.openComments[key] {
+			if !last && !m.openComments[key] {
 				preview = opts.PreviewLines
 			}
 			block, clipped := m.comment(c, width, m.fieldKey == key, preview)
 			m.clipped[key] = clipped
 			m.fieldEnds[key] = line + lipgloss.Height(block) - 1
 			line += lipgloss.Height(block) + 1
-			comments = append(comments, block)
+			items = append(items, block)
 		}
 	}
-	heading := m.rule(fmt.Sprintf("Comments %d", len(t.Comments)), width, false, m.focusReader)
 	addComment := m.addRow(commentKey, "+ Add comment")
-	blocks = append(blocks, heading+"\n"+addComment+"\n\n"+strings.Join(comments, "\n\n"))
+	blocks = append(blocks, m.tabs(t, width)+"\n"+addComment+"\n\n"+strings.Join(items, "\n\n"))
 	return strings.Join(blocks, "\n\n")
 }
 
@@ -239,12 +270,7 @@ func (m *Model) progress(done, total int) string {
 // and reports whether it cut any.
 func (m *Model) comment(c asana.Story, width int, selected bool, preview int) (string, bool) {
 	author := ticket.Author(c)
-	day, err := time.Parse(time.DateOnly, ticket.Day(c.CreatedAt))
-	when := ticket.Day(c.CreatedAt)
-	if err == nil {
-		when = shortDate(day, m.now())
-	}
-	head := authorStyle(author).Render("●") + " " + titleStyle.Render(author) + dimStyle.Render(" · "+when)
+	head := authorStyle(author).Render("●") + " " + titleStyle.Render(author) + dimStyle.Render(" · "+m.storyDay(c.CreatedAt))
 	if selected {
 		head = m.fieldStyle().Render(ansi.Strip(head))
 	}
@@ -266,6 +292,16 @@ func (m *Model) comment(c asana.Story, width int, selected bool, preview int) (s
 		lines[i] = gutter + l
 	}
 	return head + "\n" + strings.Join(lines, "\n"), clipped
+}
+
+// storyDay is the short date of an Asana timestamp, or its date part when
+// that does not parse.
+func (m *Model) storyDay(timestamp string) string {
+	day, err := time.Parse(time.DateOnly, ticket.Day(timestamp))
+	if err != nil {
+		return ticket.Day(timestamp)
+	}
+	return shortDate(day, m.now())
 }
 
 // previewText keeps the first n lines of text in lines, skipping blank ones,
@@ -499,16 +535,38 @@ func (m *Model) headingStyle(style lipgloss.Style, focused bool) lipgloss.Style 
 // rule is a section heading drawn as a full-width line with the title in it,
 // marked when it is the tabbed-to row, and muted when its pane lacks focus.
 func (m *Model) rule(title string, width int, selected, focused bool) string {
+	return m.styledRule(m.ruleTitleStyle(selected, focused).Render(title), width)
+}
+
+// ruleTitleStyle styles a rule's title: the field style when selected, else
+// the heading style.
+func (m *Model) ruleTitleStyle(selected, focused bool) lipgloss.Style {
+	if selected {
+		return m.fieldStyle()
+	}
+	return m.headingStyle(m.accentStyle, focused)
+}
+
+// styledRule draws a rule with an already styled title, cut to fit width.
+func (m *Model) styledRule(title string, width int) string {
 	line := m.sym.border.Top
 	lead := line + line + " "
 	title = ansi.Truncate(title, max(width-ansi.StringWidth(lead)-2, 1), "…")
 	fill := max(width-ansi.StringWidth(lead)-ansi.StringWidth(title)-1, 0)
 	ruleStyle := lipgloss.NewStyle().Foreground(borderColor)
-	headStyle := m.headingStyle(m.accentStyle, focused)
-	if selected {
-		headStyle = m.fieldStyle()
+	return ruleStyle.Render(lead) + title + " " + ruleStyle.Render(strings.Repeat(line, fill))
+}
+
+// tabs is the rule over the comments naming each tab with its count, the
+// shown one styled as a heading and the other faint.
+func (m *Model) tabs(t ticket.Ticket, width int) string {
+	head := m.ruleTitleStyle(m.fieldKey == tabsKey, m.focusReader)
+	comments, all := head, dimStyle
+	if m.allActivity {
+		comments, all = all, comments
 	}
-	return ruleStyle.Render(lead) + headStyle.Render(title) + " " + ruleStyle.Render(strings.Repeat(line, fill))
+	return m.styledRule(comments.Render(fmt.Sprintf("Comments %d", len(t.Comments)))+dimStyle.Render(" "+m.sym.border.Left+" ")+
+		all.Render(fmt.Sprintf("All %d", len(t.Comments)+len(t.Events))), width)
 }
 
 // card boxes body in a border with title set into the top edge. body must

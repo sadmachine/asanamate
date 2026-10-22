@@ -237,8 +237,9 @@ func handlers() map[string]handler {
 }
 
 // open focuses the reader from the list. In the reader, it edits the
-// targeted row, shows the targeted comment in full or opens its menu, or shows
-// the empty fields, older comments, or agents on other branches.
+// targeted row, shows the targeted comment in full or opens its menu, switches
+// the comment tabs, or shows the empty fields, older comments, or agents on
+// other branches.
 func (m *Model) open(tea.KeyPressMsg) tea.Cmd {
 	if !m.focusReader {
 		m.focusReaderPane()
@@ -255,6 +256,8 @@ func (m *Model) open(tea.KeyPressMsg) tea.Cmd {
 		}
 	}
 	switch {
+	case m.fieldKey == tabsKey:
+		m.switchTab()
 	case m.fieldKey == allCommentsKey:
 		m.showAllComments()
 	case m.fieldKey == emptyFieldsKey:

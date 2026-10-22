@@ -47,8 +47,10 @@ func (m *Model) mode() (name string, pill lipgloss.Style, hints [][2]string) {
 		if m.readerView != config.ViewMarkdown {
 			hints := [][2]string{targets}
 			open := keyLabel("main", "open")
-			if m.fieldKey == allCommentsKey {
-				hints = append(hints, [2]string{open, "show all comments"})
+			if m.fieldKey == tabsKey {
+				hints = append(hints, [2]string{open, "switch tab"})
+			} else if m.fieldKey == allCommentsKey {
+				hints = append(hints, [2]string{open, "show all"})
 			} else if t, ok := m.selectedDetail(); ok && m.selectedComment(t) != nil {
 				hint := "comment menu"
 				if m.clipped[m.fieldKey] {

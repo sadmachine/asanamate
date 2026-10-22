@@ -379,7 +379,7 @@ func (m *Model) renderActivityDetail(keepScroll bool) {
 		strings.Repeat("─", width), "",
 	}
 	if e.Story.HTMLText != "" {
-		lines = append(lines, m.glamour(ticket.HTMLToMarkdown(e.Story.HTMLText), width, true))
+		lines = append(lines, m.glamour(ticket.HTMLToMarkdown(mentionHTML(e.Story.HTMLText)), width, true))
 	} else {
 		lines = append(lines, ansi.Wrap(ticket.Clean(e.Story.Text), width, ""))
 	}

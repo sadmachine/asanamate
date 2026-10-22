@@ -89,6 +89,11 @@ func (m *Model) renderDetail(keepScroll bool) {
 			}
 			extra = "\n## Local repo\n\n" + repo + "\n" + extra
 		}
+		t.HTMLNotes = mentionHTML(t.HTMLNotes)
+		t.Comments = slices.Clone(t.Comments)
+		for i := range t.Comments {
+			t.Comments[i].HTMLText = mentionHTML(t.Comments[i].HTMLText)
+		}
 		content = m.glamour(t.MarkdownWith(extra), width, false)
 	} else {
 		content = m.flashGutter(lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width)))

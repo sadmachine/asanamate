@@ -9,6 +9,8 @@ import (
 
 	glamouransi "charm.land/glamour/v2/ansi"
 	"charm.land/glamour/v2/styles"
+	"charm.land/lipgloss/v2"
+	"github.com/JohannesKaufmann/dom"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
@@ -18,9 +20,34 @@ import (
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
+	nethtml "golang.org/x/net/html"
 
 	"github.com/sadmachine/asanamate/internal/config"
 )
+
+const mentionURL = "#asanamate-mention"
+
+// mentionHTML preserves user mentions as internal links for display only.
+// Copying and editing continue to use the original Asana rich text.
+func mentionHTML(source string) string {
+	if !strings.Contains(source, "data-asana-type") {
+		return source
+	}
+	doc, err := nethtml.Parse(strings.NewReader(source))
+	if err != nil {
+		return source
+	}
+	for n := range doc.Descendants() {
+		if n.Type == nethtml.ElementNode && n.Data == "a" && dom.GetAttributeOr(n, "data-asana-type", "") == "user" {
+			n.Attr = []nethtml.Attribute{{Key: "href", Val: mentionURL}}
+		}
+	}
+	var out strings.Builder
+	if err := nethtml.Render(&out, doc); err != nil {
+		return source
+	}
+	return out.String()
+}
 
 // markdownRenderer uses Glamour's layout with literal, prewrapped code blocks.
 // Wrapping before layout keeps the block gutter on every continuation line.
@@ -87,7 +114,12 @@ func applyMarkdown(dst *glamouransi.StylePrimitive, s config.Style) {
 func (r *markdownRenderer) Render(md string) (string, error) {
 	source := []byte(md)
 	doc := r.markdown.Parser().Parse(text.NewReader(source))
+	var mentions []*ast.Link
 	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if link, ok := n.(*ast.Link); ok && entering && string(link.Destination) == mentionURL {
+			mentions = append(mentions, link)
+			return ast.WalkSkipChildren, nil
+		}
 		if !entering || (n.Kind() != ast.KindCodeBlock && n.Kind() != ast.KindFencedCodeBlock) {
 			return ast.WalkContinue, nil
 		}
@@ -120,6 +152,30 @@ func (r *markdownRenderer) Render(md string) (string, error) {
 		n.SetLines(lines)
 		return ast.WalkSkipChildren, nil
 	})
+	// Replace after walking so sibling links are not skipped. Do this before
+	// list/table layout: mentions wrap as text, without URLs or link footnotes.
+	for _, link := range mentions {
+		var label strings.Builder
+		_ = ast.Walk(link, func(child ast.Node, entering bool) (ast.WalkStatus, error) {
+			if entering {
+				switch child := child.(type) {
+				case *ast.Text:
+					label.Write(child.Value(source))
+				case *ast.String:
+					label.Write(child.Value)
+				}
+			}
+			return ast.WalkContinue, nil
+		})
+		name := label.String()
+		if r.style.Link.Color != nil {
+			name = ansi.Style{}.ForegroundColor(lipgloss.Color(*r.style.Link.Color)).Styled(name)
+		}
+		start := len(source)
+		source = append(source, name...)
+		parent := link.Parent()
+		parent.ReplaceChild(parent, link, ast.NewTextSegment(text.NewSegment(start, len(source))))
+	}
 	source, err := r.renderLists(source, doc)
 	if err != nil {
 		return "", err

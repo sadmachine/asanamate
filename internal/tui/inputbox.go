@@ -7,7 +7,6 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/clipboard"
 )
@@ -120,9 +119,19 @@ func (b *inputBox) view(width, height int, accent lipgloss.Style) string {
 	if b.onSaveDraft != nil {
 		draftHint = [2]string{keyLabel("input", "save_draft"), "save draft"}
 	}
-	hints := ansi.Wrap(hintLine(accent, newlineHint, pasteHint, [2]string{keyLabel("input", "submit"), "submit"}, draftHint, [2]string{keyLabel("input", "external_editor"), "editor"}, [2]string{keyLabel("input", "cancel"), "cancel"}), max(width-2, 1), "")
+	return b.layout(width, height, accent, "", newlineHint, pasteHint, [2]string{keyLabel("input", "submit"), "submit"}, draftHint, [2]string{keyLabel("input", "external_editor"), "editor"}, [2]string{keyLabel("input", "cancel"), "cancel"})
+}
+
+// layout renders the box with footer, such as a composer's task controls,
+// between the text and the keyboard hints.
+func (b *inputBox) layout(width, height int, accent lipgloss.Style, footer string, keyHints ...[2]string) string {
+	hints := wrapHints(accent, max(width-2, 1), keyHints...)
 	errorLine := ""
 	available := height - 1 - lipgloss.Height(hints) // title and keyboard hints
+	if footer != "" {
+		available -= lipgloss.Height(footer)
+		footer += "\n"
+	}
 	help := ""
 	if b.help != "" {
 		help = modalHelp(b.help, b.helpIcon, width, min(2, max(height-4, 1))) + "\n"
@@ -142,5 +151,5 @@ func (b *inputBox) view(width, height int, accent lipgloss.Style) string {
 		b.area.SetHeight(min(available, 8))
 	}
 	return accent.Render(b.title) + "\n" + b.area.View() + "\n" + errorLine + help +
-		hints
+		footer + hints
 }

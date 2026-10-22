@@ -5,6 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/keymap"
 )
@@ -56,11 +57,33 @@ func typedLabel(scope string, names ...string) string {
 // hintLine renders modal key hints as "key desc · key desc", leaving out
 // hints whose binding has no keys.
 func hintLine(accent lipgloss.Style, hints ...[2]string) string {
+	return strings.Join(hintParts(accent, hints), dimStyle.Render(" · "))
+}
+
+// wrapHints is hintLine wrapped to width between hints, so a key never ends
+// a line without its description.
+func wrapHints(accent lipgloss.Style, width int, hints ...[2]string) string {
+	var lines []string
+	line := ""
+	for _, part := range hintParts(accent, hints) {
+		switch {
+		case line == "":
+			line = part
+		case ansi.StringWidth(line)+3+ansi.StringWidth(part) > width:
+			lines, line = append(lines, line), part
+		default:
+			line += dimStyle.Render(" · ") + part
+		}
+	}
+	return strings.Join(append(lines, line), "\n")
+}
+
+func hintParts(accent lipgloss.Style, hints [][2]string) []string {
 	var parts []string
 	for _, h := range hints {
 		if h[0] != "" {
 			parts = append(parts, accent.Render(h[0])+dimStyle.Render(" "+h[1]))
 		}
 	}
-	return strings.Join(parts, dimStyle.Render(" · "))
+	return parts
 }

@@ -1,0 +1,25 @@
+packages/asana-sessions/README.md
+  s_3c8858694f5939::t_6be194fbc0a976 21-24
+install.sh
+  s_3c8858694f5939::t_213d3e4f780c32 55-58
+  s_3c8858694f5939::t_931ce96f42ada8 2-4,7-15,17-54,59-82,85-89,91-103,105-117
+  s_3c8858694f5939::t_dd41c152def4b9 83-84,104
+README.md
+  s_3c8858694f5939::t_6be194fbc0a976 120,123-130,135-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db47f012fdd091e23fc4f53b9abcdcb6532eec6a",
+  "prompts": {},
+  "sessions": {
+    "s_3c8858694f5939": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "737ccf5e-4c07-4c33-859b-fb02d88abb4c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

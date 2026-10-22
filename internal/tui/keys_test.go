@@ -259,6 +259,46 @@ func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
 	}
 }
 
+func TestJumpMenuFocusesReaderSections(t *testing.T) {
+	m, _ := editModel(t)
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})
+	tk := m.details["1"]
+	tk.HTMLNotes = "<p>Description text</p>"
+	tk.Comments = []asana.Story{
+		{GID: "c1", CreatedBy: &asana.Ref{Name: "Amy"}, HTMLText: "<p>First</p>"},
+		{GID: "c2", CreatedBy: &asana.Ref{Name: "Zed"}, HTMLText: "<p>Second</p>"},
+	}
+	m.details["1"] = tk
+	m.renderDetail(false)
+	press(m, "'")
+	if m.modal == nil {
+		t.Fatal("' must open the jump menu")
+	}
+	var got []string
+	for _, item := range m.modal.items {
+		got = append(got, item.Key+" "+item.Label)
+	}
+	if want := []string{"t Details", "d Description", "c Comments"}; !slices.Equal(got, want) {
+		t.Fatalf("jump items = %q, want %q", got, want)
+	}
+	press(m, "c")
+	if m.modal != nil || !m.focusReader || m.fieldKey != commentKey {
+		t.Fatalf("c: modal %v, reader focus %v, target %q", m.modal != nil, m.focusReader, m.fieldKey)
+	}
+	if line := m.fieldLines[commentKey] - 1; m.reader.YOffset() != min(line, m.reader.TotalLineCount()-m.reader.Height()) {
+		t.Fatalf("comments offset = %d, want the heading on line %d at the top", m.reader.YOffset(), line)
+	}
+	press(m, "'", "t")
+	if m.fieldKey != "assignee" || m.reader.YOffset() != 0 {
+		t.Fatalf("t target = %q at offset %d", m.fieldKey, m.reader.YOffset())
+	}
+	m.readerView = config.ViewMarkdown
+	press(m, "'")
+	if m.modal != nil {
+		t.Fatal("the markdown view has no sections to jump to")
+	}
+}
+
 func TestCardsShowNewestCommentsAsPreviews(t *testing.T) {
 	m, _ := editModel(t)
 	m.deps.Config.Reader.Comments = config.Default().Reader.Comments

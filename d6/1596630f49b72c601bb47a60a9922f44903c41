@@ -7,6 +7,7 @@ internal/action/action.go
 docs/extensions.md
   s_1faf62449e0aeb::t_23297007732312 395-399,475-485,489-518
   s_1faf62449e0aeb::t_c3b1cdc8c86ba9 519
+  s_1faf62449e0aeb::t_999aab93be1336 486-488
 internal/setup/setup_test.go
   s_1faf62449e0aeb::t_54b3f3bde6c9cf 170-180
   s_1faf62449e0aeb::t_731a1844b2d091 198
@@ -15,6 +16,8 @@ internal/tui/conversations.go
   s_1faf62449e0aeb::t_c1477124600971 23-24
   s_1faf62449e0aeb::t_3561d82ee64221 6,27,274,283,285,318-323,326-329,340-341,356,390,397-404
   s_1faf62449e0aeb::t_583afde9ff0cff 371,388-389
+  s_1faf62449e0aeb::t_d9eaffcee80402 102,357,359-360
+  s_1faf62449e0aeb::t_0496dd5198cf15 25,101,103,265-269
 internal/config/config.go
   s_1faf62449e0aeb::t_3561d82ee64221 136
   s_1faf62449e0aeb::t_a062f3c96773d9 137-138,370,642,644
@@ -30,9 +33,13 @@ internal/config/config_test.go
   s_1faf62449e0aeb::t_2dabb7128b59a1 415,419-423,425-429,431-435
   s_1faf62449e0aeb::t_731a1844b2d091 416-418,424
   s_1faf62449e0aeb::t_f8da125823087b 10
+  s_1faf62449e0aeb::t_0496dd5198cf15 430
 internal/tui/conversations_test.go
   s_1faf62449e0aeb::t_54b3f3bde6c9cf 307,416-478,480-481
   s_1faf62449e0aeb::t_d1e93d495aff5b 4-5,13,181,263-306,308-415,479
+  s_1faf62449e0aeb::t_406ddfe9ff6cae 191,227-237
+  s_1faf62449e0aeb::t_0496dd5198cf15 262
+  s_1faf62449e0aeb::t_d9eaffcee80402 238-239
 internal/tui/agents_test.go
   s_1faf62449e0aeb::t_b192ceb823da34 313
 ---

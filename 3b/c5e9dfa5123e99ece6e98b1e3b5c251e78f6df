@@ -1,0 +1,31 @@
+internal/tui/images.go
+  s_f1f1bd27d645b9::t_d4ed10fd5d6559 143
+internal/tui/reader.go
+  s_f1f1bd27d645b9::t_d4ed10fd5d6559 87-91
+internal/tui/markdown.go
+  s_f1f1bd27d645b9::t_d4ed10fd5d6559 12-13,23,28-51,119,121-122
+  s_f1f1bd27d645b9::t_79f99e6dc4bc40 117,120,155-178
+internal/tui/activity.go
+  s_f1f1bd27d645b9::t_d4ed10fd5d6559 382
+internal/tui/markdown_test.go
+  s_f1f1bd27d645b9::t_b5d55925c7332c 87
+  s_f1f1bd27d645b9::t_dbd3462ee71afe 15,20-30,32-42,44-86,88-98
+  s_f1f1bd27d645b9::t_18d3f8a6080086 31,43
+  s_f1f1bd27d645b9::t_7c7c8daaa4a572 99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3bc5e9dfa5123e99ece6e98b1e3b5c251e78f6df",
+  "prompts": {},
+  "sessions": {
+    "s_f1f1bd27d645b9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16500-3fee-78f2-8d80-3be152abcd5d",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

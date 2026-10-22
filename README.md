@@ -17,12 +17,12 @@ and coding agents can do what you can. macOS and Linux only.
 - **Edit** a ticket: change its title or description, comment (with images),
   move it to a section, assign or
   unassign it, set its due date or a custom field, add or remove projects, and
-  mark it complete or reopen it. Edit your comments or react with an emoji. See
-  [Keys](#keys).
+  mark it complete or reopen it. Edit or delete your comments, or react with an
+  emoji. See [Keys](#keys).
 - **Create** a ticket in a project or My Tasks, or a subtask. See
   [Keys](#keys).
 - **Script** every edit and create from the CLI: `asanamate title`, `description`,
-  `comment`, `edit-comment`, `move`,
+  `comment`, `edit-comment`, `delete-comment`, `move`,
   `field`, `assign`, `due`, `project`, `complete`, `react`, and `create`. See
   [Writing back to Asana](#writing-back-to-asana).
 - **Act** on a ticket: run your own commands with the ticket as context, such
@@ -55,7 +55,7 @@ and coding agents can do what you can. macOS and Linux only.
 [feeds](docs/extensions.md#feeds).
 [docs/extensions.md](docs/extensions.md) documents each protocol.
 
-**Left to Asana.** asanamate does not delete tickets or comments, set tags,
+**Left to Asana.** asanamate does not delete tickets, set tags,
 followers, or dependencies, or create or change projects and sections.
 
 **Early release.** asanamate is pre-1.0: expect breaking changes, including to
@@ -336,7 +336,7 @@ key press.
 | `ctrl+d`/`ctrl+u` | half page down/up in the list, or scroll the reader half a page |
 | `ctrl+f`/`ctrl+b` (or pgdown/pgup) | page down/up in the list, or scroll the reader a page |
 | `tab`/`shift+tab`, `l`/`h` | focus the next/previous pane: the views panel (wide screens), the list, and the reader; in the cards view, entering the reader selects its first editable row |
-| `enter` | in the list, open the ticket in the reader; in the reader, edit the selected row (Add comment opens the comment editor; the Comments and All tabs switch between comments and the whole activity; Show all lists the older entries, since the cards view shows the newest `reader.comments.latest`), show a comment cut to its preview in full, or open the selected comment's menu: `r` reacts with an emoji (`1`-`9` pick one; picking one you reacted with removes it) |
+| `enter` | in the list, open the ticket in the reader; in the reader, edit the selected row (Add comment opens the comment editor; the Comments and All tabs switch between comments and the whole activity; Show all lists the older entries, since the cards view shows the newest `reader.comments.latest`), show a comment cut to its preview in full, or open the selected comment's menu: `e` edits, `d` deletes after confirmation, `r` reacts with an emoji (`1`-`9` pick one; picking one you reacted with removes it). Edit and Delete appear only for comments Asana allows you to edit |
 | `'` | jump to a section of the reader's cards view, from the list or the reader: `t` details, `a` agents, `d` description, `s` subtasks, `b` blocked by, `B` blocking, `f` attachments, `c` comments; the menu lists only the sections the ticket has, and picking one focuses the reader on it and outlines the section in the accent color for a moment |
 | `esc` | return focus to the list |
 | `0` / `1` / `2` / `3` | focus the views panel (wide screens) / the list / the reader / the Feed panel (expanding it) |
@@ -1539,6 +1539,7 @@ asanamate title [--yes] <gid> "New title"
 asanamate description [--yes] <gid> "**Updated details**" # "-" reads stdin; "" clears
 asanamate batch [--yes] <gid> '[{"kind":"assign","value":"Ann Lee"},{"kind":"due","value":"2026-10-01"}]'
 asanamate edit-comment [--yes] <comment-gid> "Updated text" # "-" reads stdin
+asanamate delete-comment [--yes] <comment-gid>             # permanently deletes it
 asanamate move    [--yes] [--project <gid>] <gid> "In Review"
 asanamate move    [--yes] --my-tasks <gid> "Later"          # a section of your My Tasks
 asanamate field   [--yes] [--project <gid>] <gid> "Branch Name" feature/fix-login
@@ -1588,6 +1589,14 @@ saved separately for each comment and do not replace a new-comment draft.
 `asanamate edit-comment` replaces a comment's text by gid; `asanamate show
 --format json <gid>` lists comment gids under `comments`. Both entry points
 check Asana's current edit permission before writing and reject empty text.
+
+To delete a comment, open the same menu and press `d` for **Delete…**, then
+confirm **Delete**. The confirmation starts on **Cancel**; `esc` also cancels.
+Delete appears alongside Edit for comments Asana allows you to edit. Deletion
+permanently removes the comment and its reactions. The CLI equivalent is
+`asanamate delete-comment [--yes] <comment-gid>`. Both entry points recheck
+Asana's current edit permission before deleting; a failed deletion keeps the
+comment visible and reports the error.
 
 Existing mentions and inline images use `[name](asana:<gid>)` and
 `![](asana:<gid>)` in the edit box. Keep these links to preserve their Asana

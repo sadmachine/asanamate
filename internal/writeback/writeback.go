@@ -116,6 +116,22 @@ func (s Service) EditComment(ctx context.Context, storyGID, text string) error {
 	return s.writeComment(ctx, "", storyGID, text)
 }
 
+// DeleteComment deletes a comment the authenticated user can edit. Asana's
+// current permission is checked before asking for confirmation or deleting.
+func (s Service) DeleteComment(ctx context.Context, storyGID string) error {
+	c, err := s.Client.Story(ctx, storyGID)
+	if err != nil {
+		return err
+	}
+	if c.Type != "comment" || !c.IsEditable {
+		return errors.New("comment cannot be deleted by the authenticated user")
+	}
+	if err := s.confirm(fmt.Sprintf("Permanently delete %s's comment %q?", ticket.Author(c), snippet(c.Text))); err != nil {
+		return err
+	}
+	return s.Client.DeleteStory(ctx, storyGID)
+}
+
 func (s Service) writeComment(ctx context.Context, gid, storyGID, text string) error {
 	text = strings.TrimSpace(text)
 	if text == "" {

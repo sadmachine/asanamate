@@ -15,6 +15,7 @@ type commentOp int
 const (
 	commentReact commentOp = iota
 	commentEdit
+	commentDelete
 )
 
 // quickReactions are the emoji the react picker offers on every comment.
@@ -27,7 +28,9 @@ var quickReactions = []struct{ emoji, name string }{
 func (m *Model) openCommentMenu(gid string, c asana.Story) {
 	items := []pickItem{{Label: "React", Key: "r", Value: commentReact}}
 	if c.IsEditable {
-		items = append(items, pickItem{Label: "Edit", Key: "e", Value: commentEdit})
+		items = append(items,
+			pickItem{Label: "Edit", Key: "e", Value: commentEdit},
+			pickItem{Label: "Delete…", Key: "d", Value: commentDelete})
 	}
 	p := newPicker(pickValue(func(op commentOp) tea.Cmd {
 		m.modal = nil
@@ -36,10 +39,32 @@ func (m *Model) openCommentMenu(gid string, c asana.Story) {
 			m.openReactPicker(gid, c)
 		case commentEdit:
 			m.openCommentEditor(gid, c)
+		case commentDelete:
+			m.confirmDeleteComment(gid, c)
 		}
 		return nil
 	}), "Comment by "+ticket.Author(c), items)
 	p.keySelect = true
+	m.modal = p
+}
+
+func (m *Model) confirmDeleteComment(gid string, c asana.Story) {
+	p := newPicker(pickValue(func(confirmed bool) tea.Cmd {
+		m.modal = nil
+		if !confirmed {
+			return nil
+		}
+		svc := m.writer()
+		m.setProgress("delete comment…")
+		return saveEdit(gid, "delete comment", func(ctx context.Context) error {
+			return svc.DeleteComment(ctx, c.GID)
+		})
+	}), "Delete "+ticket.Author(c)+"'s comment?", []pickItem{
+		{Label: "Cancel", Key: "c", Value: false},
+		{Label: "Delete", Key: "d", Value: true, Help: "Permanently delete this comment and its reactions."},
+	})
+	p.keySelect = true
+	p.stopSearch()
 	m.modal = p
 }
 

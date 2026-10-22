@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { PassThrough, Readable } from 'node:stream';
 import test from 'node:test';
 import { hook, MAX_EVENT } from '../src/hook.js';
-import { unlink } from '../src/engine.js';
+import { link, unlink } from '../src/engine.js';
 import { taskGIDsInText } from '../src/marker.js';
 import { savePending, takePending, sweepPending, RETENTION_MS } from '../src/pending.js';
 import { ID, fakeProvider, lockEnv, session } from './fakes.js';
@@ -72,6 +72,58 @@ test('Claude defers missing first record; Stop consumes only pending GID', async
   assert.match(await run(p, JSON.stringify(event({ hook_event_name: 'Stop', prompt: 'https://app.asana.com/0/1/43' })), env), /task 42/);
   assert.equal(await takePending(env, 'claude', ID), '');
   assert.equal(p.store.get(ID).name, 'Generated title [asana:42]');
+});
+
+for (const title of ['Generated title', null]) {
+  test(`Codex defers an unnamed thread until Stop ${title ? 'preserves its generated title' : 'uses the fallback'}`, async (t) => {
+    const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
+    const p = fakeProvider('codex', [session({ title: 'private first prompt' })]);
+    const send = (e) => run(p, JSON.stringify(event(e)), env);
+    assert.equal(await send(), '');
+    assert.equal(await send(), '');
+    assert.match(await send({ prompt: 'https://app.asana.com/0/1/43' }), /task 42 is already waiting/);
+    assert.equal(p.store.get(ID).name, null);
+    assert.equal(p.calls.some(([method]) => method === 'rename'), false);
+    p.store.get(ID).name = title;
+    assert.match(await send({ hook_event_name: 'Stop', prompt: 'https://app.asana.com/0/1/43' }), /linked this conversation to Asana task 42/);
+    assert.equal(p.store.get(ID).name, `${title ?? 'Conversation'} [asana:42]`);
+    assert.equal(await takePending(env, 'codex', ID), '');
+    p.calls.length = 0;
+    assert.equal(await send({ hook_event_name: 'Stop' }), '');
+    assert.deepEqual(p.calls, []);
+  });
+}
+
+for (const mutation of ['unlink', 'replace', 'native rename']) {
+  test(`Codex pending link respects ${mutation} before Stop`, async (t) => {
+    const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
+    const p = fakeProvider('codex', [session()]);
+    const send = (e) => run(p, JSON.stringify(event(e)), env);
+    assert.equal(await send(), '');
+    p.store.get(ID).name = 'Generated title';
+    if (mutation === 'unlink') {
+      await unlink({ codex: p }, { provider: 'codex', sessionId: ID }, { env });
+    } else if (mutation === 'replace') {
+      await link({ codex: p }, { provider: 'codex', sessionId: ID, gid: '43', replace: true }, { env });
+    } else {
+      p.store.get(ID).name = 'Generated title [asana:43]';
+    }
+    const notice = await send({ hook_event_name: 'Stop' });
+    assert.equal(p.store.get(ID).name, mutation === 'unlink' ? 'Generated title' : 'Generated title [asana:43]');
+    if (mutation === 'native rename') {
+      assert.match(notice, /already links ticket 43; automatic linking skipped/);
+    } else {
+      assert.equal(notice, '');
+    }
+    assert.equal(await takePending(env, 'codex', ID), '');
+  });
+}
+
+test('Codex Stop without a pending link never reads or renames a thread', async (t) => {
+  const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
+  const p = fakeProvider('codex', [session({ name: 'Conversation [asana:42]' })]);
+  assert.equal(await run(p, JSON.stringify(event({ hook_event_name: 'Stop' })), env), '');
+  assert.deepEqual(p.calls, []);
 });
 
 for (const persisted of [false, true]) {

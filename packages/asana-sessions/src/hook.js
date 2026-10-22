@@ -60,9 +60,6 @@ async function handle(provider, c) {
   }
   const lockOptions = { env: c.env, signal: c.abort.signal };
   if (event.name === 'Stop') {
-    if (provider !== 'claude') {
-      throw new UsageError('unsupported hook event for codex; skipped');
-    }
     return linkNow(p, event.sessionId, null, lockOptions, true);
   }
   const gids = launchTask(p, event.sessionId, c.env) ?? taskGIDsInText(event.prompt);

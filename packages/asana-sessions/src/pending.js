@@ -1,6 +1,7 @@
-// Pending links: a task GID found in a prompt before the provider had saved
-// the conversation. The Stop hook completes them. Entries hold only
-// provider, session ID, task GID, and creation time, never the prompt.
+// Pending links: a task GID found in a prompt before Claude saved the
+// conversation or Codex generated its title. The Stop hook completes them.
+// Entries hold only provider, session ID, task GID, and creation time, never
+// the prompt.
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Codex prompt hooks wait until Stop to link unnamed threads, preserving
+  Codex's generated title instead of preventing it with the `Conversation`
+  fallback. Named threads still link immediately. Rerun setup and review
+  both the prompt and new Stop hook in Codex `/hooks` after upgrading.
 - A Claude conversation linked before Claude Code generated its title no
   longer stays `Conversation [asana:<GID>]`: `list` shows the generated title,
   and the Stop hook renames the conversation to it once one exists.

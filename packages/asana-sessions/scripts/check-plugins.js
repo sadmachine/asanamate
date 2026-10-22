@@ -16,7 +16,7 @@ for (const provider of ['claude', 'codex']) {
   assert.equal(manifest.name, pkg.name);
   assert.equal(manifest.version, pkg.version);
   const hooks = (await json(`${base}/hooks/hooks.json`)).hooks;
-  assert.deepEqual(Object.keys(hooks), provider === 'claude' ? ['UserPromptSubmit', 'Stop'] : ['UserPromptSubmit']);
+  assert.deepEqual(Object.keys(hooks), ['UserPromptSubmit', 'Stop']);
   for (const groups of Object.values(hooks)) {
     assert.equal(groups.length, 1);
     assert.equal(groups[0].hooks.length, 1);

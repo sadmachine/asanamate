@@ -150,7 +150,9 @@ export async function linkFromPrompt(providers, { provider, sessionId, gid }, lo
   return withLock(provider, sessionId, async () => {
     const saved = await readIfPersisted(p, sessionId);
     lockOptions?.signal?.throwIfAborted();
-    if (!saved && provider === 'claude') {
+    // Claude may not have persisted yet. Codex must stay unnamed until its
+    // first turn can generate a title; setting a name prevents generation.
+    if ((!saved && provider === 'claude') || (provider === 'codex' && saved && !saved.name)) {
       const other = await savePending(lockOptions?.env, provider, sessionId, gid);
       return other ? { pendingTask: other } : null;
     }
@@ -174,6 +176,9 @@ export async function completePending(providers, { provider, sessionId }, lockOp
 // provider's generated title, once one exists. Call only while holding the
 // session's metadata lock. Failure keeps the fallback for a later Stop.
 async function retitle(p, sessionId, lockOptions) {
+  if (!p.generatedTitle) {
+    return;
+  }
   const s = await readIfPersisted(p, sessionId).catch(() => null);
   const { gids } = splitTitle(s?.name);
   const title = gids.length === 1 && await generated(p, s);

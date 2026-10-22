@@ -44,7 +44,7 @@ and model turns. Do not copy personal history. Run provider executables through
 - Validate Claude's plugin using `claude plugin validate <plugin-root>`. Register
   each marketplace and plugin natively in its disposable home. Repeat setup and
   upgrades; verify exactly one owned prompt hook runs per submission. Codex
-  `hooks/list` must show one prompt hook and no Stop hook for this plugin.
+  `hooks/list` must show one prompt hook and one Stop hook for this plugin.
 - Review native feature and trust requirements manually. Setup must not enable
   unrelated features, approve trust, or bypass policy. Verify untrusted and
   disabled hooks skip safely.
@@ -53,8 +53,11 @@ and model turns. Do not copy personal history. Run provider executables through
   API and history listing after each stage; the marker must persist. Record
   total hook latency below the 10-second companion / 15-second host budget.
 - Claude: prove first prompt precedes persistence and a real nonblocking Stop
-  completes the pending write after title generation. Codex: prove immediate
-  linking remains reliable without deferred state.
+  completes the pending write after title generation. Codex: prove an unnamed
+  thread stays unnamed during the prompt hook, then a real Stop appends the
+  marker to its generated title (or uses the fallback if still unnamed).
+  Verify named threads still link immediately, repeated Stop is a no-op, and
+  explicit unlink cancels the pending link.
 - Submit duplicate URLs, two distinct tasks, and a different task after linking.
   Verify idempotence or nonblocking notices, with no replacement.
 - Exercise the explicit skill in each CLI. Verify host session identity is

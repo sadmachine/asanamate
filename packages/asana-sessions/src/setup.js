@@ -31,7 +31,7 @@ const NATIVE = {
     label: 'Codex',
     register: (root) => [['plugin', 'marketplace', 'add', root], ['plugin', 'add', PLUGIN_ID]],
     unregister: [['plugin', 'remove', PLUGIN_ID], ['plugin', 'marketplace', 'remove', MARKETPLACE]],
-    next: 'Start Codex, run /hooks, then review and trust the asana-sessions prompt hook; Codex skips untrusted plugin hooks.',
+    next: 'Start Codex, run /hooks, then review and trust the asana-sessions prompt and Stop hooks; Codex skips untrusted plugin hooks.',
   },
 };
 const NAMES = Object.keys(NATIVE);
@@ -108,7 +108,7 @@ export async function pluginStatus(name, c) {
   return name === 'codex' ? codexHooks(c) : { state: 'ready', detail: 'hooks load in new sessions' };
 }
 
-// codexHooks checks that Codex sees exactly one prompt hook from
+// codexHooks checks that Codex sees exactly one prompt and one Stop hook from
 // the plugin, and whether the user has trusted their current definitions.
 async function codexHooks(c) {
   let hooks;
@@ -118,14 +118,14 @@ async function codexHooks(c) {
     return { state: 'error', detail: `Codex hook list failed: ${display(err.message)}` };
   }
   const count = (event) => hooks.filter((h) => h.eventName === event).length;
-  if (count('userPromptSubmit') !== 1 || count('stop') !== 0) {
+  if (count('userPromptSubmit') !== 1 || count('stop') !== 1) {
     return { state: 'stale', detail: `Codex loads ${count('userPromptSubmit')} prompt and ${count('stop')} Stop hooks from the plugin; rerun \`asana-sessions setup\`` };
   }
   if (hooks.some((h) => h.enabled === false)) {
     return { state: 'disabled', detail: 'enable the asana-sessions hooks in Codex /hooks' };
   }
   if (hooks.some((h) => h.trustStatus !== 'trusted')) {
-    return { state: 'untrusted', detail: 'run /hooks in Codex, then review and trust the asana-sessions prompt hook' };
+    return { state: 'untrusted', detail: 'run /hooks in Codex, then review and trust the asana-sessions prompt and Stop hooks' };
   }
   return { state: 'ready', detail: 'hooks are trusted' };
 }

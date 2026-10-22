@@ -11,7 +11,7 @@ function context(name, { entry, hooks, version = TESTED[name], missing = false }
   const calls = [];
   const c = { pkg, version: '0.1.0', env: { PATH: '' }, cwd: '/tmp', io: fakeIO([], { interactive: false }),
     output: '', stdout: { write: (s) => { c.output += s; } }, calls,
-    providers: { codex: { hooks: async () => hooks ?? [{ pluginId: PLUGIN_ID, eventName: 'userPromptSubmit', enabled: true, trustStatus: 'trusted' }] } },
+    providers: { codex: { hooks: async () => hooks ?? ['userPromptSubmit', 'stop'].map((eventName) => ({ pluginId: PLUGIN_ID, eventName, enabled: true, trustStatus: 'trusted' })) } },
     exec: async (command, args) => {
       calls.push([command, ...args]);
       if (command !== name) return { missing: true, ok: false, stdout: '', stderr: '' };
@@ -34,8 +34,18 @@ test('plugin status distinguishes missing, incompatible, registered, stale, disa
     assert.equal((await pluginStatus(name, context(name, { entry: entry(name, { version: '0.0.1' }) }))).state, 'stale');
     assert.equal((await pluginStatus(name, context(name, { entry: entry(name, { enabled: false }) }))).state, 'disabled');
   }
-  const c = context('codex', { entry: entry('codex'), hooks: [{ pluginId: PLUGIN_ID, eventName: 'userPromptSubmit', enabled: true, trustStatus: 'untrusted' }] });
+  const hooks = ['userPromptSubmit', 'stop'].map((eventName) => ({ pluginId: PLUGIN_ID, eventName, enabled: true, trustStatus: 'trusted' }));
+  hooks[1].trustStatus = 'untrusted';
+  const c = context('codex', { entry: entry('codex'), hooks });
   assert.equal((await pluginStatus('codex', c)).state, 'untrusted');
+  hooks[1].trustStatus = 'trusted';
+  hooks[1].enabled = false;
+  assert.equal((await pluginStatus('codex', c)).state, 'disabled');
+  hooks[1].enabled = true;
+  for (const stale of [hooks.slice(0, 1), hooks.slice(1), [...hooks, hooks[1]]]) {
+    c.providers.codex.hooks = async () => stale;
+    assert.equal((await pluginStatus('codex', c)).state, 'stale');
+  }
   c.providers.codex.hooks = async () => [];
   assert.equal((await pluginStatus('codex', c)).state, 'stale');
 });

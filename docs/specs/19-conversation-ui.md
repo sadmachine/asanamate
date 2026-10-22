@@ -20,6 +20,14 @@ range; the standalone package can be released before this UI is implemented.
 
 ## TUI entry and lookup
 
+> **Revised:** Conversations moved from the action menu to the agents modal
+> (`w`, or `enter` on the reader's Agents section). It lists running agents,
+> then saved conversations. A saved record whose exact `provider` and
+> `session_id` match a running agent's shows once, as the agent, and picking it
+> runs `agents.focus`. That agent-source identity is the authoritative
+> native-ID mapping required under Opening. The lookup still starts when the
+> modal opens, with the running agents shown while it loads.
+
 Add a built-in **Conversations** entry to the selected ticket's existing
 action menu when `[conversations]` is enabled. It is available even when
 there are no user-defined action files. Keep existing action bindings and

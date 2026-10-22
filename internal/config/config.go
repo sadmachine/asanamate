@@ -135,6 +135,9 @@ type Agents struct {
 	Command string              `toml:"command"`
 	States  map[string][]string `toml:"states"`
 	Symbols map[string]string   `toml:"symbols"`
+	// Focus is shell text that switches to one running agent, which it reads
+	// from the ASANAMATE_AGENT_* exports. Empty leaves agents unfocusable.
+	Focus string `toml:"focus"`
 }
 
 // AgentsEnabled reports whether agent tracking is turned on.
@@ -635,6 +638,9 @@ func oneOf(key, got string, allowed ...string) error {
 }
 
 func (a Agents) validate() error {
+	if strings.TrimSpace(a.Focus) != "" && strings.TrimSpace(a.Command) == "" {
+		return errors.New("agents.command is required when agents.focus is set")
+	}
 	// agents.states maps onto the known states; agents.symbols also covers unknown.
 	var known []string
 	for _, s := range agents.States {

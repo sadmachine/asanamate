@@ -86,7 +86,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		var side []string
 		sideLine := lipgloss.Height(head) + 1
 		if len(agentLines) > 0 {
-			key := "section:agents"
+			key := agentsKey
 			m.fieldLines[key] = sideLine
 			m.cardTargets = append(m.cardTargets, key)
 			card := m.card(m.sym.robot+"   Agents", cutLines(agentLines, rightW-4), rightW, m.fieldKey == key)
@@ -108,8 +108,8 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 	} else {
 		blocks = []string{head, m.card("Details", m.detailsBody(t, width-4, top), width, false)}
-		add("section:agents", "Agents", cutLines(agentLines, width))
-		markOthers(m.fieldLines["section:agents"] + 1)
+		add(agentsKey, "Agents", cutLines(agentLines, width))
+		markOthers(m.fieldLines[agentsKey] + 1)
 		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 		add("section:subtasks", subtaskTitle, wrap(subtasks, width))
 	}

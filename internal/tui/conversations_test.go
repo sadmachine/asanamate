@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/conversations"
@@ -30,25 +31,17 @@ func conversationModel(t *testing.T, reply string, actions ...config.Action) *Mo
 	tasks := []asana.Task{{GID: "1", Name: "Fix"}, {GID: "2", Name: "Other"}}
 	m.tasks, m.visible = tasks, tasks
 	m.details["1"] = ticket.Ticket{Task: tasks[0]}
-	m.width, m.height = 100, 30
+	m.width, m.height, m.loading = 100, 30, false
 	return m
 }
 
-// openConversations picks the action menu's Conversations entry and returns
-// the lookup command without running it.
+// openConversations presses w, checks the modal shows while looking, and
+// runs the lookup.
 func openConversations(t *testing.T, m *Model) {
 	t.Helper()
-	m.openActionMenu()
-	if m.modal == nil {
-		t.Fatal("action menu did not open")
-	}
-	m.modal.cursor = len(m.modal.items) - 1
-	if it := m.modal.current(); it == nil || it.Label != "Conversations" {
-		t.Fatalf("last menu item = %+v", it)
-	}
-	_, cmd := m.Update(key("enter"))
-	if m.waiting == "" {
-		t.Fatal("lookup shows no loading modal")
+	_, cmd := m.Update(key("w"))
+	if m.modal == nil || !strings.Contains(m.modal.notice, "Finding conversations") {
+		t.Fatalf("modal while looking = %+v", m.modal)
 	}
 	drain(m, cmd)
 }
@@ -61,10 +54,10 @@ func labels(p *picker) []string {
 	return out
 }
 
-func TestConversationsEntryWithoutActions(t *testing.T) {
+func TestAgentsModalListsConversations(t *testing.T) {
 	m := conversationModel(t, conversationsReply)
 	openConversations(t, m)
-	if m.modal == nil || !strings.HasPrefix(m.modal.title, "Resume in terminal") {
+	if m.modal == nil || !strings.HasPrefix(m.modal.title, "Agents") {
 		t.Fatalf("modal = %+v", m.modal)
 	}
 	if got := strings.Join(labels(m.modal), "|"); got != "Same|Same|No time|Refresh|Cancel" {
@@ -85,32 +78,39 @@ func TestConversationsEntryWithoutActions(t *testing.T) {
 	}
 }
 
-func TestConversationsOffAddsNoEntry(t *testing.T) {
+func TestActionMenuHasNoConversationsEntry(t *testing.T) {
 	m := conversationModel(t, conversationsReply, config.Action{Name: "Go", Key: "g", Command: "true"})
-	m.deps.Config.Conversations = config.Conversations{}
 	m.openActionMenu()
 	if got := labels(m.modal); len(got) != 1 || got[0] != "Go" {
 		t.Fatalf("menu = %v", got)
 	}
 }
 
+func TestAgentsModalOff(t *testing.T) {
+	m := conversationModel(t, conversationsReply)
+	m.deps.Config.Conversations = config.Conversations{}
+	m.Update(key("w"))
+	if m.modal != nil || !strings.Contains(m.status, "no agents or conversations configured") {
+		t.Fatalf("modal = %+v, status = %q", m.modal, m.status)
+	}
+}
+
 func TestConversationsLateRepliesDropped(t *testing.T) {
 	m := conversationModel(t, conversationsReply)
-	m.openActionMenu()
-	m.modal.cursor = len(m.modal.items) - 1
-	_, cmd := m.Update(key("enter"))
+	_, cmd := m.Update(key("w"))
 	m.Update(key("esc"))
 	drain(m, cmd)
-	if m.modal != nil || m.waiting != "" {
+	if m.modal != nil || len(m.conversationResults) != 0 {
 		t.Fatalf("cancelled lookup opened: %+v", m.modal)
 	}
 
 	tk := m.details["1"]
 	first := m.lookupConversations(tk, nil)
 	second := m.lookupConversations(tk, nil)
+	pending := m.modal
 	drain(m, first)
-	if m.modal != nil {
-		t.Fatal("superseded lookup attached")
+	if m.modal != pending || !strings.Contains(m.modal.notice, "Finding conversations") {
+		t.Fatalf("superseded lookup attached: %+v", m.modal)
 	}
 	m.cursor = 1 // the user moved to another ticket
 	drain(m, second)
@@ -175,4 +175,70 @@ func TestConversationOpenWritesSnapshot(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(filepath.Dir(snapshots[0]), "ticket.json")); err != nil {
 		t.Fatal("ticket exports missing beside the snapshot")
 	}
+}
+
+// runningModel has one running agent on the ticket that reports the "new"
+// conversation's exact identity, and a focus command that records its target.
+func runningModel(t *testing.T) (*Model, string) {
+	t.Helper()
+	m := conversationModel(t, conversationsReply)
+	out := filepath.Join(t.TempDir(), "focused")
+	m.deps.Config.Agents = config.Agents{Command: "unused", Focus: `printf %s "$ASANAMATE_AGENT_TARGET" > ` + out}
+	m.Update(agentsMsg{list: []agents.Agent{{TaskGID: "1", Provider: "claude", SessionID: "new", Path: "/code/web",
+		Status: "idle", State: agents.Idle, Target: "pane1", Title: "Fixing"}}})
+	return m, out
+}
+
+func TestAgentsModalShowsRunningConversationOnce(t *testing.T) {
+	m, out := runningModel(t)
+	openConversations(t, m)
+	if got := strings.Join(labels(m.modal), "|"); !strings.Contains(got, "Fixing") || strings.Count(got, "Same") != 1 {
+		t.Fatalf("rows = %s", got)
+	}
+	a, ok := m.modal.items[0].Value.(agents.Agent)
+	if !ok || a.Target != "pane1" || !strings.Contains(m.modal.items[0].Hint, "running") {
+		t.Fatalf("first row = %+v", m.modal.items[0])
+	}
+	if rec, _ := m.modal.items[1].Value.(conversations.Record); rec.SessionID != "old" {
+		t.Fatalf("saved row = %+v", m.modal.items[1])
+	}
+	_, cmd := m.Update(key("enter"))
+	drain(m, cmd)
+	if got, err := os.ReadFile(out); err != nil || string(got) != "pane1" || m.modal != nil {
+		t.Fatalf("focus wrote %q, err = %v, modal = %+v", got, err, m.modal)
+	}
+}
+
+func TestAgentsModalWithoutFocusExplains(t *testing.T) {
+	m, out := runningModel(t)
+	m.deps.Config.Agents.Focus = ""
+	openConversations(t, m)
+	if cmd := m.pickedConversation(m.details["1"], m.modal.items[0].Value); cmd != nil || !strings.Contains(m.status, "agents.focus") {
+		t.Fatalf("status = %q", m.status)
+	}
+	if _, err := os.Stat(out); err == nil {
+		t.Fatal("focus ran without agents.focus")
+	}
+}
+
+func TestAgentsModalWithoutConversations(t *testing.T) {
+	m, _ := runningModel(t)
+	m.deps.Config.Conversations = config.Conversations{}
+	_, cmd := m.Update(key("w"))
+	if cmd != nil || m.modal == nil || m.conversations != nil {
+		t.Fatalf("modal = %+v, lookup = %v", m.modal, m.conversations)
+	}
+	if got := strings.Join(labels(m.modal), "|"); !strings.HasSuffix(got, "|Cancel") || strings.Contains(got, "Refresh") || strings.Count(got, "|") != 1 {
+		t.Fatalf("rows = %s", got)
+	}
+}
+
+func TestAgentsSectionEnterOpensModal(t *testing.T) {
+	m, _ := runningModel(t)
+	m.focusReader, m.fieldKey = true, agentsKey
+	_, cmd := m.Update(key("enter"))
+	if m.modal == nil || !strings.HasPrefix(m.modal.title, "Agents") {
+		t.Fatalf("modal = %+v", m.modal)
+	}
+	drain(m, cmd)
 }

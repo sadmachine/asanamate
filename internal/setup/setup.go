@@ -426,6 +426,10 @@ commands = []
 # such as the ccmux adapter, asanamate-ccmux, or your own tool.
 # [agents]
 # command = "asanamate-ccmux"
+# Optional shell command that switches to one running agent, from the w
+# modal. It reads the agent from $ASANAMATE_AGENT_TARGET and the other
+# action exports. Empty leaves agents listed but not focusable.
+# focus = 'ccmux switch "$ASANAMATE_AGENT_TARGET"'
 #
 # Map the tool's raw statuses onto asanamate's states. A status equal to a
 # state name already maps to it; anything unmapped shows as "unknown".
@@ -440,8 +444,8 @@ commands = []
 # [agents.symbols]
 # waiting = "!"
 
-# Optional saved Claude Code and Codex conversations for a ticket: the action
-# menu's Conversations entry and "asanamate conversations". Both must be set
+# Optional saved Claude Code and Codex conversations for a ticket: the w
+# modal's saved rows and "asanamate conversations". Both must be set
 # together; empty commands leave the feature off. The commands below need the
 # separately installed asana-sessions package. See README "Conversations" and
 # docs/extensions.md for the protocol and provider safety requirements.

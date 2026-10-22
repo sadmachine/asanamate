@@ -32,8 +32,9 @@ and coding agents can do what you can. macOS and Linux only.
 - **Show agents** (optional): coding agents running in ccmux or any other tool
   appear next to their tickets. See [Agents](#agents-optional).
 - **Resume conversations** (optional): find a ticket's saved Claude Code and
-  Codex conversations, including archived ones, and resume one in the
-  terminal. See [Conversations](#conversations-optional).
+  Codex conversations, including archived ones, next to its running agents
+  (`w`), and resume one in the terminal or switch to it when it is running.
+  See [Conversations](#conversations-optional).
 - **Track time** (optional): log time to Harvest from a ticket. See
   [Time tracking](#time-tracking-optional).
 - **Suggest links** (optional): preselect each project's repo and Harvest
@@ -191,7 +192,7 @@ shows; see [Troubleshooting](#troubleshooting) for what its results prove.
 | Paste image into comment (`alt+v`) | macOS `osascript` (built in); Linux `wl-clipboard` (Wayland) or `xclip` (X11). On macOS the terminal must send Option as Alt (kitty `macos_option_as_alt`, Ghostty `macos-option-as-alt`, iTerm2 "Esc+") | always on | not needed | not checked | the comment box shows why; type the image's Markdown yourself |
 | Paste into input (`Ctrl+V`) | macOS `pbpaste`; Linux `xclip` or `xsel` (X11) or `wl-clipboard` (Wayland) | always on | not needed | not checked | the input shows why, and your terminal's paste still works |
 | Agent status | an agents command, such as `asanamate-ccmux` for ccmux; see [Agents](#agents-optional) | `agents.command` | remove `[agents]` keys | `agents` | off |
-| Conversations | the [asana-sessions](packages/asana-sessions/README.md) package (Node 22+); see [Conversations](#conversations-optional) | `[conversations]` | remove `[conversations]` keys | `conversations` (shown only when on) | no Conversations entry |
+| Conversations | the [asana-sessions](packages/asana-sessions/README.md) package (Node 22+); see [Conversations](#conversations-optional) | `[conversations]` | remove `[conversations]` keys | `conversations` (shown only when on) | the `w` modal lists running agents only |
 | Time tracking | `asanamate-hrvst` and a Harvest personal access token, or your own provider; see [Time tracking](#time-tracking-optional) | `[time_tracking]` | remove `[time_tracking]` keys | `time_tracking`, `extension harvest` (local check) | off |
 | Project link suggestions | a project links command, such as imarc's `asanamate-hub`; see [Project links](#project-links-optional) | `project_links.command` | remove `project_links.command` | `project_links`, `extension hub` (local check) | no suggestions |
 | Relative dates (`tomorrow`, `+1 day`) | GNU `date`; on macOS, `gdate` from `brew install coreutils` | install it | not needed | not checked | type dates as `YYYY-MM-DD` |
@@ -370,6 +371,7 @@ key press.
 | `s` | visual settings: separators, header spacing, reader view, selection style, dim unfocused panes, and theme save in `settings.toml`; list columns save per project in state |
 | `,` | settings & tools: `a` builds / edits actions, `o` opens extensions, `i` sets the auto-update interval (saved in `settings.toml`), and `n` opens session status history |
 | `o` | open the ticket in the browser |
+| `w` | agents: the ticket's running agents, then its saved conversations (see [Conversations](#conversations-optional)); also `enter` on the reader's Agents section. `enter` on an agent runs `agents.focus`. Skipped when your `[keys.main]` already binds `w` |
 | `y` | open yank menu: `y` selection, `u` ticket URL, `g` ticket GID, `t` ticket title, `c` latest comment; `Esc` cancels (requires terminal OSC 52 support) |
 | `Y` | copy current selection directly: ticket title in list, targeted comment as Markdown, project/section value, or reader field value; unsupported targets do nothing (requires terminal OSC 52 support) |
 | `r` | reload tickets, rerun the Feed panel's feeds and git check, and clear the inline image cache (including failed loads) |
@@ -678,6 +680,7 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 | `list.fields` | `["section", "due"]` | default values shown with the title, in aligned columns (`single` layout); `s`, then `c` overrides columns per project; projects whose columns were set in the TUI keep their own; due dates show relative to today and are colored by urgency; a column with one value in each group (such as the grouped field) leaves the rows and shows that value once in the group header, or after the count when the list is ungrouped |
 | `branch_field` | `""` | custom field holding the ticket's git branch (`$ASANAMATE_BRANCH`); empty uses the ticket's ID field, else the title slug |
 | `agents.command` | unset (off) | opt-in agent tracking, such as `"asanamate-ccmux"`; see [Agents](#agents-optional) |
+| `agents.focus` | unset (off) | shell command that switches to one running agent from the `w` modal, reading `$ASANAMATE_AGENT_TARGET` and the other agent exports, such as `'ccmux switch "$ASANAMATE_AGENT_TARGET"'`; requires `agents.command` |
 | `conversations.command` | `""` (off) | saved-conversation lookup, such as `"asana-sessions asanamate list"`; requires `conversations.open`; see [Conversations](#conversations-optional) and the [extension contract](docs/extensions.md#conversation-history) |
 | `conversations.open` | `""` (off) | foreground opener reading a private selection snapshot, such as `"asana-sessions asanamate open"`; requires `conversations.command`. asana-sessions is not bundled |
 | `symbols` | `unicode` on UTF-8, else `ascii` | `unicode`, `nerd`, or `ascii` for ticket markers and agent states |
@@ -1442,6 +1445,18 @@ agent = true
 command = 'ccmux switch "$ASANAMATE_AGENT_TARGET"'
 ```
 
+**Agents modal.** `w`, or `enter` on the reader's Agents section, lists the
+ticket's running agents, then its saved conversations when
+[Conversations](#conversations-optional) is on. Set `agents.focus` to switch
+to an agent from it. The command runs in the background with the same
+`ASANAMATE_*` exports as an `agent = true` action:
+
+```toml
+[agents]
+command = "asanamate-ccmux"
+focus = 'ccmux switch "$ASANAMATE_AGENT_TARGET"'
+```
+
 Ticket text becomes the agent's prompt, so anyone who can edit a ticket can
 steer the agent. Be careful combining this with auto-approved tools.
 
@@ -1472,13 +1487,16 @@ This release supports conversation protocol version 1, which asana-sessions
 Any program implementing the
 [protocol](docs/extensions.md#conversation-history) works too.
 
-**In the TUI.** Press `a` on a ticket and pick **Conversations**, the last
-entry (with arrows and `enter`). It is there even with no action files, and it
-does not change what `.` repeats. The picker lists one row per conversation,
-newest first: title, provider, last activity, `active`/`inactive`/`unknown`,
+**In the TUI.** Press `w` on a ticket (or `enter` on the reader's Agents
+section). The modal lists the ticket's running agents first, then one row per
+saved conversation, newest first: title, provider, last activity, `active`/`inactive`/`unknown`,
 and whether it is archived; the highlighted row shows its native session ID,
 directory, and branch. Pick a row to **resume it in this terminal**; quitting
-the conversation returns to the same ticket. **Refresh** looks again, showing
+the conversation returns to the same ticket. A conversation that a running
+agent reports by the same provider and session ID shows once, as the agent;
+picking it runs [`agents.focus`](#agents-optional) to switch to it rather than
+resuming a second copy. The lookup runs when the modal opens, with the running
+agents already shown. **Refresh** looks again, showing
 the last result, marked stale, until the new one arrives. A lookup that failed
 or found only part of the history says so, with the provider's message; it is
 never shown as "No linked conversations."
@@ -1507,7 +1525,8 @@ What to expect:
   window that owns it. Claude conversations whose activity is unknown are
   refused too, because Claude Code does not stop two processes resuming one.
 - Session IDs are the providers' own; they differ from ccmux or Paseo agent
-  IDs. The **Agents** section shows running agents, not saved conversations.
+  IDs. A running agent matches a saved conversation only when its agent source
+  reports the native provider and session ID, as `asanamate-ccmux` does.
 - The plugins only add markers. Disabling or removing them keeps every link,
   and lookup works without them.
 

@@ -77,6 +77,20 @@ func TestResolveOverridesAndUnbinds(t *testing.T) {
 	}
 }
 
+func TestAgentsPreservesExistingWOverride(t *testing.T) {
+	k, err := Resolve(map[string]map[string][]string{"main": {"activity": {"w"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k.Name("main", "w") != "activity" || len(k.Keys("main", "agents")) != 0 {
+		t.Fatal("new agents default claimed an existing override")
+	}
+	k, err = Resolve(map[string]map[string][]string{"main": {"agents": {"C"}}})
+	if err != nil || k.Name("main", "C") != "agents" || k.Name("main", "w") != "" {
+		t.Fatalf("agents rebinding = %v, %v", k["main"], err)
+	}
+}
+
 func TestToolsPreservesExistingCommaOverrides(t *testing.T) {
 	for _, binding := range []string{"settings", "quit"} {
 		t.Run(binding, func(t *testing.T) {

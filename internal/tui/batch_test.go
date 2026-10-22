@@ -247,7 +247,11 @@ func TestCommentFooterRendersAndPreservesTextFocus(t *testing.T) {
 			t.Errorf("missing %q in %q", label, view)
 		}
 	}
-	press(m, "tab", "shift+tab")
+	press(m, "tab")
+	if view := ansi.Strip(m.composer.view(75, 30, m.accentStyle)); !strings.Contains(view, keyLabel("input", "save_draft")+" draft") {
+		t.Errorf("field hints missing draft key in %q", view)
+	}
+	press(m, "shift+tab")
 	// Text input returns a recurring cursor blink command after rendering.
 	// Inspect the input change without draining that animation forever.
 	m.Update(key("a"))

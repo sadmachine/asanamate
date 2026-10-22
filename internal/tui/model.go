@@ -284,6 +284,8 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 		return m, m.imageCellSizeChanged(kitty.CellSize{Width: msg.Width, Height: msg.Height})
 	case tasksMsg:
 		return m, m.gotTasks(msg)
+	case flashDoneMsg:
+		m.endFlash(msg)
 	case detailTickMsg:
 		if t, ok := m.selected(); ok && t.GID == msg.gid {
 			if _, cached := m.details[msg.gid]; !cached {

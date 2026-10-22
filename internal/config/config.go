@@ -261,7 +261,8 @@ type Reader struct {
 }
 
 // Comments configures the cards view's comments. Latest is how many of the
-// newest it lists until Show all comments is opened; 0 lists them all.
+// newest comments, or activity entries in the All tab, it lists until Show
+// all is opened; 0 lists them all.
 // PreviewLines is how many lines of text each listed comment but the newest
 // keeps until opened; 0 shows them in full.
 type Comments struct {

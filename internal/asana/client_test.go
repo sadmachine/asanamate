@@ -134,16 +134,17 @@ func TestMemberProjectsFiltersByUser(t *testing.T) {
 	}
 }
 
-func TestCommentsKeepsOnlyComments(t *testing.T) {
+func TestStoriesWithoutSinceLoadsWholeTimeline(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.Query().Get("opt_fields"), "is_editable") {
-			t.Error("comment list must request edit permission")
+		q := r.URL.Query()
+		if q.Has("created_after") || !strings.Contains(q.Get("opt_fields"), "is_editable") || !strings.Contains(q.Get("opt_fields"), "reaction_summary") {
+			t.Errorf("unexpected query %s", r.URL)
 		}
 		io.WriteString(w, `{"data":[{"gid":"1","type":"system"},{"gid":"2","type":"comment","is_editable":true,"html_text":"<body>hi</body>"}]}`)
 	})
-	comments, err := c.Comments(ctx, "9")
-	if err != nil || len(comments) != 1 || comments[0].GID != "2" || !comments[0].IsEditable {
-		t.Fatalf("comments = %+v, err = %v", comments, err)
+	stories, err := c.Stories(ctx, "9", time.Time{})
+	if err != nil || len(stories) != 2 || stories[1].GID != "2" || !stories[1].IsEditable {
+		t.Fatalf("stories = %+v, err = %v", stories, err)
 	}
 }
 

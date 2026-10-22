@@ -3,6 +3,7 @@ package ticket
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -26,10 +27,13 @@ func List(ctx context.Context, c *asana.Client, workspace, projectGID string) ([
 	return c.ProjectTasks(ctx, projectGID, since)
 }
 
-// Ticket is a task plus everything the reading pane and actions need.
+// Ticket is a task plus everything the reading pane and actions need. Its
+// stories split into Comments and Events, the system changes, each oldest
+// first.
 type Ticket struct {
 	asana.Task
 	Comments    []asana.Story      `json:"comments"`
+	Events      []asana.Story      `json:"events"`
 	Attachments []asana.Attachment `json:"attachments"`
 	Subtasks    []asana.Task       `json:"subtasks"`
 }
@@ -39,10 +43,40 @@ func Fetch(ctx context.Context, c *asana.Client, gid string) (Ticket, error) {
 	var t Ticket
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() (err error) { t.Task, err = c.Task(ctx, gid); return err })
-	g.Go(func() (err error) { t.Comments, err = c.Comments(ctx, gid); return err })
+	g.Go(func() error {
+		stories, err := c.Stories(ctx, gid, time.Time{})
+		for _, s := range stories {
+			if s.Type == "comment" {
+				t.Comments = append(t.Comments, s)
+			} else {
+				t.Events = append(t.Events, s)
+			}
+		}
+		return err
+	})
 	g.Go(func() (err error) { t.Attachments, err = c.Attachments(ctx, gid); return err })
 	g.Go(func() (err error) { t.Subtasks, err = c.Subtasks(ctx, gid); return err })
 	return t, g.Wait()
+}
+
+// Entry is a story on a ticket's timeline: a comment, or a system change
+// when Comment is false.
+type Entry struct {
+	asana.Story
+	Comment bool
+}
+
+// Timeline returns the ticket's comments and events merged, oldest first.
+func (t Ticket) Timeline() []Entry {
+	all := make([]Entry, 0, len(t.Comments)+len(t.Events))
+	for _, c := range t.Comments {
+		all = append(all, Entry{c, true})
+	}
+	for _, e := range t.Events {
+		all = append(all, Entry{e, false})
+	}
+	slices.SortStableFunc(all, func(a, b Entry) int { return strings.Compare(a.CreatedAt, b.CreatedAt) })
+	return all
 }
 
 // Clean removes control characters (except newline and tab) so untrusted

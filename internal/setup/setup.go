@@ -378,8 +378,8 @@ section = false
 max_text_width = 0
 
 [reader.comments]
-# How many of the newest comments the cards view lists; Show all comments
-# lists the rest. 0 lists them all.
+# How many of the newest comments, or activity entries in the All tab, the
+# cards view lists; Show all lists the rest. 0 lists them all.
 latest = 3
 # Lines of text kept of each listed comment but the newest, ending in
 # "see more"; enter shows one in full. 0 shows every comment in full.

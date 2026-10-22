@@ -82,21 +82,6 @@ func (c *Client) Task(ctx context.Context, gid string) (Task, error) {
 	return getOne[Task](ctx, c, "/tasks/"+gid, fields(detailFields))
 }
 
-// Comments returns a task's comment stories, oldest first.
-func (c *Client) Comments(ctx context.Context, gid string) ([]Story, error) {
-	all, err := getAll[Story](ctx, c, "/tasks/"+gid+"/stories", fields("type,created_at,created_by.name,text,html_text,is_editable,reaction_summary.variant,reaction_summary.count,reaction_summary.reacted"))
-	if err != nil {
-		return nil, err
-	}
-	var comments []Story
-	for _, s := range all {
-		if s.Type == "comment" {
-			comments = append(comments, s)
-		}
-	}
-	return comments, nil
-}
-
 // Subtasks returns a task's direct subtasks.
 func (c *Client) Subtasks(ctx context.Context, gid string) ([]Task, error) {
 	return getAll[Task](ctx, c, "/tasks/"+gid+"/subtasks", fields("name,completed"))

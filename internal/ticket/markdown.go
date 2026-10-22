@@ -99,7 +99,7 @@ func (t Ticket) EmptyFields() []Field {
 // Description returns the ticket's notes as Markdown.
 func (t Ticket) Description() string { return HTMLToMarkdown(t.HTMLNotes) }
 
-// Author returns the cleaned name of a comment's author.
+// Author returns the cleaned name of a story's author.
 func Author(c asana.Story) string {
 	if c.CreatedBy == nil {
 		return "Unknown"
@@ -147,11 +147,15 @@ func (t Ticket) MarkdownWith(extra string) string {
 	}
 	section(&b, "Attachments", strings.Join(attachments, "\n"))
 
-	var comments []string
-	for _, c := range t.Comments {
-		comments = append(comments, fmt.Sprintf("### %s · %s\n\n%s", Author(c), Day(c.CreatedAt), HTMLToMarkdown(c.HTMLText)))
+	var activity []string
+	for _, s := range t.Timeline() {
+		if s.Comment {
+			activity = append(activity, fmt.Sprintf("### %s · %s\n\n%s", Author(s.Story), Day(s.CreatedAt), HTMLToMarkdown(s.HTMLText)))
+		} else {
+			activity = append(activity, fmt.Sprintf("- %s · %s · %s", Author(s.Story), Day(s.CreatedAt), OneLine(s.Text)))
+		}
 	}
-	section(&b, "Comments", strings.Join(comments, "\n\n"))
+	section(&b, "Activity", strings.Join(activity, "\n\n"))
 	return b.String()
 }
 

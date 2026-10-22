@@ -207,7 +207,7 @@ func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
 	}
 	m.details["1"] = tk
 	press(m, "2")
-	want := []string{"assignee", "project:p1", addProjectKey, "my_tasks", "field:f1", emptyFieldsKey, "section:description", commentKey, "comment:c1", "comment:c2"}
+	want := []string{"assignee", "project:p1", addProjectKey, "my_tasks", "field:f1", emptyFieldsKey, "section:description", tabsKey, commentKey, "comment:c1", "comment:c2"}
 	for i, key := range want {
 		if m.fieldKey != key {
 			t.Fatalf("target %d = %q, want %q", i, m.fieldKey, key)
@@ -273,7 +273,7 @@ func TestCardsShowNewestCommentsAsPreviews(t *testing.T) {
 	press(m, "2")
 
 	lines := strings.Split(ansi.Strip(m.renderCards(tk, 60)), "\n")
-	if line := lines[m.fieldLines[allCommentsKey]]; !strings.Contains(line, "Show all 5 comments") {
+	if line := lines[m.fieldLines[allCommentsKey]]; !strings.Contains(line, "Show all 5") {
 		t.Fatalf("show all line = %q", line)
 	}
 	want := []string{commentKey, allCommentsKey, "comment:c3", "comment:c4", "comment:c5"}
@@ -315,8 +315,8 @@ func TestCardsShowNewestCommentsAsPreviews(t *testing.T) {
 	m.modal = nil
 
 	m.fieldKey = allCommentsKey
-	if !hint("show all comments") {
-		t.Fatal("the Show all row's enter hint must say show all comments")
+	if !hint("show all") {
+		t.Fatal("the Show all row's enter hint must say show all")
 	}
 	press(m, "enter")
 	if !m.showComments || m.fieldKey != "comment:c1" || !slices.Contains(m.cardTargets, "comment:c2") || slices.Contains(m.cardTargets, allCommentsKey) {
@@ -332,6 +332,60 @@ func TestCardsShowNewestCommentsAsPreviews(t *testing.T) {
 	}
 	if m.showComments || m.openComments != nil {
 		t.Fatalf("another ticket kept comment state: all %v, open %v", m.showComments, m.openComments)
+	}
+}
+
+func TestCardsAllTabInterleavesActivity(t *testing.T) {
+	m, _ := editModel(t)
+	m.deps.Config.Reader.Comments = config.Default().Reader.Comments
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	tk := m.details["1"]
+	tk.Comments = []asana.Story{
+		{GID: "c1", CreatedAt: "2026-09-20T10:00:00Z", CreatedBy: &asana.Ref{Name: "Amy"}, HTMLText: "<p>First</p>"},
+		{GID: "c2", CreatedAt: "2026-09-22T10:00:00Z", CreatedBy: &asana.Ref{Name: "Zed"}, HTMLText: "<p>Second</p>"},
+	}
+	tk.Events = []asana.Story{
+		{GID: "e1", CreatedAt: "2026-09-19T10:00:00Z", CreatedBy: &asana.Ref{Name: "Sam"}, Text: "created this task"},
+		{GID: "e2", CreatedAt: "2026-09-21T10:00:00Z", CreatedBy: &asana.Ref{Name: "Sam"}, Text: "assigned to Amy"},
+		{GID: "e3", CreatedAt: "2026-09-21T11:00:00Z", CreatedBy: &asana.Ref{Name: "Sam"}, Text: "changed the due date"},
+	}
+	m.details["1"] = tk
+	press(m, "2")
+	text := ansi.Strip(m.renderCards(tk, 60))
+	if !strings.Contains(text, "Comments 2 │ All 5") || strings.Contains(text, "assigned to Amy") {
+		t.Fatalf("Comments tab:\n%s", text)
+	}
+
+	m.fieldKey = tabsKey
+	_, _, hints := m.mode()
+	if !slices.Contains(hints, [2]string{keyLabel("main", "open"), "switch tab"}) {
+		t.Fatalf("tabs hints = %q", hints)
+	}
+	press(m, "enter")
+	if !m.allActivity || m.fieldKey != tabsKey {
+		t.Fatalf("enter on the tabs: all %v, target %q", m.allActivity, m.fieldKey)
+	}
+	lines := strings.Split(ansi.Strip(m.renderCards(tk, 60)), "\n")
+	if line := lines[m.fieldLines[allCommentsKey]]; !strings.Contains(line, "Show all 5") {
+		t.Fatalf("show all line = %q", line)
+	}
+	want := []string{tabsKey, commentKey, allCommentsKey, "comment:c2"}
+	if got := m.cardTargets[len(m.cardTargets)-len(want):]; !slices.Equal(got, want) {
+		t.Fatalf("All targets = %q, want %q", got, want)
+	}
+	// The newest three: two events on adjacent lines, then the newest comment.
+	at := m.fieldLines[allCommentsKey] + 2
+	if !strings.Contains(lines[at], "Sam · ") || !strings.Contains(lines[at], "assigned to Amy") ||
+		!strings.Contains(lines[at+1], "changed the due date") || m.fieldLines["comment:c2"] != at+3 || !strings.Contains(lines[at+3], "Zed") {
+		t.Fatalf("All tab lines from %d:\n%s", at, strings.Join(lines[at:], "\n"))
+	}
+
+	other := asana.Task{GID: "2", Name: "Other"}
+	m.details["2"] = ticket.Ticket{Task: other}
+	m.Update(tasksMsg{tasks: []asana.Task{m.tasks[0], other}})
+	press(m, "esc", "j")
+	if m.shownGID != "2" || !m.allActivity {
+		t.Fatalf("shown %q, all %v: the All tab must stay chosen across tickets", m.shownGID, m.allActivity)
 	}
 }
 

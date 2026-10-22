@@ -11,8 +11,8 @@ and coding agents can do what you can. macOS and Linux only.
 
 - **Browse** My Tasks or any project: filter, group, sort, pin tickets, and
   save views. See [Filtering](#filtering).
-- **Read** a ticket's fields, description, subtasks, comments, reactions, and
-  attachments, with images inline in kitty-graphics terminals. See
+- **Read** a ticket's fields, description, subtasks, comments, reactions,
+  activity, and attachments, with images inline in kitty-graphics terminals. See
   [Layout](#layout).
 - **Edit** a ticket: change its title or description, comment (with images),
   move it to a section, assign or
@@ -276,7 +276,11 @@ and wider, a views panel on the left lists My Tasks, recent projects, the
 groupings, sorting, and running agents: press `0`, move with `j`/`k`, and open one
 with `enter`. Press `Z` to show or hide this panel independently of the reader.
 It hides automatically below 160 columns. In a reader at least 90 columns wide,
-the cards view puts the agents and subtasks beside the details card. In narrower terminals the list
+the cards view puts the agents and subtasks beside the details card. The cards
+view's Comments and All tabs show the ticket's comments, or its whole activity
+with system changes such as assignment and due dates on faint lines between the
+comments; `enter` on the tabs switches them, and the choice holds until you
+quit. The markdown view always shows the whole activity. In narrower terminals the list
 fills the screen and `enter` opens the reader in its place.
 
 Fit asanamate to its spot with the `[layout]` table in `config.toml`:
@@ -325,7 +329,7 @@ key press.
 | `ctrl+d`/`ctrl+u` | half page down/up in the list, or scroll the reader half a page |
 | `ctrl+f`/`ctrl+b` (or pgdown/pgup) | page down/up in the list, or scroll the reader a page |
 | `tab`/`shift+tab`, `l`/`h` | focus the next/previous pane: the views panel (wide screens), the list, and the reader; in the cards view, entering the reader selects its first editable row |
-| `enter` | in the list, open the ticket in the reader; in the reader, edit the selected row (Add comment opens the comment editor; Show all comments lists the older ones, since the cards view shows the newest `reader.comments.latest`), show a comment cut to its preview in full, or open the selected comment's menu: `r` reacts with an emoji (`1`-`9` pick one; picking one you reacted with removes it) |
+| `enter` | in the list, open the ticket in the reader; in the reader, edit the selected row (Add comment opens the comment editor; the Comments and All tabs switch between comments and the whole activity; Show all lists the older entries, since the cards view shows the newest `reader.comments.latest`), show a comment cut to its preview in full, or open the selected comment's menu: `r` reacts with an emoji (`1`-`9` pick one; picking one you reacted with removes it) |
 | `esc` | return focus to the list |
 | `0` / `1` / `2` / `3` | focus the views panel (wide screens) / the list / the reader / the Feed panel (expanding it) |
 | `F` | expand or collapse the Feed panel until the view changes |
@@ -688,7 +692,7 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 | `keys.<scope>.<name>` | see the template | key bindings: a list of keys per binding, such as `[keys.main] quit = ["q", "ctrl+q"]`; `[]` unbinds. Yank uses `keys.main.yank` and `keys.main.copy_selection`; legacy `copy_link` and `copy_comment` remain available without default keys. Scopes: `main`, `activity`, `views`, `filter`, `picker`, `form`, `form_field`, `input`, `builder`, `notice`. Keys are a character (`"j"`, `"?"`) or a key name with modifiers (`"ctrl+d"`, `"shift+tab"`, `"enter"`, `"space"`, `"pgdown"`); a letter with `ctrl` or `alt` is lower case, plus `shift` for the capital (`"ctrl+shift+q"`, not `"ctrl+Q"`); `ctrl+c` is reserved for quitting and protects unsent comments. `asanamate setup` and `asanamate config update` write every binding, commented, with its default |
 | `keys.input.save_draft` | `["ctrl+d"]` | save a comment draft and close; other text inputs keep their editing controls |
 | `reader.max_text_width` | `0` | cards view: wrap description and comment text at this many columns (words are kept whole); `0` wraps at the pane width |
-| `reader.comments.latest` | `3` | cards view: list only this many of the newest comments, under a Show all comments row; `0` lists them all |
+| `reader.comments.latest` | `3` | cards view: list only this many of the newest comments, or activity entries in the All tab, under a Show all row; `0` lists them all |
 | `reader.comments.preview_lines` | `2` | cards view: cut each listed comment but the newest to this many lines of text, ending in `see more …` (`enter` shows it in full); `0` shows comments in full |
 | `repo_source.root` | your setup directory, or empty | directory whose direct children with a `.git` entry (clones and worktrees) fill the repo picker; absolute or starting with `~`; empty: type a path |
 | `repo_source.command` | unset | prints one repo path per line; replaces `repo_source.root` when set; see [Repo sources](docs/extensions.md#repo-sources) |

@@ -518,17 +518,30 @@ func (m *Model) fieldTargets(t ticket.Ticket) []string {
 	return append(keys, commentKey)
 }
 
-// allCommentsKey is the field key of the cards view's Show all comments row.
+// tabsKey is the field key of the cards view's Comments and All tabs.
+const tabsKey = "comment_tabs"
+
+// allCommentsKey is the field key of the cards view's Show all row.
 const allCommentsKey = "all_comments"
 
-// showAllComments reveals the selected ticket's older comments and selects
-// the oldest.
+// switchTab flips the cards view between the Comments and All tabs.
+func (m *Model) switchTab() {
+	m.allActivity = !m.allActivity
+	m.showTarget()
+}
+
+// showAllComments reveals the selected ticket's older comments, or older
+// stories in the All tab, and selects the oldest comment, or the tabs when
+// there is none.
 func (m *Model) showAllComments() {
 	t, ok := m.selectedDetail()
-	if !ok || len(t.Comments) == 0 {
+	if !ok {
 		return
 	}
-	m.showComments, m.fieldKey = true, commentTarget(t.Comments[0], 0)
+	m.showComments, m.fieldKey = true, tabsKey
+	if len(t.Comments) > 0 {
+		m.fieldKey = commentTarget(t.Comments[0], 0)
+	}
 	m.showTarget()
 }
 

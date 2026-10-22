@@ -22,6 +22,7 @@ var catalog = []Scope{
 		{Name: "next_pane", Keys: []string{"tab", "l"}, Desc: "next / previous pane", Hint: "pane", Group: "Move"},
 		{Name: "prev_pane", Keys: []string{"shift+tab", "h"}, Desc: "previous pane", Pair: "next_pane"},
 		{Name: "open", Keys: []string{"enter"}, Desc: "open ticket / edit target", Group: "Move"},
+		{Name: "jump", Keys: []string{"'"}, Desc: "jump to reader section", Group: "Move"},
 		{Name: "filter", Keys: []string{"/"}, Desc: "filter", Hint: "filter", Group: "Move"},
 		{Name: "projects", Keys: []string{"p"}, Desc: "projects", Hint: "proj", Group: "Move"},
 		{Name: "activity", Keys: []string{"I"}, Desc: "workspace activity", Group: "Move"},

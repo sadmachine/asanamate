@@ -326,6 +326,7 @@ key press.
 | `ctrl+f`/`ctrl+b` (or pgdown/pgup) | page down/up in the list, or scroll the reader a page |
 | `tab`/`shift+tab`, `l`/`h` | focus the next/previous pane: the views panel (wide screens), the list, and the reader; in the cards view, entering the reader selects its first editable row |
 | `enter` | in the list, open the ticket in the reader; in the reader, edit the selected row (Add comment opens the comment editor; Show all comments lists the older ones, since the cards view shows the newest `reader.comments.latest`), show a comment cut to its preview in full, or open the selected comment's menu: `r` reacts with an emoji (`1`-`9` pick one; picking one you reacted with removes it) |
+| `'` | jump to a section of the reader's cards view, from the list or the reader: `t` details, `a` agents, `d` description, `s` subtasks, `b` blocked by, `B` blocking, `f` attachments, `c` comments; the menu lists only the sections the ticket has, and picking one focuses the reader on it |
 | `esc` | return focus to the list |
 | `0` / `1` / `2` / `3` | focus the views panel (wide screens) / the list / the reader / the Feed panel (expanding it) |
 | `F` | expand or collapse the Feed panel until the view changes |

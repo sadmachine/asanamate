@@ -151,6 +151,7 @@ func handlers() map[string]handler {
 		"next_pane":      {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.cyclePane(false) }},
 		"prev_pane":      {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.cyclePane(true) }},
 		"open":           {splitOnly: true, run: (*Model).open},
+		"jump":           {splitOnly: true, run: menu(func(m *Model) func() { return m.openJumpMenu })},
 		"filter": {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			m.filtering, m.filterBefore = true, m.filterInput.Value()
 			m.reader.SetHeight(m.paneHeight())

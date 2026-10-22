@@ -1,0 +1,21 @@
+internal/tui/batch.go
+  s_a65c73206f93dc::t_73683641cd75f1 454
+internal/tui/batch_test.go
+  s_a65c73206f93dc::t_1cead1d176b426 250-254
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "65eb5e7a38e3388e7c397b3a169f2701ebebb717",
+  "prompts": {},
+  "sessions": {
+    "s_a65c73206f93dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa574016-2f29-42d1-aa52-01e30f6d6114",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

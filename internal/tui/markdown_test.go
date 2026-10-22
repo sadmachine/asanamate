@@ -12,9 +12,90 @@ import (
 	"charm.land/glamour/v2/styles"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
+
+func TestRichTextMentionColors(t *testing.T) {
+	const mention = `<a data-asana-type="user" data-asana-gid="123" href="https://app.asana.com/0/123/list">@Austin Fishbaugh</a>`
+	const colored = "\x1b[38;2;18;52;86m@Austin Fishbaugh"
+	for _, theme := range []string{"ansi-dark", "ansi-light"} {
+		for _, inline := range []bool{false, true} {
+			for name, body := range map[string]string{
+				"prose":     "Hello " + mention + ", welcome.",
+				"list":      "<ul><li>Hello " + mention + ", welcome.</li></ul>",
+				"table":     "<table><tr><th>Person</th></tr><tr><td>" + mention + "</td></tr></table>",
+				"formatted": "<strong>Hello " + mention + ", welcome.</strong>",
+				"image":     mention + `<img data-asana-gid="9" alt="shot.png">`,
+				"multiple":  mention + " and " + mention + ", welcome.",
+			} {
+				t.Run(fmt.Sprintf("%s/inline=%v/%s", theme, inline, name), func(t *testing.T) {
+					m, _ := testModel(t, config.Config{
+						Theme: config.Theme{Name: theme},
+						Colors: config.Colors{Markdown: config.MarkdownColors{
+							Link: config.Style{FG: "#123456"},
+						}},
+					})
+					m.deps.Images, m.deps.Config.Images.Inline = true, inline
+					m.images["9"] = &inlineImage{id: 20, cols: 4, rows: 2}
+					out := m.renderRich("<body>"+body+"</body>", 80)
+					if strings.Count(out, colored) != strings.Count(body, "data-asana-type") {
+						t.Fatalf("mention missing theme link color: %q", out)
+					}
+					plain := ansi.Strip(out)
+					for _, unwanted := range []string{"asanamate-mention", "https://app.asana.com", "[1]"} {
+						if strings.Contains(plain, unwanted) {
+							t.Fatalf("mention acquired link text %q: %q", unwanted, plain)
+						}
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestMentionColorsPreserveTextAndWrapping(t *testing.T) {
+	m, _ := testModel(t, config.Config{Colors: config.Colors{Markdown: config.MarkdownColors{
+		Link: config.Style{FG: "#123456"},
+	}}})
+	const body = `<body>Before <a data-asana-type="user"><strong>@Austin &amp; Sam_界</strong></a>, after @Plain Name.</body>`
+	for _, width := range []int{20, 80} {
+		out := m.renderRich(body, width)
+		plain := strings.Join(strings.Fields(ansi.Strip(out)), " ")
+		if plain != "Before @Austin & Sam_界, after @Plain Name." {
+			t.Fatalf("mention text changed at width %d: %q", width, plain)
+		}
+		if strings.Contains(out, "\x1b[38;2;18;52;86m@Plain") {
+			t.Fatalf("ordinary @text colored as a mention: %q", out)
+		}
+		for _, line := range strings.Split(out, "\n") {
+			if ansi.StringWidth(line) > width {
+				t.Fatalf("mention exceeds width %d: %q", width, line)
+			}
+		}
+	}
+}
+
+func TestMentionColorsInBothReaderViews(t *testing.T) {
+	m, _ := testModel(t, config.Config{Colors: config.Colors{Markdown: config.MarkdownColors{
+		Link: config.Style{FG: "#123456"},
+	}}})
+	m.loading, m.width, m.height = false, 160, 50
+	const body = `<body>Hello <a data-asana-type="user" data-asana-gid="123">@Austin Fishbaugh</a>, welcome.</body>`
+	task := asana.Task{GID: "1", Name: "Mentions"}
+	m.Update(tasksMsg{tasks: []asana.Task{task}})
+	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: task, Comments: []asana.Story{{GID: "9", HTMLText: body}}}})
+	for range 2 {
+		if out := m.reader.GetContent(); !strings.Contains(out, "\x1b[38;2;18;52;86m@Austin Fishbaugh") {
+			t.Fatalf("%s reader missing mention color: %q", m.readerView, out)
+		}
+		if got := m.details["1"].Comments[0].HTMLText; got != body {
+			t.Fatalf("display changed stored comment HTML: %q", got)
+		}
+		m.Update(key("v"))
+	}
+}
 
 func TestMarkdownCodeBlocks(t *testing.T) {
 	for _, theme := range []string{"dark", "light", "one-dark", "one-light"} {

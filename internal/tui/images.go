@@ -140,6 +140,7 @@ func (m *Model) inlineImageLoaded(msg inlineImageMsg) tea.Cmd {
 // renderRich renders Asana rich text like renderBody. With inline images on,
 // each loaded image that fits draws in place of its link.
 func (m *Model) renderRich(html string, width int) string {
+	html = mentionHTML(html)
 	if !m.inlineImagesOn() {
 		return m.renderBody(ticket.HTMLToMarkdown(html), width)
 	}

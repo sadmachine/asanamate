@@ -167,6 +167,17 @@ func TestTemplateMatchesDefaults(t *testing.T) {
 	}
 }
 
+func TestMergePreservesAgentFocus(t *testing.T) {
+	updated, _, _, err := Merge("workspace = \"1\"\n[agents]\ncommand = \"custom-source\"\nfocus = 'custom-focus \"$ASANAMATE_AGENT_TARGET\"'\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := loadString(t, updated)
+	if cfg.Agents.Command != "custom-source" || cfg.Agents.Focus != `custom-focus "$ASANAMATE_AGENT_TARGET"` {
+		t.Fatalf("agent configuration changed: %+v", cfg.Agents)
+	}
+}
+
 func TestTemplateOptionsStayTopLevel(t *testing.T) {
 	// Uncomment every commented setting and table, but not prose.
 	setting := regexp.MustCompile(`^# (\[|[a-z_]+ +=)`)
@@ -184,6 +195,7 @@ func TestTemplateOptionsStayTopLevel(t *testing.T) {
 		t.Fatalf("config with every commented option enabled does not load: %v", err)
 	}
 	if cfg.Symbols != "unicode" || cfg.ReducedMotion == nil || cfg.Agents.Command != "asanamate-ccmux" ||
+		cfg.Agents.Focus != `ccmux switch "$ASANAMATE_AGENT_TARGET"` ||
 		!slices.Contains(cfg.Agents.States["working"], "running") || cfg.Agents.Symbols["waiting"] == "" {
 		t.Fatalf("cfg = %+v", cfg)
 	}

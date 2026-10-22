@@ -392,6 +392,11 @@ in generic core. A custom host opener must use an explicit native-ID mapping
 and authoritative ownership behavior. The remaining companion feasibility and
 release checks are still required; this core contract is not their approval.
 
+The TUI can compose discovery with the [agent focus contract](#agent-focus)
+instead of invoking the foreground opener. Focusing an existing session never
+starts a second provider process, so active and unknown conversations may be
+focused. This does not relax the foreground opener's activity requirements.
+
 ## Agent sources
 
 Set `agents.command` to list running coding agents; asanamate links each one
@@ -466,6 +471,51 @@ command = '~/bin/my-agents.sh'
 working = ["busy"]
 waiting = ["permission"]
 ```
+
+### Agent focus
+
+`agents.focus` is optional trusted shell text, run with `/bin/sh -c`.
+It requires `agents.command`. For example:
+
+```toml
+[agents]
+command = "asanamate-ccmux"
+focus = 'ccmux switch "$ASANAMATE_AGENT_TARGET"'
+```
+
+For saved conversations, the TUI composes the agent source with conversation
+discovery. Selecting a saved conversation, including its combined running-agent
+row, revalidates its ticket link through `conversations.command`
+and refreshes `agents.command`, with a shared 10-second deadline. Only exact
+`(provider, session_id)` equality and a nonempty `target` qualify for focus.
+Status describes work within an open session: `idle` does not mean closed.
+Directory, branch, title, and heuristic ticket matches never establish session
+identity. Missing identities or targets do not qualify.
+
+A single match focuses directly; multiple matches present a target picker,
+then revalidate both sources for the chosen target. Cancellation or a changed
+ticket selection discards the pending operation. Missing conversation links,
+failed refreshes, or a chosen target that disappears stop the operation.
+A successful refresh with no usable target invokes `conversations.open` with
+the discovered activity unchanged. Absence from an agent source never proves
+inactivity. Without `agents.focus`, the existing foreground path is unchanged.
+
+The focus command gets the selected agent's `ASANAMATE_AGENT_*` variables,
+ticket exports, and the revalidated `ASANAMATE_CONVERSATION_*` snapshot described
+above. Inherited `ASANAMATE_*` variables are removed. Commands stay in trusted
+configuration; targets and conversation metadata are data, never executable
+shell text. Quote environment variable expansions in configured commands.
+
+The command must focus an existing target, never create or resume a provider
+process. It must fail if its target is no longer live or cannot be focused.
+Adapters needing stronger identity checks can compare the selected snapshot
+with the live target before focusing. The command runs in asanamate's cwd,
+with no interactive stdin or controlling terminal, using the existing detached
+action runner. Output is appended to the state's `actions.log`. Zero means
+focus succeeded; nonzero reports failure and the log path. Failure never
+automatically invokes the conversation opener. asanamate stays running even
+when launched with `--exit-on-action`. The CLI's `conversation open` still uses
+the foreground opener. Neither provider calls or imports the other.
 
 ### Optional conversation links
 

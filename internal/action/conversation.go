@@ -13,13 +13,13 @@ import (
 )
 
 // ConversationCommand writes the private selection snapshot and returns a
-// command for the existing foreground handoff. The snapshot joins the run
+// command for conversation focus or the foreground handoff. The snapshot joins the run
 // directory of c.Files when the caller exported the ticket (WriteFiles), else
 // gets a new run directory: the CLI resolves a linked chat without reading
-// Asana, so its ticket exports are absent. The caller supplies terminal
-// streams, as with Command. The helper runs in asanamate's cwd, without ticket
-// repo/branch steps; native revalidation, cwd recovery, and resumption belong
-// to the opener.
+// Asana, so its ticket exports are absent. The caller chooses the execution
+// mode and streams, as with Command. The helper runs in asanamate's cwd,
+// without ticket repo/branch steps. Focus callers revalidate through discovery;
+// native activity checks, cwd recovery, and resumption belong to the opener.
 func ConversationCommand(stateDir, command string, c Context, selected conversations.Record) (*exec.Cmd, error) {
 	if strings.TrimSpace(command) == "" {
 		return nil, errors.New("conversations.open is not configured")

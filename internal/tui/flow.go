@@ -195,12 +195,22 @@ func (m *Model) runAgent(r *pendingRun) (tea.Cmd, bool) {
 		r.agent = &list[0]
 		return nil, false
 	}
+	m.pickAgent(list, m.pickedAgent)
+	return nil, true
+}
+
+// pickAgent shares the live-target chooser with conversation focus. Include
+// the target so two panes of the same conversation remain distinguishable.
+func (m *Model) pickAgent(list []agents.Agent, picked func(agents.Agent) tea.Cmd) {
 	items := make([]pickItem, len(list))
 	for i, a := range list {
-		items[i] = pickItem{Label: m.agentLabel(a, lipgloss.NewStyle()), Hint: ticket.OneLine(filepath.Base(a.Path)), Value: a}
+		hint := filepath.Base(a.Path)
+		if a.Target != "" {
+			hint += " · " + a.Target
+		}
+		items[i] = pickItem{Label: m.agentLabel(a, lipgloss.NewStyle()), Hint: ticket.OneLine(hint), Value: a}
 	}
-	m.modal = newPicker(pickValue(m.pickedAgent), "Which agent?", items)
-	return nil, true
+	m.modal = newPicker(pickValue(picked), "Which agent?", items)
 }
 
 func (m *Model) pickedAgent(a agents.Agent) tea.Cmd {

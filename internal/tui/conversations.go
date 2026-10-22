@@ -2,6 +2,8 @@ package tui
 
 import (
 	"context"
+	"fmt"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -18,14 +20,17 @@ import (
 // cancelling, or closing its picker replaces or clears m.conversations, so a
 // late reply is dropped instead of attaching to another ticket.
 type conversationLookup struct {
-	ticket ticket.Ticket
-	cancel context.CancelFunc
-	shown  *picker // picker shown while looking, with the last result if any
+	ticket   ticket.Ticket
+	cancel   context.CancelFunc
+	shown    *picker               // picker shown while looking, with the last result if any
+	selected *conversations.Record // non-nil revalidates a selection before focus
+	target   string                // chosen focus target; empty lets the user choose
 }
 
 type conversationsMsg struct {
 	lookup *conversationLookup
 	result conversations.Result
+	agents []agents.Agent
 	err    error
 }
 
@@ -87,19 +92,24 @@ func (m *Model) stopConversations() {
 	}
 }
 
-func (m *Model) gotConversations(msg conversationsMsg) {
+func (m *Model) gotConversations(msg conversationsMsg) tea.Cmd {
 	l := msg.lookup
 	if l != m.conversations {
-		return
+		return nil
 	}
 	m.stopConversations()
-	if m.modal != l.shown {
-		return
+	if l.selected != nil {
+		m.waiting = ""
+	} else if m.modal != l.shown {
+		return nil
 	}
 	if t, ok := m.selected(); !ok || t.GID != l.ticket.GID {
 		m.modal = nil
 		m.setStatus(statusInfo, "selection changed; conversations closed")
-		return
+		return nil
+	}
+	if l.selected != nil {
+		return m.gotConversationOpen(msg)
 	}
 	// Refresh keeps the row highlighted in the shown picker when still present.
 	var highlighted any
@@ -111,7 +121,7 @@ func (m *Model) gotConversations(msg conversationsMsg) {
 		conversations.Sort(msg.result.Conversations)
 		m.conversationResults[gid] = msg.result
 		m.modal = m.conversationPicker(l.ticket, msg.result, highlighted, "")
-		return
+		return nil
 	}
 	notice := failureNotice(conversations.Failure(msg.err))
 	last, ok := m.conversationResults[gid]
@@ -119,6 +129,7 @@ func (m *Model) gotConversations(msg conversationsMsg) {
 		notice += " Showing the last successful result."
 	}
 	m.modal = m.conversationPicker(l.ticket, last, highlighted, notice)
+	return nil
 }
 
 // conversationPicker lists t's running agents, then result's records that
@@ -251,12 +262,111 @@ func (m *Model) pickedConversation(t ticket.Ticket, value any) tea.Cmd {
 		return nil
 	case agents.Agent:
 		m.stopConversations()
+		if strings.TrimSpace(m.deps.Config.Agents.Focus) != "" {
+			if c, ok := m.conversationResults[t.GID].Find(v.Provider, v.SessionID); ok {
+				return m.checkConversationOpen(t, c, v.Target)
+			}
+		}
 		return m.focusAgent(t, v)
 	case conversations.Record:
 		m.stopConversations()
+		if strings.TrimSpace(m.deps.Config.Agents.Focus) != "" {
+			return m.checkConversationOpen(t, v, "")
+		}
 		return m.openConversation(t, v)
 	}
 	return nil
+}
+
+// checkConversationOpen refreshes both contracts; the periodic agent cache is
+// display data, never authority for opening a selected conversation.
+func (m *Model) checkConversationOpen(t ticket.Ticket, selected conversations.Record, target string) tea.Cmd {
+	ctx, cancel := context.WithTimeout(context.Background(), conversations.LookupTimeout)
+	l := &conversationLookup{ticket: t, cancel: cancel, selected: &selected, target: target}
+	m.conversations = l
+	source := conversations.Source{Command: m.deps.Config.Conversations.Command}
+	cfg := m.deps.Config.Agents
+	return m.wait("Checking running conversation…", func() tea.Msg {
+		msg := conversationsMsg{lookup: l}
+		msg.result, msg.err = source.List(ctx, t.GID)
+		if msg.err == nil {
+			if _, ok := msg.result.Find(selected.Provider, selected.SessionID); ok {
+				msg.agents, msg.err = agents.Fetch(ctx, cfg.Command, cfg.States)
+			}
+		}
+		if msg.err == nil {
+			msg.err = ctx.Err()
+		}
+		return msg
+	})
+}
+
+func (m *Model) gotConversationOpen(msg conversationsMsg) tea.Cmd {
+	if msg.err != nil {
+		m.setStatus(statusError, "Open conversation failed: "+msg.err.Error())
+		return nil
+	}
+	l := msg.lookup
+	selected, ok := msg.result.Find(l.selected.Provider, l.selected.SessionID)
+	if !ok {
+		m.setStatus(statusError, "Open conversation failed: conversation is no longer available for this ticket; refresh conversations")
+		return nil
+	}
+	var matches []agents.Agent
+	for _, a := range msg.agents {
+		if a.Provider == selected.Provider && a.SessionID == selected.SessionID && a.Target != "" {
+			if l.target != "" {
+				if a.Target == l.target {
+					return m.focusConversation(l.ticket, selected, a)
+				}
+				continue
+			}
+			matches = append(matches, a)
+		}
+	}
+	if l.target != "" {
+		m.setStatus(statusError, "Focus agent failed: target is no longer available; refresh conversations")
+		return nil
+	}
+	switch len(matches) {
+	case 0:
+		// Absence from an agent source does not prove inactivity. Preserve the
+		// conversation provider's activity and let its opener decide safely.
+		return m.openConversation(l.ticket, selected)
+	case 1:
+		return m.focusConversation(l.ticket, selected, matches[0])
+	default:
+		m.pickAgent(matches, func(a agents.Agent) tea.Cmd {
+			m.modal = nil
+			return m.checkConversationOpen(l.ticket, selected, a.Target)
+		})
+		return nil
+	}
+}
+
+// focusConversation invokes trusted configuration with an opaque target and
+// the revalidated conversation snapshot. It never quits or takes the terminal,
+// and failure never falls through to a second process resuming the session.
+func (m *Model) focusConversation(t ticket.Ticket, selected conversations.Record, a agents.Agent) tea.Cmd {
+	m.modal = nil
+	if current, ok := m.selected(); !ok || current.GID != t.GID {
+		m.setStatus(statusInfo, "selection changed; conversations closed")
+		return nil
+	}
+	cmd, err := m.conversationCommand(t, selected, m.deps.Config.Agents.Focus, &a)
+	if err != nil {
+		m.setStatus(statusError, "Focus agent failed: "+err.Error())
+		return nil
+	}
+	logPath := filepath.Join(m.deps.StateDir, "actions.log")
+	m.setProgress("Focus agent: running…")
+	return func() tea.Msg {
+		err := action.RunBackground(cmd, logPath)
+		if err != nil {
+			err = fmt.Errorf("%w; refresh conversations before retrying", err)
+		}
+		return actionDoneMsg{name: "Focus agent", log: logPath, err: err}
+	}
 }
 
 // focusAgent runs agents.focus in the background for a, with the exports an
@@ -277,16 +387,19 @@ func (m *Model) focusAgent(t ticket.Ticket, a agents.Agent) tea.Cmd {
 
 func (m *Model) openConversation(t ticket.Ticket, c conversations.Record) tea.Cmd {
 	const name = "Resume in terminal"
-	files, err := action.WriteFiles(m.deps.StateDir, t)
-	if err != nil {
-		m.setStatus(statusError, "writing ticket files: "+err.Error())
-		return nil
-	}
-	cmd, err := action.ConversationCommand(m.deps.StateDir, m.deps.Config.Conversations.Open,
-		action.Context{Ticket: t, Files: files, BranchField: m.deps.Config.BranchField}, c)
+	cmd, err := m.conversationCommand(t, c, m.deps.Config.Conversations.Open, nil)
 	if err != nil {
 		m.setStatus(statusError, name+" failed: "+err.Error())
 		return nil
 	}
 	return tea.ExecProcess(cmd, func(err error) tea.Msg { return actionDoneMsg{name: name, err: err} })
+}
+
+func (m *Model) conversationCommand(t ticket.Ticket, c conversations.Record, command string, agent *agents.Agent) (*exec.Cmd, error) {
+	files, err := action.WriteFiles(m.deps.StateDir, t)
+	if err != nil {
+		return nil, fmt.Errorf("writing ticket files: %w", err)
+	}
+	return action.ConversationCommand(m.deps.StateDir, command,
+		action.Context{Ticket: t, Files: files, BranchField: m.deps.Config.BranchField, Agent: agent}, c)
 }

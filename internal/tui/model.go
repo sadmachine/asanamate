@@ -326,7 +326,7 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 			m.extension.report, m.extension.busy = msg.report, false
 		}
 	case conversationsMsg:
-		m.gotConversations(msg)
+		return m, m.gotConversations(msg)
 	case actionDoneMsg:
 		status := actionStatus(msg)
 		if msg.err != nil {

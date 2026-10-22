@@ -132,12 +132,12 @@ func (c Config) ProjectLinksEnabled() bool {
 // States maps extra raw statuses onto asanamate's states; Symbols overrides
 // the symbol shown per state.
 type Agents struct {
-	Command string              `toml:"command"`
+	Command string `toml:"command"`
+	// Focus is an optional noninteractive command that focuses the selected agent's target
+	// without resuming a conversation or closing asanamate.
+	Focus   string              `toml:"focus"`
 	States  map[string][]string `toml:"states"`
 	Symbols map[string]string   `toml:"symbols"`
-	// Focus is shell text that switches to one running agent, which it reads
-	// from the ASANAMATE_AGENT_* exports. Empty leaves agents unfocusable.
-	Focus string `toml:"focus"`
 }
 
 // AgentsEnabled reports whether agent tracking is turned on.
@@ -367,6 +367,7 @@ func Default() Config {
 	return Config{
 		Theme:         Theme{Name: ThemeAuto, Auto: AutoThemes{Dark: "ansi-dark", Light: "ansi-light"}},
 		ConfirmWrites: true,
+		Agents:        Agents{Focus: ""},
 		Conversations: Conversations{},
 		TimeTracking:  TimeTracking{},
 		ProjectLinks:  ProjectLinks{},

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -407,6 +408,27 @@ func TestAgentsValidation(t *testing.T) {
 	} {
 		if _, err := Load(writeFile(t, "workspace = \"1\"\n"+body)); err == nil {
 			t.Errorf("%s: expected an error", name)
+		}
+	}
+}
+
+func TestAgentFocusConfig(t *testing.T) {
+	if cfg := Default(); cfg.Agents.Focus != "" {
+		t.Fatal("agent focus enabled by default")
+	}
+	for _, body := range []string{
+		"",
+		"[agents]\nfocus = \"\"\n",
+		"[agents]\ncommand = \"fixture agents\"\nfocus = 'fixture focus \"$ASANAMATE_AGENT_TARGET\"'\n",
+	} {
+		if cfg, err := Load(writeFile(t, "workspace = \"1\"\n"+body)); err != nil || strings.Contains(body, "fixture focus") && cfg.Agents.Focus != `fixture focus "$ASANAMATE_AGENT_TARGET"` {
+			t.Fatalf("focus config rejected: %v", err)
+		}
+	}
+	for _, command := range []string{"", "  "} {
+		body := "workspace = \"1\"\n[agents]\ncommand = " + strconv.Quote(command) + "\nfocus = \"fixture focus\"\n"
+		if _, err := Load(writeFile(t, body)); err == nil || !strings.Contains(err.Error(), "agents.command is required when agents.focus is set") {
+			t.Fatalf("focus without source: %v", err)
 		}
 	}
 }

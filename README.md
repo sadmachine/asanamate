@@ -1502,6 +1502,28 @@ the last result, marked stale, until the new one arrives. A lookup that failed
 or found only part of the history says so, with the provider's message; it is
 never shown as "No linked conversations."
 
+To focus an existing session instead, add a focus command to your agents
+configuration (merge this into an existing `[agents]` table):
+
+```toml
+[agents]
+command = "asanamate-ccmux"
+focus = 'ccmux switch "$ASANAMATE_AGENT_TARGET"'
+```
+
+The TUI refreshes the conversation link and agent source when you select a
+conversation. An exact `(provider, session_id)` match with a focus target
+runs `agents.focus` without closing asanamate or taking its terminal. An idle
+agent is still an open session. Multiple matches ask which target to focus;
+the selection is checked again before focusing. A successful lookup with no
+usable match uses `conversations.open`, preserving its activity checks.
+Lookup or focus failures stop the operation; they never automatically resume
+another copy. Focus failures point to `actions.log` in the state directory.
+
+Both adapters are replaceable: they share only native conversation identity.
+The conversation provider does not call or depend on the agent provider.
+The CLI's `conversation open` continues to use the foreground opener.
+
 **From the CLI.** Neither command needs an Asana token or reads Asana:
 
 ```sh

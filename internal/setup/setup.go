@@ -426,9 +426,9 @@ commands = []
 # such as the ccmux adapter, asanamate-ccmux, or your own tool.
 # [agents]
 # command = "asanamate-ccmux"
-# Optional shell command that switches to one running agent, from the w
-# modal. It reads the agent from $ASANAMATE_AGENT_TARGET and the other
-# action exports. Empty leaves agents listed but not focusable.
+# Optional: focus an exact running conversation instead of resuming another
+# copy. Runs without terminal input and keeps asanamate open. Other agent
+# sources can use their own focus command with the same target variable.
 # focus = 'ccmux switch "$ASANAMATE_AGENT_TARGET"'
 #
 # Map the tool's raw statuses onto asanamate's states. A status equal to a

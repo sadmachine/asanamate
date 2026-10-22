@@ -45,7 +45,7 @@ type Context struct {
 	Worktree      string
 	ConfirmWrites bool
 	Files         Files
-	// Conversation is the exact saved selection, only for a conversation opener.
+	// Conversation is the exact saved selection for conversation focus or resumption.
 	Conversation *conversations.Record
 	// Preferred holds the gids of the active project's custom fields; it
 	// decides between fields that share a name.

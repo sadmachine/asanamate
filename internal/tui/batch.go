@@ -413,17 +413,22 @@ func (c *commentComposer) view(width, height int, accent lipgloss.Style) string 
 	if c.task == nil {
 		return c.box.view(width, height, accent)
 	}
-	assignee := "(unassigned)"
+	from, assignee := "", dimStyle.Render("unassigned")
 	if c.task.Assignee != nil {
-		assignee = c.task.Assignee.Name
+		from = ticket.OneLine(c.task.Assignee.Name)
+		assignee = from
 	}
 	if change, ok := c.change("assign", "", ""); ok {
-		assignee = "* " + c.labels[changeKey(change)]
+		assignee = pendingValue(from, c.labels[changeKey(change)])
 	}
-	section := "(unchanged)"
+	section := dimStyle.Render("unchanged")
 	for _, change := range c.changes {
 		if change.Kind == "move" {
-			section = "* " + c.labels[changeKey(change)]
+			from := c.task.SectionIn(change.Project)
+			if change.Project == writeback.MyTasks && c.task.AssigneeSection != nil {
+				from = c.task.AssigneeSection.Name
+			}
+			section = pendingValue(ticket.OneLine(from), c.labels[changeKey(change)])
 			break
 		}
 	}
@@ -431,16 +436,30 @@ func (c *commentComposer) view(width, height int, accent lipgloss.Style) string 
 	if c.branch != nil {
 		pending++
 	}
-	lines := []string{"Assign to: " + assignee, "Change section: " + section, fmt.Sprintf("Edit all details (%d pending)", pending)}
-	for i, line := range lines {
-		line = ansi.Truncate(ticket.OneLine(line), max(width-2, 1), "…")
-		if c.footer == i {
-			line = accent.Reverse(true).Render("▸ " + line)
-		} else {
-			line = "  " + line
-		}
-		lines[i] = line
+	w := max(width-2, 1)
+	head := dimStyle.Render("── ") + accent.Render("Task updates") + " "
+	if pending > 0 {
+		head += dimStyle.Render(fmt.Sprintf("%d pending ", pending))
 	}
-	footer := strings.Join(lines, "\n") + "\n" + hintLine(accent, [2]string{"tab/shift+tab", "task details"}, [2]string{"enter", "edit selected"})
-	return c.box.view(width, max(height-lipgloss.Height(footer)-1, 1), accent) + "\n\n" + footer
+	lines := []string{ansi.Truncate(head+dimStyle.Render(strings.Repeat("─", max(w-ansi.StringWidth(head), 0))), w, "…")}
+	for i, field := range [][2]string{{"Assignee", assignee}, {"Section", section}, {"More", dimStyle.Render("all task details…")}} {
+		marker, label := "  ", dimStyle.Render(fmt.Sprintf("%-10s", field[0]))
+		if c.footer == i {
+			marker, label = accent.Render("▌ "), accent.Bold(true).Render(fmt.Sprintf("%-10s", field[0]))
+		}
+		lines = append(lines, ansi.Truncate(marker+label+field[1], w, "…"))
+	}
+	hints := [][2]string{{keyLabel("input", "submit"), "submit"}, {keyLabel("input", "paste_image"), "image"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "external_editor"), "editor"}, {"tab", "fields"}, {keyLabel("input", "cancel"), "cancel"}}
+	if c.footer >= 0 {
+		hints = [][2]string{{"enter", "change"}, {"tab", "next"}, {keyLabel("input", "submit"), "submit"}, {keyLabel("input", "cancel"), "cancel"}}
+	}
+	return c.box.layout(width, height, accent, strings.Join(lines, "\n"), hints...)
+}
+
+// pendingValue shows a staged edit as "old → new ●", or "new ●" without an old value.
+func pendingValue(from, to string) string {
+	if from == "" {
+		return warnStyle.Render(ticket.OneLine(to) + " ●")
+	}
+	return dimStyle.Render(from+" → ") + warnStyle.Render(ticket.OneLine(to)+" ●")
 }

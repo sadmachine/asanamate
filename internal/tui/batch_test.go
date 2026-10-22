@@ -242,7 +242,7 @@ func TestCommentFooterRendersAndPreservesTextFocus(t *testing.T) {
 	m, _ := editModel(t)
 	press(m, "c")
 	view := ansi.Strip(m.composer.view(75, 30, m.accentStyle))
-	for _, label := range []string{"Assign to: Amy", "Change section:", "Edit all details", "tab/shift+tab"} {
+	for _, label := range []string{"Task updates", "Assignee", "Amy", "Section", "More", "tab fields"} {
 		if !strings.Contains(view, label) {
 			t.Errorf("missing %q in %q", label, view)
 		}

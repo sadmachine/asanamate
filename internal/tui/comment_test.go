@@ -162,7 +162,7 @@ func TestCommentSaveAndRestoreAcrossSessions(t *testing.T) {
 	m.width, m.height = 140, 40
 	press(m, "c")
 	m.input.area.SetValue("  first\nsecond  ")
-	if view := ansi.Strip(m.body()); !strings.Contains(view, "save draft") {
+	if view := ansi.Strip(m.body()); !strings.Contains(view, keyLabel("input", "save_draft")+" draft") {
 		t.Fatal("draft key missing from editor")
 	}
 	send(m, ctrlD)

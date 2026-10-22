@@ -1,0 +1,40 @@
+packages/asana-sessions/test/hook.test.js
+  s_0e6b13888ef575::t_59f27accc387cb 7,77-126
+  s_0e6b13888ef575::t_f643a65c1bc4f3 127-128
+packages/asana-sessions/RELEASING.md
+  s_0e6b13888ef575::t_e4227e0375f008 47,56-60
+packages/asana-sessions/src/engine.js
+  s_0e6b13888ef575::t_0ae85b1ab962f5 153-155,179-181
+packages/asana-sessions/CHANGELOG.md
+  s_0e6b13888ef575::t_e4227e0375f008 5-8
+packages/asana-sessions/scripts/check-plugins.js
+  s_0e6b13888ef575::t_59f27accc387cb 19
+packages/asana-sessions/test/setup.test.js
+  s_0e6b13888ef575::t_59f27accc387cb 14,37-39,41-48
+packages/asana-sessions/src/setup.js
+  s_0e6b13888ef575::t_0ae85b1ab962f5 34,111,121,128
+packages/asana-sessions/plugins/codex/asana-sessions/hooks/hooks.json
+  s_0e6b13888ef575::t_0ae85b1ab962f5 13-23
+packages/asana-sessions/README.md
+  s_0e6b13888ef575::t_e4227e0375f008 106-110,120-121,199-203,296-298
+  s_0e6b13888ef575::t_09b2d39c23a55c 277-278,299-300
+packages/asana-sessions/src/pending.js
+  s_0e6b13888ef575::t_0ae85b1ab962f5 1
+  s_0e6b13888ef575::t_e4227e0375f008 2-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "11b0cd3b3db081e83f700399e099605cdb1297b6",
+  "prompts": {},
+  "sessions": {
+    "s_0e6b13888ef575": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a164d5-7823-7b30-809f-911be103bbfb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

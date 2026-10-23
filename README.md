@@ -1249,6 +1249,30 @@ Remembered action choices use the chosen Asana project and action key. They
 are saved when the form is submitted. Existing `input` actions keep their text
 box; an action can use both.
 
+For choices that change between runs, set `form.command` instead of static
+`form.fields`. The command returns the same control spec as JSON; asanamate
+shows its normal form, then passes submitted values as `ASANAMATE_PARAM_<ID>`.
+Choosing a select option does not run the action; submit the form with `ctrl+s`.
+
+```toml
+name = "Resume conversation"
+key = "r"
+mode = "foreground"
+command = 'node ~/.config/asanamate/helpers/resume-agent.mjs'
+
+[form]
+command = 'node ~/.config/asanamate/helpers/resume-agent.mjs form'
+```
+
+The example assumes your own helper implements both commands. See the
+[dynamic form contract](docs/extensions.md#dynamic-action-forms) for the
+request, response, and error handling.
+
+| Form key | Default | Purpose |
+|---|---|---|
+| `form.command` | `""` (off) | Load fresh controls from a JSON command before each run |
+| `form.fields` | empty | Static controls; cannot be combined with `form.command` |
+
 **tmux note:** `tmux new-window` and `split-window` run their command in the
 tmux server's environment, so `ASANAMATE_*` variables do not reach them. Pass
 the ones you need with `-e NAME="$NAME"`, as in the example above.

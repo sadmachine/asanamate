@@ -186,6 +186,9 @@ func (b *actionBuilder) showAction() {
 			}, b.showAction)
 		}),
 		builderRow("Form fields", fmt.Sprint(len(a.Form.Fields)), "Optional select, true/false, number, string, hours, or date prompts before running. Answers become ASANAMATE_PARAM_<ID>.", func() { b.descend(b.showAction, b.showFields) }),
+		builderRow("Form command", a.Form.Command, "Optional command returning fresh form controls as JSON. Leave static form fields empty when using it.", func() {
+			b.text("Form command (/bin/sh -c)", &a.Form.Command, b.showAction, true)
+		}),
 		builderRow("Save action", keyLabel("builder", "save"), "Validate and write the action file. Changes become available immediately.", b.submit),
 	}
 	b.show("Action builder", rows)

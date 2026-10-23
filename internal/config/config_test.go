@@ -459,10 +459,10 @@ func TestSaveActionFileRoundTripAndBackup(t *testing.T) {
 	original := ActionFile{Name: "20-deploy.toml", Action: Action{
 		Name: "Deploy", Key: "D", Mode: ModeBackground, Repo: true, Agent: true,
 		Context: ContextComment, Command: "printf '%s\\n' \"$ASANAMATE_INPUT_FILE\"\n# next line\n", Input: "Notes", ConfirmWrites: &no,
-		Form: form.Spec{Fields: []form.Field{
+		Form: ActionForm{Spec: form.Spec{Fields: []form.Field{
 			{ID: "target", Label: "Target", Type: form.Select, Remember: true, Options: []form.Option{{ID: "prod", Name: "Production"}}},
 			{ID: "hours", Label: "Hours", Type: form.Hours},
-		}},
+		}}},
 	}}
 	actions, err := SaveActionFile(dir, original)
 	if err != nil || len(actions) != 1 || !reflect.DeepEqual(actions[0], original.Action) {
@@ -493,6 +493,53 @@ func TestSaveActionFileRoundTripAndBackup(t *testing.T) {
 	info, err := os.Stat(filepath.Join(dir, edited.Name))
 	if err != nil || info.Mode().Perm() != 0o600 {
 		t.Fatalf("permissions: %v, %v", info, err)
+	}
+}
+
+func TestActionDynamicFormRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "resume.toml")
+	const source = `name = "Resume"
+key = "r"
+command = "resume-agent"
+[form]
+command = "resume-agent form"
+`
+	if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	files, err := LoadActionFiles(dir)
+	if err != nil || len(files) != 1 {
+		t.Fatalf("load dynamic action form: %+v, %v", files, err)
+	}
+	if _, err := SaveActionFile(dir, files[0]); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil || !strings.Contains(string(data), `command = "resume-agent form"`) {
+		t.Fatalf("form command lost on save: %s, %v", data, err)
+	}
+}
+
+func TestActionDynamicFormRejectsConflictingFields(t *testing.T) {
+	for _, body := range []string{
+		`[form]
+command = "   "`,
+		`[form]
+command = "load-options"
+[[form.fields]]
+id = "target"
+label = "Target"
+type = "string"`,
+	} {
+		dir := t.TempDir()
+		data := "name = 'Run'\nkey = 'r'\ncommand = 'run'\n" + body
+		if err := os.WriteFile(filepath.Join(dir, "run.toml"), []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := LoadActionFiles(dir); err == nil || !strings.Contains(err.Error(), "form.command") {
+			t.Fatalf("expected form.command validation error, got %v", err)
+		}
 	}
 }
 

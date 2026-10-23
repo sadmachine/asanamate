@@ -40,7 +40,7 @@ func TestTicketOnlyShowsOnlyTheReader(t *testing.T) {
 
 func TestTicketOnlyIgnoresListKeys(t *testing.T) {
 	m := ticketOnlyModel(t)
-	for _, k := range []string{"esc", "1", "0", "3", "tab", "shift+tab", "/", "p", "I", "H", "z", "Z", "F", "V", "b", "n"} {
+	for _, k := range []string{"esc", "1", "0", "3", "tab", "shift+tab", "/", "S", "p", "I", "H", "z", "Z", "F", "V", "b", "n"} {
 		m.Update(key(k))
 		if !m.focusReader || m.filtering || m.activityOpen || m.modal != nil || m.input != nil || m.showNav() || !m.readerOn() {
 			t.Fatalf("%s: focusReader = %v, filtering = %v, activity = %v, modal = %v", k, m.focusReader, m.filtering, m.activityOpen, m.modal != nil)

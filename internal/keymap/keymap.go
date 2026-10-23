@@ -104,9 +104,9 @@ func Resolve(overrides map[string]map[string][]string) (Keymap, error) {
 			if !ok {
 				raw = b.Keys
 				// Preserve legacy copy keys and existing overrides when the new
-				// yank, tools, or agents defaults would otherwise claim the same key.
+				// yank, tools, agents, or search defaults would otherwise claim the same key.
 				legacy := map[string]string{"yank": "copy_link", "copy_selection": "copy_comment"}[b.Name]
-				yields := b.Name == "tools" || b.Name == "agents"
+				yields := b.Name == "tools" || b.Name == "agents" || b.Name == "search"
 				for name, explicit := range overrides[s.Name] {
 					if s.Name != "main" || (name != legacy && !yields) {
 						continue

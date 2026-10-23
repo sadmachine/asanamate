@@ -91,6 +91,20 @@ func TestAgentsPreservesExistingWOverride(t *testing.T) {
 	}
 }
 
+func TestSearchPreservesExistingSOverride(t *testing.T) {
+	k, err := Resolve(map[string]map[string][]string{"main": {"settings": {"S"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k.Name("main", "S") != "settings" || len(k.Keys("main", "search")) != 0 {
+		t.Fatal("new search default claimed an existing override")
+	}
+	_, err = Resolve(map[string]map[string][]string{"main": {"settings": {"S"}, "search": {"S"}}})
+	if err == nil {
+		t.Fatal("explicit conflicting search binding must be rejected")
+	}
+}
+
 func TestToolsPreservesExistingCommaOverrides(t *testing.T) {
 	for _, binding := range []string{"settings", "quit"} {
 		t.Run(binding, func(t *testing.T) {

@@ -24,6 +24,7 @@ var catalog = []Scope{
 		{Name: "open", Keys: []string{"enter"}, Desc: "open ticket / edit target", Group: "Move"},
 		{Name: "jump", Keys: []string{"'"}, Desc: "jump to reader section", Group: "Move"},
 		{Name: "filter", Keys: []string{"/"}, Desc: "filter", Hint: "filter", Group: "Move"},
+		{Name: "search", Keys: []string{"S"}, Desc: "search current list", Hint: "search", Group: "Move"},
 		{Name: "projects", Keys: []string{"p"}, Desc: "projects", Hint: "proj", Group: "Move"},
 		{Name: "activity", Keys: []string{"I"}, Desc: "workspace activity", Group: "Move"},
 		{Name: "history", Keys: []string{"H"}, Desc: "ticket history", Group: "Move"},

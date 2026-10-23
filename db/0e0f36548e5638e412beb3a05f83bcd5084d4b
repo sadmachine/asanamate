@@ -1,0 +1,35 @@
+README.md
+  s_301beb6ae08dc3::t_11bab9b9c88984 345,388
+internal/tui/ticketsearch.go
+  s_301beb6ae08dc3::t_11bab9b9c88984 1-27
+internal/keymap/keymap.go
+  s_301beb6ae08dc3::t_11bab9b9c88984 107,109
+internal/keymap/keymap_test.go
+  s_301beb6ae08dc3::t_1cb6294490ff90 94-107
+internal/tui/ticketonly_test.go
+  s_301beb6ae08dc3::t_1cb6294490ff90 43
+internal/tui/statusline.go
+  s_301beb6ae08dc3::t_11bab9b9c88984 69
+internal/tui/keys.go
+  s_301beb6ae08dc3::t_11bab9b9c88984 160
+internal/keymap/catalog.go
+  s_301beb6ae08dc3::t_11bab9b9c88984 27
+internal/tui/ticketsearch_test.go
+  s_301beb6ae08dc3::t_1cb6294490ff90 1-170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db0e0f36548e5638e412beb3a05f83bcd5084d4b",
+  "prompts": {},
+  "sessions": {
+    "s_301beb6ae08dc3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16adc-74b7-75b1-9e73-358bdac951ae",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

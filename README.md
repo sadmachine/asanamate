@@ -319,7 +319,9 @@ resize = true
 ```
 
 Select `+ Add project` below the ticket's project rows and press `enter` to
-add it to another project. The picker excludes projects already on the ticket.
+add it to another project. The picker includes accessible, unarchived projects
+in your workspace, even ones you haven't joined, and excludes projects already
+on the ticket. Project navigation still lists only projects you've joined.
 
 The bottom bar shows the mode (`NORMAL`, `READ`, `EDIT`, `FILTER`, `VIEWS`,
 or `FEED`), the view, filter, grouping, sorting, ticket count, and agents, with the keys

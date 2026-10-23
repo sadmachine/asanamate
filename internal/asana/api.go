@@ -50,25 +50,13 @@ func (c *Client) tasksIn(ctx context.Context, path string, since time.Time) ([]T
 	return getAll[Task](ctx, c, path, q)
 }
 
-// MemberProjects returns unarchived projects in workspace that userGID is a member of.
-func (c *Client) MemberProjects(ctx context.Context, workspace, userGID string) ([]Project, error) {
+// Projects returns all accessible, unarchived projects in workspace, including
+// projects the authenticated user has not joined.
+func (c *Client) Projects(ctx context.Context, workspace string) ([]Project, error) {
 	q := fields("name,color,members.gid")
 	q.Set("workspace", workspace)
 	q.Set("archived", "false")
-	all, err := getAll[Project](ctx, c, "/projects", q)
-	if err != nil {
-		return nil, err
-	}
-	var mine []Project
-	for _, p := range all {
-		for _, m := range p.Members {
-			if m.GID == userGID {
-				mine = append(mine, p)
-				break
-			}
-		}
-	}
-	return mine, nil
+	return getAll[Project](ctx, c, "/projects", q)
 }
 
 // Project returns one project's name, including projects the user is not a

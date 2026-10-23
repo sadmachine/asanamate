@@ -66,8 +66,9 @@ type detailMsg struct {
 }
 
 type projectsMsg struct {
-	projects []asana.Project
-	err      error
+	projects    []asana.Project
+	allProjects []asana.Project
+	err         error
 }
 
 // linkNamesMsg carries names for linked projects outside m.projects; a
@@ -220,8 +221,17 @@ func loadProjects(c *asana.Client, workspace string) tea.Cmd {
 		if err != nil {
 			return projectsMsg{err: err}
 		}
-		projects, err := c.MemberProjects(ctx, workspace, me.GID)
-		return projectsMsg{projects: projects, err: err}
+		all, err := c.Projects(ctx, workspace)
+		var projects []asana.Project
+		for _, p := range all {
+			for _, member := range p.Members {
+				if member.GID == me.GID {
+					projects = append(projects, p)
+					break
+				}
+			}
+		}
+		return projectsMsg{projects: projects, allProjects: all, err: err}
 	})
 }
 

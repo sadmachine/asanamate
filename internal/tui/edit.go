@@ -139,7 +139,13 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 			m.input.area.SetValue(c.value("due", "", "", m.input.area.Value()))
 		}
 	case editAddProject:
-		return m.requestProjects(func() tea.Cmd { m.openAddProjectPicker(); return nil })
+		if m.projectsLoaded {
+			m.openAddProjectPicker()
+			return nil
+		}
+		m.afterProjects = func() tea.Cmd { m.openAddProjectPicker(); return nil }
+		m.setProgress("loading projects…")
+		return m.refreshProjects()
 	case editRemoveProject:
 		m.openRemoveProjectPicker()
 	case editBranch:
@@ -285,14 +291,14 @@ func (m *Model) openAddProjectPicker() {
 		memberOf[mb.Project.GID] = true
 	}
 	var items []pickItem
-	for _, p := range m.projects {
+	for _, p := range m.allProjects {
 		if !memberOf[p.GID] {
 			items = append(items, pickItem{Label: ticket.Clean(p.Name), Value: asana.Ref{GID: p.GID, Name: p.Name}})
 		}
 	}
 	if len(items) == 0 {
 		m.edit = nil
-		m.setStatus(statusWarning, "no other member projects available")
+		m.setStatus(statusWarning, "no other accessible projects available")
 		if m.composer != nil {
 			m.returnToDraft()
 		}

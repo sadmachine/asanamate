@@ -43,6 +43,9 @@ func testModel(t *testing.T, cfg config.Config) (*Model, *state.State) {
 	m.toastTimer = func(_ time.Duration, msg toastTickMsg) tea.Cmd {
 		return func() tea.Msg { return msg }
 	}
+	m.connectionTimer = func(_ time.Duration, msg connectionTickMsg) tea.Cmd {
+		return func() tea.Msg { return msg }
+	}
 	m.now = func() time.Time { return testToday }
 	// New sets package state from cfg; restore the defaults so tests that
 	// never call New see them.

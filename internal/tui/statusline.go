@@ -90,6 +90,8 @@ func (m *Model) renderStatusline(showMessage bool) string {
 	default:
 		segs = m.listSegs()
 	}
+	connection := m.connectionIndicator()
+	segs = append(segs, connection)
 	left := pill + " " + strings.Join(segs, dimStyle.Render(" │ "))
 
 	status, level := m.status, m.statusLevel
@@ -113,9 +115,9 @@ func (m *Model) renderStatusline(showMessage bool) string {
 	if gap < 2 {
 		// Status messages matter more than where the list is.
 		if status == "" {
-			return ansi.Truncate(left, m.width, "…")
+			return ansi.Truncate(pill+" "+connection+" "+strings.Join(segs[:len(segs)-1], dimStyle.Render(" │ ")), m.width, "…")
 		}
-		return ansi.Truncate(pill+" "+right, m.width, "…")
+		return ansi.Truncate(pill+" "+connection+" "+right, m.width, "…")
 	}
 	return left + strings.Repeat(" ", gap) + right
 }

@@ -47,7 +47,8 @@ func (m *Model) autoRefresh(msg refreshTickMsg) tea.Cmd {
 	if m.activityOpen {
 		return next
 	}
-	if m.loading || m.waiting != "" || len(m.detailRequests) > 0 || m.filtering || m.help || m.modal != nil || m.input != nil || m.form != nil || m.builder != nil ||
+	blockedPicker := m.modal != nil && m.modal != m.connectionMenu
+	if m.loading || m.waiting != "" || len(m.detailRequests) > 0 || m.filtering || m.help || blockedPicker || m.input != nil || m.form != nil || m.builder != nil ||
 		m.run != nil || m.edit != nil || m.timeEntry != nil || m.menuFor != "" {
 		return next
 	}

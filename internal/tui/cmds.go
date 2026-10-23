@@ -33,12 +33,13 @@ func scheduleSpinner() tea.Cmd {
 }
 
 type tasksMsg struct {
-	project *asana.Ref
-	tasks   []asana.Task
-	pins    []asana.Task // explicitly pinned tasks absent from the normal list
-	warning string
-	catalog []asana.Ref // the project's custom field names and gids, when known
-	err     error
+	project          *asana.Ref
+	tasks            []asana.Task
+	pins             []asana.Task // explicitly pinned tasks absent from the normal list
+	warning          string
+	pinConnectionErr error       // unavailable pinned tasks use connection health, not warnings
+	catalog          []asana.Ref // the project's custom field names and gids, when known
+	err              error
 }
 
 type agentsMsg struct {
@@ -162,7 +163,11 @@ func loadTasks(c *asana.Client, workspace string, project *asana.Ref, pins []str
 				}
 				t, err := c.Task(ctx, gid)
 				if err != nil {
-					failed = append(failed, fmt.Sprintf("%s: %v", gid, err))
+					if connectionFailureError(err) {
+						msg.pinConnectionErr = err
+					} else {
+						failed = append(failed, fmt.Sprintf("%s: %v", gid, err))
+					}
 					continue
 				}
 				msg.pins = append(msg.pins, t)
@@ -180,6 +185,9 @@ func loadAgents(cfg config.Agents) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), agentRefresh*2)
 		defer cancel()
 		list, err := agents.Fetch(ctx, cfg.Command, cfg.States)
+		if ctx.Err() != nil {
+			err = fmt.Errorf("agents command interrupted: %w", ctx.Err())
+		}
 		return agentsMsg{list: list, err: err}
 	}
 }

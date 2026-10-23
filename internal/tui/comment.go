@@ -378,6 +378,9 @@ func (m *Model) commentDone(msg commentDoneMsg) tea.Cmd {
 		return nil
 	}
 	c.busy = false
+	if msg.op == commentPost {
+		m.observeAsana("posting comment", msg.err)
+	}
 	applied := 0
 	if msg.saved {
 		if msg.op == commentPost {

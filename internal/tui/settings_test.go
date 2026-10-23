@@ -22,7 +22,7 @@ func TestSettingsMenusSeparateAndRebind(t *testing.T) {
 			otherKeys           []string
 		}{
 			{"settings", "s", "Visual settings", []string{"a", "o", "i", "n"}},
-			{"tools", ",", "Settings & tools", []string{"s", "h", "v", "l", "d", "t", "c"}},
+			{"tools", ",", "Settings & tools", []string{"s", "h", "v", "l", "d", "t"}},
 		} {
 			name := menu.binding
 			if rebound {

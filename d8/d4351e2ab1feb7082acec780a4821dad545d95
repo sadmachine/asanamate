@@ -1,0 +1,60 @@
+internal/tui/activity.go
+  s_5b2c5f9f59dd82::t_90fb6b238eea63 221-223,231-233
+internal/tui/statusline.go
+  s_5b2c5f9f59dd82::t_90fb6b238eea63 93-94,118,120
+internal/tui/edit.go
+  s_5b2c5f9f59dd82::t_a27fd3ae718167 397,400,737,740
+internal/tui/symbols.go
+  s_5b2c5f9f59dd82::t_54abc8fb62e9d0 22-26,28
+  s_5b2c5f9f59dd82::t_af4003c068ef51 27,50,59,61,66,84-86
+internal/tui/model.go
+  s_5b2c5f9f59dd82::t_a27fd3ae718167 357,360,581
+  s_5b2c5f9f59dd82::t_90fb6b238eea63 182,261-264,266-267,422-423,426,467,472,508,516,519,544-546,549-551,575,577-579
+  s_5b2c5f9f59dd82::t_54abc8fb62e9d0 169-176,178-181,183
+  s_5b2c5f9f59dd82::t_d79155c20f19f9 177,416-420,424-425,469-471,602
+internal/tui/comment.go
+  s_5b2c5f9f59dd82::t_d79155c20f19f9 381-383
+internal/tui/connection.go
+  s_5b2c5f9f59dd82::t_d79155c20f19f9 141-143
+  s_5b2c5f9f59dd82::t_a029c18ced85b8 1-22,24-140,144-153,155,157-177,181-214,216-231
+  s_5b2c5f9f59dd82::t_54abc8fb62e9d0 23
+  s_5b2c5f9f59dd82::t_7eee026a5813c4 154,156,178-180,215
+internal/tui/settings.go
+  s_5b2c5f9f59dd82::t_90fb6b238eea63 67
+README.md
+  s_5b2c5f9f59dd82::t_839b9185e59f22 971-972
+  s_5b2c5f9f59dd82::t_7eee026a5813c4 373,969
+  s_5b2c5f9f59dd82::t_d79155c20f19f9 960-968,970,973-979
+internal/tui/model_test.go
+  s_5b2c5f9f59dd82::t_d79155c20f19f9 46-48
+internal/tui/connection_test.go
+  s_5b2c5f9f59dd82::t_839b9185e59f22 5,8,186-188,201-219,222-239
+  s_5b2c5f9f59dd82::t_b6771d3538630f 10-11,17,77-78,86-92,95-99,135-185,189-200,240-265
+  s_5b2c5f9f59dd82::t_01b22e768dcfb2 1-4,6-7,9,12-16,18-76,79-85,93,101-134,266-267
+  s_5b2c5f9f59dd82::t_13149bd4fe439e 94,100
+  s_5b2c5f9f59dd82::t_2e500a6d0f7264 220-221
+internal/tui/cmds.go
+  s_5b2c5f9f59dd82::t_76c5f373cfdbfc 36-42
+  s_5b2c5f9f59dd82::t_d79155c20f19f9 166-170
+  s_5b2c5f9f59dd82::t_90fb6b238eea63 188-190
+internal/tui/refresh.go
+  s_5b2c5f9f59dd82::t_7eee026a5813c4 50-51
+internal/tui/settings_test.go
+  s_5b2c5f9f59dd82::t_a27fd3ae718167 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d8d4351e2ab1feb7082acec780a4821dad545d95",
+  "prompts": {},
+  "sessions": {
+    "s_5b2c5f9f59dd82": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16905-24a1-7d10-87b7-0a2d4ac3825e",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

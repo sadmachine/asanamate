@@ -64,6 +64,7 @@ func (m *Model) openTools() {
 			return nil
 		}},
 		{Label: "Status history", Key: "n", Value: func() tea.Cmd { m.openStatusHistory(); return nil }},
+		{Label: "Connection status", Key: "c", Value: func() tea.Cmd { m.openConnectionStatus(); return nil }},
 	}
 	p := newPicker(pickValue(func(open func() tea.Cmd) tea.Cmd { return open() }), "Settings & tools", items)
 	p.keySelect = true

@@ -218,6 +218,9 @@ func (m *Model) gotActivity(msg activityMsg) tea.Cmd {
 	if a.seq != msg.seq {
 		return nil
 	}
+	if !msg.partial {
+		m.observeAsana("scanning activity", msg.err)
+	}
 	var next tea.Cmd
 	if msg.partial {
 		next = waitActivity(a.updates)
@@ -225,7 +228,9 @@ func (m *Model) gotActivity(msg activityMsg) tea.Cmd {
 		a.loading = false
 	}
 	if msg.err != nil {
-		a.err = ticket.OneLine(msg.err.Error())
+		if !connectionFailureError(msg.err) {
+			a.err = ticket.OneLine(msg.err.Error())
+		}
 		var apiErr *asana.APIError
 		if errors.As(msg.err, &apiErr) && apiErr.Status == http.StatusPaymentRequired {
 			a.stopped = true

@@ -394,9 +394,10 @@ func (m *Model) openSectionPicker(msg sectionsMsg) {
 			m.setInlineError("loading sections: " + msg.err.Error())
 			m.composer.box.err = m.status
 			m.returnToDraft()
-		} else {
+		} else if !connectionFailureError(msg.err) {
 			m.setStatus(statusError, "loading sections: "+msg.err.Error())
 		}
+		m.clearProgress()
 		return
 	}
 	m.clearProgress()
@@ -733,9 +734,10 @@ func (m *Model) openUserPicker(err error) {
 			m.setInlineError("loading people: " + err.Error())
 			m.composer.box.err = m.status
 			m.returnToDraft()
-		} else {
+		} else if !connectionFailureError(err) {
 			m.setStatus(statusError, "loading people: "+err.Error())
 		}
+		m.clearProgress()
 		return
 	}
 	m.clearProgress()

@@ -166,16 +166,21 @@ type Model struct {
 	conversations       *conversationLookup
 	conversationResults map[string]conversations.Result
 
-	status           string
-	statusLevel      statusLevel
-	statusProgress   bool
-	statusHistory    []statusMessage
-	toast            *statusToast
-	toastSeq         uint64
-	toastPending     bool
-	toastTimer       func(time.Duration, toastTickMsg) tea.Cmd // nil uses the real clock
-	backgroundErrors map[string]string
-	exitCmd          *exec.Cmd
+	status                string
+	statusLevel           statusLevel
+	statusProgress        bool
+	statusHistory         []statusMessage
+	toast                 *statusToast
+	toastSeq              uint64
+	toastPending          bool
+	toastTimer            func(time.Duration, toastTickMsg) tea.Cmd // nil uses the real clock
+	connectionTimer       func(time.Duration, connectionTickMsg) tea.Cmd
+	backgroundErrors      map[string]string
+	asanaConnection       connectionHealth
+	agentConnection       connectionHealth
+	connectionMenu        *picker
+	connectionTickPending bool
+	exitCmd               *exec.Cmd
 }
 
 // New returns a model that starts on My Tasks with its last used grouping, sort, and filter.
@@ -253,8 +258,13 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	// Statuses originate in synchronous handlers throughout the TUI. Schedule
 	// the latest toast once, after the handler finishes changing its state.
-	defer func() { cmd = tea.Batch(cmd, m.scheduleToast()) }()
+	defer func() {
+		m.refreshConnectionStatus()
+		cmd = tea.Batch(cmd, m.scheduleToast(), m.scheduleConnectionTick())
+	}()
 	switch msg := msg.(type) {
+	case connectionTickMsg:
+		return m, nil
 	case toastTickMsg:
 		return m, m.toastTick(msg)
 	case refreshTickMsg:
@@ -344,8 +354,10 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	case timeSummaryMsg:
 		m.gotTimeSummary(msg)
 	case sectionsMsg:
+		m.observeAsana("loading sections", msg.err)
 		m.openSectionPicker(msg)
 	case usersMsg:
+		m.observeAsana("loading people", msg.err)
 		if msg.err == nil {
 			m.users, m.meGID = msg.users, msg.me
 		}
@@ -401,8 +413,17 @@ func (m *Model) gotTasks(msg tasksMsg) tea.Cmd {
 	}
 	refreshing := m.loading
 	m.loading = false
+	connectionErr := msg.err
+	if connectionErr == nil {
+		connectionErr = msg.pinConnectionErr
+	}
+	connectionError := m.observeAsana("loading tasks", connectionErr)
 	if msg.err != nil {
-		m.setBackgroundError("tasks", "loading tasks: "+msg.err.Error())
+		if !connectionError {
+			m.setBackgroundError("tasks", "loading tasks: "+msg.err.Error())
+		} else {
+			m.clearProgress()
+		}
 		return nil
 	}
 	delete(m.backgroundErrors, "tasks")
@@ -443,8 +464,12 @@ func (m *Model) gotDetail(msg detailMsg) tea.Cmd {
 	delete(m.detailRequests, msg.gid)
 	t, ok := m.selected()
 	isSelected := ok && t.GID == msg.gid
+	connectionError := m.observeAsana("loading ticket", msg.err)
 	if msg.err != nil {
-		if isSelected || m.openGID == msg.gid {
+		if connectionError {
+			m.clearProgress()
+		}
+		if !connectionError && (isSelected || m.openGID == msg.gid) {
 			m.setBackgroundError("ticket", "loading ticket: "+msg.err.Error())
 		}
 		if m.openGID == msg.gid {
@@ -480,6 +505,7 @@ func (m *Model) gotDetail(msg detailMsg) tea.Cmd {
 // whatever waited for them.
 func (m *Model) gotProjects(msg projectsMsg) tea.Cmd {
 	m.loadingProjects = false
+	connectionError := m.observeAsana("loading projects", msg.err)
 	if msg.err != nil {
 		message := "loading projects: " + msg.err.Error()
 		if m.composer != nil && m.afterProjects != nil {
@@ -487,9 +513,10 @@ func (m *Model) gotProjects(msg projectsMsg) tea.Cmd {
 			m.afterProjects = nil
 			m.composer.setError(m.status)
 			m.returnToDraft()
-		} else {
+		} else if !connectionError {
 			m.setBackgroundError("projects", message)
 		}
+		m.clearProgress()
 		return nil
 	}
 	delete(m.backgroundErrors, "projects")
@@ -514,9 +541,14 @@ func (m *Model) gotAgents(msg agentsMsg) tea.Cmd {
 	if !m.deps.Config.AgentsEnabled() {
 		return nil
 	}
+	if m.agentConnection.observe(msg.err, m.now()) {
+		m.connectionTickPending = true
+	}
 	if msg.err != nil {
 		m.agentsErr = "agents: " + msg.err.Error()
-		m.setBackgroundError("agents", m.agentsErr)
+		if !connectionFailureError(msg.err) {
+			m.setBackgroundError("agents", m.agentsErr)
+		}
 	} else {
 		delete(m.backgroundErrors, "agents")
 		m.agents, m.agentsErr, m.linked = msg.list, "", nil
@@ -540,9 +572,13 @@ func (m *Model) gotProjectFields(msg projectFieldsMsg) tea.Cmd {
 	if msg.columns && msg.gid != gidOf(m.viewProject) {
 		return nil
 	}
+	connectionError := m.observeAsana("loading project fields", msg.err)
 	if msg.err != nil {
-		m.setStatus(statusError, "loading project fields: "+msg.err.Error())
+		if !connectionError {
+			m.setStatus(statusError, "loading project fields: "+msg.err.Error())
+		}
 		if msg.columns {
+			m.clearProgress()
 			return nil
 		}
 	}
@@ -563,6 +599,7 @@ func (m *Model) gotProjectFields(msg projectFieldsMsg) tea.Cmd {
 
 // editDone reports a finished edit and reloads the list.
 func (m *Model) editDone(msg editDoneMsg) tea.Cmd {
+	m.observeAsana(msg.what, msg.err)
 	if msg.err != nil {
 		m.setStatus(statusError, msg.what+" failed: "+msg.err.Error())
 		return nil

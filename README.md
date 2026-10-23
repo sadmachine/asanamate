@@ -370,7 +370,7 @@ key press.
 | `]` / `[` | apply the next/previous saved view, in name order |
 | `ctrl+s` | save the current filter, grouping, and sorting under a name |
 | `s` | visual settings: separators, header spacing, reader view, selection style, dim unfocused panes, and theme save in `settings.toml`; list columns save per project in state |
-| `,` | settings & tools: `a` builds / edits actions, `o` opens extensions, `i` sets the auto-update interval (saved in `settings.toml`), and `n` opens session status history |
+| `,` | settings & tools: `a` builds / edits actions, `o` opens extensions, `i` sets the auto-update interval (saved in `settings.toml`), `n` opens session status history, and `c` opens connection status |
 | `o` | open the ticket in the browser |
 | `w` | agents: the ticket's running agents, then its saved conversations (see [Conversations](#conversations-optional)); also `enter` on the reader's Agents section. `enter` on an agent runs `agents.focus`. Skipped when your `[keys.main]` already binds `w` |
 | `y` | open yank menu: `y` selection, `u` ticket URL, `g` ticket GID, `t` ticket title, `c` latest comment; `Esc` cancels (requires terminal OSC 52 support) |
@@ -956,6 +956,26 @@ editor or picker closes; errors belonging to an editor stay inline. Repeated
 identical background failures do not reopen a modal until that source recovers.
 Press `y` to copy the full modal message without dismissing it; remap
 these keys with `keys.notice.copy`.
+
+Background connection failures use a separate network indicator beside the
+auto-update interval instead of modals, toasts, or Status history. A network icon
+(`⇄` in Unicode, Wi-Fi in Nerd Font, `(net)` in ASCII) precedes the status symbol:
+gray `?` means no successful refresh yet, green `●` means connected, yellow `◐`
+means reconnecting, and red `○` means unavailable for at least 30 seconds. ASCII
+uses `?`, `+`, `~`, and `x`. Colors follow the theme's muted, OK, warning, and error
+roles. The indicator reports Asana reachability, not the system's Wi-Fi state.
+
+Open **Settings & tools > Connection status** (`,`, then `c`) for the last
+successful check, current outage duration, failed attempt count, and latest
+error. **Retry now** (`r`) refreshes Asana and checks enabled agents without
+closing the menu; automatic refresh also continues there. Agent health is shown
+separately and never changes Asana's
+indicator; agent polling timeouts also stay out of ordinary notifications.
+Repeated failures share one outage entry. Outages lasting less than 30 seconds
+disappear on recovery; the latest 20 outages per source stay in memory for this
+session. Select an entry, or press `y`, to copy its details. Successful refreshes
+clear the indicator automatically. Failed writes, authentication and permission
+errors, invalid responses, and other command failures still report errors normally.
 
 Open Settings & tools (`,`), then Status history (`n`) to search the latest 100 messages
 from this session, newest first, with timestamps and severity. Consecutive

@@ -344,6 +344,8 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 		} else {
 			m.setStatus(statusInfo, status)
 		}
+	case actionFormMsg:
+		m.gotActionForm(msg)
 	case editorDoneMsg:
 		msg.apply(msg.text, msg.err)
 		return m, nil
@@ -674,11 +676,15 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.waiting != "" {
 		switch {
-		case keys.Name("main", k) == "quit":
-			return tea.Quit
-		case keys.Name("picker", k) == "cancel":
+		case keys.Name("main", k) == "quit", keys.Name("picker", k) == "cancel":
+			if m.run != nil && m.run.formCancel != nil {
+				m.run.formCancel()
+			}
 			m.waiting, m.run, m.timeEntry = "", nil, nil
 			m.stopConversations()
+			if keys.Name("main", k) == "quit" {
+				return tea.Quit
+			}
 		}
 		return nil
 	}

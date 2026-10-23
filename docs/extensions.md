@@ -185,6 +185,109 @@ mode = "foreground"
 command = '~/bin/show-ticket.sh | less'
 ```
 
+### Dynamic action forms
+
+An action's `[form] command` supplies fresh controls instead of static
+`[[form.fields]]`. The two cannot be combined. After resolving the action's
+agent, project, repo, and optional input, asanamate runs the form command with
+`/bin/sh -c`. It sends one JSON request on stdin:
+
+```json
+{"version":1,"operation":"form","ticket":{"gid":"42","name":"Fix sorting"}}
+```
+
+`ticket` is the full ticket export, including comments, events, attachments,
+and subtasks. Read it from stdin; form commands do not receive this run's
+`ASANAMATE_*` exports. Ticket text is data, never shell code.
+
+Return one JSON object on stdout using the same fields, types, defaults,
+and remembered choices as a static action form. The response has no version
+wrapper:
+
+```json
+{
+  "fields": [
+    {
+      "id": "conversation",
+      "label": "Conversation",
+      "type": "select",
+      "options": [
+        {"id": "claude:one", "name": "Claude: Fix sorting"},
+        {"id": "codex:two", "name": "Codex: Sorting follow-up"}
+      ]
+    }
+  ]
+}
+```
+
+Field IDs must be unique snake_case names matching `[a-z][a-z0-9_]*`, with
+nonempty labels. Each select option needs a nonempty ID and name; option IDs
+must be unique within that select. The field's `label` names the control, and
+each option's `name` is its visible choice. Submitting the example exports the
+selected option's `id` as `ASANAMATE_PARAM_CONVERSATION` to the action command.
+
+Option IDs are opaque strings: core does not interpret providers, session IDs,
+URLs, or other identity data inside them. Your action command defines how to
+decode them. For example, a helper can use a JSON-encoded string such as
+`{"provider":"claude","sessionId":"one"}` as an option ID when it needs both
+values. JSON-encode that string when placing it inside the response object.
+
+Controls must pass the shared form validation, including at least one field
+and at least one option per select. A command failure, invalid JSON, or invalid
+controls cancels the action and shows an error. Use a nonzero exit with an
+explanation on stderr when no usable choices exist; do not return an empty
+form. Successful commands must include only the form on stdout.
+
+The lookup has a 10-second timeout, a 1 MiB stdout limit, and a 64 KiB stderr
+limit. Esc cancels it and stops its child processes. Late replies cannot attach
+to a cancelled or different action. No action starts until the user submits
+the form; answers reach the action as `ASANAMATE_PARAM_<ID>` as usual. Select
+IDs identify a choice, not permission to act on it: commands must revalidate
+current identity, links, activity, and other preconditions before resuming a
+conversation or performing another operation.
+
+#### Minimal working example
+
+Save this helper as `~/bin/subtask-form.py`. It builds choices from the selected
+ticket's subtasks, using only Python's standard library:
+
+```python
+import json
+import sys
+
+request = json.load(sys.stdin)
+if request.get("version") != 1 or request.get("operation") != "form":
+    sys.exit("Unsupported action form request")
+
+subtasks = request["ticket"].get("subtasks") or []
+if not subtasks:
+    sys.exit("This ticket has no subtasks")
+
+print(json.dumps({"fields": [{
+    "id": "subtask",
+    "label": "Subtask",
+    "type": "select",
+    "options": [{"id": task["gid"], "name": task["name"]} for task in subtasks],
+}]}))
+```
+
+Create `actions/read-subtask.toml` next to `config.toml`:
+
+```toml
+name = "Read a subtask"
+key = "s"
+mode = "foreground"
+command = 'asanamate read "$ASANAMATE_PARAM_SUBTASK"'
+
+[form]
+command = 'python3 ~/bin/subtask-form.py'
+```
+
+Use an unused action key if `s` is already assigned. Run the action, edit the
+Subtask select, choose a subtask, then submit with `ctrl+s`. The normal action
+command opens the chosen subtask. Each run gets fresh choices from the ticket
+snapshot; the helper does not start another TUI or read terminal input.
+
 ## Conversation history
 
 This is the generic core contract, version **1**. When both commands are set,

@@ -492,6 +492,8 @@ var actionFiles = []struct{ name, body string }{
 # Optional [form] fields provide select, bool, number, string, hours, or date
 # controls, each with an optional default. Values reach the
 # command as $ASANAMATE_PARAM_<ID>. See README for an example.
+# For dynamic controls, set [form] command = "your-form-command" instead of
+# form.fields. It reads a JSON ticket request and returns {"fields":[...]}.
 # mode: "foreground" (suspend the TUI), "background" (detached, logged), or
 # "exit" (quit asanamate, then run). repo = true resolves the ticket's repo first.
 # context = "comment" shows the action only on a highlighted comment, first in

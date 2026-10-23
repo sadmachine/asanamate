@@ -342,6 +342,15 @@ type RepoSource struct {
 	Command string `toml:"command"`
 }
 
+// ActionForm configures either static controls or a command that returns them.
+// The zero value skips the form, as in Default.
+type ActionForm struct {
+	form.Spec
+	// Command reads a ticket request as JSON and returns a fresh form.Spec.
+	// Empty uses Fields; setting both command and fields is invalid.
+	Command string `toml:"command,omitempty"`
+}
+
 // Action is a user-defined command run against the selected ticket. Each
 // action is its own file in ActionsDir, with these keys at the top level.
 type Action struct {
@@ -354,8 +363,8 @@ type Action struct {
 	// where it is listed first; "" shows it everywhere.
 	Context string `toml:"context"`
 	Command string `toml:"command"`
-	// Form optionally asks for parameter values before running the command.
-	Form form.Spec `toml:"form"`
+	// Form optionally loads controls and asks for values before running.
+	Form ActionForm `toml:"form"`
 	// Input, when set, is the title of a text box shown before the action
 	// runs; the typed text reaches the command as $ASANAMATE_INPUT_FILE.
 	Input         string `toml:"input"`
@@ -491,7 +500,14 @@ func (a Action) validate() error {
 	if len([]rune(a.Key)) != 1 {
 		return errors.New("key must be a single character")
 	}
-	if len(a.Form.Fields) > 0 {
+	if a.Form.Command != "" {
+		if strings.TrimSpace(a.Form.Command) == "" {
+			return errors.New("form.command must not be blank")
+		}
+		if len(a.Form.Fields) > 0 {
+			return errors.New("form.command and form.fields cannot both be set")
+		}
+	} else if len(a.Form.Fields) > 0 {
 		if err := a.Form.Validate(); err != nil {
 			return fmt.Errorf("action %q form: %w", a.Name, err)
 		}

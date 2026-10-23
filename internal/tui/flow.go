@@ -2,6 +2,7 @@ package tui
 
 import (
 	"cmp"
+	"context"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -15,6 +16,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/form"
 	"github.com/sadmachine/asanamate/internal/kitty"
 	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -31,8 +33,16 @@ type pendingRun struct {
 	comment        *asana.Story // highlighted comment, set when the menu opened
 	input          string       // text typed for an input action
 	formValues     map[string]string
-	awaitingFields bool   // the project's fields are loading
-	branch         string // branch the action runs on
+	form           form.Spec          // controls frozen for this run, including dynamic choices
+	formCancel     context.CancelFunc // cancels a dynamic form lookup
+	awaitingFields bool               // the project's fields are loading
+	branch         string             // branch the action runs on
+}
+
+type actionFormMsg struct {
+	run  *pendingRun
+	spec form.Spec
+	err  error
 }
 
 // advanceRun runs the run's steps in order from the current one, then
@@ -412,12 +422,42 @@ func (m *Model) runInput(r *pendingRun) (tea.Cmd, bool) {
 // runForm opens the action's form, starting each remembered field on its
 // most recent valid choice for the project.
 func (m *Model) runForm(r *pendingRun) (tea.Cmd, bool) {
-	if len(r.action.Form.Fields) == 0 {
+	if r.action.Form.Command != "" {
+		ctx, cancel := context.WithCancel(context.Background())
+		r.formCancel = cancel
+		return m.wait("Loading action form…", func() tea.Msg {
+			defer cancel()
+			spec, err := action.LoadForm(ctx, r.action.Form, r.ticket)
+			return actionFormMsg{run: r, spec: spec, err: err}
+		}), true
+	}
+	r.form = r.action.Form.Spec
+	if len(r.form.Fields) == 0 {
 		return nil, false
 	}
+	m.showActionForm(r)
+	return nil, true
+}
+
+func (m *Model) gotActionForm(msg actionFormMsg) {
+	if m.run != msg.run {
+		return
+	}
+	m.waiting = ""
+	m.run.formCancel = nil
+	if msg.err != nil {
+		m.run = nil
+		m.setStatus(statusError, "loading action form: "+msg.err.Error())
+		return
+	}
+	m.run.form = msg.spec
+	m.showActionForm(m.run)
+}
+
+func (m *Model) showActionForm(r *pendingRun) {
 	defaults := map[string]string{}
 	if r.project != nil {
-		for _, field := range r.action.Form.Fields {
+		for _, field := range r.form.Fields {
 			for _, id := range m.deps.State.RecentFormChoices("action:"+r.action.Key, r.project.GID, field.ID) {
 				if field.HasOption(id) {
 					defaults[field.ID] = id
@@ -426,8 +466,7 @@ func (m *Model) runForm(r *pendingRun) (tea.Cmd, bool) {
 			}
 		}
 	}
-	m.form = newFormModal(r.action.Name, r.action.Form, defaults, m.typedActionForm)
-	return nil, true
+	m.form = newFormModal(r.action.Name, r.form, defaults, m.typedActionForm)
 }
 
 func (m *Model) typedActionForm(values map[string]string) tea.Cmd {
@@ -436,7 +475,7 @@ func (m *Model) typedActionForm(values map[string]string) tea.Cmd {
 	r.formValues = values
 	if r.project != nil {
 		remembered := false
-		for _, field := range r.action.Form.Fields {
+		for _, field := range r.form.Fields {
 			if field.Remember {
 				m.deps.State.TouchFormChoice("action:"+r.action.Key, r.project.GID, field.ID, values[field.ID])
 				remembered = true

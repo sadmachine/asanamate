@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,7 +24,7 @@ import (
 
 func TestActionUsesSharedFormAndPassesParameter(t *testing.T) {
 	spec := form.Spec{Fields: []form.Field{{ID: "target", Label: "Target", Type: form.Select, Remember: true, Options: []form.Option{{ID: "prod", Name: "Production"}, {ID: "stage", Name: "Staging"}}}}}
-	m, st := testModel(t, config.Config{Actions: []config.Action{{Name: "Deploy", Key: "d", Mode: config.ModeExit, Command: "true", Form: spec}}})
+	m, st := testModel(t, config.Config{Actions: []config.Action{{Name: "Deploy", Key: "d", Mode: config.ModeExit, Command: "true", Form: config.ActionForm{Spec: spec}}}})
 	tk := ticket.Ticket{Task: asana.Task{GID: "42", Name: "Fix", Memberships: []asana.Membership{{Project: asana.Ref{GID: "7", Name: "Web"}}}}}
 	m.tasks, m.visible = []asana.Task{tk.Task}, []asana.Task{tk.Task}
 	m.details["42"] = tk
@@ -50,6 +51,82 @@ func TestActionUsesSharedFormAndPassesParameter(t *testing.T) {
 	m.pickedAction(0)
 	if m.form == nil || m.form.values["target"] != "prod" {
 		t.Fatal("action form did not restore choice")
+	}
+}
+
+func TestActionDynamicFormSelectsThenSubmits(t *testing.T) {
+	const response = `{"fields":[{"id":"conversation","label":"Conversation","type":"select","remember":true,"options":[{"id":"claude:123","name":"Claude history"},{"id":"codex:456","name":"Codex history"}]}]}`
+	a := config.Action{Name: "Resume", Key: "r", Mode: config.ModeExit, Command: "true", Form: config.ActionForm{Command: replyCommand(response)}}
+	m, st := testModel(t, config.Config{Actions: []config.Action{a}})
+	tk := ticket.Ticket{Task: asana.Task{GID: "42", Name: "Fix", Memberships: []asana.Membership{{Project: asana.Ref{GID: "7"}}}}}
+	m.tasks, m.visible, m.loading = []asana.Task{tk.Task}, []asana.Task{tk.Task}, false
+	m.details["42"] = tk
+	m.openActionMenu()
+	cmd := m.pickedAction(0)
+	if cmd == nil || m.waiting == "" || m.form != nil || m.ExitCommand() != nil {
+		t.Fatal("dynamic form did not wait for choices")
+	}
+	drain(m, cmd)
+	if m.waiting != "" || m.form == nil || m.ExitCommand() != nil {
+		t.Fatalf("form did not load before action: %+v, %s", m.form, m.status)
+	}
+	press(m, "enter", "down", "enter")
+	if m.form == nil || m.form.values["conversation"] != "codex:456" || m.ExitCommand() != nil {
+		t.Fatal("select launched action before form submission")
+	}
+	m.Update(tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl})
+	if m.form != nil || m.ExitCommand() == nil || !slices.Contains(m.ExitCommand().Env, "ASANAMATE_PARAM_CONVERSATION=codex:456") {
+		t.Fatal("submitted conversation did not reach action")
+	}
+	if got := st.RecentFormChoices("action:r", "7", "conversation"); len(got) != 1 || got[0] != "codex:456" {
+		t.Fatalf("dynamic choices not remembered: %v", got)
+	}
+	if len(m.deps.Config.Actions[0].Form.Fields) != 0 {
+		t.Fatal("runtime choices mutated action config")
+	}
+}
+
+func TestActionDynamicFormCancellationDropsLateReplies(t *testing.T) {
+	for _, cancelKey := range []string{"esc", "q"} {
+		t.Run(cancelKey, func(t *testing.T) {
+			m, _ := testModel(t, config.Default())
+			m.loading = false
+			r := &pendingRun{action: config.Action{Form: config.ActionForm{Command: "cat"}}}
+			m.run = r
+			m.runForm(r)
+			cancelled := false
+			cancel := r.formCancel
+			r.formCancel = func() { cancel(); cancelled = true }
+			m.Update(key(cancelKey))
+			if !cancelled || m.run != nil || m.waiting != "" {
+				t.Fatal("cancel did not stop form lookup")
+			}
+			other := &pendingRun{}
+			m.run, m.waiting = other, "another request"
+			m.Update(actionFormMsg{run: r, err: errors.New("late failure")})
+			if m.run != other || m.waiting != "another request" || m.form != nil {
+				t.Fatal("late form response replaced newer run")
+			}
+		})
+	}
+}
+
+func TestActionDynamicFormFailureAndFormCancelDoNotLaunch(t *testing.T) {
+	for _, response := range []string{`{"fields":[]}`, `{"fields":[{"id":"conversation","label":"Conversation","type":"string"}]}`} {
+		m, _ := testModel(t, config.Default())
+		m.loading = false
+		r := &pendingRun{action: config.Action{Name: "Resume", Form: config.ActionForm{Command: replyCommand(response)}}}
+		m.run = r
+		cmd, _ := m.runForm(r)
+		drain(m, cmd)
+		if m.form != nil {
+			m.Update(key("esc"))
+		} else if !strings.Contains(m.status, "form has no fields") {
+			t.Fatalf("missing form error: %s", m.status)
+		}
+		if m.run != nil || m.form != nil || m.ExitCommand() != nil {
+			t.Fatal("failed or cancelled form launched action")
+		}
 	}
 }
 
@@ -198,10 +275,10 @@ func TestActionBuilderCreatesEditsAndReloads(t *testing.T) {
 	m.Update(key("esc"))
 	no := false
 	want := config.Action{Name: "Deploy", Key: "D", Mode: config.ModeBackground, Repo: true, Agent: true, Context: config.ContextComment, Command: command, Input: "Notes", ConfirmWrites: &no,
-		Form: form.Spec{Fields: []form.Field{
+		Form: config.ActionForm{Spec: form.Spec{Fields: []form.Field{
 			{ID: "target", Label: "Target", Type: form.Select, Remember: true, Options: []form.Option{{ID: "prod", Name: "Production"}}},
 			{ID: "hours", Label: "Hours", Type: form.Hours},
-		}},
+		}}},
 	}
 	m.lastAction = 0
 	m.Update(tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl})
@@ -245,7 +322,7 @@ func TestActionBuilderCancelAndDeleteStayInDraft(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
 	m.loading = false
-	original := config.ActionFile{Name: "draft.toml", Action: config.Action{Name: "Original", Key: "o", Mode: config.ModeForeground, Command: "true", Form: form.Spec{Fields: []form.Field{{ID: "target", Label: "Target", Type: form.Select, Options: []form.Option{{ID: "prod", Name: "Production"}}}}}}}
+	original := config.ActionFile{Name: "draft.toml", Action: config.Action{Name: "Original", Key: "o", Mode: config.ModeForeground, Command: "true", Form: config.ActionForm{Spec: form.Spec{Fields: []form.Field{{ID: "target", Label: "Target", Type: form.Select, Options: []form.Option{{ID: "prod", Name: "Production"}}}}}}}}
 	dir := config.ActionsDir(m.deps.ConfigPath)
 	actions, err := config.SaveActionFile(dir, original)
 	if err != nil {

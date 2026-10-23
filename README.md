@@ -342,6 +342,7 @@ key press.
 | `0` / `1` / `2` / `3` | focus the views panel (wide screens) / the list / the reader / the Feed panel (expanding it) |
 | `F` | expand or collapse the Feed panel until the view changes |
 | `/` | edit the filter (available fields appear while editing; `ctrl+/` opens the filter guide; `enter` keeps the filter, `esc` restores the previous one) |
+| `S` | search the current ticket list: type words from a title or a ticket GID, use arrows or `ctrl+n`/`ctrl+p` to move, and `enter` to open the ticket in the reader. The original filter stays unchanged; `esc` clears the search, then `esc` closes. Remap with `keys.main.search`; an existing binding for `S` takes priority over this default |
 | `p` | switch project (recent first) |
 | `I` | open Activity: your actions and changes directly related to you |
 | `H` | ticket history: the last 10 tickets focused in the reader, most recent first; picking one selects it (keeping it in the Viewing section when the view doesn't show it) and focuses the reader |
@@ -384,7 +385,7 @@ Pickers start in browse mode: `j`/`k` move, `/` searches, `enter` picks, and
 `esc` stops searching or closes. Multi-select pickers check items with `space`
 or `tab` and confirm with `enter`. In the repo picker, `ctrl+s` (or the
 `Use "<path>"` row) uses the typed path. Set `picker.type_first = true` to
-open pickers in search mode.
+open pickers in search mode. The `S` ticket search always opens in search mode.
 
 The action menu, the `e` edit menu, and both settings menus work differently:
 each item has its own key, shown in brackets, which picks it at once. They

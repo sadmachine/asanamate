@@ -157,6 +157,7 @@ func handlers() map[string]handler {
 			m.reader.SetHeight(m.paneHeight())
 			return m.filterInput.Focus()
 		}},
+		"search": {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.openTicketSearch() }},
 		"projects": {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			return m.requestProjects(func() tea.Cmd { m.openProjectPicker(); return nil })
 		}},

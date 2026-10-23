@@ -66,7 +66,7 @@ func (m *Model) mode() (name string, pill lipgloss.Style, hints [][2]string) {
 	case m.focusNav:
 		return "VIEWS", normalPill, [][2]string{{keyLabel("views", "down", "up"), "move"}, {keyLabel("views", "open"), "open"}, list, {keyLabel("main", "help"), "keys"}}
 	}
-	return "NORMAL", normalPill, m.keyHints("action", "edit", "log_time", "yank", "filter", "projects", "help")
+	return "NORMAL", normalPill, m.keyHints("action", "edit", "log_time", "yank", "filter", "search", "projects", "help")
 }
 
 // statusline is the bottom bar: a mode pill, where the list is and what it

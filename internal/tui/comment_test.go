@@ -309,8 +309,11 @@ func TestCommentCtrlCConfirmsBeforeQuitting(t *testing.T) {
 	}
 	m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	_, cmd = m.Update(key("enter"))
-	msg := cmd()
-	_, cmd = m.Update(msg)
+	for _, msg := range commandMessages(cmd) {
+		if done, ok := msg.(commentDoneMsg); ok {
+			_, cmd = m.Update(done)
+		}
+	}
 	if !slices.Contains(commandMessages(cmd), tea.Msg(tea.QuitMsg{})) || savedComment(t, m).Text != "keep" {
 		t.Fatal("save-and-quit failed")
 	}
@@ -450,7 +453,7 @@ func TestCommentKeyRemapAndOtherInputs(t *testing.T) {
 	b.area.SetValue("abc")
 	b.area.CursorStart()
 	b.update(ctrlD)
-	if b.area.Value() != "bc" || strings.Contains(b.view(80, 20, m.accentStyle), "save draft") {
+	if b.area.Value() != "bc" || strings.Contains(b.view(80, 20, m.modalLook()), "save draft") {
 		t.Fatal("draft behavior leaked into action input")
 	}
 }
@@ -465,7 +468,7 @@ func TestInterruptedCommentRestoresUncertainty(t *testing.T) {
 		t.Fatal(err)
 	}
 	press(m, "c")
-	if !strings.Contains(m.input.help, "Delivery uncertain") {
+	if !strings.Contains(m.input.notice, "Delivery uncertain") {
 		t.Fatal("interrupted write restored without warning")
 	}
 	send(m, ctrlS)
@@ -482,7 +485,7 @@ func TestCommentTimeoutRequiresReview(t *testing.T) {
 	m.Update(commentDoneMsg{composer: composer, op: commentPost, saved: true,
 		draft: drafts.Comment{Text: "may have arrived", Uncertain: commentDeliveryUncertain(context.DeadlineExceeded)},
 		err:   context.DeadlineExceeded})
-	if m.input.area.Value() != "may have arrived" || !strings.Contains(m.input.help, "Delivery uncertain") {
+	if m.input.area.Value() != "may have arrived" || !strings.Contains(m.input.notice, "Delivery uncertain") {
 		t.Fatal("timeout lost input or delivery warning")
 	}
 	send(m, ctrlS)

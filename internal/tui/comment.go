@@ -104,12 +104,12 @@ func (m *Model) openCommentInput(gid, storyGID, title, initial string) {
 }
 
 func (c *commentComposer) deliveryHint() {
-	c.box.help = ""
+	c.box.help, c.box.notice = "", ""
 	if c.storyGID != "" {
 		c.box.help = "Existing mentions and images use asana:<gid> links. Keep these links to preserve them."
 	}
 	if c.uncertain {
-		c.box.help = "Delivery uncertain. Check the ticket's comments before submitting again."
+		c.box.notice = "Delivery uncertain. Check the ticket's comments before submitting again."
 	}
 }
 
@@ -274,20 +274,20 @@ func (m *Model) runComment(op commentOperation) tea.Cmd {
 		m.renderDetail(true)
 	}
 	c.busy = true
-	c.box.err, c.box.help = "", "Saving draft…"
+	c.box.err, c.box.progress = "", "Saving draft…"
 	if op == commentDiscard {
-		c.box.help = "Discarding draft…"
+		c.box.progress = "Discarding draft…"
 	} else if op == commentPost {
-		c.box.help = "Posting comment…"
+		c.box.progress = "Posting comment…"
 		if c.task != nil && (len(c.changes) > 0 || c.review != nil) {
-			c.box.help = "Submitting changes…"
+			c.box.progress = "Submitting changes…"
 		}
 		if c.storyGID != "" {
-			c.box.help = "Updating comment…"
+			c.box.progress = "Updating comment…"
 		}
 	}
 	if c.review != nil && m.modal == c.review {
-		c.review.err = c.box.help
+		c.review.err, c.review.progress = "", c.box.progress
 	}
 	draft := drafts.Comment{Text: c.box.area.Value(), Images: maps.Clone(c.images), Uncertain: c.uncertain,
 		Changes: slices.Clone(c.changes), ChangeLabels: maps.Clone(c.labels), Branch: c.branch}
@@ -296,7 +296,7 @@ func (m *Model) runComment(op commentOperation) tea.Cmd {
 	for i := range draft.Changes {
 		logAfter[i+1] = m.draftLogTime(draft.Changes[:i+1])
 	}
-	return request(func(ctx context.Context) tea.Msg {
+	return tea.Batch(m.startSpinner(), request(func(ctx context.Context) tea.Msg {
 		msg := commentDoneMsg{composer: c, op: op}
 		if op == commentDiscard {
 			msg.err = c.store.Remove()
@@ -361,7 +361,7 @@ func (m *Model) runComment(op commentOperation) tea.Cmd {
 			msg.cleanup = c.store.Remove()
 		}
 		return msg
-	})
+	}))
 }
 
 func commentDeliveryUncertain(err error) bool {
@@ -377,7 +377,7 @@ func (m *Model) commentDone(msg commentDoneMsg) tea.Cmd {
 	if c == nil || c != msg.composer {
 		return nil
 	}
-	c.busy = false
+	c.busy, c.box.progress = false, ""
 	if msg.op == commentPost {
 		m.observeAsana("posting comment", msg.err)
 	}

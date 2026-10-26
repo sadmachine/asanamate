@@ -170,9 +170,10 @@ func (m *Model) conversationPicker(t ticket.Ticket, result conversations.Result,
 		}
 	}
 	var notes []string
+	level := statusInfo
 	switch {
 	case notice != "":
-		notes = append(notes, notice)
+		notes, level = append(notes, notice), statusWarning
 	case !conversationsOn:
 		if len(running) == 0 {
 			notes = append(notes, "No running agents.")
@@ -181,14 +182,17 @@ func (m *Model) conversationPicker(t ticket.Ticket, result conversations.Result,
 		notes = append(notes, "No linked conversations.")
 	}
 	if !result.Complete() {
-		notes = append(notes, "Incomplete lookup; some conversations may be missing.")
+		notes, level = append(notes, "Incomplete lookup; some conversations may be missing."), statusWarning
 	}
 	for _, d := range result.Diagnostics {
 		notes = append(notes, diagnosticNotice(d))
+		if d.Severity != "info" {
+			level = statusWarning
+		}
 	}
 	p := newPicker(func(res pickResult) tea.Cmd { return m.pickedConversation(t, res.item.Value) },
 		"Agents: "+ticket.Clean(t.Name), items)
-	p.helpIcon, p.notice = m.sym.info, strings.Join(notes, "\n")
+	p.notice, p.noticeLevel = strings.Join(notes, "\n"), level
 	p.cursor = cursor
 	return p
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/asana"
@@ -180,13 +179,8 @@ func (m *Model) openBatchReview() {
 	p := newPicker(pickValue(func(run func() tea.Cmd) tea.Cmd { return run() }), "Edit multiple: "+ticket.OneLine(t.Name), items)
 	p.extraHints = [][2]string{{keyLabel("input", "submit"), "submit all changes"}}
 	p.stopSearch()
-	p.err = c.box.err
-	if p.err == "" && c.uncertain {
-		p.err = c.box.help
-	}
-	if c.busy {
-		p.err = c.box.help
-	}
+	p.err, p.progress = c.box.err, c.box.progress
+	p.notice, p.noticeLevel = c.box.notice, statusWarning
 	if c.review != nil {
 		p.cursor = min(c.review.cursor, len(items)-1)
 	}
@@ -409,10 +403,11 @@ func (c *commentComposer) setError(message string) {
 	}
 }
 
-func (c *commentComposer) view(width, height int, accent lipgloss.Style) string {
+func (c *commentComposer) view(width, height int, look modalLook) string {
 	if c.task == nil {
-		return c.box.view(width, height, accent)
+		return c.box.view(width, height, look)
 	}
+	accent := look.accent
 	from, assignee := "", dimStyle.Render("unassigned")
 	if c.task.Assignee != nil {
 		from = ticket.OneLine(c.task.Assignee.Name)
@@ -453,7 +448,7 @@ func (c *commentComposer) view(width, height int, accent lipgloss.Style) string 
 	if c.footer >= 0 {
 		hints = [][2]string{{"enter", "change"}, {"tab", "next"}, {keyLabel("input", "submit"), "submit"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "cancel"), "cancel"}}
 	}
-	return c.box.layout(width, height, accent, strings.Join(lines, "\n"), hints...)
+	return c.box.layout(width, height, look, strings.Join(lines, "\n"), hints...)
 }
 
 // pendingValue shows a staged edit as "old → new ●", or "new ●" without an old value.

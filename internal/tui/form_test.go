@@ -442,12 +442,12 @@ func TestActionBuilderHelpFollowsSelectionAndStaysWhileEditing(t *testing.T) {
 	b.showAction()
 	m.builder = b
 	b.menu.cursor = 8 // Input title
-	view := ansi.Strip(b.view(80, 22, m.accentStyle))
+	view := ansi.Strip(b.view(80, 22, m.modalLook()))
 	if !strings.Contains(view, "Leave blank to skip free-text input.") {
 		t.Fatal("selected Input title has no description")
 	}
 	m.Update(key("up"))
-	view = ansi.Strip(b.view(80, 22, m.accentStyle))
+	view = ansi.Strip(b.view(80, 22, m.modalLook()))
 	if !strings.Contains(view, "Use $ASANAMATE_* variables") || strings.Contains(view, "Leave blank to skip") {
 		t.Fatal("help did not follow selection")
 	}
@@ -456,7 +456,7 @@ func TestActionBuilderHelpFollowsSelectionAndStaysWhileEditing(t *testing.T) {
 	if b.input == nil || b.input.area.Value() != "Deployment notes" {
 		t.Fatal("input editor did not open populated")
 	}
-	view = ansi.Strip(b.view(80, 12, m.accentStyle))
+	view = ansi.Strip(b.view(80, 12, m.modalLook()))
 	if !strings.Contains(view, "Leave blank to skip free-text input.") || !strings.Contains(view, "Deployment notes") {
 		t.Fatal("populated editor hid help")
 	}
@@ -467,7 +467,7 @@ func TestActionBuilderHelpFollowsSelectionAndStaysWhileEditing(t *testing.T) {
 	builderPick(t, m, "Form fields")
 	builderPick(t, m, "Add field")
 	b.menu.cursor = 4 // Remember
-	view = ansi.Strip(b.view(80, 16, m.accentStyle))
+	view = ansi.Strip(b.view(80, 16, m.modalLook()))
 	if !strings.Contains(view, "For select fields only") {
 		t.Fatal("nested field has no help")
 	}
@@ -491,7 +491,7 @@ func TestActionBuilderBrowseSearchAndInfoIcon(t *testing.T) {
 	for _, r := range "input" {
 		m.Update(key(string(r)))
 	}
-	view := ansi.Strip(b.view(90, 22, m.accentStyle))
+	view := ansi.Strip(b.view(90, 22, m.modalLook()))
 	if !strings.Contains(view, "(i) Leave blank") {
 		t.Fatal("help has no info icon")
 	}
@@ -507,7 +507,7 @@ func TestActionBuilderBrowseSearchAndInfoIcon(t *testing.T) {
 	if b.input.area.Value() != "j/k notes" {
 		t.Fatal("navigation intercepted editor text")
 	}
-	if !strings.Contains(ansi.Strip(b.view(90, 12, m.accentStyle)), "(i) Leave blank") {
+	if !strings.Contains(ansi.Strip(b.view(90, 12, m.modalLook())), "(i) Leave blank") {
 		t.Fatal("editor help has no icon")
 	}
 	m.Update(key("esc"))
@@ -531,16 +531,16 @@ func TestActionBuilderInfoIconFollowsSymbolSet(t *testing.T) {
 			m.Update(key("enter"))
 			b := m.builder
 			b.menu.cursor = 8
-			if !strings.Contains(ansi.Strip(b.view(90, 22, m.accentStyle)), tc.icon+" Leave blank") {
+			if !strings.Contains(ansi.Strip(b.view(90, 22, m.modalLook())), tc.icon+" Leave blank") {
 				t.Fatal("action help used wrong info icon")
 			}
 			m.Update(key("enter"))
-			if !strings.Contains(ansi.Strip(b.view(90, 12, m.accentStyle)), tc.icon+" Leave blank") {
+			if !strings.Contains(ansi.Strip(b.view(90, 12, m.modalLook())), tc.icon+" Leave blank") {
 				t.Fatal("text editor used wrong info icon")
 			}
 			m.Update(key("esc"))
 			builderPick(t, m, "Form fields")
-			if !strings.Contains(ansi.Strip(b.view(90, 16, m.accentStyle)), tc.icon+" Add a prompt") {
+			if !strings.Contains(ansi.Strip(b.view(90, 16, m.modalLook())), tc.icon+" Add a prompt") {
 				t.Fatal("nested help used wrong info icon")
 			}
 		})
@@ -574,7 +574,7 @@ func TestBuilderSaveFollowsItsBinding(t *testing.T) {
 	m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
 	m.openActionBuilder()
 	m.Update(key("enter"))
-	view := ansi.Strip(m.builder.view(100, 30, lipgloss.NewStyle()))
+	view := ansi.Strip(m.builder.view(100, 30, modalLook{}))
 	if !strings.Contains(view, "ctrl+w save") || strings.Contains(view, "ctrl+s") {
 		t.Fatalf("builder hints must use the bound save key:\n%s", view)
 	}

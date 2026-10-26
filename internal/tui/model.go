@@ -906,7 +906,12 @@ func (m *Model) refreshViewing(tasks ...asana.Task) bool {
 
 // animating reports whether anything shown uses the spinner.
 func (m *Model) animating() bool {
-	return m.loading || m.waiting != "" || m.anyWorking() || m.activityOpen && m.activity.loading
+	return m.loading || m.waiting != "" || m.anyWorking() || m.activityOpen && m.activity.loading ||
+		m.composer != nil && m.composer.busy
+}
+
+func (m *Model) modalLook() modalLook {
+	return modalLook{accent: m.accentStyle, sym: m.sym, frame: m.frame}
 }
 
 // wait shows text in a loading modal until the reply to cmd clears it;
@@ -1181,25 +1186,25 @@ func (m *Model) body() string {
 			"\n\n" + hintLine(m.accentStyle, [2]string{keyLabel("notice", "dismiss"), "dismiss"}, [2]string{keyLabel("notice", "copy"), "copy"})
 		style = modalStyle.BorderForeground(noticeStyle.GetForeground())
 	case m.builder != nil:
-		content = m.builder.view(w, mh, m.accentStyle)
+		content = m.builder.view(w, mh, m.modalLook())
 	case m.composer != nil && m.composer.confirm != nil:
-		content = m.composer.confirm.view(w, mh, m.accentStyle)
+		content = m.composer.confirm.view(w, mh, m.modalLook())
 	case m.input != nil:
 		if m.input.area.DynamicHeight {
 			w = max(min(m.width-4, 100), 10)
 		}
 		if m.composer != nil && m.input == m.composer.box {
-			content = m.composer.view(w, mh, m.accentStyle)
+			content = m.composer.view(w, mh, m.modalLook())
 		} else {
-			content = m.input.view(w, mh, m.accentStyle)
+			content = m.input.view(w, mh, m.modalLook())
 		}
 	case m.form != nil:
-		content = m.form.view(w, mh, m.accentStyle)
+		content = m.form.view(w, mh, m.modalLook())
 	case m.modal != nil:
 		if m.modal.preview != nil {
 			w = max(min(m.width-4, 140), 10)
 		}
-		content = m.modal.view(w, mh, m.accentStyle)
+		content = m.modal.view(w, mh, m.modalLook())
 	case m.extension != nil:
 		content = m.extension.view(w, mh)
 	case m.composer != nil:

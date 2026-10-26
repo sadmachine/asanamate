@@ -38,25 +38,26 @@ type pickResult struct {
 // selects by each item's Key instead. With allowFree, the search text can be
 // returned as is. With multi, toggle checks items and choose returns them.
 type picker struct {
-	onPick     func(pickResult) tea.Cmd // runs on the returned choice
-	onCopy     func(*pickItem) tea.Cmd  // copies the highlighted item without choosing it
-	title      string
-	items      []pickItem
-	matches    []int
-	cursor     int
-	input      textinput.Model
-	keySelect  bool
-	searching  bool
-	helpIcon   string // resolved symbol set's info icon; empty uses (i)
-	allowFree  bool
-	multi      bool
-	reorder    bool // ctrl+up/down reorders items in an unfiltered multi picker
-	allowReset bool // ctrl+r returns a reset result
-	links      bool // choose opens the item's link; copy returns a copy result
-	checked    map[int]bool
-	err        string
-	notice     string      // owner's status lines shown under the list; search keeps them
-	extraHints [][2]string // controls handled by the picker's owner
+	onPick      func(pickResult) tea.Cmd // runs on the returned choice
+	onCopy      func(*pickItem) tea.Cmd  // copies the highlighted item without choosing it
+	title       string
+	items       []pickItem
+	matches     []int
+	cursor      int
+	input       textinput.Model
+	keySelect   bool
+	searching   bool
+	allowFree   bool
+	multi       bool
+	reorder     bool // ctrl+up/down reorders items in an unfiltered multi picker
+	allowReset  bool // ctrl+r returns a reset result
+	links       bool // choose opens the item's link; copy returns a copy result
+	checked     map[int]bool
+	err         string
+	progress    string      // a running request, drawn with the spinner
+	notice      string      // owner's status lines shown under the list; search keeps them
+	noticeLevel statusLevel // notice severity; zero is info
+	extraHints  [][2]string // controls handled by the picker's owner
 	// preview draws the highlighted item, or nil for none, beside the list.
 	preview func(it *pickItem, width, height int) string
 	// listMaxWidth caps the list beside a preview; zero uses 32 columns.
@@ -289,13 +290,13 @@ func (p *picker) current() *pickItem {
 // minPreviewWidth is the narrowest modal that shows a picker's preview.
 const minPreviewWidth = 56
 
-func (p *picker) view(width, height int, accent lipgloss.Style) string {
+func (p *picker) view(width, height int, look modalLook) string {
 	if p.preview == nil || width < minPreviewWidth {
-		return p.listView(width, height, accent)
+		return p.listView(width, height, look)
 	}
 	listW := max(min(width*2/5, cmp.Or(p.listMaxWidth, 32)), 24)
 	paneW := width - listW - 3 // divider with one space on either side
-	list := p.listView(listW, height, accent)
+	list := p.listView(listW, height, look)
 	preview := p.preview(p.current(), paneW, height)
 	rows := max(lipgloss.Height(list), lipgloss.Height(preview))
 	divider := lipgloss.NewStyle().Foreground(borderColor).Padding(0, 1).
@@ -304,7 +305,8 @@ func (p *picker) view(width, height int, accent lipgloss.Style) string {
 }
 
 // listView draws the title, search, list, and key hints.
-func (p *picker) listView(width, height int, accent lipgloss.Style) string {
+func (p *picker) listView(width, height int, look modalLook) string {
+	accent := look.accent
 	var b strings.Builder
 	b.WriteString(accent.Render(ansi.Truncate(p.title, width, "…")) + "\n")
 	if !p.keySelect && p.searching {
@@ -322,15 +324,22 @@ func (p *picker) listView(width, height int, accent lipgloss.Style) string {
 			if p.cursor < len(p.matches) {
 				text = p.items[p.matches[p.cursor]].Help
 			}
-			help = modalHelp(text, p.helpIcon, width, min(2, max(height-6, 1)))
+			help = look.message(statusInfo, text, width, min(2, max(height-6, 1)))
 			break
 		}
 	}
 	hint := ansi.Wrap(p.controls(accent), width, "")
-	notice := ""
-	if p.notice != "" {
-		notice = warnStyle.Render(ansi.Wrap(p.notice, max(width-2, 1), ""))
+	// Status lines, most urgent last so they sit next to the key hints.
+	var status []string
+	for _, msg := range []struct {
+		level statusLevel
+		text  string
+	}{{p.noticeLevel, p.notice}, {statusBusy, p.progress}, {statusError, p.err}} {
+		if msg.text != "" {
+			status = append(status, look.message(msg.level, msg.text, width, 0))
+		}
 	}
+	notice := strings.Join(status, "\n")
 	rows := max(height-3-lipgloss.Height(help)-lipgloss.Height(hint)-lipgloss.Height(notice), 1)
 	start := max(p.cursor-rows+1, 0)
 	if p.rowCount() == 0 {
@@ -371,9 +380,6 @@ func (p *picker) listView(width, height int, accent lipgloss.Style) string {
 	}
 	if notice != "" {
 		b.WriteString(notice + "\n")
-	}
-	if p.err != "" {
-		b.WriteString(errorStyle.Render(p.err) + "\n")
 	}
 	if help != "" {
 		b.WriteString(help + "\n")
@@ -429,20 +435,40 @@ func (p *picker) controls(accent lipgloss.Style) string {
 	return hintLine(accent, append(hints, [2]string{keyLabel("picker", "cancel"), cancel})...)
 }
 
-// modalHelp reserves a stable footer height while wrapping the selected
-// description. Long descriptions are clipped to keep controls visible.
-func modalHelp(text, icon string, width, rows int) string {
+// modalLook is what modals draw with: the accent, the resolved symbols, and
+// the spinner frame for progress.
+type modalLook struct {
+	accent lipgloss.Style
+	sym    symbolSet
+	frame  int
+}
+
+// message draws text led by its level's symbol, wrapped to width. A positive
+// rows clips and pads it, so a footer such as item help keeps a stable height.
+func (l modalLook) message(level statusLevel, text string, width, rows int) string {
+	style, icon := dimStyle, l.sym.info
+	switch level {
+	case statusWarning:
+		style, icon = warnStyle, l.sym.warning
+	case statusError:
+		style, icon = errorStyle, l.sym.failure
+	case statusBusy:
+		style = l.accent
+		if l.sym.spinner != nil {
+			icon = l.sym.spinner[l.frame%len(l.sym.spinner)]
+		}
+	}
 	width = max(width-2, 1)
-	if text != "" {
-		text = cmp.Or(icon, asciiSymbols.info) + " " + text
+	if text != "" && icon != "" {
+		text = icon + " " + text
 	}
 	lines := strings.Split(ansi.Wrap(text, width, ""), "\n")
-	if len(lines) > rows {
+	if rows > 0 && len(lines) > rows {
 		lines = lines[:rows]
 		lines[rows-1] = ansi.Truncate(lines[rows-1], max(width-1, 0), "") + "…"
 	}
 	for len(lines) < rows {
 		lines = append(lines, "")
 	}
-	return dimStyle.Render(strings.Join(lines, "\n"))
+	return style.Render(strings.Join(lines, "\n"))
 }

@@ -635,7 +635,7 @@ func TestStatusHistoryListUsesAvailableWidth(t *testing.T) {
 	}
 	for _, tc := range []struct{ width, preview int }{{40, 0}, {56, 29}, {80, 45}, {100, 57}, {140, 81}} {
 		previewWidth = 0
-		view := ansi.Strip(p.view(tc.width, 20, m.accentStyle))
+		view := ansi.Strip(p.view(tc.width, 20, m.modalLook()))
 		if previewWidth != tc.preview {
 			t.Fatalf("width %d: preview width = %d, want %d", tc.width, previewWidth, tc.preview)
 		}

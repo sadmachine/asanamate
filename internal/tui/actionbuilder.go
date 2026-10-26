@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/form"
@@ -15,14 +14,13 @@ import (
 
 // actionBuilder owns a draft until Save. Nested editors never write files.
 type actionBuilder struct {
-	file     config.ActionFile
-	infoIcon string
-	menu     *picker
-	input    *inputBox
-	back     []func()
-	root     bool
-	done     bool
-	save     func(config.ActionFile) error
+	file  config.ActionFile
+	menu  *picker
+	input *inputBox
+	back  []func()
+	root  bool
+	done  bool
+	save  func(config.ActionFile) error
 }
 
 func (m *Model) openActionBuilder() {
@@ -39,7 +37,7 @@ func (m *Model) openActionBuilder() {
 	}
 	open := func(file config.ActionFile) tea.Cmd {
 		m.modal = nil
-		b := &actionBuilder{file: file, infoIcon: m.sym.info}
+		b := &actionBuilder{file: file}
 		b.save = func(file config.ActionFile) error {
 			actions, err := config.SaveActionFile(dir, file)
 			if err != nil {
@@ -75,7 +73,6 @@ func (b *actionBuilder) show(title string, rows []pickItem) {
 		cursor = b.menu.matches[b.menu.cursor]
 	}
 	b.menu = newPicker(pickValue(func(edit func()) tea.Cmd { edit(); return nil }), title, rows)
-	b.menu.helpIcon = b.infoIcon
 	b.menu.cursor = min(cursor, len(rows)-1)
 	b.root = false
 }
@@ -96,7 +93,6 @@ func (b *actionBuilder) text(title string, value *string, parent func(), multili
 	}
 	b.input = newInputBox(title, "")
 	b.input.help = help
-	b.input.helpIcon = b.infoIcon
 	b.input.area.MaxContentHeight = math.MaxInt
 	b.input.area.SetValue(*value)
 	original, displayed := *value, b.input.area.Value()
@@ -312,18 +308,18 @@ func (b *actionBuilder) update(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-func (b *actionBuilder) view(width, height int, accent lipgloss.Style) string {
+func (b *actionBuilder) view(width, height int, look modalLook) string {
 	if b.input != nil {
-		return b.input.view(width, height, accent)
+		return b.input.view(width, height, look)
 	}
-	view := b.menu.view(width, height, accent)
+	view := b.menu.view(width, height, look)
 	hint := " back"
 	if b.root {
 		hint = " discard draft"
 	}
 	view = strings.Replace(view, dimStyle.Render(" cancel"), dimStyle.Render(hint), 1)
 	if save := keyLabel("builder", "save"); b.root && save != "" {
-		view += dimStyle.Render(" · ") + accent.Render(save) + dimStyle.Render(" save")
+		view += dimStyle.Render(" · ") + look.accent.Render(save) + dimStyle.Render(" save")
 	}
 	return view
 }

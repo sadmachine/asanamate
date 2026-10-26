@@ -9,7 +9,6 @@ import (
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/dateinput"
@@ -154,10 +153,11 @@ func (f *formModal) update(msg tea.KeyPressMsg) (bool, tea.Cmd) {
 	return false, nil
 }
 
-func (f *formModal) view(width, height int, accent lipgloss.Style) string {
+func (f *formModal) view(width, height int, look modalLook) string {
 	if f.picker != nil {
-		return f.picker.view(width, height, accent)
+		return f.picker.view(width, height, look)
 	}
+	accent := look.accent
 	var b strings.Builder
 	b.WriteString(accent.Render(ticket.OneLine(f.title)) + "\n")
 	for i, field := range f.spec.Fields {
@@ -186,7 +186,7 @@ func (f *formModal) view(width, height int, accent lipgloss.Style) string {
 		b.WriteString(line + "\n")
 	}
 	if f.err != "" {
-		b.WriteString(errorStyle.Render(ticket.OneLine(f.err)) + "\n")
+		b.WriteString(look.message(statusError, ticket.OneLine(f.err), width, 0) + "\n")
 	}
 	editorScope := "form"
 	if f.editing {

@@ -18,6 +18,7 @@ const (
 	statusInfo statusLevel = iota
 	statusWarning
 	statusError
+	statusBusy // a running request; only modals draw it, with the spinner
 )
 
 const (

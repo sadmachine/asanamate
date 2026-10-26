@@ -260,6 +260,21 @@ func TestCommentFooterRendersAndPreservesTextFocus(t *testing.T) {
 	}
 }
 
+func TestCommentFooterMovesWithJK(t *testing.T) {
+	m, _ := editModel(t)
+	press(m, "c", "tab")
+	want := []int{1, 2, 2, 1, 0, 0}
+	for i, k := range []string{"j", "j", "down", "k", "up", "k"} {
+		press(m, k)
+		if m.composer.footer != want[i] {
+			t.Fatalf("after %s footer = %d, want %d", k, m.composer.footer, want[i])
+		}
+	}
+	if m.input.area.Value() != "" {
+		t.Fatal("j/k typed into the comment")
+	}
+}
+
 func TestCommentFooterDoesNotCaptureConfirmationKeys(t *testing.T) {
 	m, writes := editModel(t)
 	press(m, "c")

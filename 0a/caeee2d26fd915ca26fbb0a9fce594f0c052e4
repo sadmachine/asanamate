@@ -1,0 +1,53 @@
+internal/tui/picker_test.go
+  s_6c0ee6cce3ba89::t_0e98ee77d7dd45 81,230,318,359
+  s_6c0ee6cce3ba89::t_fac793d53c3e37 178,193
+internal/tui/inputbox.go
+  s_6c0ee6cce3ba89::t_28681aa1655979 18-19,111,123,128-129,135,137,139-145,147,157
+internal/tui/batch.go
+  s_6c0ee6cce3ba89::t_28681aa1655979 182-183,406,408,410,451
+internal/tui/form.go
+  s_6c0ee6cce3ba89::t_28681aa1655979 156,158,160,189
+internal/tui/actionbuilder.go
+  s_6c0ee6cce3ba89::t_28681aa1655979 311,313,315,322
+  s_6c0ee6cce3ba89::t_4d2c650e5b646f 17-23,40
+internal/tui/batch_test.go
+  s_6c0ee6cce3ba89::t_0e98ee77d7dd45 121,244,251
+internal/tui/comment_test.go
+  s_6c0ee6cce3ba89::t_0e98ee77d7dd45 456
+  s_6c0ee6cce3ba89::t_8377734f695580 312-316,471,488
+internal/tui/inputbox_test.go
+  s_6c0ee6cce3ba89::t_0e98ee77d7dd45 113,123,133,137
+internal/tui/comment.go
+  s_6c0ee6cce3ba89::t_28681aa1655979 107,112,277,279,281,283,286,290
+  s_6c0ee6cce3ba89::t_b3bac5758e9487 299,364,380
+internal/tui/picker.go
+  s_6c0ee6cce3ba89::t_240912dbc2dbda 59,334,337-339
+  s_6c0ee6cce3ba89::t_69138abd5821e3 293,295,299,308-309,327,332-333,335-336,340,342,438-460,462-463,466,473
+  s_6c0ee6cce3ba89::t_acf514afd1f584 41-58,60
+internal/tui/statusline_test.go
+  s_6c0ee6cce3ba89::t_0e98ee77d7dd45 638
+internal/tui/notifications.go
+  s_6c0ee6cce3ba89::t_28681aa1655979 21
+internal/tui/form_test.go
+  s_6c0ee6cce3ba89::t_0e98ee77d7dd45 445,450,459,470,494,510,534,538,543,577
+internal/tui/conversations.go
+  s_6c0ee6cce3ba89::t_9ac047aae8180b 173,176,185,189-191,195
+internal/tui/model.go
+  s_6c0ee6cce3ba89::t_89bd5913bf6b27 909-914,1189,1191,1197,1199,1202,1207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0acaeee2d26fd915ca26fbb0a9fce594f0c052e4",
+  "prompts": {},
+  "sessions": {
+    "s_6c0ee6cce3ba89": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "37ea3780-dc64-4d49-a4dd-6ca02d99c1e5",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

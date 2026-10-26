@@ -110,7 +110,7 @@ func TestCommentBoxGrowsAndScrolls(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			b.area.SetValue(tc.text)
-			view := b.view(tc.width, tc.height, lipgloss.NewStyle())
+			view := b.view(tc.width, tc.height, modalLook{})
 			if got := b.area.Height(); got != tc.want {
 				t.Fatalf("height = %d, want %d", got, tc.want)
 			}
@@ -120,7 +120,7 @@ func TestCommentBoxGrowsAndScrolls(t *testing.T) {
 		})
 	}
 	b.area.SetValue(strings.Repeat("line\n", 20))
-	b.view(100, 30, lipgloss.NewStyle())
+	b.view(100, 30, modalLook{})
 	b.update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if b.area.LineCount() != 22 || b.area.Height() != 16 {
 		t.Fatal("viewport limit must scroll, not block new lines")
@@ -130,11 +130,11 @@ func TestCommentBoxGrowsAndScrolls(t *testing.T) {
 	}
 	// Resize existing content without changing it.
 	b.area.SetValue(strings.Repeat("x", 1100))
-	b.view(60, 30, lipgloss.NewStyle())
+	b.view(60, 30, modalLook{})
 	if b.area.Height() != 16 {
 		t.Fatal("narrowing editor did not grow wrapped content")
 	}
-	b.view(100, 30, lipgloss.NewStyle())
+	b.view(100, 30, modalLook{})
 	if b.area.Height() != 12 {
 		t.Fatal("widening editor did not shrink wrapped content")
 	}

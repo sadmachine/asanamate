@@ -78,7 +78,7 @@ func TestPickerFreeText(t *testing.T) {
 	p := newPicker(nil, "Repo", items("/code/web"))
 	p.allowFree = true
 	search(p, "/tmp/x")
-	if !strings.Contains(ansi.Strip(p.view(80, 12, lipgloss.NewStyle())), `Use "/tmp/x"`) {
+	if !strings.Contains(ansi.Strip(p.view(80, 12, modalLook{})), `Use "/tmp/x"`) {
 		t.Fatal("typed values must show a Use row")
 	}
 	res, _ := p.update(key("enter"))
@@ -175,7 +175,7 @@ func TestPickerHelpUsesFilteredSelectionAndFitsModal(t *testing.T) {
 		{Label: "Name", Help: "Required menu name."},
 		{Label: "Input title", Help: "Leave blank to skip free-text input. Set a title to ask for notes before running."},
 	})
-	style := lipgloss.NewStyle()
+	style := modalLook{}
 	initial := p.view(40, 10, style)
 	p.update(key("down"))
 	selected := p.view(40, 10, style)
@@ -190,7 +190,7 @@ func TestPickerHelpUsesFilteredSelectionAndFitsModal(t *testing.T) {
 	if lipgloss.Height(view) > 10 || !strings.Contains(view, "enter select") {
 		t.Fatal("help hid controls")
 	}
-	for _, line := range strings.Split(ansi.Strip(modalHelp(p.items[1].Help, "(i)", 40, 2)), "\n") {
+	for _, line := range strings.Split(ansi.Strip(modalLook{sym: asciiSymbols}.message(statusInfo, p.items[1].Help, 40, 2)), "\n") {
 		if ansi.StringWidth(line) > 40 {
 			t.Fatalf("line wider than modal: %q", line)
 		}
@@ -227,7 +227,7 @@ func TestBrowsePickerRequiresSlashBeforeFiltering(t *testing.T) {
 	if p.input.Value() != "k" || len(p.matches) != 1 || p.items[p.matches[0]].Label != "Key" {
 		t.Fatal("k navigated while searching")
 	}
-	view := ansi.Strip(p.view(80, 12, lipgloss.NewStyle()))
+	view := ansi.Strip(p.view(80, 12, modalLook{}))
 	if !strings.Contains(view, "/ k") || !strings.Contains(view, "clear search") {
 		t.Fatal("search mode not visible")
 	}
@@ -315,7 +315,7 @@ func TestColumnPickerControlsFitNarrowModal(t *testing.T) {
 	p.reorder, p.allowReset = true, true
 	p.searching = true
 	p.input.Focus()
-	view := ansi.Strip(p.view(40, 12, lipgloss.NewStyle()))
+	view := ansi.Strip(p.view(40, 12, modalLook{}))
 	if lipgloss.Height(view) > 12 || !strings.Contains(view, "enter") || !strings.Contains(view, "ctrl+r") || !strings.Contains(view, "ctrl+up/down") {
 		t.Fatalf("column controls do not fit: %q", view)
 	}
@@ -356,7 +356,7 @@ func TestPickerPreviewHasFullHeightDivider(t *testing.T) {
 			return strings.Repeat("Detail\n", rows-1) + "Detail"
 		}
 		for _, width := range []int{40, 56, 100, 140} {
-			view := ansi.Strip(p.view(width, 12, lipgloss.NewStyle()))
+			view := ansi.Strip(p.view(width, 12, modalLook{}))
 			column := -1
 			for _, line := range strings.Split(view, "\n") {
 				if ansi.StringWidth(line) > width {

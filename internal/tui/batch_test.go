@@ -118,7 +118,7 @@ func TestBatchSubmitHotkeyAppearsInFooterWithoutSubmitRow(t *testing.T) {
 					t.Fatal("submit still appears as an editable row")
 				}
 			}
-			view := ansi.Strip(m.modal.view(160, 20, m.accentStyle))
+			view := ansi.Strip(m.modal.view(160, 20, m.modalLook()))
 			footer := view[strings.LastIndex(view, "\n")+1:]
 			if !strings.Contains(footer, submit+" submit all changes") {
 				t.Fatalf("footer lacks submit hotkey: %q", footer)
@@ -241,14 +241,14 @@ func TestBatchValidationFailureLeavesAllEditsUnsent(t *testing.T) {
 func TestCommentFooterRendersAndPreservesTextFocus(t *testing.T) {
 	m, _ := editModel(t)
 	press(m, "c")
-	view := ansi.Strip(m.composer.view(75, 30, m.accentStyle))
+	view := ansi.Strip(m.composer.view(75, 30, m.modalLook()))
 	for _, label := range []string{"Task updates", "Assignee", "Amy", "Section", "More", "tab fields"} {
 		if !strings.Contains(view, label) {
 			t.Errorf("missing %q in %q", label, view)
 		}
 	}
 	press(m, "tab")
-	if view := ansi.Strip(m.composer.view(75, 30, m.accentStyle)); !strings.Contains(view, keyLabel("input", "save_draft")+" draft") {
+	if view := ansi.Strip(m.composer.view(75, 30, m.modalLook())); !strings.Contains(view, keyLabel("input", "save_draft")+" draft") {
 		t.Errorf("field hints missing draft key in %q", view)
 	}
 	press(m, "shift+tab")

@@ -256,7 +256,7 @@ type Selection struct {
 // Reader configures the reading pane. View is its starting view: cards
 // (sections and boxed comments) or markdown (the rendered ticket Markdown).
 // MaxTextWidth caps the wrap width of the cards view's description and
-// comment text; 0 wraps at the pane width. Comments shapes its comments.
+// comment text, and of the comment editor; 0 wraps at the pane width. Comments shapes its comments.
 type Reader struct {
 	View         string   `toml:"view"`
 	MaxTextWidth int      `toml:"max_text_width"`

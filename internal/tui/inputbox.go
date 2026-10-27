@@ -24,6 +24,7 @@ type inputBox struct {
 	sanitizedPaste bool                 // tracks content changed by the textarea during paste
 	images         bool                 // paste_image inserts clipboard images as Markdown
 	oneLine        bool                 // enter adds no newline, as for a title
+	maxTextWidth   int                  // caps the text's wrap width, as reader.max_text_width; 0 for none
 }
 
 // imagePasteMsg is a clipboard image saved to path for an input box, or why not.
@@ -160,7 +161,11 @@ func (b *inputBox) body(width, height int, look modalLook, footer string, keyHin
 		b.area.MaxHeight = min(available, 16)
 	}
 	// SetWidth also recalculates dynamic height, including soft-wrapped lines.
-	b.area.SetWidth(max(width-2, 1))
+	textWidth := max(width-2, 1)
+	if b.maxTextWidth > 0 {
+		textWidth = min(textWidth, b.maxTextWidth)
+	}
+	b.area.SetWidth(textWidth)
 	if !b.area.DynamicHeight {
 		b.area.SetHeight(min(available, 8))
 	}

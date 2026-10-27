@@ -21,6 +21,12 @@ func (c *commentComposer) hasChanges() bool {
 	return strings.TrimSpace(c.box.area.Value()) != "" || len(c.changes) > 0 || c.branch != nil
 }
 
+// unsaved reports whether closing would lose work: changes, other than an
+// edited comment returned to its original text.
+func (c *commentComposer) unsaved() bool {
+	return c.hasChanges() && (c.storyGID == "" || c.box.area.Value() != c.original)
+}
+
 func changeKey(c writeback.Change) string {
 	if c.Kind == "project_add" || c.Kind == "project_remove" {
 		return "project:" + c.Target
@@ -86,6 +92,9 @@ func (m *Model) beginDraftEdit(op editOp) tea.Cmd {
 
 func (m *Model) returnToDraft() {
 	m.input, m.modal, m.edit = nil, nil, nil
+	if m.composer.reading {
+		return
+	}
 	if m.composer.review != nil {
 		m.openBatchReview()
 	} else {
@@ -403,9 +412,23 @@ func (c *commentComposer) setError(message string) {
 	}
 }
 
+// view draws the composer as a modal.
 func (c *commentComposer) view(width, height int, look modalLook) string {
+	c.box.area.MinHeight = 10
+	return look.accent.Render(c.box.title) + "\n" + c.body(width, height-1, look, "cancel")
+}
+
+// paneView draws the composer as the reader's bottom pane, whose edge shows
+// the title. It starts short and grows with its text.
+func (c *commentComposer) paneView(width, height int, look modalLook) string {
+	c.box.area.MinHeight = 3
+	return c.body(width, height, look, "ticket")
+}
+
+// body is the composer below its title, with cancel labelling the cancel key.
+func (c *commentComposer) body(width, height int, look modalLook, cancel string) string {
 	if c.task == nil {
-		return c.box.view(width, height, look)
+		return c.box.body(width, height, look, "", c.box.hints(cancel)...)
 	}
 	accent := look.accent
 	from, assignee := "", dimStyle.Render("unassigned")
@@ -444,11 +467,11 @@ func (c *commentComposer) view(width, height int, look modalLook) string {
 		}
 		lines = append(lines, ansi.Truncate(marker+label+field[1], w, "…"))
 	}
-	hints := [][2]string{{keyLabel("input", "submit"), "submit"}, {keyLabel("input", "paste_image"), "image"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "external_editor"), "editor"}, {"tab", "fields"}, {keyLabel("input", "cancel"), "cancel"}}
+	hints := [][2]string{{keyLabel("input", "submit"), "submit"}, {keyLabel("input", "paste_image"), "image"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "external_editor"), "editor"}, {"tab", "fields"}, {keyLabel("input", "cancel"), cancel}}
 	if c.footer >= 0 {
-		hints = [][2]string{{"enter", "change"}, {"tab", "next"}, {keyLabel("input", "submit"), "submit"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "cancel"), "cancel"}}
+		hints = [][2]string{{"enter", "change"}, {"tab", "next"}, {keyLabel("input", "submit"), "submit"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "cancel"), cancel}}
 	}
-	return c.box.layout(width, height, look, strings.Join(lines, "\n"), hints...)
+	return c.box.body(width, height, look, strings.Join(lines, "\n"), hints...)
 }
 
 // pendingValue shows a staged edit as "old → new ●", or "new ●" without an old value.

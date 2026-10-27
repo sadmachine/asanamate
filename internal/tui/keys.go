@@ -154,7 +154,7 @@ func handlers() map[string]handler {
 		"jump":           {splitOnly: true, run: menu(func(m *Model) func() { return m.openJumpMenu })},
 		"filter": {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			m.filtering, m.filterBefore = true, m.filterInput.Value()
-			m.reader.SetHeight(m.paneHeight())
+			m.reader.SetHeight(m.readerHeight())
 			return m.filterInput.Focus()
 		}},
 		"search": {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.openTicketSearch() }},
@@ -273,6 +273,16 @@ func (m *Model) open(tea.KeyPressMsg) tea.Cmd {
 		return m.openField(m.fieldKey)
 	}
 	return nil
+}
+
+// readsInPlace reports whether open, in the reader, only shows more of the
+// ticket, such as a whole comment or another tab, rather than acting on it.
+func (m *Model) readsInPlace() bool {
+	switch m.fieldKey {
+	case tabsKey, allCommentsKey, emptyFieldsKey, otherAgentsKey:
+		return true
+	}
+	return m.readerView != config.ViewMarkdown && m.clipped[m.fieldKey]
 }
 
 // available reports whether b runs in the current layout.

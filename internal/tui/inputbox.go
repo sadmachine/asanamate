@@ -109,6 +109,11 @@ func (b *inputBox) update(msg tea.Msg) (res pickResult, cmd tea.Cmd) {
 }
 
 func (b *inputBox) view(width, height int, look modalLook) string {
+	return b.layout(width, height, look, "", b.hints("cancel")...)
+}
+
+// hints are the box's keyboard hints, with cancel labelling the cancel key.
+func (b *inputBox) hints(cancel string) [][2]string {
 	newlineHint, pasteHint := [2]string{"enter", "newline"}, [2]string{}
 	if b.oneLine {
 		newlineHint = [2]string{}
@@ -120,21 +125,26 @@ func (b *inputBox) view(width, height int, look modalLook) string {
 	if b.onSaveDraft != nil {
 		draftHint = [2]string{keyLabel("input", "save_draft"), "save draft"}
 	}
-	return b.layout(width, height, look, "", newlineHint, pasteHint, [2]string{keyLabel("input", "submit"), "submit"}, draftHint, [2]string{keyLabel("input", "external_editor"), "editor"}, [2]string{keyLabel("input", "cancel"), "cancel"})
+	return [][2]string{newlineHint, pasteHint, {keyLabel("input", "submit"), "submit"}, draftHint, {keyLabel("input", "external_editor"), "editor"}, {keyLabel("input", "cancel"), cancel}}
 }
 
 // layout renders the box with footer, such as a composer's task controls,
 // between the text and the keyboard hints.
 func (b *inputBox) layout(width, height int, look modalLook, footer string, keyHints ...[2]string) string {
+	return look.accent.Render(b.title) + "\n" + b.body(width, height-1, look, footer, keyHints...)
+}
+
+// body is layout without the title, for a pane whose edge shows it.
+func (b *inputBox) body(width, height int, look modalLook, footer string, keyHints ...[2]string) string {
 	hints := wrapHints(look.accent, max(width-2, 1), keyHints...)
-	available := height - 1 - lipgloss.Height(hints) // title and keyboard hints
+	available := height - lipgloss.Height(hints)
 	if footer != "" {
 		available -= lipgloss.Height(footer)
 		footer += "\n"
 	}
 	status := ""
 	if b.help != "" {
-		status += look.message(statusInfo, b.help, width, min(2, max(height-4, 1))) + "\n"
+		status += look.message(statusInfo, b.help, width, min(2, max(height-3, 1))) + "\n"
 	}
 	for _, msg := range []struct {
 		level statusLevel
@@ -154,6 +164,5 @@ func (b *inputBox) layout(width, height int, look modalLook, footer string, keyH
 	if !b.area.DynamicHeight {
 		b.area.SetHeight(min(available, 8))
 	}
-	return look.accent.Render(b.title) + "\n" + b.area.View() + "\n" + status +
-		footer + hints
+	return b.area.View() + "\n" + status + footer + hints
 }

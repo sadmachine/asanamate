@@ -48,8 +48,7 @@ func OpenComment(stateDir, workspace, task string) (*CommentStore, Comment, erro
 	if stateDir == "" {
 		return nil, Comment{}, errors.New("draft state directory is not set")
 	}
-	identity := sha256.Sum256([]byte(workspace + "\x00" + task))
-	s := &CommentStore{path: filepath.Join(stateDir, "drafts", "comments", fmt.Sprintf("%x.json", identity))}
+	s := &CommentStore{path: commentPath(stateDir, workspace, task)}
 	data, err := read(s.path)
 	if err != nil {
 		return nil, Comment{}, err
@@ -62,6 +61,21 @@ func OpenComment(stateDir, workspace, task string) (*CommentStore, Comment, erro
 	}
 	s.snapshot = data
 	return s, draft, nil
+}
+
+// HasComment reports whether a draft is saved for the workspace and identity
+// OpenComment takes, without reading or locking it.
+func HasComment(stateDir, workspace, task string) bool {
+	if stateDir == "" {
+		return false
+	}
+	_, err := os.Stat(commentPath(stateDir, workspace, task))
+	return err == nil
+}
+
+func commentPath(stateDir, workspace, task string) string {
+	identity := sha256.Sum256([]byte(workspace + "\x00" + task))
+	return filepath.Join(stateDir, "drafts", "comments", fmt.Sprintf("%x.json", identity))
 }
 
 // Save atomically replaces the draft, including its images, with private permissions.

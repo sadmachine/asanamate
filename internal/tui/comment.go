@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/drafts"
@@ -39,6 +40,8 @@ type commentComposer struct {
 	review    *picker
 	footer    int // -1 focuses the comment; otherwise an optional task control
 	logTime   bool
+	reading   bool             // the reader has focus beside the composer pane
+	resume    *tea.KeyPressMsg // the key that left the ticket, run once the composer closes
 }
 
 type commentOperation int
@@ -101,6 +104,146 @@ func (m *Model) openCommentInput(gid, storyGID, title, initial string) {
 		return m.runComment(commentSave)
 	}
 	m.composer, m.input, m.edit = c, b, nil
+	if m.composerFits() {
+		m.focusReaderPane()
+	}
+}
+
+// composerPaneMinH is the least pane height that fits the composer pane, at
+// most half of it, with the reader still readable above it.
+const composerPaneMinH = 24
+
+// composerFits reports whether the reader can hold the composer as its bottom
+// pane: the reader is on, tall enough, and shows the composer's ticket.
+func (m *Model) composerFits() bool {
+	c := m.composer
+	if c == nil || m.activityOpen || !m.readerOn() || m.paneHeight() < composerPaneMinH {
+		return false
+	}
+	t, ok := m.selected()
+	return ok && t.GID == c.gid
+}
+
+// composerPane reports whether the composer shows as the reader's bottom
+// pane rather than a modal: it fits, and the reader is on screen, beside the
+// list or focused full screen.
+func (m *Model) composerPane() bool {
+	return m.composerFits() && (m.readerShown() || m.focusReader)
+}
+
+// composerFocused reports whether the composer pane has focus.
+func (m *Model) composerFocused() bool {
+	return m.composerPane() && !m.composer.reading
+}
+
+// focusComposer returns focus from the reader to the composer.
+func (m *Model) focusComposer() {
+	c := m.composer
+	c.reading, m.input = false, c.box
+	if c.footer < 0 {
+		c.box.area.Focus()
+	}
+}
+
+// cancelComment handles the cancel key. A pane with unsaved work hands focus
+// to the reader and stays open; otherwise the composer closes, asking first
+// when it has work to keep.
+func (m *Model) cancelComment() tea.Cmd {
+	c := m.composer
+	if !m.composerPane() || !c.unsaved() {
+		return m.leaveComment(false)
+	}
+	c.reading, m.input = true, nil
+	c.box.area.Blur()
+	return nil
+}
+
+// readingKeys are the [keys.main] bindings that work in the reader beside
+// the composer pane. They only show the ticket, so the draft stays open.
+var readingKeys = map[string]bool{
+	"down": true, "up": true, "scroll_down": true, "scroll_up": true, "top": true, "bottom": true,
+	"half_page_down": true, "half_page_up": true, "page_down": true, "page_up": true,
+	"focus_reader": true, "jump": true, "reader_view": true, "reload": true, "help": true,
+	"yank": true, "copy_selection": true, "copy_link": true, "copy_comment": true, "open_browser": true,
+}
+
+// readBesideComment handles a key while the reader has focus beside the
+// composer pane. Reading keys work and the comment key returns to the
+// composer. Any other bound key leaves the ticket: it asks about the draft
+// first and runs once the composer closes.
+func (m *Model) readBesideComment(msg tea.KeyPressMsg) tea.Cmd {
+	c := m.composer
+	k := msg.String()
+	name := keys.Name("main", k)
+	switch {
+	case name == "":
+		return nil
+	case name == "comment", name == "open" && m.fieldKey == commentKey && c.storyGID == "":
+		m.focusComposer()
+		return nil
+	case readingKeys[name], name == "open" && m.readsInPlace():
+		if b, ok := m.bindingFor(k); ok {
+			return b.run(m, msg)
+		}
+		return nil
+	}
+	if _, ok := m.bindingFor(k); !ok && name != "focus_list" {
+		// Unavailable here, as list keys are in ticket-only mode. esc still
+		// leaves the comment.
+		return nil
+	}
+	c.resume = &msg
+	return m.leaveComment(false)
+}
+
+// keepComment returns to the composer from its leave confirmation.
+func (m *Model) keepComment() {
+	c := m.composer
+	c.confirm, c.quitting, c.resume = nil, false, nil
+	if c.reading {
+		m.focusComposer()
+	}
+}
+
+// checkDraft notes whether the selected ticket has a saved comment draft,
+// which the reader's edge marks.
+func (m *Model) checkDraft() {
+	t, ok := m.selected()
+	m.draftSaved = ok && drafts.HasComment(m.deps.StateDir, m.deps.Config.Workspace, t.GID)
+}
+
+// composerPaneView draws the composer pane's body, at most half the reader's
+// height, to fit inside its panel below the reader.
+func (m *Model) composerPaneView() string {
+	_, w, split := m.paneWidths()
+	if !m.readerFramed(split) {
+		w -= panelFrame // a bare reader's panel-free width
+	}
+	body := m.composer.paneView(max(w-2, 1), max(m.paneHeight()/2-panelFrame, 3), m.modalLook())
+	return lipgloss.NewStyle().Padding(0, 1).Render(body)
+}
+
+// syncComposer fits the reader to the composer pane. A composer that loses
+// its pane, as when the terminal narrows, takes focus again as a modal.
+func (m *Model) syncComposer() {
+	if c := m.composer; c != nil && c.reading && m.modal == nil && !m.composerPane() {
+		m.focusComposer()
+	}
+	m.reader.SetHeight(m.readerHeight())
+}
+
+// afterComposer finishes leaving the closed composer c: it refreshes the
+// draft marker, then quits or runs the key that left the ticket.
+func (m *Model) afterComposer(c *commentComposer) tea.Cmd {
+	m.checkDraft()
+	if c.quitting {
+		m.closeActivity()
+		return tea.Quit
+	}
+	if c.resume != nil {
+		return m.handleKey(*c.resume)
+	}
+	return nil
 }
 
 func (c *commentComposer) deliveryHint() {
@@ -150,7 +293,7 @@ func (m *Model) updateComment(msg tea.Msg) tea.Cmd {
 			case "save_draft":
 				return c.box.onSaveDraft()
 			case "cancel":
-				return m.leaveComment(false)
+				return m.cancelComment()
 			}
 			return nil
 		}
@@ -159,7 +302,7 @@ func (m *Model) updateComment(msg tea.Msg) tea.Cmd {
 		if key, ok := msg.(tea.KeyPressMsg); ok {
 			res, cmd := c.confirm.update(key)
 			if res.cancelled {
-				c.confirm, c.quitting = nil, false
+				m.keepComment()
 			} else if res.done {
 				return tea.Batch(cmd, c.confirm.onPick(res))
 			}
@@ -173,7 +316,7 @@ func (m *Model) updateComment(msg tea.Msg) tea.Cmd {
 			m.openBatchReview()
 			return cmd
 		}
-		return m.leaveComment(false)
+		return m.cancelComment()
 	}
 	if res.done {
 		return m.postComment()
@@ -187,7 +330,7 @@ func (m *Model) leaveComment(quit bool) tea.Cmd {
 		return nil
 	}
 	c.quitting = quit
-	if !c.hasChanges() || (c.storyGID != "" && c.box.area.Value() == c.original) {
+	if !c.unsaved() {
 		return m.runComment(commentDiscard)
 	}
 	title := "Save comment as draft?"
@@ -198,7 +341,7 @@ func (m *Model) leaveComment(quit bool) tea.Cmd {
 		c.confirm = nil
 		switch choice {
 		case "keep":
-			c.quitting = false
+			m.keepComment()
 			return nil
 		case "save":
 			return m.runComment(commentSave)
@@ -398,13 +541,9 @@ func (m *Model) commentDone(msg commentDoneMsg) tea.Cmd {
 		if msg.op == commentDiscard && !c.hasChanges() {
 			m.composer, m.input, m.modal, m.edit = nil, nil, nil, nil
 			m.setStatus(statusWarning, "comment closed; draft retained: "+msg.err.Error())
-			if c.quitting {
-				m.closeActivity()
-				return tea.Quit
-			}
-			return nil
+			return m.afterComposer(c)
 		}
-		c.quitting = false
+		c.quitting, c.resume = false, nil
 		c.box.err = msg.err.Error()
 		if c.review != nil {
 			m.openBatchReview()
@@ -423,6 +562,7 @@ func (m *Model) commentDone(msg commentDoneMsg) tea.Cmd {
 	case commentDiscard:
 		m.setStatus(statusInfo, "comment draft discarded")
 	case commentPost:
+		m.checkDraft()
 		what := "comment"
 		if c.storyGID != "" {
 			what = "edit comment"
@@ -443,9 +583,5 @@ func (m *Model) commentDone(msg commentDoneMsg) tea.Cmd {
 		}
 		return cmd
 	}
-	if c.quitting {
-		m.closeActivity()
-		return tea.Quit
-	}
-	return nil
+	return m.afterComposer(c)
 }

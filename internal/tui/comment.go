@@ -223,13 +223,24 @@ func (m *Model) composerPaneView() string {
 	return lipgloss.NewStyle().Padding(0, 1).Render(body)
 }
 
-// syncComposer fits the reader to the composer pane. A composer that loses
-// its pane, as when the terminal narrows, takes focus again as a modal.
+// syncComposer fits the reader to the composer pane. The reader scrolls by
+// the change in the pane's height, so its bottom line stays in view as the
+// pane opens, grows, or closes. A composer that loses its pane, as when the
+// terminal shortens, takes focus again as a modal.
 func (m *Model) syncComposer() {
 	if c := m.composer; c != nil && c.reading && m.modal == nil && !m.composerPane() {
 		m.focusComposer()
 	}
+	h := 0
+	if m.composerPane() {
+		h = lipgloss.Height(m.composerPaneView()) + panelFrame
+	}
+	offset, grown := m.reader.YOffset(), h-m.composerH
+	m.composerH = h
 	m.reader.SetHeight(m.readerHeight())
+	if grown != 0 {
+		m.reader.SetYOffset(offset + grown)
+	}
 }
 
 // afterComposer finishes leaving the closed composer c: it refreshes the

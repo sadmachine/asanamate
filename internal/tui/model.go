@@ -1149,10 +1149,7 @@ func (m *Model) paneHeight() int {
 // readerHeight is the reader's height: the pane height, less the composer
 // pane while it shows.
 func (m *Model) readerHeight() int {
-	if !m.composerPane() {
-		return m.paneHeight()
-	}
-	return max(m.paneHeight()-lipgloss.Height(m.composerPaneView())-panelFrame, 1)
+	return max(m.paneHeight()-m.composerH, 1)
 }
 
 func (m *Model) layout() {

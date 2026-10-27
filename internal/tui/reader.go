@@ -26,6 +26,7 @@ type readerState struct {
 	viewIndex      int                     // viewImages index of the image in the viewer
 	shownGID       string
 	draftSaved     bool              // the selected ticket has a saved comment draft
+	composerH      int               // rows the reader gives the composer pane; 0 without one
 	shownWidth     int               // text width shownGID was rendered at
 	shownAgents    string            // agents section rendered for shownGID
 	fieldKey       string            // selected cards view target; "" for none

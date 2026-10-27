@@ -338,6 +338,26 @@ func TestCommentPaneKeepsDraftWhileReading(t *testing.T) {
 	}
 }
 
+func TestCommentPaneKeepsReaderBottomInView(t *testing.T) {
+	m, _ := editModel(t)
+	tk := m.details["1"]
+	tk.Task.HTMLNotes = "<body>" + strings.Repeat("line<br>", 60) + "last line</body>"
+	m.details["1"] = tk
+	m.width, m.height = 140, 40
+	m.layout()
+	m.renderDetail(false)
+	m.focusReaderPane()
+	m.reader.GotoBottom()
+	press(m, "c")
+	if !m.reader.AtBottom() {
+		t.Fatal("opening the pane hid the reader's bottom")
+	}
+	press(m, "esc")
+	if m.composer != nil || !m.reader.AtBottom() {
+		t.Fatal("closing the pane moved the reader off its bottom")
+	}
+}
+
 func TestCommentPaneBecomesModalWithoutReaderRoom(t *testing.T) {
 	m, _ := editModel(t)
 	m.width, m.height = 140, 40

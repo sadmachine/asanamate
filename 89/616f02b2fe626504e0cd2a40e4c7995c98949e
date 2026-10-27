@@ -1,0 +1,34 @@
+internal/tui/time.go
+  s_0064fcbd757984::t_d480b116dde2f1 118-121
+docs/extensions.md
+  s_0064fcbd757984::t_74a6999e6e7e31 235-237,755-757,760
+README.md
+  s_0064fcbd757984::t_74a6999e6e7e31 1078-1080
+internal/form/form.go
+  s_0064fcbd757984::t_d480b116dde2f1 47-48,50-51
+internal/tui/form.go
+  s_0064fcbd757984::t_d480b116dde2f1 163-165
+cmd/asanamate-hrvst/harvest.go
+  s_0064fcbd757984::t_b9f9b5830087ae 5,11,17,101,468-491
+  s_0064fcbd757984::t_8634968f67fd1f 492-493
+internal/tui/time_test.go
+  s_0064fcbd757984::t_bd4880ef46497f 117-137
+cmd/asanamate-hrvst/harvest_test.go
+  s_0064fcbd757984::t_becceef07d16be 12,55,61-77,109,120-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "89616f02b2fe626504e0cd2a40e4c7995c98949e",
+  "prompts": {},
+  "sessions": {
+    "s_0064fcbd757984": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d5f76783-299a-483d-858c-452fdef12575",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

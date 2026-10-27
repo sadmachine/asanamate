@@ -1,0 +1,29 @@
+internal/tui/inputbox.go
+  s_f9afa84093c129::t_c98e2943be0359 27,164-168
+internal/tui/comment_test.go
+  s_f9afa84093c129::t_08dc5aad6bb467 361-374
+internal/config/config.go
+  s_f9afa84093c129::t_c98e2943be0359 259
+internal/tui/comment.go
+  s_f9afa84093c129::t_c98e2943be0359 81
+README.md
+  s_f9afa84093c129::t_c98e2943be0359 716
+internal/setup/setup.go
+  s_f9afa84093c129::t_c98e2943be0359 376-377
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cd846c970a7d8160f4f28b210a571ee7b6645007",
+  "prompts": {},
+  "sessions": {
+    "s_f9afa84093c129": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "baf13026-806b-4ccf-915e-58aba9884c47",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -259,6 +259,7 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	// Statuses originate in synchronous handlers throughout the TUI. Schedule
 	// the latest toast once, after the handler finishes changing its state.
 	defer func() {
+		m.syncComposer()
 		m.refreshConnectionStatus()
 		cmd = tea.Batch(cmd, m.scheduleToast(), m.scheduleConnectionTick())
 	}()
@@ -666,7 +667,11 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 				return c.box.onSaveDraft()
 			}
 		}
-		if m.input == nil && m.modal == nil {
+		if c.reading {
+			if m.modal == nil && !m.help {
+				return m.readBesideComment(msg)
+			}
+		} else if m.input == nil && m.modal == nil {
 			if bound("picker", msg, false) == "cancel" {
 				m.afterProjects = nil
 				m.returnToDraft()
@@ -814,7 +819,7 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) tea.Cmd {
 func (m *Model) finishFilter() {
 	m.filtering = false
 	m.filterInput.Blur()
-	m.reader.SetHeight(m.paneHeight())
+	m.reader.SetHeight(m.readerHeight())
 	m.saveView()
 	m.fitList()
 	m.decideFeed()
@@ -1141,6 +1146,15 @@ func (m *Model) paneHeight() int {
 	return max(m.bodyHeight()-m.filterHintHeight(), 1)
 }
 
+// readerHeight is the reader's height: the pane height, less the composer
+// pane while it shows.
+func (m *Model) readerHeight() int {
+	if !m.composerPane() {
+		return m.paneHeight()
+	}
+	return max(m.paneHeight()-lipgloss.Height(m.composerPaneView())-panelFrame, 1)
+}
+
 func (m *Model) layout() {
 	if !m.showNav() {
 		m.focusNav = false
@@ -1151,7 +1165,7 @@ func (m *Model) layout() {
 		m.renderers = map[rendererKey]*markdownRenderer{}
 	}
 	m.reader.SetWidth(readerW)
-	m.reader.SetHeight(m.paneHeight())
+	m.reader.SetHeight(m.readerHeight())
 	m.filterInput.SetWidth(max(m.width/3, 10))
 	if m.activityOpen {
 		m.layoutActivity()
@@ -1189,7 +1203,7 @@ func (m *Model) body() string {
 		content = m.builder.view(w, mh, m.modalLook())
 	case m.composer != nil && m.composer.confirm != nil:
 		content = m.composer.confirm.view(w, mh, m.modalLook())
-	case m.input != nil:
+	case m.input != nil && !(m.composer != nil && m.input == m.composer.box && m.composerPane()):
 		if m.input.area.DynamicHeight {
 			w = max(min(m.width-4, 100), 10)
 		}
@@ -1207,7 +1221,7 @@ func (m *Model) body() string {
 		content = m.modal.view(w, mh, m.modalLook())
 	case m.extension != nil:
 		content = m.extension.view(w, mh)
-	case m.composer != nil:
+	case m.composer != nil && m.input == nil && !m.composer.reading:
 		content = "Loading task details…\n" + hintLine(m.accentStyle, [2]string{keyLabel("picker", "cancel"), "cancel"})
 	case m.help:
 		if m.activityOpen {
@@ -1249,12 +1263,12 @@ func (m *Model) panes(h int) string {
 	switch {
 	case split:
 		list := m.listPanel(listW, listW+panelFrame, h)
-		reader := m.panel("[2] Ticket", m.readerView, m.reader.View(), readerW+panelFrame, h, m.focusReader, m.readerHighlight())
-		panes = lipgloss.JoinHorizontal(lipgloss.Top, list, reader)
+		panes = lipgloss.JoinHorizontal(lipgloss.Top, list, m.readerPanel(readerW+panelFrame, h, true))
 	case m.focusReader:
-		panes = m.reader.View()
 		if m.showNav() {
-			panes = m.panel("[2] Ticket", m.readerView, panes, readerW+panelFrame, h, m.focusReader, m.readerHighlight())
+			panes = m.readerPanel(readerW+panelFrame, h, true)
+		} else {
+			panes = m.readerPanel(readerW, h, false)
 		}
 	case m.showNav():
 		panes = m.listPanel(listW-panelFrame, listW, h)
@@ -1266,6 +1280,39 @@ func (m *Model) panes(h int) string {
 		panes = lipgloss.JoinHorizontal(lipgloss.Top, nav, panes)
 	}
 	return panes
+}
+
+// readerPanel is the reader, width by h cells, above the composer pane while
+// it shows. framed draws the reader in its [2] Ticket panel.
+func (m *Model) readerPanel(width, h int, framed bool) string {
+	focused, ch, pane := m.focusReader, 0, ""
+	if m.composerPane() {
+		c := m.composer
+		body := m.composerPaneView()
+		ch = lipgloss.Height(body) + panelFrame
+		pane = "\n" + m.panel(c.box.title, "", body, width, ch, !c.reading, nil)
+		focused = focused && c.reading
+	}
+	reader := m.reader.View()
+	if framed {
+		reader = m.panel("[2] Ticket", m.readerRight(), reader, width, h-ch, focused, m.readerHighlight())
+	}
+	return reader + pane
+}
+
+// readerFramed reports whether the reader sits in its [2] Ticket panel:
+// beside the list, or full screen beside the views panel.
+func (m *Model) readerFramed(split bool) bool {
+	return split || m.showNav()
+}
+
+// readerRight is the reader panel's edge label: its view, after a draft
+// marker when the ticket has a saved comment draft and no composer is open.
+func (m *Model) readerRight() string {
+	if m.draftSaved && m.composer == nil {
+		return "draft · " + m.readerView
+	}
+	return m.readerView
 }
 
 // listPanel is the list panel, contentW columns of rows in width columns,

@@ -39,6 +39,10 @@ func (m *Model) mode() (name string, pill lipgloss.Style, hints [][2]string) {
 		return "NORMAL", normalPill, [][2]string{{keyLabel("main", "quit"), "quit"}}
 	case m.filtering:
 		return "FILTER", filterPill, [][2]string{{typedLabel("filter", "done"), "apply"}, {typedLabel("filter", "cancel"), "cancel"}, {typedLabel("filter", "help"), "guide"}}
+	case m.composerFocused():
+		return "INSERT", editPill, nil
+	case m.composerPane():
+		return "READ", readPill, [][2]string{scroll, {keyLabel("main", "comment"), "back to comment"}, list}
 	case m.focusReader && m.fieldKey == commentKey:
 		return "EDIT", editPill, [][2]string{targets, {keyLabel("main", "open"), "add comment"}, scroll, list}
 	case m.focusReader && m.editableTarget():

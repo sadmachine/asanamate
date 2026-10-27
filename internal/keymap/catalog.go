@@ -33,7 +33,7 @@ var catalog = []Scope{
 		{Name: "repeat_action", Keys: []string{"."}, Desc: "repeat last action", Group: "Ticket"},
 		{Name: "pin", Keys: []string{"P"}, Desc: "pin / unpin", Group: "Ticket"},
 		{Name: "edit", Keys: []string{"e"}, Desc: "edit", Hint: "edit", Group: "Ticket"},
-		{Name: "comment", Keys: []string{"c"}, Desc: "add comment", Group: "Ticket"},
+		{Name: "comment", Keys: []string{"c"}, Desc: "add comment / return to it", Group: "Ticket"},
 		{Name: "due", Keys: []string{"d"}, Desc: "set due date", Group: "Ticket"},
 		{Name: "move_section", Keys: []string{"m"}, Desc: "move to section", Group: "Ticket"},
 		{Name: "assign", Keys: []string{"@"}, Desc: "assign", Group: "Ticket"},
@@ -123,7 +123,7 @@ var catalog = []Scope{
 		{Name: "external_editor", Keys: []string{"ctrl+e"}, Desc: "edit the draft in VISUAL, EDITOR, or vim", Typing: true},
 		{Name: "submit", Keys: []string{"ctrl+s"}, Desc: "submit", Typing: true},
 		{Name: "save_draft", Keys: []string{"ctrl+d"}, Desc: "comments: save a draft and close", Typing: true},
-		{Name: "cancel", Keys: []string{"esc"}, Desc: "cancel", Typing: true},
+		{Name: "cancel", Keys: []string{"esc"}, Desc: "cancel; in the comment pane, focus the ticket", Typing: true},
 		{Name: "paste_image", Keys: []string{"alt+v"}, Desc: "comments: insert the clipboard image as Markdown", Typing: true},
 	}},
 	{Name: "builder", Doc: "Action builder (A). Its menus use [keys.picker].", Bindings: []Binding{

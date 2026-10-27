@@ -16,8 +16,14 @@ func TestCommentRoundTripAndIsolation(t *testing.T) {
 		t.Fatalf("new draft = %+v, %v", empty, err)
 	}
 	draft := Comment{Text: "  first\nsecond  ", Images: map[string][]byte{"/tmp/image.png": {1, 2, 3}}, Uncertain: true}
+	if HasComment(dir, "workspace", "task") {
+		t.Fatal("unsaved draft reported as saved")
+	}
 	if err := store.Save(draft); err != nil {
 		t.Fatal(err)
+	}
+	if !HasComment(dir, "workspace", "task") || HasComment(dir, "other", "task") {
+		t.Fatal("saved draft not reported for its identity only")
 	}
 	for _, path := range []string{filepath.Dir(store.path), store.path, store.path + ".lock"} {
 		info, err := os.Stat(path)
@@ -37,6 +43,9 @@ func TestCommentRoundTripAndIsolation(t *testing.T) {
 	}
 	if err := again.Remove(); err != nil {
 		t.Fatal(err)
+	}
+	if HasComment(dir, "workspace", "task") {
+		t.Fatal("removed draft still reported")
 	}
 	_, got, err = OpenComment(dir, "workspace", "task")
 	if err != nil || got.Text != "" || len(got.Images) != 0 {

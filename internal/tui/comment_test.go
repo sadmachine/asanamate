@@ -248,40 +248,146 @@ func TestCommentSaveAndRestoreAcrossSessions(t *testing.T) {
 }
 
 func TestCommentExitChoices(t *testing.T) {
-	for _, choice := range []string{"save", "discard", "keep", "esc"} {
-		t.Run(choice, func(t *testing.T) {
-			m, writes := editModel(t)
-			m.width, m.height = 140, 40
-			press(m, "c")
-			m.input.area.SetValue("draft")
-			press(m, "esc")
-			if m.composer.confirm == nil || !strings.Contains(ansi.Strip(m.body()), "Save comment as draft?") {
-				t.Fatal("content exited without confirmation")
-			}
-			switch choice {
-			case "save":
-				press(m, "enter")
-			case "discard":
-				press(m, "down", "enter")
-			case "keep":
-				press(m, "down", "down", "enter")
-			case "esc":
-				press(m, "esc")
-			}
-			if len(*writes) != 0 {
-				t.Fatal("exit posted comment")
-			}
-			if choice == "keep" || choice == "esc" {
-				if m.input == nil || m.input.area.Value() != "draft" || m.composer.confirm != nil {
-					t.Fatal("keep editing lost editor")
-				}
-			} else if m.input != nil {
-				t.Fatal("save/discard did not close editor")
-			}
-			if got := savedComment(t, m).Text; (got == "draft") != (choice == "save") {
-				t.Fatalf("saved text = %q after %s", got, choice)
-			}
-		})
+	// A modal, on a terminal too short for the pane, cancels at once; a
+	// pane's first esc only moves focus to the reader, whose esc leaves.
+	for _, layout := range []struct {
+		name   string
+		height int
+		esc    []string
+	}{{"modal", 20, []string{"esc"}}, {"pane", 40, []string{"esc", "esc"}}} {
+		for _, choice := range []string{"save", "discard", "keep", "esc"} {
+			t.Run(layout.name+"/"+choice, func(t *testing.T) {
+				testCommentExitChoice(t, layout.height, layout.esc, choice)
+			})
+		}
+	}
+}
+
+func testCommentExitChoice(t *testing.T, height int, esc []string, choice string) {
+	m, writes := editModel(t)
+	m.width, m.height = 140, height
+	m.layout()
+	press(m, "c")
+	m.input.area.SetValue("draft")
+	press(m, esc...)
+	if m.composer.confirm == nil || !strings.Contains(ansi.Strip(m.body()), "Save comment as draft?") {
+		t.Fatal("content exited without confirmation")
+	}
+	switch choice {
+	case "save":
+		press(m, "enter")
+	case "discard":
+		press(m, "down", "enter")
+	case "keep":
+		press(m, "down", "down", "enter")
+	case "esc":
+		press(m, "esc")
+	}
+	if len(*writes) != 0 {
+		t.Fatal("exit posted comment")
+	}
+	if choice == "keep" || choice == "esc" {
+		if m.input == nil || m.input.area.Value() != "draft" || m.composer.confirm != nil {
+			t.Fatal("keep editing lost editor")
+		}
+	} else if m.input != nil {
+		t.Fatal("save/discard did not close editor")
+	}
+	if got := savedComment(t, m).Text; (got == "draft") != (choice == "save") {
+		t.Fatalf("saved text = %q after %s", got, choice)
+	}
+}
+
+func TestCommentPaneKeepsDraftWhileReading(t *testing.T) {
+	m, writes := editModel(t)
+	m.width, m.height = 140, 40
+	m.layout()
+	press(m, "c")
+	if !m.composerFocused() || !m.focusReader || m.reader.Height() >= m.paneHeight() {
+		t.Fatalf("composer did not open as a focused pane: reader height %d of %d", m.reader.Height(), m.paneHeight())
+	}
+	if view := ansi.Strip(m.body()); !strings.Contains(view, "Comment on Fix") || !strings.Contains(view, "[2] Ticket") {
+		t.Fatal("pane missing below the reader")
+	}
+	m.input.area.SetValue("draft")
+	press(m, "esc", "j")
+	if m.composer == nil || !m.composer.reading || m.input != nil || m.composer.box.area.Value() != "draft" {
+		t.Fatal("esc closed the pane or reading keys reached the draft")
+	}
+	if name, _, _ := m.mode(); name != "READ" {
+		t.Fatalf("mode = %s, want READ", name)
+	}
+	press(m, "c")
+	if !m.composerFocused() || m.input.area.Value() != "draft" {
+		t.Fatal("comment key did not return to the draft")
+	}
+	press(m, "esc", "1")
+	if m.composer.confirm == nil {
+		t.Fatal("leaving the ticket did not ask about the draft")
+	}
+	press(m, "enter")
+	if m.composer != nil || m.focusReader || len(*writes) != 0 || savedComment(t, m).Text != "draft" {
+		t.Fatal("saving did not close the pane and then focus the list")
+	}
+	if !strings.Contains(m.readerRight(), "draft") {
+		t.Fatal("reader edge does not mark the saved draft")
+	}
+	press(m, "c")
+	if m.input.area.Value() != "draft" || strings.Contains(m.readerRight(), "draft") {
+		t.Fatal("comment key did not reopen the draft in place of the marker")
+	}
+}
+
+func TestCommentPaneBecomesModalWithoutReaderRoom(t *testing.T) {
+	m, _ := editModel(t)
+	m.width, m.height = 140, 40
+	m.layout()
+	press(m, "c")
+	m.input.area.SetValue("draft")
+	press(m, "esc")
+	send(m, tea.WindowSizeMsg{Width: 80, Height: 40})
+	if !m.composerPane() || !m.focusReader {
+		t.Fatal("narrowed terminal lost the pane in the full-screen reader")
+	}
+	send(m, tea.WindowSizeMsg{Width: 140, Height: 20})
+	if m.composerPane() || m.input == nil || m.input != m.composer.box || !strings.Contains(ansi.Strip(m.body()), "draft") {
+		t.Fatal("short terminal hid the draft instead of showing it as a modal")
+	}
+}
+
+func TestCommentPaneInTicketOnlyReader(t *testing.T) {
+	m := ticketOnlyModel(t)
+	press(m, "c")
+	if !m.composerFocused() {
+		t.Fatal("ticket-only reader did not hold the composer pane")
+	}
+	m.input.area.SetValue("draft")
+	for i, line := range strings.Split(m.body(), "\n") {
+		if w := ansi.StringWidth(line); w > m.width {
+			t.Fatalf("line %d is %d wide, terminal %d", i, w, m.width)
+		}
+	}
+	press(m, "esc", "/")
+	if m.composer == nil || !m.composer.reading || m.composer.confirm != nil {
+		t.Fatal("a list key unavailable here left the comment")
+	}
+	press(m, "esc")
+	if m.composer.confirm == nil {
+		t.Fatal("esc did not ask about the draft")
+	}
+	press(m, "down", "enter")
+	if m.composer != nil || !m.focusReader {
+		t.Fatal("discarding did not close the pane and keep the reader")
+	}
+}
+
+func TestCommentModalOnShortTerminal(t *testing.T) {
+	m, _ := editModel(t)
+	m.width, m.height = 140, 20
+	m.layout()
+	press(m, "c")
+	if m.composerPane() || !strings.Contains(ansi.Strip(m.body()), "Comment on Fix") {
+		t.Fatal("short terminal did not use the modal")
 	}
 }
 

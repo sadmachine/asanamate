@@ -409,12 +409,23 @@ Quit without saving (`:q!`) to keep the previous draft. Editor failures also kee
 the previous draft and show an error. The private temporary buffer is deleted
 when the editor exits. Search and filter inputs keep their inline controls.
 
+The comment editor opens as a pane below the ticket, so you can read the
+description and earlier comments while you write. This works beside the list,
+in the full-screen reader of a narrow terminal, and in ticket-only mode. Press `esc` to move focus from the editor to the ticket; the draft
+stays open. Movement, `'` jump, and `enter` on a shortened comment or a tab work
+there, and `c` returns to the editor. Any other key leaves the ticket: it first
+offers Save draft, Discard, or Keep editing, then runs. In ticket-only mode,
+`esc` there offers the same choices. When the reader is hidden or too short to
+share, the editor opens as a modal and `esc` offers those choices at once.
+
 Comments support one local draft per workspace and ticket, shared across project
 views. Press `ctrl+d` to save a draft and close the editor; remap it with
-`keys.input.save_draft`. Pressing `esc` with content offers Save draft, Discard,
-or Keep editing. An empty or whitespace-only comment closes without a prompt.
-`ctrl+c` uses the same choices before quitting. Opening the comment editor again
-restores the draft, including after a restart.
+`keys.input.save_draft`. Leaving an editor with content offers Save draft,
+Discard, or Keep editing. An empty or whitespace-only comment closes without a
+prompt, as does an edited comment with its original text. `ctrl+c` uses the
+same choices before quitting. The reading pane's edge shows `draft` while the
+ticket has a saved draft; opening the comment editor again restores it,
+including after a restart.
 
 Press `e`, then `m` for **Edit multiple** to stage several details on one ticket.
 The modal lists assignee, due date, completion, each project's section, editable

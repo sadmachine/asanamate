@@ -25,6 +25,7 @@ type readerState struct {
 	viewImages     []asana.Attachment      // images the attachment viewer steps through
 	viewIndex      int                     // viewImages index of the image in the viewer
 	shownGID       string
+	draftSaved     bool              // the selected ticket has a saved comment draft
 	shownWidth     int               // text width shownGID was rendered at
 	shownAgents    string            // agents section rendered for shownGID
 	fieldKey       string            // selected cards view target; "" for none
@@ -53,6 +54,7 @@ func (m *Model) renderDetail(keepScroll bool) {
 		return
 	}
 	m.markSeen(t.Task)
+	m.checkDraft()
 	if !m.readerOn() {
 		m.shownGID = t.GID
 		return

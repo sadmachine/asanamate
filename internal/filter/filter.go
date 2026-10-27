@@ -2,7 +2,8 @@
 //
 // A query is space-separated terms that must all match. Bare words match the
 // title. section:, project:, assignee:, and tag: match names by substring.
-// project:<name>[<section>] matches a section within that project only.
+// project:<name>[<section>] matches a section within that project only, by
+// exact name; project:<name>[<a>|<b>] matches any of the listed sections.
 // is:open and is:done match completion. due:overdue, due:today, due:week (the
 // next 7 days, today included), and due:none match the due date. agent:any,
 // agent:none, and agent:<state> match linked agents. A leading "-" negates a term, and double
@@ -25,7 +26,7 @@ func Keys() []string { return slices.Clone(keys) }
 
 type term struct {
 	key, value string
-	section    string // project:<value>[<section>]; empty matches any section
+	sections   []string // project:<value>[<a>|<b>]; nil matches any section
 	negate     bool
 }
 
@@ -45,7 +46,7 @@ func Parse(query string) Filter {
 		if k, v, ok := strings.Cut(tok, ":"); ok && slices.Contains(keys, strings.ToLower(k)) {
 			t.key, t.value = strings.ToLower(k), strings.ToLower(v)
 			if t.key == "project" {
-				t.value, t.section = splitSection(t.value)
+				t.value, t.sections = splitSections(t.value)
 			}
 		} else {
 			t.value = strings.ToLower(tok)
@@ -55,14 +56,20 @@ func Parse(query string) Filter {
 	return f
 }
 
-// splitSection splits "name[section]" into name and section. Values without a
-// trailing bracketed section are returned whole.
-func splitSection(v string) (name, section string) {
+// splitSections splits "name[a|b]" into name and its "|"-separated sections,
+// dropping empty ones. Values without a trailing bracketed list are returned
+// whole.
+func splitSections(v string) (name string, sections []string) {
 	i := strings.LastIndex(v, "[")
 	if i < 0 || !strings.HasSuffix(v, "]") {
-		return v, ""
+		return v, nil
 	}
-	return v[:i], v[i+1 : len(v)-1]
+	for _, s := range strings.Split(v[i+1:len(v)-1], "|") {
+		if s = strings.TrimSpace(s); s != "" {
+			sections = append(sections, s)
+		}
+	}
+	return v[:i], sections
 }
 
 func tokenize(query string) []string {
@@ -166,7 +173,7 @@ func (tm term) match(t asana.Task, agentStates []string, today time.Time) bool {
 	case "project":
 		for _, m := range t.Memberships {
 			if contains(m.Project.Name, tm.value) &&
-				(tm.section == "" || m.Section != nil && contains(m.Section.Name, tm.section)) {
+				(tm.sections == nil || m.Section != nil && slices.Contains(tm.sections, strings.ToLower(m.Section.Name))) {
 				return true
 			}
 		}

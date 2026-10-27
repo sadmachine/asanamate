@@ -96,7 +96,7 @@ func (m *Model) filterHelpView() string {
 	return key("Filters") + "\n\n" +
 		key("words") + " search titles\n" +
 		key("section:  project:  assignee:  tag:") + " match names\n" +
-		key("project:<name>[<section>]") + " matches a section of that project\n" +
+		key("project:<name>[<a>|<b>]") + " matches named sections of that project\n" +
 		key("is:open  is:done") + " filter completion\n" +
 		key("due:overdue  due:today  due:week  due:none") + " filter due dates\n" +
 		key("agent:any  agent:none  agent:<state>") + " filter linked agents\n" +

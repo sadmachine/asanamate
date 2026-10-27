@@ -358,6 +358,20 @@ func TestCommentPaneKeepsReaderBottomInView(t *testing.T) {
 	}
 }
 
+func TestCommentEditorWrapsAtReaderTextWidth(t *testing.T) {
+	for _, height := range []int{40, 20} { // pane, modal
+		m, _ := editModel(t)
+		m.deps.Config.Reader.MaxTextWidth = 40
+		m.width, m.height = 140, height
+		m.layout()
+		press(m, "c")
+		m.body()
+		if got := m.input.area.Width(); got != 40 {
+			t.Fatalf("height %d: editor text width = %d, want 40", height, got)
+		}
+	}
+}
+
 func TestCommentPaneBecomesModalWithoutReaderRoom(t *testing.T) {
 	m, _ := editModel(t)
 	m.width, m.height = 140, 40

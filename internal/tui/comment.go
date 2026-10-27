@@ -78,6 +78,7 @@ func (m *Model) openCommentInput(gid, storyGID, title, initial string) {
 	b.area.MinHeight = 10
 	b.area.MaxContentHeight = math.MaxInt
 	b.images = true
+	b.maxTextWidth = m.deps.Config.Reader.MaxTextWidth
 	b.area.SetValue(initial)
 	c := &commentComposer{gid: gid, storyGID: storyGID, original: initial, box: b, footer: -1}
 	identity := gid

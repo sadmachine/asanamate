@@ -373,8 +373,8 @@ section = false
 
 [reader]
 # Reading pane view lives in settings.toml (reader.view).
-# Wrap description and comment text in the cards view at this many columns;
-# 0 wraps at the pane width.
+# Wrap description and comment text in the cards view, and the comment
+# editor, at this many columns; 0 wraps at the pane width.
 max_text_width = 0
 
 [reader.comments]

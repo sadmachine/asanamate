@@ -2,16 +2,19 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -95,7 +98,7 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 				break
 			}
 		}
-		return json.NewEncoder(out).Encode(form.Spec{Fields: []form.Field{
+		return json.NewEncoder(out).Encode(form.Spec{Info: []string{harvestClientsToday(ctx, configPath, endpoint)}, Fields: []form.Field{
 			project,
 			{ID: "task_id", Label: "Harvest task", Type: form.Select, Options: []form.Option{task}, Remember: true},
 			{ID: "hours", Label: "Hours", Type: form.Hours},
@@ -369,43 +372,43 @@ func eachPage(ctx context.Context, credentials harvestCredentials, base *url.URL
 	}
 }
 
-// harvestFeed answers a feed request: the user's time entries spent on date,
-// each linked to its Asana ticket, and the day's total as the summary.
-func harvestFeed(ctx context.Context, configPath, endpoint, date string) (feed.Reply, error) {
-	if _, err := time.Parse(time.DateOnly, date); err != nil {
-		return feed.Reply{}, errors.New("hrvst feed needs date as YYYY-MM-DD")
-	}
+// harvestEntry is one of the user's own time entries.
+type harvestEntry struct {
+	Hours     *float64                  `json:"hours"`
+	Running   bool                      `json:"is_running"`
+	Notes     string                    `json:"notes"`
+	CreatedAt time.Time                 `json:"created_at"`
+	Client    struct{ Name string }     `json:"client"`
+	Project   struct{ Name string }     `json:"project"`
+	Reference *harvestExternalReference `json:"external_reference"`
+}
+
+// harvestUserEntries gets every entry the user spent on date, each with a
+// valid duration. label prefixes errors.
+func harvestUserEntries(ctx context.Context, configPath, endpoint, date, label string) ([]harvestEntry, error) {
 	credentials, err := loadHarvestCredentials(configPath)
 	if err != nil {
-		return feed.Reply{}, err
+		return nil, err
 	}
 	base, err := url.Parse(endpoint)
 	if err != nil {
-		return feed.Reply{}, err
+		return nil, err
 	}
 	data, err := credentials.call(ctx, http.MethodGet, base.ResolveReference(&url.URL{Path: "users/me"}).String(), nil)
 	if err != nil {
-		return feed.Reply{}, err
+		return nil, err
 	}
 	var me struct {
 		ID json.Number `json:"id"`
 	}
 	if err := json.Unmarshal(data, &me); err != nil || !positiveID(me.ID.String()) {
-		return feed.Reply{}, errors.New("Harvest feed: missing user id")
+		return nil, fmt.Errorf("%s: missing user id", label)
 	}
-	reply := feed.Reply{Source: "hrvst", Icon: "clock", Items: []feed.Item{}}
-	var total float64
+	var entries []harvestEntry
 	query := url.Values{"user_id": {me.ID.String()}, "from": {date}, "to": {date}}
-	err = eachPage(ctx, credentials, base, query, "Harvest feed", func(data []byte) error {
+	err = eachPage(ctx, credentials, base, query, label, func(data []byte) error {
 		var result struct {
-			Entries *[]struct {
-				Hours     *float64                  `json:"hours"`
-				Running   bool                      `json:"is_running"`
-				Notes     string                    `json:"notes"`
-				CreatedAt time.Time                 `json:"created_at"`
-				Project   struct{ Name string }     `json:"project"`
-				Reference *harvestExternalReference `json:"external_reference"`
-			} `json:"time_entries"`
+			Entries *[]harvestEntry `json:"time_entries"`
 		}
 		if err := json.Unmarshal(data, &result); err != nil {
 			return err
@@ -414,34 +417,78 @@ func harvestFeed(ctx context.Context, configPath, endpoint, date string) (feed.R
 			return errors.New("missing time_entries")
 		}
 		for _, entry := range *result.Entries {
-			if entry.Hours == nil || *entry.Hours < 0 || math.IsNaN(*entry.Hours) || math.IsInf(*entry.Hours, 0) || entry.CreatedAt.IsZero() {
-				return errors.New("invalid entry duration or time")
+			if entry.Hours == nil || *entry.Hours < 0 || math.IsNaN(*entry.Hours) || math.IsInf(*entry.Hours, 0) {
+				return errors.New("invalid entry duration")
 			}
-			total += *entry.Hours
-			item := feed.Item{Time: entry.CreatedAt, Text: hoursLabel(*entry.Hours) + " · " + entry.Project.Name, Tone: feed.ToneOK}
-			if entry.Running {
-				item.Text, item.Tone = "running · "+item.Text, feed.ToneWarn
-			}
-			// A linked entry's notes are its ticket's title, kept for tickets
-			// the panel has not loaded.
-			if notes := feed.OneLine(entry.Notes); notes != "" {
-				item.Text += " · " + notes
-			}
-			if ref := entry.Reference; ref != nil && digits(ref.ID) {
-				item.TicketGID, item.URL = ref.ID, ref.Permalink
-			}
-			reply.Items = append(reply.Items, item)
 		}
+		entries = append(entries, *result.Entries...)
 		return nil
 	})
+	return entries, err
+}
+
+// harvestFeed answers a feed request: the user's time entries spent on date,
+// each linked to its Asana ticket, and the day's total as the summary.
+func harvestFeed(ctx context.Context, configPath, endpoint, date string) (feed.Reply, error) {
+	if _, err := time.Parse(time.DateOnly, date); err != nil {
+		return feed.Reply{}, errors.New("hrvst feed needs date as YYYY-MM-DD")
+	}
+	entries, err := harvestUserEntries(ctx, configPath, endpoint, date, "Harvest feed")
 	if err != nil {
 		return feed.Reply{}, err
+	}
+	reply := feed.Reply{Source: "hrvst", Icon: "clock", Items: []feed.Item{}}
+	var total float64
+	for _, entry := range entries {
+		if entry.CreatedAt.IsZero() {
+			return feed.Reply{}, errors.New("Harvest feed: invalid entry time")
+		}
+		total += *entry.Hours
+		item := feed.Item{Time: entry.CreatedAt, Text: hoursLabel(*entry.Hours) + " · " + entry.Project.Name, Tone: feed.ToneOK}
+		if entry.Running {
+			item.Text, item.Tone = "running · "+item.Text, feed.ToneWarn
+		}
+		// A linked entry's notes are its ticket's title, kept for tickets
+		// the panel has not loaded.
+		if notes := feed.OneLine(entry.Notes); notes != "" {
+			item.Text += " · " + notes
+		}
+		if ref := entry.Reference; ref != nil && digits(ref.ID) {
+			item.TicketGID, item.URL = ref.ID, ref.Permalink
+		}
+		reply.Items = append(reply.Items, item)
 	}
 	if math.IsInf(total*3600, 0) || total*3600 >= float64(math.MaxInt64) {
 		return feed.Reply{}, errors.New("Harvest feed: duration overflow")
 	}
 	reply.Summary = durationLabel(total) + " logged"
 	return reply, nil
+}
+
+// harvestClientsToday is the form's info line: hours spent today per
+// client, most first, running timers included as in the feed. Failure only
+// costs the line, never the form.
+func harvestClientsToday(ctx context.Context, configPath, endpoint string) string {
+	entries, err := harvestUserEntries(ctx, configPath, endpoint, time.Now().Format(time.DateOnly), "Harvest today")
+	if err != nil {
+		return "Today by client unavailable: " + err.Error()
+	}
+	hours := map[string]float64{}
+	for _, entry := range entries {
+		hours[cmp.Or(strings.TrimSpace(entry.Client.Name), "No client")] += *entry.Hours
+	}
+	if len(hours) == 0 {
+		return "Today: nothing logged"
+	}
+	clients := slices.Collect(maps.Keys(hours))
+	slices.SortFunc(clients, func(a, b string) int {
+		return cmp.Or(cmp.Compare(hours[b], hours[a]), strings.Compare(a, b))
+	})
+	parts := make([]string, len(clients))
+	for i, client := range clients {
+		parts[i] = client + " " + durationLabel(hours[client])
+	}
+	return "Today: " + strings.Join(parts, " · ")
 }
 
 // hoursLabel shows decimal hours briefly: "1.5h", "0.25h", "2h".

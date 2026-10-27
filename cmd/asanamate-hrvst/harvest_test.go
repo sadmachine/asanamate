@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -51,15 +52,31 @@ func TestHarvestAdapterUsesExternalReference(t *testing.T) {
 	if err := os.WriteFile(credentials, []byte(`{"accessToken":"test-token","accountId":"789"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	todayFails := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer test-token" || r.Header.Get("Harvest-Account-ID") != "789" {
 			t.Errorf("Harvest request headers = %+v", r.Header)
 		}
 		if r.Method == http.MethodGet {
-			if r.URL.Path != "/users/me/project_assignments" {
+			switch r.URL.Path {
+			case "/users/me/project_assignments":
+				fmt.Fprintf(w, `{"project_assignments":%s,"next_page":null}`, assignmentJSON)
+			case "/users/me":
+				if todayFails {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				fmt.Fprint(w, `{"id":555}`)
+			case "/":
+				if today := time.Now().Format(time.DateOnly); r.URL.Query().Get("from") != today || r.URL.Query().Get("to") != today {
+					t.Errorf("today filter = %v", r.URL.Query())
+				}
+				fmt.Fprint(w, `{"time_entries":[
+					{"hours":1.5,"client":{"name":"Acme"}},{"hours":0.25,"client":null},
+					{"hours":2.3333,"is_running":true,"client":{"name":"Foo"}},{"hours":1.5,"client":{"name":"Acme"}}],"next_page":null}`)
+			default:
 				t.Errorf("unexpected path %s", r.URL.Path)
 			}
-			fmt.Fprintf(w, `{"project_assignments":%s,"next_page":null}`, assignmentJSON)
 			return
 		}
 		var payload struct {
@@ -89,7 +106,7 @@ func TestHarvestAdapterUsesExternalReference(t *testing.T) {
 		t.Fatal(err)
 	}
 	var spec form.Spec
-	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || len(spec.Fields) != 4 || spec.Fields[3].Type != form.Date || spec.Fields[0].Options[0].ID != "123" || spec.Fields[1].Options[0] != (form.Option{ID: "456", Name: "Development"}) || !spec.Fields[0].Remember || !spec.Fields[1].Remember {
+	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || len(spec.Fields) != 4 || spec.Fields[3].Type != form.Date || !slices.Equal(spec.Info, []string{"Today: Acme 3h · Foo 2h 20m · No client 15m"}) || spec.Fields[0].Options[0].ID != "123" || spec.Fields[1].Options[0] != (form.Option{ID: "456", Name: "Development"}) || !spec.Fields[0].Remember || !spec.Fields[1].Remember {
 		t.Fatalf("response = %s, err = %v", out.String(), err)
 	}
 	out.Reset()
@@ -99,6 +116,15 @@ func TestHarvestAdapterUsesExternalReference(t *testing.T) {
 	}
 	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || spec.Fields[0].Default != "123" || spec.Fields[1].Default != "" {
 		t.Fatalf("suggested response = %s, err = %v", out.String(), err)
+	}
+	// Losing today's breakdown costs only its line, never the form.
+	todayFails = true
+	out.Reset()
+	if err := runHarvest(context.Background(), strings.NewReader(`{"operation":"form"}`), &out, "456", credentials, server.URL); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || len(spec.Fields) != 4 || len(spec.Info) != 1 || !strings.HasPrefix(spec.Info[0], "Today by client unavailable: ") {
+		t.Fatalf("failed-breakdown response = %s, err = %v", out.String(), err)
 	}
 	if err := runHarvest(context.Background(), strings.NewReader(request), &out, "456", credentials, server.URL); err != nil {
 		t.Fatal(err)

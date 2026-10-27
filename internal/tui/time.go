@@ -115,7 +115,10 @@ func (m *Model) gotTimeForm(msg timeFormMsg) {
 	if msg.linksErr != nil {
 		m.setStatus(statusWarning, "no suggestions: "+msg.linksErr.Error())
 	}
-	m.form = newFormModal("Log time · "+ticket.OneLine(entry.project.Name), msg.spec, defaults, m.submitTimeForm)
+	// The ticket's tracked time follows the provider's info, in the modal only.
+	spec := msg.spec
+	spec.Info = append(slices.Clip(spec.Info), "This ticket: "+m.timeSummaryValue(entry.ticket.GID))
+	m.form = newFormModal("Log time · "+ticket.OneLine(entry.project.Name), spec, defaults, m.submitTimeForm)
 }
 
 func (m *Model) submitTimeForm(values map[string]string) tea.Cmd {

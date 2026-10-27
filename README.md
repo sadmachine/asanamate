@@ -1075,7 +1075,9 @@ assigning to yourself, and reopening never ask.
 Press `t` on a ticket. If ticket belongs to several Asana projects, choose one.
 The form shows the Harvest projects where your task is active, the task under
 its real name, decimal hours, and the date; an error naming the task ID means
-it is not active on any of your projects. Press
+it is not active on any of your projects. Above the fields, it shows today's
+hours per Harvest client, most first and including running timers, then this
+ticket's tracked time. Press
 Enter to edit a field, Tab to move, and Ctrl+S to log. Project and task choices
 are remembered per Asana project after a successful log; hours starts empty,
 and the date starts as today. Type the date as `YYYY-MM-DD` or `date -d` text

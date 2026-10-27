@@ -44,9 +44,11 @@ type Field struct {
 	Default  string   `json:"default,omitempty" toml:"default,omitempty"`
 }
 
-// Spec contains the controls rendered in one modal.
+// Spec contains the controls rendered in one modal. Info lines are context
+// shown under the modal's title; only command-supplied forms carry them.
 type Spec struct {
-	Fields []Field `json:"fields" toml:"fields"`
+	Info   []string `json:"info,omitempty" toml:"-"`
+	Fields []Field  `json:"fields" toml:"fields"`
 }
 
 // Validate checks field IDs and supported control types.

@@ -114,6 +114,27 @@ func TestTimeFormChoosesAsanaProjectAndRestoresFields(t *testing.T) {
 	}
 }
 
+// The provider's info lines sit under the title, followed by the ticket's
+// tracked time.
+func TestTimeFormShowsProviderInfoAndTicketTime(t *testing.T) {
+	m, _ := timeModel(t, asana.Membership{Project: asana.Ref{GID: "1", Name: "Asana Web"}})
+	withInfo := strings.Replace(timeFormJSON, `{"fields":`, `{"info":["Today: Acme 3h · Foo 2h"],"fields":`, 1)
+	m.deps.Config.TimeTracking.Command = "printf '%s' '" + withInfo + "'"
+	today := int64(4200)
+	m.timeSummaries = map[string]timeSummaryState{"42": {summary: timetracking.Summary{TotalSeconds: 21600, TodaySeconds: &today}}}
+	drain(m, m.openTime())
+	if m.form == nil {
+		t.Fatalf("no form; status = %q", m.status)
+	}
+	lines := strings.Split(ansi.Strip(m.form.view(80, 20, m.modalLook())), "\n")
+	if len(lines) < 3 || lines[1] != "Today: Acme 3h · Foo 2h" || lines[2] != "This ticket: 6h · 1h 10m today" {
+		t.Fatalf("form view = %q", lines)
+	}
+	if len(m.timeEntry.spec.Info) != 1 {
+		t.Errorf("ticket line leaked into the provider spec: %q", m.timeEntry.spec.Info)
+	}
+}
+
 // A provider default fills a select without a remembered choice; a
 // remembered choice still offered wins over it.
 func TestTimeFormProviderDefaultYieldsToRememberedChoice(t *testing.T) {

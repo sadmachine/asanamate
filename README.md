@@ -488,8 +488,10 @@ Space-separated terms, all of which must match:
 
 - words match the title
 - `section:`, `project:`, `assignee:`, `tag:` match names
-- `project:<name>[<section>]` matches a section within that project, such as
-  `project:web[backlog]` or `project:web["in progress"]`
+- `project:<name>[<section>]` matches a section within that project by its
+  full name (case-insensitive), such as `project:web[backlog]` or
+  `project:web["in progress"]`; separate sections with `|` to match any of
+  them, such as `-project:web[done|"in review"]`
 - `is:open`, `is:done`
 - `due:overdue`, `due:today`, `due:week` (the next 7 days, today included),
   `due:none`

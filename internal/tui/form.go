@@ -160,6 +160,9 @@ func (f *formModal) view(width, height int, look modalLook) string {
 	accent := look.accent
 	var b strings.Builder
 	b.WriteString(accent.Render(ticket.OneLine(f.title)) + "\n")
+	for _, line := range f.spec.Info {
+		b.WriteString(dimStyle.Render(ansi.Truncate(ticket.OneLine(line), max(width-2, 1), "…")) + "\n")
+	}
 	for i, field := range f.spec.Fields {
 		value := f.values[field.ID]
 		if field.Type == form.Select {

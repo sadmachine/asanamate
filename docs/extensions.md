@@ -232,6 +232,9 @@ decode them. For example, a helper can use a JSON-encoded string such as
 `{"provider":"claude","sessionId":"one"}` as an option ID when it needs both
 values. JSON-encode that string when placing it inside the response object.
 
+The response may also include `info`, one-line strings shown dimmed under the
+form's title, as in a [time form](#time-tracking).
+
 Controls must pass the shared form validation, including at least one field
 and at least one option per select. A command failure, invalid JSON, or invalid
 controls cancels the action and shows an error. Use a nonzero exit with an
@@ -749,10 +752,12 @@ ignore.
   cannot have one. A select's `default` names one of its options, such as the
   project a `links` entry suggests; a remembered choice that is still offered
   wins over it. A `bool` without a default starts as `"false"`, and a `date`
-  as today.
+  as today. Optional `info` is a list of one-line strings shown dimmed under
+  the form's title, such as today's time per client; asanamate adds the
+  ticket's tracked time after them. Harvest sends today's hours per client.
 
   ```json
-  {"fields":[
+  {"info":["Today: Web 3h · Ops 45m"],"fields":[
     {"id":"project_id","label":"Project","type":"select","remember":true,
      "options":[{"id":"123","name":"Web"}]},
     {"id":"hours","label":"Hours","type":"hours"},

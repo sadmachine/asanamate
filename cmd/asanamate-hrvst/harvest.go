@@ -2,16 +2,19 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -95,7 +98,7 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 				break
 			}
 		}
-		return json.NewEncoder(out).Encode(form.Spec{Fields: []form.Field{
+		return json.NewEncoder(out).Encode(form.Spec{Info: []string{harvestClientsToday(ctx, configPath, endpoint)}, Fields: []form.Field{
 			project,
 			{ID: "task_id", Label: "Harvest task", Type: form.Select, Options: []form.Option{task}, Remember: true},
 			{ID: "hours", Label: "Hours", Type: form.Hours},
@@ -460,6 +463,32 @@ func harvestFeed(ctx context.Context, configPath, endpoint, date string) (feed.R
 	}
 	reply.Summary = durationLabel(total) + " logged"
 	return reply, nil
+}
+
+// harvestClientsToday is the form's info line: hours spent today per
+// client, most first, running timers included as in the feed. Failure only
+// costs the line, never the form.
+func harvestClientsToday(ctx context.Context, configPath, endpoint string) string {
+	entries, err := harvestUserEntries(ctx, configPath, endpoint, time.Now().Format(time.DateOnly), "Harvest today")
+	if err != nil {
+		return "Today by client unavailable: " + err.Error()
+	}
+	hours := map[string]float64{}
+	for _, entry := range entries {
+		hours[cmp.Or(strings.TrimSpace(entry.Client.Name), "No client")] += *entry.Hours
+	}
+	if len(hours) == 0 {
+		return "Today: nothing logged"
+	}
+	clients := slices.Collect(maps.Keys(hours))
+	slices.SortFunc(clients, func(a, b string) int {
+		return cmp.Or(cmp.Compare(hours[b], hours[a]), strings.Compare(a, b))
+	})
+	parts := make([]string, len(clients))
+	for i, client := range clients {
+		parts[i] = client + " " + durationLabel(hours[client])
+	}
+	return "Today: " + strings.Join(parts, " · ")
 }
 
 // hoursLabel shows decimal hours briefly: "1.5h", "0.25h", "2h".

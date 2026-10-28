@@ -6,21 +6,24 @@ own design pass. They are recorded here so they can be picked up later.
 
 ## Cheaper project list
 
-**Now:** `Client.MemberProjects` loads every unarchived project in the
-workspace with its member list, then keeps the ones the user belongs to. In
-large workspaces this is slow and moves a lot of data. The TUI caches the
-result in state, so pickers open at once and the load runs in the
-background once per session, but the request costs the same.
+**Now:** `Client.Projects` loads every unarchived project in the workspace
+with its member list. The TUI keeps the ones the user belongs to for project
+navigation, caching them in state, and offers all of them in the Add to
+project picker. In large workspaces this is slow and moves a lot of data.
+The cache lets navigation open at once, and the load runs in the background
+once per session, but the request costs the same.
 
 **Idea:** Asana has no server-side filter for the user's own projects:
 `GET /projects` has no member filter, and `GET /memberships` needs a project
 `parent` for user memberships. A team-based list
 (`/users/{gid}/team_memberships`, then `GET /memberships` with each team and
-`resource_subtype=project_membership`) moves far less data.
+`resource_subtype=project_membership`) moves far less data for navigation.
+The Add to project picker still needs every accessible project, so it would
+keep a full load, made only when the picker opens.
 
 **Watch out for:** A team-based list includes team projects the user is not a
 member of and misses projects shared with the user directly, which changes
-what the project picker shows.
+what project navigation shows.
 
 ## Shared shell runner
 

@@ -127,6 +127,7 @@ type Model struct {
 	navHidden    bool   // the views panel is hidden for this session
 
 	projects        []asana.Project
+	allProjects     []asana.Project            // accessible projects for task membership edits; not persisted
 	projectsLoaded  bool                       // projects came from Asana this session, not the state cache
 	loadingProjects bool                       // projects are loading
 	afterProjects   func() tea.Cmd             // runs once projects load
@@ -525,6 +526,7 @@ func (m *Model) gotProjects(msg projectsMsg) tea.Cmd {
 	delete(m.backgroundErrors, "projects")
 	m.clearProgress()
 	m.projects, m.projectsLoaded = msg.projects, true
+	m.allProjects = msg.allProjects
 	m.deps.State.Projects = make([]state.Project, len(msg.projects))
 	for i, p := range msg.projects {
 		m.deps.State.Projects[i] = state.Project{GID: p.GID, Name: p.Name}

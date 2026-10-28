@@ -72,7 +72,7 @@ func editModel(t *testing.T) (*Model, *[]string) {
 		case r.URL.Path == "/stories/9" && r.Method == http.MethodGet:
 			io.WriteString(w, `{"data":{"gid":"9","type":"comment","is_editable":true,"target":{"gid":"1"}}}`)
 		case r.URL.Path == "/projects":
-			io.WriteString(w, `{"data":[{"gid":"p1","name":"Web","members":[{"gid":"u1"}]},{"gid":"p2","name":"API","members":[{"gid":"u1"}]}]}`)
+			io.WriteString(w, `{"data":[{"gid":"p1","name":"Web","members":[{"gid":"u1"}]},{"gid":"p2","name":"API","members":[{"gid":"u2"}]}]}`)
 		case r.URL.Path == "/workspaces/w/users":
 			io.WriteString(w, `{"data":[{"gid":"u2","name":"zed"},{"gid":"u1","name":"Amy"}]}`)
 		case r.URL.Path == "/tasks/1" && r.Method == http.MethodGet:
@@ -316,6 +316,22 @@ func TestAddProjectExcludesExistingMemberships(t *testing.T) {
 	press(m, "e", "p")
 	if m.modal == nil || len(m.modal.items) != 1 || m.modal.items[0].Value.(asana.Ref).GID != "p2" {
 		t.Fatalf("add project choices = %v", m.modal)
+	}
+	if len(m.projects) != 1 || m.projects[0].GID != "p1" || len(m.deps.State.Projects) != 1 || m.deps.State.Projects[0].GID != "p1" {
+		t.Fatalf("non-member project leaked into navigation/cache: %+v, %+v", m.projects, m.deps.State.Projects)
+	}
+}
+
+func TestAddProjectWaitsForAccessibleProjectsDespiteNavigationCache(t *testing.T) {
+	m, _ := editModel(t)
+	m.projects = []asana.Project{{GID: "p1", Name: "Web"}}
+	press(m, "e", "p")
+	if m.modal == nil || len(m.modal.items) != 1 || m.modal.items[0].Value.(asana.Ref).GID != "p2" {
+		t.Fatalf("cached navigation hid accessible project: %v (status %q)", m.modal, m.status)
+	}
+	press(m, "esc", "e", "p")
+	if m.modal == nil || len(m.modal.items) != 1 || m.loadingProjects {
+		t.Fatal("accessible projects should be reused within the session")
 	}
 }
 

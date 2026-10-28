@@ -121,15 +121,18 @@ func TestMyTasksResolvesTaskList(t *testing.T) {
 	}
 }
 
-func TestMemberProjectsFiltersByUser(t *testing.T) {
+func TestProjectsIncludesNonMembers(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/projects" || r.URL.Query().Get("workspace") != "w" {
+			t.Errorf("unexpected project request: %s", r.URL)
+		}
 		if r.URL.Query().Get("archived") != "false" {
 			t.Errorf("archived = %q", r.URL.Query().Get("archived"))
 		}
 		io.WriteString(w, `{"data":[{"gid":"a","name":"Mine","members":[{"gid":"me"}]},{"gid":"b","name":"Other","members":[{"gid":"x"}]}]}`)
 	})
-	projects, err := c.MemberProjects(ctx, "w", "me")
-	if err != nil || len(projects) != 1 || projects[0].Name != "Mine" {
+	projects, err := c.Projects(ctx, "w")
+	if err != nil || len(projects) != 2 || projects[0].Name != "Mine" || projects[1].Name != "Other" {
 		t.Fatalf("projects = %+v, err = %v", projects, err)
 	}
 }

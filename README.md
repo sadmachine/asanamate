@@ -27,6 +27,9 @@ and coding agents can do what you can. macOS and Linux only.
   [Writing back to Asana](#writing-back-to-asana).
 - **Act** on a ticket: run your own commands with the ticket as context, such
   as starting a coding agent in its repo. See [Actions](#actions).
+- **Automate** with hooks: open a prompt or run an action when you open,
+  assign, or complete a ticket, or when new activity arrives. See
+  [Hooks](#hooks).
 - **Discover extensions**: browse optional integrations, setup guides and local
   checks from Settings & tools or `asanamate extensions`. See [Extensions](#extensions).
 - **Show agents** (optional): coding agents running in ccmux or any other tool
@@ -490,6 +493,8 @@ Space-separated terms, all of which must match:
 
 - words match the title
 - `section:`, `project:`, `assignee:`, `tag:` match names
+- `assignee:@me` matches tickets assigned to you, `assignee:none` unassigned
+  ones
 - `project:<name>[<section>]` matches a section within that project by its
   full name (case-insensitive), such as `project:web[backlog]` or
   `project:web["in progress"]`; separate sections with `|` to match any of
@@ -498,6 +503,9 @@ Space-separated terms, all of which must match:
 - `due:overdue`, `due:today`, `due:week` (the next 7 days, today included),
   `due:none`
 - `agent:any`, `agent:none`, `agent:<state>` match linked [agents](#agents-optional)
+- `branch:any` matches a ticket with a branch saved for it (**Set branch**) or
+  set in its `branch_field`; `branch:none` one whose branch falls back to its
+  ID field or title slug
 - `-term` negates a term; `"double quotes"` group words
 
 Example: `is:open section:"in progress" -tag:blocked`. Set the startup filter
@@ -723,8 +731,11 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 | `repo_source.root` | your setup directory, or empty | directory whose direct children with a `.git` entry (clones and worktrees) fill the repo picker; absolute or starting with `~`; empty: type a path |
 | `repo_source.command` | unset | prints one repo path per line; replaces `repo_source.root` when set; see [Repo sources](docs/extensions.md#repo-sources) |
 | `time_tracking.id` / `time_tracking.command` | unset (off) | provider ID for saved choices and command implementing the [time tracking JSON protocol](docs/extensions.md#time-tracking) |
-| `time_tracking.prompt_after` | `[]` | TUI edits that open the log time form once they succeed: `"assign"` (to someone else) and `"complete"`; `esc` skips it. See [Time tracking](#time-tracking-optional) |
 | `project_links.command` | unset (off) | command implementing the [project links JSON protocol](docs/extensions.md#project-links); its links preselect the repo picker and time form |
+| `hooks[].on` | required | the event: `ticket_open`, `assign`, `complete`, or `new_activity`. See [Hooks](#hooks) |
+| `hooks[].when` | `""` (every ticket) | a [filter](#filtering) query the event's ticket must match |
+| `hooks[].once` | `false` | `true` runs the hook at most once per ticket, remembered across restarts |
+| `hooks[].run` | required | `log_time`, `edit:<item>`, or `action:<file>` |
 
 ### settings.toml
 
@@ -1071,10 +1082,21 @@ environment and remove `account_id` (or the provider file). Remove the legacy
 login only if you also want to discard that fallback; revoke tokens in Harvest
 when needed. Core browsing works independently of Harvest.
 
-To be asked for time when you hand a ticket off, add
-`prompt_after = ["assign", "complete"]`. Assigning a ticket to someone else or
-completing it then opens the log time form; `esc` skips it. Unassigning,
-assigning to yourself, and reopening never ask.
+To be asked for time when you hand a ticket off, add these [hooks](#hooks).
+Assigning a ticket to someone else or completing it then opens the log time
+form; `esc` skips it. Unassigning, assigning to yourself, and reopening never
+ask.
+
+```toml
+[[hooks]]
+on = "assign"
+when = "-assignee:@me -assignee:none"
+run = "log_time"
+
+[[hooks]]
+on = "complete"
+run = "log_time"
+```
 
 Press `t` on a ticket. If ticket belongs to several Asana projects, choose one.
 The form shows the Harvest projects where your task is active, the task under
@@ -1348,6 +1370,70 @@ repo = true
 command = 'sesh connect "$ASANAMATE_REPO"'
 ```
 
+## Hooks
+
+A hook opens a prompt or runs an [action](#actions) when something happens to
+a ticket. Add `[[hooks]]` tables to `config.toml`; matching hooks run in file
+order.
+
+```toml
+# Ask for a branch the first time you open a ticket without one.
+[[hooks]]
+on = "ticket_open"
+when = "is:open branch:none"
+once = true
+run = "edit:branch"
+
+# Open a tmux window for new activity on your tickets tagged agent.
+[[hooks]]
+on = "new_activity"
+when = "assignee:@me tag:agent"
+once = true
+run = "action:tmux-open"
+```
+
+**Events** (`on`) happen only in the running TUI. CLI writes such as
+`asanamate complete` raise none.
+
+- `ticket_open`: the reader gains focus on a ticket (`enter`, `2`, or
+  `tab`/`l` landing on it), or a ticket opens in the reader from Activity, the
+  Feed panel, ticket history, ticket search, an Asana task link, or the jump
+  menu. Moving the list selection and starting a comment do not count.
+- `assign`: a TUI assignment succeeds, from the edit menu, **Edit multiple**,
+  or a comment's staged edits. `when` sees the new assignee.
+- `complete`: a TUI edit completes a ticket. Reopening never counts.
+- `new_activity`: an [Activity](#activity) scan finds a related event that is
+  new to its cache: not your own, not automatic, and not from the first scan
+  that fills an empty cache. With `activity.refresh_interval = "0"`, scans
+  run only when Activity opens.
+
+**Conditions** (`when`) use the [filter](#filtering) language, such as
+`"is:open branch:none"`. Empty matches every ticket.
+
+**Targets** (`run`):
+
+- `log_time` opens the log time form (needs [time tracking](#time-tracking-optional)).
+- `edit:<item>` opens an edit menu item: `title`, `description`, `section`,
+  `field`, `assign`, `due`, `add_project`, `remove_project`, or `branch`.
+- `action:<file>` runs `actions/<file>.toml` as if picked from the action
+  menu. `$ASANAMATE_EVENT` holds the event name (empty from the menu); for
+  `new_activity` on a comment, the `$ASANAMATE_COMMENT_*` variables describe
+  that comment. A hook's background action stays in the background with
+  `--exit-on-action`. `new_activity` hooks run only background actions with
+  no form, input, repo, or agent.
+
+**Rules:**
+
+- At most one prompt opens per event, the first matching one; background
+  actions all run. One write that both assigns and completes opens at most
+  one prompt.
+- A prompt never opens over another menu, input, form, or the comment
+  composer. That hook skips and asks next time.
+- An edit a hook opened raises no hook events.
+- `once = true` counts a hook as done for a ticket when its prompt opens, so
+  `esc` answers it too. Changing the hook's `on`, `when`, or `run` starts it
+  fresh.
+
 ## Agents (optional)
 
 asanamate can show coding agents that another tool is running, such as
@@ -1417,22 +1503,22 @@ reported itself, when that report is newer than ccmux's:
 - **Claude Code** keeps a file per running session in
   `$CLAUDE_CONFIG_DIR/sessions/` (else `~/.claude/sessions/`). The adapter
   reads it as is; nothing to install.
-- **Codex** reports through a hook. `asanamate-ccmux setup` adds
+- **Codex** reports through a Codex hook. `asanamate-ccmux setup` adds
   `asanamate-ccmux hook codex` to `$CODEX_HOME/hooks.json` (else
   `~/.codex/hooks.json`), after asking, saving the old file as a timestamped
   `hooks.json.<time>.bak`. Codex asks you to trust the new
   hooks on its next start, and needs hooks on (`[features] hooks = true`). The
-  hook writes one file per session in `$XDG_STATE_HOME/asanamate/agents/`
+  Codex hook writes one file per session in `$XDG_STATE_HOME/asanamate/agents/`
   (else `~/.local/state/asanamate/agents/`).
   Without it, Codex states fall back to the Codex pane title, and are
   inaccurate or wrong when the title format changes.
 
-  The hook runs `asanamate-ccmux` by its full path. After you move or
+  The Codex hook runs `asanamate-ccmux` by its full path. After you move or
   reinstall it somewhere else, run `asanamate-ccmux setup` again: it finds the
   old hook, including one that runs `asanamate hook codex` from before
   v0.2.0, and offers to replace it with the current path. Your other hooks
   stay, and the old file is saved as a timestamped `hooks.json.<time>.bak`
-  again. To remove the hook, delete the entries whose command ends in
+  again. To remove the Codex hook, delete the entries whose command ends in
   `hook codex` from `hooks.json`.
 
 Any status other than `idle` from ccmux is passed on as is, so
@@ -1851,7 +1937,7 @@ provider never retries creation automatically.
    (see [Optional features](#optional-features)). Run `hrvst login` again for
    time tracking.
 6. Run `asanamate-ccmux setup` if you use the Codex hook; it adds or repairs
-   the hook for the new path.
+   the Codex hook for the new path.
 7. Run `asanamate doctor` and fix what it reports.
 
 The state file, ticket exports (`tickets/`), and the action log hold project

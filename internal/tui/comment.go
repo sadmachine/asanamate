@@ -38,8 +38,8 @@ type commentComposer struct {
 	labels    map[string]string
 	branch    *string
 	review    *picker
-	footer    int // -1 focuses the comment; otherwise an optional task control
-	logTime   bool
+	footer    int              // -1 focuses the comment; otherwise an optional task control
+	events    []hookEvent      // hook events from staged edits already applied
 	reading   bool             // the reader has focus beside the composer pane
 	resume    *tea.KeyPressMsg // the key that left the ticket, run once the composer closes
 }
@@ -59,7 +59,7 @@ type commentDoneMsg struct {
 	saved    bool
 	err      error
 	cleanup  error // a successful post whose draft could not be removed
-	logTime  bool
+	events   []hookEvent
 }
 
 func (m *Model) openCommentComposer(t asana.Task) {
@@ -457,9 +457,13 @@ func (m *Model) runComment(op commentOperation) tea.Cmd {
 	draft := drafts.Comment{Text: c.box.area.Value(), Images: maps.Clone(c.images), Uncertain: c.uncertain,
 		Changes: slices.Clone(c.changes), ChangeLabels: maps.Clone(c.labels), Branch: c.branch}
 	svc, gid := m.writer(), c.gid
-	logAfter := make([]bool, len(draft.Changes)+1)
+	var base asana.Task
+	if c.task != nil {
+		base = *c.task
+	}
+	eventsAfter := make([][]hookEvent, len(draft.Changes)+1)
 	for i := range draft.Changes {
-		logAfter[i+1] = m.draftLogTime(draft.Changes[:i+1])
+		eventsAfter[i+1] = m.changeEvents(base, draft.Changes[:i+1])
 	}
 	return tea.Batch(m.startSpinner(), request(func(ctx context.Context) tea.Msg {
 		msg := commentDoneMsg{composer: c, op: op}
@@ -491,7 +495,7 @@ func (m *Model) runComment(op commentOperation) tea.Cmd {
 		if len(draft.Changes) > 0 {
 			done, err := svc.Batch(ctx, gid, draft.Changes)
 			draft.Changes = draft.Changes[done:]
-			msg.draft, msg.err, msg.logTime = draft, err, logAfter[done]
+			msg.draft, msg.err, msg.events = draft, err, eventsAfter[done]
 			if saveErr := c.store.Save(draft); saveErr != nil {
 				msg.err = errors.Join(err, fmt.Errorf("saving remaining edits: %w", saveErr))
 			}
@@ -555,7 +559,7 @@ func (m *Model) commentDone(msg commentDoneMsg) tea.Cmd {
 		c.images, c.uncertain = msg.draft.Images, msg.draft.Uncertain
 		c.changes, c.labels, c.branch = msg.draft.Changes, msg.draft.ChangeLabels, msg.draft.Branch
 	}
-	c.logTime = c.logTime || msg.logTime
+	c.events = append(c.events, msg.events...)
 	c.deliveryHint()
 	if msg.err != nil {
 		// Empty input has nothing to protect. Close even if an old draft
@@ -589,10 +593,10 @@ func (m *Model) commentDone(msg commentDoneMsg) tea.Cmd {
 		if c.storyGID != "" {
 			what = "edit comment"
 		}
-		if c.task != nil && (applied > 0 || c.logTime || c.review != nil) {
+		if c.task != nil && (applied > 0 || len(c.events) > 0 || c.review != nil) {
 			what = "update ticket"
 		}
-		cmd := m.editDone(editDoneMsg{gid: c.gid, what: what, logTime: c.logTime})
+		cmd := m.editDone(editDoneMsg{gid: c.gid, what: what, events: c.events})
 		if msg.cleanup != nil {
 			message := "comment posted"
 			if what == "update ticket" {

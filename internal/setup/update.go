@@ -232,6 +232,12 @@ func Merge(old string) (string, []string, map[string]any, error) {
 		if used[k] {
 			continue
 		}
+		if tables, ok := v.([]map[string]any); ok {
+			if err := writeTableArray(&b, k, tables); err != nil {
+				return "", nil, nil, err
+			}
+			continue
+		}
 		if !isTable(v) {
 			return "", nil, nil, fmt.Errorf("the template has no place for %s", k)
 		}
@@ -306,6 +312,36 @@ func isTable(v any) bool {
 func writeTable(b *strings.Builder, md toml.MetaData, path []string, v any) error {
 	fmt.Fprintf(b, "\n[%s]\n", strings.Join(path, "."))
 	return writeKeys(b, md, path, v.(map[string]any))
+}
+
+// tableArrayOrder is the key order writeTableArray uses, so migrated hooks
+// read like the template's examples.
+var tableArrayOrder = []string{"on", "when", "once", "run"}
+
+// writeTableArray appends tables as an array of tables named name, such as
+// [[hooks]], keeping their order.
+func writeTableArray(b *strings.Builder, name string, tables []map[string]any) error {
+	for i, t := range tables {
+		fmt.Fprintf(b, "\n[[%s]]\n", name)
+		keys := slices.Sorted(maps.Keys(t))
+		slices.SortStableFunc(keys, func(x, y string) int {
+			rank := func(k string) int {
+				if i := slices.Index(tableArrayOrder, k); i >= 0 {
+					return i
+				}
+				return len(tableArrayOrder)
+			}
+			return rank(x) - rank(y)
+		})
+		for _, k := range keys {
+			v, err := formatValue(t[k])
+			if err != nil {
+				return fmt.Errorf("%s[%d].%s: %w", name, i+1, k, err)
+			}
+			fmt.Fprintf(b, "%s = %s\n", k, v)
+		}
+	}
+	return nil
 }
 
 // writeKeys appends t's values in file order, then its sub-tables.

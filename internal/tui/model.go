@@ -161,6 +161,7 @@ type Model struct {
 	menuFor        string         // gid whose menu opens once its details arrive
 	menuOpen       func() tea.Cmd // opens that menu
 	openGID        string         // history ticket to show once its details arrive
+	openedGID      string         // ticket the focused reader raised ticket_open for
 
 	// conversations is the lookup in flight; conversationResults holds each
 	// ticket's last successful lookup, in memory only, shown stale on refresh.
@@ -259,12 +260,15 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	// Statuses originate in synchronous handlers throughout the TUI. Schedule
 	// the latest toast once, after the handler finishes changing its state.
+	composerBefore := m.composer != nil
 	defer func() {
 		m.syncComposer()
 		m.refreshConnectionStatus()
-		cmd = tea.Batch(cmd, m.scheduleToast(), m.scheduleConnectionTick())
+		cmd = tea.Batch(cmd, m.checkTicketOpen(composerBefore), m.scheduleToast(), m.scheduleConnectionTick())
 	}()
 	switch msg := msg.(type) {
+	case hookActionMsg:
+		return m, m.launchHookAction(msg)
 	case connectionTickMsg:
 		return m, nil
 	case toastTickMsg:
@@ -611,17 +615,14 @@ func (m *Model) editDone(msg editDoneMsg) tea.Cmd {
 	}
 	m.setStatus(statusInfo, cmp.Or(msg.done, msg.what+": done"))
 	// Keep the edited ticket shown even if the reload drops it from the view.
-	var logTime tea.Cmd
 	if t, ok := m.selected(); ok && t.GID == msg.gid {
 		m.viewing = &t
-		if msg.logTime && m.deps.Config.TimeTrackingEnabled() {
-			logTime = m.openTime()
-		}
 	}
+	hooks := m.runHooks(msg.events)
 	if m.shownGID != msg.gid {
 		delete(m.details, msg.gid)
 	}
-	return tea.Batch(m.refresh(), logTime)
+	return tea.Batch(m.refresh(), hooks)
 }
 
 func sameProject(a, b *asana.Ref) bool {
@@ -860,7 +861,7 @@ func (m *Model) applyFilter() {
 			}
 		}
 	}
-	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.agentStates, m.now())
+	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.filterEnv())
 	visible = slices.DeleteFunc(visible, func(t asana.Task) bool { return slices.Contains(pins, t.GID) })
 	fresh, rest := m.splitNew(visible)
 	m.visible, m.groups = groupTasks(rest, m.groupBy, m.rowContext(), m.now())

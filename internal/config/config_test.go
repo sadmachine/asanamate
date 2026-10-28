@@ -334,13 +334,6 @@ func TestTimeTrackingConfig(t *testing.T) {
 	if err != nil || !cfg.TimeTrackingEnabled() {
 		t.Fatalf("configured time tracking = %+v, err = %v", cfg.TimeTracking, err)
 	}
-	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[time_tracking]\nid = \"hrvst\"\ncommand = \"p\"\nprompt_after = [\"assign\", \"complete\"]\n"))
-	if err != nil || !cfg.TimeTracking.PromptsAfter(PromptAssign) || !cfg.TimeTracking.PromptsAfter(PromptComplete) {
-		t.Fatalf("prompt_after = %+v, err = %v", cfg.TimeTracking, err)
-	}
-	if _, err := Load(writeFile(t, "workspace = \"1\"\n[time_tracking]\nid = \"hrvst\"\ncommand = \"p\"\nprompt_after = [\"move\"]\n")); err == nil || !strings.Contains(err.Error(), "time_tracking.prompt_after") {
-		t.Fatalf("bad prompt_after: err = %v", err)
-	}
 	for _, body := range []string{"id = \"hrvst\"", "command = \"provider\"", "id = \"hrvst\"\ncommand = \"  \""} {
 		if _, err := Load(writeFile(t, "workspace = \"1\"\n[time_tracking]\n"+body+"\n")); err == nil || !strings.Contains(err.Error(), "time_tracking") {
 			t.Fatalf("config %q error = %v", body, err)
@@ -465,7 +458,9 @@ func TestSaveActionFileRoundTripAndBackup(t *testing.T) {
 		}}},
 	}}
 	actions, err := SaveActionFile(dir, original)
-	if err != nil || len(actions) != 1 || !reflect.DeepEqual(actions[0], original.Action) {
+	loaded := original.Action
+	loaded.File = "20-deploy"
+	if err != nil || len(actions) != 1 || !reflect.DeepEqual(actions[0], loaded) {
 		t.Fatalf("round trip: %+v, %v", actions, err)
 	}
 	files, err := LoadActionFiles(dir)
@@ -744,5 +739,105 @@ func TestFeedConfig(t *testing.T) {
 		if _, err := Load(writeFile(t, "workspace = \"1\"\n"+body)); err == nil || !strings.Contains(err.Error(), key) {
 			t.Errorf("%q: error %v, want one naming %s", body, err, key)
 		}
+	}
+}
+
+const hookTimeTracking = "[time_tracking]\nid = \"hrvst\"\ncommand = \"p\"\n"
+
+func TestHooksLoad(t *testing.T) {
+	path := writeFile(t, "workspace = \"1\"\n"+hookTimeTracking+`
+[[hooks]]
+on = "ticket_open"
+when = "is:open branch:none"
+once = true
+run = "edit:branch"
+
+[[hooks]]
+on = "complete"
+run = "log_time"
+
+[[hooks]]
+on = "new_activity"
+run = "action:tmux-open"
+`)
+	writeActions(t, path, map[string]string{"tmux-open.toml": "name = \"Open\"\nkey = \"o\"\nmode = \"background\"\ncommand = \"true\"\n"})
+	cfg, err := Load(path)
+	want := []Hook{
+		{On: HookTicketOpen, When: "is:open branch:none", Once: true, Run: "edit:branch"},
+		{On: HookComplete, Run: HookLogTime},
+		{On: HookNewActivity, Run: "action:tmux-open"},
+	}
+	if err != nil || !reflect.DeepEqual(cfg.Hooks, want) {
+		t.Fatalf("hooks = %+v, err = %v", cfg.Hooks, err)
+	}
+	if a, ok := cfg.HookAction(cfg.Hooks[2]); !ok || a.Name != "Open" || a.File != "tmux-open" {
+		t.Fatalf("hook action = %+v, %v", a, ok)
+	}
+	if kind, name := cfg.Hooks[0].Target(); kind != "edit" || name != "branch" {
+		t.Fatalf("target = %q, %q", kind, name)
+	}
+}
+
+func TestHooksValidate(t *testing.T) {
+	background := "name = \"Bg\"\nkey = \"b\"\nmode = \"background\"\ncommand = \"true\"\n"
+	foreground := "name = \"Fg\"\nkey = \"f\"\ncommand = \"true\"\n"
+	withForm := strings.Replace(background, `key = "b"`, `key = "m"`, 1) + "[form]\ncommand = \"form-cmd\"\n"
+	for _, tc := range []struct {
+		name, hooks, want string
+	}{
+		{"unknown event", "[[hooks]]\non = \"complete\"\nrun = \"log_time\"\n[[hooks]]\non = \"refresh\"\nrun = \"log_time\"\n", `hooks[2].on: "refresh" must be one of ticket_open, assign, complete, new_activity`},
+		{"unknown target", "[[hooks]]\non = \"complete\"\nrun = \"edit:complete\"\n", `hooks[1].run: "edit:complete" must be`},
+		{"missing run", "[[hooks]]\non = \"complete\"\n", `hooks[1].run: "" must be`},
+		{"log time without tracking", "[[hooks]]\non = \"complete\"\nrun = \"log_time\"\n", "hooks[1].run: log_time needs [time_tracking]"},
+		{"missing action", "[[hooks]]\non = \"assign\"\nrun = \"action:nope\"\n", "hooks[1].run: no action file actions/nope.toml"},
+		{"activity prompt", "[[hooks]]\non = \"new_activity\"\nrun = \"edit:branch\"\n", "hooks[1].run: new_activity hooks run background actions only"},
+		{"activity foreground action", "[[hooks]]\non = \"new_activity\"\nrun = \"action:fg\"\n", "hooks[1].run: actions/fg.toml must be a background action"},
+		{"activity form action", "[[hooks]]\non = \"new_activity\"\nrun = \"action:form\"\n", "hooks[1].run: actions/form.toml must be a background action"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tracking := hookTimeTracking
+			if tc.name == "log time without tracking" {
+				tracking = ""
+			}
+			path := writeFile(t, "workspace = \"1\"\n"+tracking+tc.hooks)
+			writeActions(t, path, map[string]string{"bg.toml": background, "fg.toml": foreground, "form.toml": withForm})
+			if _, err := Load(path); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("err = %v, want %q", err, tc.want)
+			}
+		})
+	}
+	path := writeFile(t, "workspace = \"1\"\n[[hooks]]\non = \"ticket_open\"\nrun = \"action:fg\"\n")
+	writeActions(t, path, map[string]string{"fg.toml": foreground})
+	if _, err := Load(path); err != nil {
+		t.Fatalf("interactive action on ticket_open: %v", err)
+	}
+}
+
+func TestPromptAfterBecomesHooks(t *testing.T) {
+	body := "workspace = \"1\"\n" + hookTimeTracking + "prompt_after = [\"assign\", \"complete\"]\n[[hooks]]\non = \"ticket_open\"\nrun = \"edit:branch\"\n"
+	path := writeFile(t, body)
+	_, err := Load(path)
+	var pending *UpdateNeeded
+	if !errors.As(err, &pending) || !strings.Contains(err.Error(), `time_tracking.prompt_after was replaced by [[hooks]] with run = "log_time"`) {
+		t.Fatalf("err = %v", err)
+	}
+	raw := decode(t, body)
+	if _, err := ApplyUpdates(raw); err != nil {
+		t.Fatal(err)
+	}
+	want := []map[string]any{
+		{"on": "ticket_open", "run": "edit:branch"},
+		{"on": "assign", "when": "-assignee:@me -assignee:none", "run": "log_time"},
+		{"on": "complete", "run": "log_time"},
+	}
+	if !reflect.DeepEqual(raw["hooks"], want) {
+		t.Fatalf("hooks = %#v", raw["hooks"])
+	}
+	if _, ok := getPath(raw, "time_tracking.prompt_after"); ok {
+		t.Fatal("prompt_after left in config")
+	}
+	raw = decode(t, "workspace = \"1\"\n"+hookTimeTracking+"prompt_after = []\n")
+	if _, err := ApplyUpdates(raw); err != nil || raw["hooks"] != nil {
+		t.Fatalf("empty prompt_after: hooks = %v, err = %v", raw["hooks"], err)
 	}
 }

@@ -1,12 +1,16 @@
 // Package filter implements the ticket list query language.
 //
 // A query is space-separated terms that must all match. Bare words match the
-// title. section:, project:, assignee:, and tag: match names by substring.
+// title. section:, project:, assignee:, and tag: match names by substring;
+// assignee:@me matches tickets assigned to the user and assignee:none
+// unassigned ones.
 // project:<name>[<section>] matches a section within that project only, by
 // exact name; project:<name>[<a>|<b>] matches any of the listed sections.
 // is:open and is:done match completion. due:overdue, due:today, due:week (the
 // next 7 days, today included), and due:none match the due date. agent:any,
-// agent:none, and agent:<state> match linked agents. A leading "-" negates a term, and double
+// agent:none, and agent:<state> match linked agents. branch:any matches a
+// branch saved for the ticket or set in its branch field, and branch:none
+// neither. A leading "-" negates a term, and double
 // quotes group words.
 package filter
 
@@ -19,7 +23,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 )
 
-var keys = []string{"section", "project", "assignee", "tag", "is", "due", "agent"}
+var keys = []string{"section", "project", "assignee", "tag", "is", "due", "agent", "branch"}
 
 // Keys returns the filter fields in display order.
 func Keys() []string { return slices.Clone(keys) }
@@ -96,34 +100,48 @@ func tokenize(query string) []string {
 	return toks
 }
 
-// Match reports whether t satisfies every term. agentStates are the states of
-// the agents linked to t; today places due dates.
-func (f Filter) Match(t asana.Task, agentStates []string, today time.Time) bool {
+// Env is what terms need beyond the task. Today places due dates and Me is
+// the user's gid for assignee:@me. AgentStates returns the states of the
+// agents linked to a task and HasBranch whether it has an explicit branch;
+// nil lookups mean none.
+type Env struct {
+	Today       time.Time
+	Me          string
+	AgentStates func(asana.Task) []string
+	HasBranch   func(asana.Task) bool
+}
+
+// Match reports whether t satisfies every term.
+func (f Filter) Match(t asana.Task, env Env) bool {
+	var states []string
+	if env.AgentStates != nil {
+		states = env.AgentStates(t)
+	}
 	for _, tm := range f.terms {
-		if tm.match(t, agentStates, today) == tm.negate {
+		if tm.match(t, states, env) == tm.negate {
 			return false
 		}
 	}
 	return true
 }
 
-// Apply returns the tasks that match, in their original order. agentStates
-// may be nil when agents are not tracked; today places due dates.
-func (f Filter) Apply(tasks []asana.Task, agentStates func(asana.Task) []string, today time.Time) []asana.Task {
+// Apply returns the tasks that match, in their original order.
+func (f Filter) Apply(tasks []asana.Task, env Env) []asana.Task {
 	var out []asana.Task
 	for _, t := range tasks {
-		var states []string
-		if agentStates != nil {
-			states = agentStates(t)
-		}
-		if f.Match(t, states, today) {
+		if f.Match(t, env) {
 			out = append(out, t)
 		}
 	}
 	return out
 }
 
-func (tm term) match(t asana.Task, agentStates []string, today time.Time) bool {
+// UsesMe reports whether a term needs Env.Me.
+func (f Filter) UsesMe() bool {
+	return slices.ContainsFunc(f.terms, func(tm term) bool { return tm.key == "assignee" && tm.value == "@me" })
+}
+
+func (tm term) match(t asana.Task, agentStates []string, env Env) bool {
 	switch tm.key {
 	case "agent":
 		switch tm.value {
@@ -149,7 +167,7 @@ func (tm term) match(t asana.Task, agentStates []string, today time.Time) bool {
 		}
 		return false
 	case "due":
-		_, days, ok := asana.DueDays(t.DueOn, today)
+		_, days, ok := asana.DueDays(t.DueOn, env.Today)
 		switch tm.value {
 		case "none":
 			return !ok
@@ -162,7 +180,22 @@ func (tm term) match(t asana.Task, agentStates []string, today time.Time) bool {
 		}
 		return false
 	case "assignee":
+		switch tm.value {
+		case "@me":
+			return t.Assignee != nil && env.Me != "" && t.Assignee.GID == env.Me
+		case "none":
+			return t.Assignee == nil || t.Assignee.GID == ""
+		}
 		return t.Assignee != nil && contains(t.Assignee.Name, tm.value)
+	case "branch":
+		has := env.HasBranch != nil && env.HasBranch(t)
+		switch tm.value {
+		case "any":
+			return has
+		case "none":
+			return !has
+		}
+		return false
 	case "tag":
 		for _, tag := range t.Tags {
 			if contains(tag.Name, tm.value) {

@@ -224,7 +224,18 @@ func setupHarvest(ctx context.Context, in io.Reader, out io.Writer, endpoint str
 	if tracking {
 		fmt.Fprintln(out, `[time_tracking]
 id = "hrvst"
-command = "asanamate-hrvst"`)
+command = "asanamate-hrvst"
+
+# Optional: open the log time form after assigning a ticket to someone else
+# or completing it. Add these at the end of the file.
+[[hooks]]
+on = "assign"
+when = "-assignee:@me -assignee:none"
+run = "log_time"
+
+[[hooks]]
+on = "complete"
+run = "log_time"`)
 	}
 	if feeds {
 		fmt.Fprintln(out, `Add "asanamate-hrvst" to existing feed.commands, preserving other commands. If no [feed] table exists:

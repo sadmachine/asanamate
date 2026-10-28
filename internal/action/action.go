@@ -62,12 +62,21 @@ type Context struct {
 	Comment *asana.Story
 	// FormValues are selected action parameters, exposed as ASANAMATE_PARAM_*.
 	FormValues map[string]string
+	// Event is the hook event that ran the action, "" from the action menu.
+	Event string
 }
 
 // Branch returns the ticket's git branch: saved, the branch typed for it, when
 // set, then the value of branchField, otherwise DefaultBranch.
 func Branch(t asana.Task, saved, branchField string, preferred map[string]bool) string {
-	return cmp.Or(saved, fieldBranch(t, branchField, preferred), DefaultBranch(t))
+	return cmp.Or(ExplicitBranch(t, saved, branchField, preferred), DefaultBranch(t))
+}
+
+// ExplicitBranch is the ticket's branch when one was given: saved, else
+// branchField's value. It returns "" when the branch falls back to
+// DefaultBranch.
+func ExplicitBranch(t asana.Task, saved, branchField string, preferred map[string]bool) string {
+	return cmp.Or(saved, fieldBranch(t, branchField, preferred))
 }
 
 // DefaultBranch is the branch of a ticket without a branch field value: its
@@ -175,6 +184,7 @@ func Env(c Context) []string {
 		"CONVERSATION_JSON":     c.Files.Conversation,
 		"CONVERSATION_PROVIDER": "",
 		"CONVERSATION_ID":       "",
+		"EVENT":                 c.Event,
 	}
 	if c.Conversation != nil {
 		vars["CONVERSATION_PROVIDER"], vars["CONVERSATION_ID"] = c.Conversation.Provider, c.Conversation.SessionID

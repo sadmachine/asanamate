@@ -111,9 +111,10 @@ README's [Actions](../README.md#actions) section for its keys (`name`, `key`,
 `mode`, `repo`, `agent`, `context`, `form`, `input`, `confirm_writes`) and
 for the action builder.
 
-**When it runs.** When you pick the action in the TUI's action menu, after
-asanamate resolves its repo (`repo = true`), its agent (`agent = true`), its
-form, and its input box. Cancelling any of those skips the run.
+**When it runs.** When you pick the action in the TUI's action menu, or a
+[hook](../README.md#hooks) runs it, after asanamate resolves its repo
+(`repo = true`), its agent (`agent = true`), its form, and its input box.
+Cancelling any of those skips the run.
 
 **Input.** The ticket arrives in environment variables and files:
 
@@ -129,13 +130,14 @@ form, and its input box. Cancelling any of those skips the run.
 | `ASANAMATE_BRANCH` | the ticket's branch: the one saved for it, else `branch_field`'s value, else the ID field, else the title slug |
 | `ASANAMATE_AGENT_STATE`, `ASANAMATE_AGENT_STATUS`, `ASANAMATE_AGENT_PATH`, `ASANAMATE_AGENT_TARGET`, `ASANAMATE_AGENT_TITLE` | the agent the action is about (the chosen one for `agent = true`, else the most urgent): normalized state, raw status, directory, jump id, title. Empty without agents |
 | `ASANAMATE_AGENT_TARGETS` | every linked agent, one `target<TAB>state<TAB>path<TAB>title` line each |
-| `ASANAMATE_COMMENT_GID`, `ASANAMATE_COMMENT_AUTHOR`, `ASANAMATE_COMMENT_AUTHOR_GID`, `ASANAMATE_COMMENT_DATE`, `ASANAMATE_COMMENT_TEXT` | the highlighted comment when the menu opened: story gid, author name and gid, `created_at` timestamp, and body as Markdown. Empty when no comment is highlighted |
+| `ASANAMATE_COMMENT_GID`, `ASANAMATE_COMMENT_AUTHOR`, `ASANAMATE_COMMENT_AUTHOR_GID`, `ASANAMATE_COMMENT_DATE`, `ASANAMATE_COMMENT_TEXT` | the highlighted comment when the menu opened, or for a `new_activity` hook the new comment: story gid, author name and gid, `created_at` timestamp, and body as Markdown. Empty when no comment is highlighted |
 | `ASANAMATE_TICKET_JSON`, `ASANAMATE_TICKET_MD` | full ticket as JSON / Markdown |
 | `ASANAMATE_INPUT_FILE` | text typed into the `input` box, possibly empty. Empty path for actions without `input` |
 | `ASANAMATE_CONVERSATION_JSON`, `ASANAMATE_CONVERSATION_PROVIDER`, `ASANAMATE_CONVERSATION_ID` | private selection snapshot, provider, and exact native session ID for a conversation opener; empty for unrelated actions |
 | `ASANAMATE_PARAM_<ID>` | selected action form value, with its field ID uppercased |
 | `ASANAMATE_FIELD_<NAME>` | custom field display values, e.g. `ASANAMATE_FIELD_BRANCH_NAME` |
 | `ASANAMATE_CONFIRM_WRITES` | `1`/`0`, read by the write-back subcommands |
+| `ASANAMATE_EVENT` | the [hook](../README.md#hooks) event that ran the action, such as `new_activity`; empty from the action menu |
 
 The variables above are set on every run, empty when they do not apply,
 except `ASANAMATE_PARAM_*` and `ASANAMATE_FIELD_*`, which exist only for the

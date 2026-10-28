@@ -5,6 +5,38 @@ workflow copies a version's section to the top of its GitHub release notes,
 so links here are absolute. Steps for changes not yet released wait under
 `## Unreleased`, which becomes the version's heading when it is tagged.
 
+## Unreleased
+
+**Breaking:** `time_tracking.prompt_after` is replaced by
+[hooks](https://github.com/sadmachine/asanamate#hooks). asanamate names the
+change at startup and offers to apply it; `asanamate config update` applies it
+too, keeping a timestamped backup. It turns
+
+```toml
+[time_tracking]
+prompt_after = ["assign", "complete"]
+```
+
+into these hooks at the end of `config.toml`, after any you already have:
+
+```toml
+[[hooks]]
+on = "assign"
+when = "-assignee:@me -assignee:none"
+run = "log_time"
+
+[[hooks]]
+on = "complete"
+run = "log_time"
+```
+
+The log time form opens after the same edits as before. Hooks can also ask
+for a branch when you first open a ticket, or run an action on new Activity;
+see [Hooks](https://github.com/sadmachine/asanamate#hooks). New filter terms
+`assignee:@me`, `assignee:none`, `branch:any`, and `branch:none` work in hooks
+and the list filter. `assignee:none` now matches unassigned tickets, not
+people whose names contain "none".
+
 ## v0.3.4
 
 New default key: `'` opens a menu that jumps to a section of the reader. If

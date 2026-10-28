@@ -577,11 +577,42 @@ func runList(args []string) error {
 	if !filterSet {
 		*query = cfg.List.DefaultView.Filter
 	}
-	tasks, err := ticket.List(context.Background(), client, cfg.Workspace, *project)
+	ctx := context.Background()
+	tasks, err := ticket.List(ctx, client, cfg.Workspace, *project)
 	if err != nil {
 		return err
 	}
-	return listing.Tasks(os.Stdout, *format, filter.Parse(*query).Apply(tasks, nil, time.Now()), *project)
+	f := filter.Parse(*query)
+	env, err := listFilterEnv(ctx, client, cfg, f)
+	if err != nil {
+		return err
+	}
+	return listing.Tasks(os.Stdout, *format, f.Apply(tasks, env), *project)
+}
+
+// listFilterEnv gives `list` what filter terms need: the user, fetched only
+// when the query uses assignee:@me, and the branches saved in state.
+func listFilterEnv(ctx context.Context, client *asana.Client, cfg config.Config, f filter.Filter) (filter.Env, error) {
+	env := filter.Env{Today: time.Now()}
+	if f.UsesMe() {
+		me, err := client.Me(ctx)
+		if err != nil {
+			return env, err
+		}
+		env.Me = me.GID
+	}
+	stateDir, err := config.StateDir()
+	if err != nil {
+		return env, err
+	}
+	st, err := state.Load(filepath.Join(stateDir, state.FileName))
+	if err != nil {
+		return env, err
+	}
+	env.HasBranch = func(t asana.Task) bool {
+		return action.ExplicitBranch(t, st.TaskBranches[t.GID], cfg.BranchField, nil) != ""
+	}
+	return env, nil
 }
 
 func runShow(args []string) error {

@@ -72,13 +72,16 @@ type Config struct {
 	TimeTracking TimeTracking `toml:"time_tracking"`
 	// ProjectLinks is disabled until its command is set.
 	ProjectLinks ProjectLinks `toml:"project_links"`
-	Layout       Layout       `toml:"layout"`
-	List         List         `toml:"list"`
-	Reader       Reader       `toml:"reader"`
-	Images       Images       `toml:"images"`
-	Picker       Picker       `toml:"picker"`
-	Activity     Activity     `toml:"activity"`
-	Feed         Feed         `toml:"feed"`
+	// Hooks run a built-in prompt or an action when an event happens to a
+	// ticket, in this order.
+	Hooks    []Hook   `toml:"hooks"`
+	Layout   Layout   `toml:"layout"`
+	List     List     `toml:"list"`
+	Reader   Reader   `toml:"reader"`
+	Images   Images   `toml:"images"`
+	Picker   Picker   `toml:"picker"`
+	Activity Activity `toml:"activity"`
+	Feed     Feed     `toml:"feed"`
 	// Keys overrides key bindings: scope, then binding name, then keys. See
 	// internal/keymap for the scopes and names, including Activity controls.
 	Keys map[string]map[string][]string `toml:"keys"`
@@ -96,19 +99,7 @@ type TimeTracking struct {
 	ID string `toml:"id"`
 	// Command reads a JSON request from stdin and returns a form spec as JSON.
 	Command string `toml:"command"`
-	// PromptAfter lists the TUI edits that open the log time form once they
-	// succeed: PromptAssign (to someone else) and PromptComplete.
-	PromptAfter []string `toml:"prompt_after"`
 }
-
-// Edits time_tracking.prompt_after accepts.
-const (
-	PromptAssign   = "assign"
-	PromptComplete = "complete"
-)
-
-// PromptsAfter reports whether a successful edit opens the log time form.
-func (t TimeTracking) PromptsAfter(edit string) bool { return slices.Contains(t.PromptAfter, edit) }
 
 func (c Config) TimeTrackingEnabled() bool {
 	return c.TimeTracking.ID != "" && c.TimeTracking.Command != ""
@@ -369,6 +360,17 @@ type Action struct {
 	// runs; the typed text reaches the command as $ASANAMATE_INPUT_FILE.
 	Input         string `toml:"input"`
 	ConfirmWrites *bool  `toml:"confirm_writes"`
+	// File is the action's file name in ActionsDir without .toml, which
+	// hooks name it by; set by Load.
+	File string `toml:"-"`
+}
+
+// Interactive reports whether running the action can ask for something or
+// take over the terminal: anything but a background action without a form,
+// input, repo, or agent choice.
+func (a Action) Interactive() bool {
+	return a.Mode != ModeBackground || a.Input != "" || a.Repo || a.Agent ||
+		a.Form.Command != "" || len(a.Form.Fields) > 0
 }
 
 // Default returns the values used for keys the config file omits.
@@ -380,6 +382,7 @@ func Default() Config {
 		Conversations: Conversations{},
 		TimeTracking:  TimeTracking{},
 		ProjectLinks:  ProjectLinks{},
+		Hooks:         nil,
 		Actions:       nil,
 		Layout:        Layout{Reader: true, Focus: Focus{Dim: true, Resize: true}},
 		List: List{
@@ -455,8 +458,13 @@ func LoadData(path string, data, settings []byte) (Config, error) {
 	if cfg.Themes, err = loadThemes(ThemesDir(path), cfg.Theme); err != nil {
 		return cfg, fmt.Errorf("%s: %w", SettingsPath(path), err)
 	}
-	cfg.Actions, err = loadActions(ActionsDir(path))
-	return cfg, err
+	if cfg.Actions, err = loadActions(ActionsDir(path)); err != nil {
+		return cfg, err
+	}
+	if err := cfg.validateHookActions(); err != nil {
+		return cfg, fmt.Errorf("%s: %w", path, err)
+	}
+	return cfg, nil
 }
 
 // compactKeys drops scopes that override nothing, such as the template's
@@ -525,9 +533,9 @@ func (c Config) validate() error {
 	if strings.TrimSpace(c.TimeTracking.ID) != c.TimeTracking.ID {
 		return errors.New("time_tracking.id must not have surrounding whitespace")
 	}
-	for _, edit := range c.TimeTracking.PromptAfter {
-		if edit != PromptAssign && edit != PromptComplete {
-			return fmt.Errorf("time_tracking.prompt_after: %q must be %q or %q", edit, PromptAssign, PromptComplete)
+	for i, h := range c.Hooks {
+		if err := h.validate(c.TimeTrackingEnabled()); err != nil {
+			return fmt.Errorf("hooks[%d].%w", i+1, err)
 		}
 	}
 	if c.ProjectLinks.Command != "" && strings.TrimSpace(c.ProjectLinks.Command) == "" {

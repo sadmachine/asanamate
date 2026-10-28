@@ -238,6 +238,10 @@ func (m *Model) gotActivity(msg activityMsg) tea.Cmd {
 		return nil
 	}
 	a.report = msg.report
+	known := make(map[string]bool, len(a.cache.Entries))
+	for _, e := range a.cache.Entries {
+		known[e.Story.GID] = true
+	}
 	if msg.replace {
 		a.cache.Replace(msg.report, msg.foundAt)
 	} else {
@@ -247,7 +251,26 @@ func (m *Model) gotActivity(msg activityMsg) tea.Cmd {
 		m.saveActivity()
 	}
 	m.filterActivity()
-	return next
+	return tea.Batch(next, m.runHooks(newActivityEvents(a.cache.Entries, known)))
+}
+
+// newActivityEvents returns a new_activity event for each related entry that
+// is not in known, skipping a scan that seeded an empty cache (its entries
+// have no FoundAt).
+func newActivityEvents(entries []activity.Entry, known map[string]bool) []hookEvent {
+	var events []hookEvent
+	for _, e := range entries {
+		if known[e.Story.GID] || !e.NewSince(time.Time{}) {
+			continue
+		}
+		ev := hookEvent{name: config.HookNewActivity, task: e.Task}
+		if e.Story.ResourceSubtype == "comment_added" {
+			story := e.Story
+			ev.comment = &story
+		}
+		events = append(events, ev)
+	}
+	return events
 }
 
 func (a *activityView) selected() (activity.Entry, bool) {

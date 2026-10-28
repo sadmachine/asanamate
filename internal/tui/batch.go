@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/asana"
-	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/dateinput"
 	"github.com/sadmachine/asanamate/internal/ticket"
 	"github.com/sadmachine/asanamate/internal/writeback"
@@ -194,18 +193,6 @@ func (m *Model) openBatchReview() {
 		p.cursor = min(c.review.cursor, len(items)-1)
 	}
 	c.review, m.modal, m.input, m.edit = p, p, nil, nil
-}
-
-func (m *Model) draftLogTime(changes []writeback.Change) bool {
-	for _, change := range changes {
-		if change.Kind == "assign" && change.Value != "" && change.Value != m.meGID && m.deps.Config.TimeTracking.PromptsAfter(config.PromptAssign) {
-			return true
-		}
-		if change.Kind == "complete" && change.Value == "true" && m.deps.Config.TimeTracking.PromptsAfter(config.PromptComplete) {
-			return true
-		}
-	}
-	return false
 }
 
 func fieldText(f asana.CustomField) string {

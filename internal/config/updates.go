@@ -1,7 +1,10 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 )
 
@@ -21,7 +24,7 @@ func (u *UpdateNeeded) Error() string {
 // can report all pending changes. Migration rejects those conflicts.
 type update func(map[string]any, map[string]any, bool) ([]string, error)
 
-var updates = []update{updateKeys, updateCommands, updatePreset, updateThemeValues, updateSettings}
+var updates = []update{updateKeys, updateCommands, updatePreset, updateThemeValues, updateSettings, updatePromptAfter}
 
 // PendingUpdates lists all pending changes without modifying raw.
 func PendingUpdates(raw map[string]any) []string {
@@ -141,4 +144,41 @@ func updateSettings(m, settings map[string]any, _ bool) ([]string, error) {
 		}
 	}
 	return changes, nil
+}
+
+// promptAfterHooks are the hooks each time_tracking.prompt_after edit became.
+var promptAfterHooks = map[string]map[string]any{
+	HookAssign:   {"on": HookAssign, "when": "-assignee:@me -assignee:none", "run": HookLogTime},
+	HookComplete: {"on": HookComplete, "run": HookLogTime},
+}
+
+// updatePromptAfter replaces time_tracking.prompt_after with the hooks that
+// open the log time form after the same edits, after any existing hooks.
+func updatePromptAfter(m, _ map[string]any, strict bool) ([]string, error) {
+	const key = "time_tracking.prompt_after"
+	v, ok := getPath(m, key)
+	if !ok {
+		return nil, nil
+	}
+	edits, _ := v.([]any)
+	var hooks []map[string]any
+	switch existing := m["hooks"].(type) {
+	case nil:
+	case []map[string]any:
+		hooks = slices.Clone(existing)
+	default:
+		if strict {
+			return nil, errors.New("hooks must be an array of tables to replace " + key)
+		}
+	}
+	for _, edit := range []string{HookAssign, HookComplete} {
+		if slices.Contains(edits, any(edit)) {
+			hooks = append(hooks, maps.Clone(promptAfterHooks[edit]))
+		}
+	}
+	deletePath(m, key)
+	if len(hooks) > 0 {
+		m["hooks"] = hooks
+	}
+	return []string{key + " was replaced by [[hooks]] with run = \"log_time\""}, nil
 }

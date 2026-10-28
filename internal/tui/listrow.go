@@ -11,6 +11,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/filter"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -86,6 +87,18 @@ func otherAgents(n int) string {
 }
 
 // agentStates lists the states of t's agents, for filter terms.
+// filterEnv is what filter terms need beyond each ticket.
+func (m *Model) filterEnv() filter.Env {
+	return filter.Env{Today: m.now(), Me: m.meGID, AgentStates: m.agentStates, HasBranch: m.hasBranch}
+}
+
+// hasBranch reports whether t has a branch saved for it or set in its branch
+// field, rather than the ID field or title slug fallback.
+func (m *Model) hasBranch(t asana.Task) bool {
+	preferred := m.projectFields[gidOf(m.viewProject)]
+	return action.ExplicitBranch(t, m.deps.State.TaskBranches[t.GID], m.deps.Config.BranchField, preferred) != ""
+}
+
 func (m *Model) agentStates(t asana.Task) []string {
 	var out []string
 	for _, a := range m.viewAgents(t) {

@@ -441,23 +441,30 @@ func TestWideCardsPutSubtasksBesideDetails(t *testing.T) {
 	}
 }
 
-func TestTimePromptAfterHandoff(t *testing.T) {
+// The hooks time_tracking.prompt_after = ["assign", "complete"] became.
+var (
+	assignLogTime   = config.Hook{On: config.HookAssign, When: "-assignee:@me -assignee:none", Run: config.HookLogTime}
+	completeLogTime = config.Hook{On: config.HookComplete, Run: config.HookLogTime}
+)
+
+func TestLogTimeHooksAfterHandoff(t *testing.T) {
 	for _, tc := range []struct {
-		name   string
-		prompt []string
-		keys   []string
-		want   bool
+		name  string
+		hooks []config.Hook
+		keys  []string
+		want  bool
 	}{
-		{"assign to someone else", []string{config.PromptAssign}, []string{"@", "j", "j", "enter"}, true},
-		{"assign to yourself", []string{config.PromptAssign}, []string{"@", "j", "enter"}, false},
-		{"unassign", []string{config.PromptAssign}, []string{"@", "enter"}, false},
-		{"complete", []string{config.PromptComplete}, []string{"x"}, true},
-		{"assign without the prompt", []string{config.PromptComplete}, []string{"@", "j", "j", "enter"}, false},
+		{"assign to someone else", []config.Hook{assignLogTime}, []string{"@", "j", "j", "enter"}, true},
+		{"assign to yourself", []config.Hook{assignLogTime}, []string{"@", "j", "enter"}, false},
+		{"unassign", []config.Hook{assignLogTime}, []string{"@", "enter"}, false},
+		{"complete", []config.Hook{completeLogTime}, []string{"x"}, true},
+		{"assign without the hook", []config.Hook{completeLogTime}, []string{"@", "j", "j", "enter"}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m, writes := editModel(t)
 			m.deps.Config.ConfirmWrites = false
-			m.deps.Config.TimeTracking = config.TimeTracking{ID: "hrvst", Command: "printf '%s' '" + timeFormJSON + "'", PromptAfter: tc.prompt}
+			m.deps.Config.TimeTracking = config.TimeTracking{ID: "hrvst", Command: "printf '%s' '" + timeFormJSON + "'"}
+			m.deps.Config.Hooks = tc.hooks
 			tk := m.details["1"]
 			tk.PermalinkURL = "https://app.asana.com/0/p1/1"
 			m.details["1"] = tk

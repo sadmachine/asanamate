@@ -40,9 +40,29 @@ The config is TOML, decoded into the structs in `internal/config/config.go`.
   config or API changes while preserving the PR's intended behavior.
 - Require every `ci` job to succeed for the reviewed PR head before merging;
   recheck if the head changes. Use a GitHub merge commit to preserve the
-  contributor's commits and authorship.
+  contributor's commits and authorship, with a Conventional Commits subject
+  ending in the PR number, such as
+  `fix(tui): list accessible projects in the add-project picker (#2)`. That
+  subject decides the PR's bump when its own commits are not conventional.
 - Validate the combined `main` after integration, then follow "Version bumps"
   for the release gates on that exact commit.
+
+## Commits
+
+- Subjects follow Conventional Commits: `type(scope): summary`, lowercase,
+  imperative. The type sets the release bump (see Version bumps), so pick it
+  by what users get: `feat` for new behavior, `fix` for a correction. The
+  scope is the area changed, usually a package or command (`tui`, `config`,
+  `filter`, `hrvst`, `asana-sessions`).
+- One logical change per commit, with its tests and docs in the same commit.
+- Breaking changes follow "Approved breaking changes" under Config keys.
+
+## Deferred ideas
+
+`docs/deferred-ideas.md` records improvements set aside with their reasons.
+When a change implements an entry, or makes any of its text untrue (such as
+its **Now** description of the code), update or delete that entry in the
+same commit.
 
 ## Version bumps
 

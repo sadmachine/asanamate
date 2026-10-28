@@ -196,7 +196,8 @@ func TestTemplateOptionsStayTopLevel(t *testing.T) {
 	}
 	if cfg.Symbols != "unicode" || cfg.ReducedMotion == nil || cfg.Agents.Command != "asanamate-ccmux" ||
 		cfg.Agents.Focus != `ccmux switch "$ASANAMATE_AGENT_TARGET"` ||
-		!slices.Contains(cfg.Agents.States["working"], "running") || cfg.Agents.Symbols["waiting"] == "" {
+		!slices.Contains(cfg.Agents.States["working"], "running") || cfg.Agents.Symbols["waiting"] == "" ||
+		len(cfg.Hooks) != 3 || cfg.Hooks[0].Run != "edit:branch" || cfg.Hooks[2].On != config.HookComplete {
 		t.Fatalf("cfg = %+v", cfg)
 	}
 }
@@ -534,5 +535,31 @@ func TestHarvestTemplateUsesNativeSetup(t *testing.T) {
 	}
 	if strings.Contains(template, "YOUR_TASK_ID") {
 		t.Fatal("template requires manual task ID")
+	}
+}
+
+func TestMergeReplacesPromptAfterWithHooks(t *testing.T) {
+	updated, _, moved, err := Merge("workspace = \"1\"\n[time_tracking]\nid = \"hrvst\"\ncommand = \"asanamate-hrvst\"\nprompt_after = [\"assign\", \"complete\"]\n\n[[hooks]]\non = \"ticket_open\"\nwhen = \"branch:none\"\nonce = true\nrun = \"edit:branch\"\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(moved) != 0 || strings.Contains(updated, "prompt_after =") {
+		t.Fatalf("moved = %v\n%s", moved, updated)
+	}
+	cfg := loadString(t, updated)
+	want := []config.Hook{
+		{On: config.HookTicketOpen, When: "branch:none", Once: true, Run: "edit:branch"},
+		{On: config.HookAssign, When: "-assignee:@me -assignee:none", Run: config.HookLogTime},
+		{On: config.HookComplete, Run: config.HookLogTime},
+	}
+	if !reflect.DeepEqual(cfg.Hooks, want) || cfg.TimeTracking.Command != "asanamate-hrvst" {
+		t.Fatalf("hooks = %+v\n%s", cfg.Hooks, updated)
+	}
+	if !strings.Contains(updated, "[[hooks]]\non = \"assign\"\nwhen = \"-assignee:@me -assignee:none\"\nrun = \"log_time\"\n") {
+		t.Fatalf("migrated hook not written in template order:\n%s", updated)
+	}
+	again, _, _, err := Merge(updated)
+	if err != nil || again != updated {
+		t.Fatalf("second merge changed the config (err = %v):\n%s", err, again)
 	}
 }

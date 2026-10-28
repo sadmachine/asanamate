@@ -469,7 +469,7 @@ func (c *commentComposer) body(width, height int, look modalLook, cancel string)
 	}
 	hints := [][2]string{{keyLabel("input", "submit"), "submit"}, {keyLabel("input", "paste_image"), "image"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "external_editor"), "editor"}, {"tab", "fields"}, {keyLabel("input", "cancel"), cancel}}
 	if c.footer >= 0 {
-		hints = [][2]string{{"enter", "change"}, {"tab", "next"}, {keyLabel("input", "submit"), "submit"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "cancel"), cancel}}
+		hints = [][2]string{{"enter", "change"}, {keyLabel("picker", "down", "up"), "move"}, {"tab", "next"}, {keyLabel("input", "submit"), "submit"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "cancel"), cancel}}
 	}
 	return c.box.body(width, height, look, strings.Join(lines, "\n"), hints...)
 }

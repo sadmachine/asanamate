@@ -299,6 +299,16 @@ func (m *Model) updateComment(msg tea.Msg) tea.Cmd {
 			}
 		}
 		if c.footer >= 0 {
+			// j/k move between task controls without leaving them; tab
+			// still cycles back to the comment.
+			switch bound("picker", key, false) {
+			case "down":
+				c.footer = min(c.footer+1, 2)
+				return nil
+			case "up":
+				c.footer = max(c.footer-1, 0)
+				return nil
+			}
 			switch bound("input", key, true) {
 			case "submit":
 				return m.postComment()

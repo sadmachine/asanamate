@@ -1,0 +1,19 @@
+docs/migrations.md
+  s_7796a0311c3153::t_075701eb73f7df 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "33674f561ec1827fc8673edd2df723eed2490eed",
+  "prompts": {},
+  "sessions": {
+    "s_7796a0311c3153": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90eb1009-82db-4478-a59e-91b5e240e1e6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

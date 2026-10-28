@@ -36,6 +36,9 @@ type State struct {
 	// TaskBranches maps an Asana task gid to a git branch typed for that task,
 	// used in place of its branch field and the fallback.
 	TaskBranches map[string]string `toml:"task_branches"`
+	// HooksRun maps a once hook's key (config.Hook.Key) to the task gids it
+	// has run for, so it never runs for them again.
+	HooksRun map[string][]string `toml:"hooks_run,omitempty"`
 	// Projects caches the projects the user is a member of, from the last
 	// load, so pickers open before a fresh list arrives.
 	Projects []Project `toml:"projects,omitempty"`
@@ -248,6 +251,22 @@ func (s *State) LinkTaskRepo(taskGID, path string) {
 // UnlinkTaskRepo forgets a task's own repository, so its projects' links apply.
 func (s *State) UnlinkTaskRepo(taskGID string) {
 	delete(s.TaskRepos, taskGID)
+}
+
+// HookRan reports whether the once hook key has run for the task.
+func (s *State) HookRan(key, taskGID string) bool {
+	return slices.Contains(s.HooksRun[key], taskGID)
+}
+
+// MarkHookRun records that the once hook key ran for the task.
+func (s *State) MarkHookRun(key, taskGID string) {
+	if s.HookRan(key, taskGID) {
+		return
+	}
+	if s.HooksRun == nil {
+		s.HooksRun = map[string][]string{}
+	}
+	s.HooksRun[key] = append(s.HooksRun[key], taskGID)
 }
 
 // SetTaskBranch remembers the git branch typed for a task; "" forgets it.

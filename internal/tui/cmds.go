@@ -110,11 +110,11 @@ type usersMsg struct {
 }
 
 type editDoneMsg struct {
-	gid     string
-	what    string
-	done    string // the status line on success; "" shows "<what>: done"
-	logTime bool   // open the log time form on success (time_tracking.prompt_after)
-	err     error
+	gid    string
+	what   string
+	done   string      // the status line on success; "" shows "<what>: done"
+	events []hookEvent // hook events the edit raises on success
+	err    error
 }
 
 type imageMsg struct {

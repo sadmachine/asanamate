@@ -274,7 +274,7 @@ func TestActionBuilderCreatesEditsAndReloads(t *testing.T) {
 	m.Update(key("esc"))
 	m.Update(key("esc"))
 	no := false
-	want := config.Action{Name: "Deploy", Key: "D", Mode: config.ModeBackground, Repo: true, Agent: true, Context: config.ContextComment, Command: command, Input: "Notes", ConfirmWrites: &no,
+	want := config.Action{Name: "Deploy", Key: "D", Mode: config.ModeBackground, Repo: true, Agent: true, Context: config.ContextComment, Command: command, Input: "Notes", ConfirmWrites: &no, File: "10-deploy",
 		Form: config.ActionForm{Spec: form.Spec{Fields: []form.Field{
 			{ID: "target", Label: "Target", Type: form.Select, Remember: true, Options: []form.Option{{ID: "prod", Name: "Production"}}},
 			{ID: "hours", Label: "Hours", Type: form.Hours},

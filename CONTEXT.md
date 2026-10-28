@@ -16,3 +16,9 @@ asanamate. Different extensions can implement the same contract.
 **Provider**:
 An extension that supplies data or operations for a capability, such as
 time tracking or project links.
+
+**Hook**:
+A `[[hooks]]` entry in config that runs a built-in prompt or an action when
+an event happens to a ticket.
+_Avoid_: bare "hook" for a Claude Code or Codex hook; say "Claude Code hook"
+or "Codex hook".

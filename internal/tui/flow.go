@@ -37,6 +37,7 @@ type pendingRun struct {
 	formCancel     context.CancelFunc // cancels a dynamic form lookup
 	awaitingFields bool               // the project's fields are loading
 	branch         string             // branch the action runs on
+	event          string             // the hook event that started the run, "" from the menu
 }
 
 type actionFormMsg struct {
@@ -59,12 +60,14 @@ func (m *Model) advanceRun() tea.Cmd {
 		m.runProjectFields,
 		m.runBranch,
 	}
-	for r := m.run; r.step < len(steps); r.step++ {
+	r := m.run
+	for ; r.step < len(steps); r.step++ {
 		if cmd, wait := steps[r.step](r); wait || m.run == nil {
 			return cmd
 		}
 	}
-	return m.launch(m.run)
+	m.run = nil
+	return m.launch(r)
 }
 
 // resumeRun moves past the step whose answer just arrived.
@@ -530,9 +533,9 @@ func (m *Model) runBranch(r *pendingRun) (tea.Cmd, bool) {
 	return nil, true
 }
 
-// launch starts the run's action in its mode.
+// launch starts the run's action in its mode. Hook runs keep their mode
+// even with --exit-on-action, so a hook never quits asanamate.
 func (m *Model) launch(r *pendingRun) tea.Cmd {
-	m.run = nil
 	preferred := m.projectFields[gidOf(r.project)]
 	linked := m.ticketAgents(r.ticket.Task, preferred)
 	agent := r.agent
@@ -568,9 +571,10 @@ func (m *Model) launch(r *pendingRun) tea.Cmd {
 		Agents:        linked,
 		Comment:       r.comment,
 		FormValues:    r.formValues,
+		Event:         r.event,
 	})
 	name, mode := r.action.Name, r.action.Mode
-	if m.deps.ExitOnAction && mode == config.ModeBackground {
+	if m.deps.ExitOnAction && mode == config.ModeBackground && r.event == "" {
 		mode = config.ModeExit
 	}
 	switch mode {

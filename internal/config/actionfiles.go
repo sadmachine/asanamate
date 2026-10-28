@@ -49,6 +49,7 @@ func LoadActionFiles(dir string) ([]ActionFile, error) {
 			return nil, fmt.Errorf("%s: key %q is already used by %s", path, a.Key, other)
 		}
 		keys[key] = path
+		a.File = strings.TrimSuffix(filepath.Base(path), ".toml")
 		files = append(files, ActionFile{Name: filepath.Base(path), Action: a, Original: data})
 	}
 	return files, nil

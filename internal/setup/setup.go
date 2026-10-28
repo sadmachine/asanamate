@@ -459,9 +459,8 @@ commands = []
 # id = "hrvst"
 # Run asanamate-hrvst setup first. --task-id ID remains an explicit override.
 # command = "asanamate-hrvst"
-# Open the log time form after these edits succeed in the TUI: "assign" (to
-# someone else) and "complete". esc skips it.
-# prompt_after = ["assign", "complete"]
+# To open the log time form after assigning or completing a ticket, add the
+# log_time hooks at the end of this file.
 
 # Optional: suggest each Asana project's git repository and time tracking
 # project from another system. The command reads a JSON request from stdin and
@@ -478,6 +477,34 @@ root = %s
 # Or a command printing one repo path per line; it replaces root when set.
 # Examples: "sesh list -z", "zoxide query -l".
 # command = ""
+
+# Optional hooks run a built-in prompt or an action when something happens to
+# a ticket, in this order. See README "Hooks".
+#   on: "ticket_open" (the reader focuses a ticket), "assign" or "complete"
+#     (TUI edits), or "new_activity" (an Activity scan finds a related event).
+#   when: a list filter query the ticket must match; empty matches every one.
+#   once = true: run at most once per ticket.
+#   run: "log_time", "edit:<item>" (title, description, section, field,
+#     assign, due, add_project, remove_project, branch), or "action:<file>"
+#     (actions/<file>.toml; new_activity runs background actions only).
+#
+# Ask for a branch the first time you open a ticket without one:
+# [[hooks]]
+# on = "ticket_open"
+# when = "is:open branch:none"
+# once = true
+# run = "edit:branch"
+#
+# Log time after handing a ticket to someone else or completing it, once
+# time tracking is set up:
+# [[hooks]]
+# on = "assign"
+# when = "-assignee:@me -assignee:none"
+# run = "log_time"
+#
+# [[hooks]]
+# on = "complete"
+# run = "log_time"
 `
 
 // actionFiles are written to the actions directory by setup. The .example

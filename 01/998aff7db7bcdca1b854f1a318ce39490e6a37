@@ -1,0 +1,21 @@
+docs/specs/22-hooks.md
+  s_7796a0311c3153::t_05a85cfae4ebd4 1-321
+docs/specs/README.md
+  s_7796a0311c3153::t_402cab7887a708 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "01998aff7db7bcdca1b854f1a318ce39490e6a37",
+  "prompts": {},
+  "sessions": {
+    "s_7796a0311c3153": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90eb1009-82db-4478-a59e-91b5e240e1e6",
+        "model": "unknown"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

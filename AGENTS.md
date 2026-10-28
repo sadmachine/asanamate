@@ -120,8 +120,8 @@ writes, such as state, migrate silently on load. On yes:
 
 - Copy each file you will change to a timestamped sibling first, named
   `<file>.yyyy-mm-dd--hh-mm-ss.bak` (`date +%Y-%m-%d--%H-%M-%S`), such as
-  `config.toml.2026-10-06--14-30-05.bak`. Never overwrite or delete an
-  existing backup. `asanamate config update` names its own backups this way.
+  `config.toml.2026-10-06--14-30-05.bak`. Never overwrite an existing
+  backup. `asanamate config update` names its own backups this way.
 - Bring `config.toml` and `actions/` onto the new shape, keeping every value
   the user set. `asanamate config update` handles new template keys in
   `config.toml`; everything else is a hand edit.
@@ -132,6 +132,10 @@ writes, such as state, migrate silently on load. On yes:
   (`git -C ~/.config/asanamate rev-parse --show-toplevel`). If it does, ask
   the user whether to commit the changes. On yes, stage and commit only paths
   under `~/.config/asanamate`, never unrelated changes elsewhere in that repo.
+- Once the changes are committed, delete each `*.bak` under
+  `~/.config/asanamate` whose exact content git already holds (its
+  `git hash-object` names a committed version of the original), since git now
+  keeps that state. Keep any other backup: it is the only copy of its state.
 
 ## Asana writes
 

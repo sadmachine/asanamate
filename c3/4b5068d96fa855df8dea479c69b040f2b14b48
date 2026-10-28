@@ -1,0 +1,95 @@
+internal/tui/flow.go
+  s_7796a0311c3153::t_54d5f9a1899fb9 40,63-64,69-70,536-537,574,577
+docs/specs/README.md
+  s_7796a0311c3153::t_702f72917bd423 37
+cmd/asanamate-hrvst/setup.go
+  s_7796a0311c3153::t_25bad2d8d3a0a4 227-238
+internal/filter/filter.go
+  s_7796a0311c3153::t_805b01b4dabc85 4-6,11-13,26,103-119,121,128-129,132,139-144,170,183-188,190-198
+internal/config/updates.go
+  s_7796a0311c3153::t_efbc6e526161e8 4,6-7,27,148-184
+internal/setup/setup_test.go
+  s_7796a0311c3153::t_91c04e2055ea82 199-200
+  s_7796a0311c3153::t_757aad5d7c37bb 540-565
+internal/config/config_test.go
+  s_7796a0311c3153::t_d4dd6a365be11d 744-783,785-843
+  s_7796a0311c3153::t_9c9d9365b53dad 461-463,784
+internal/tui/hooks.go
+  s_7796a0311c3153::t_c9e2f48961348d 1-33,38-187
+  s_7796a0311c3153::t_461617399308ca 34-37
+internal/config/hooks.go
+  s_7796a0311c3153::t_7d13c6a3c498e7 1-109
+internal/tui/form_test.go
+  s_7796a0311c3153::t_29ce3ab69db963 277
+internal/setup/setup.go
+  s_7796a0311c3153::t_91c04e2055ea82 498-499
+  s_7796a0311c3153::t_56f8d0cb9565fd 462-463,480-497,500-507
+internal/config/config.go
+  s_7796a0311c3153::t_36bb76151be59d 75-76,363-373,461-467,536-538
+  s_7796a0311c3153::t_0d02c489da5b3e 77-84
+  s_7796a0311c3153::t_aeaa6cefe19357 385
+internal/tui/comment.go
+  s_7796a0311c3153::t_54d5f9a1899fb9 42,62,460-464,466,498,562,596,599
+  s_7796a0311c3153::t_461617399308ca 41
+internal/action/action.go
+  s_7796a0311c3153::t_f78d63095df842 65-66,187
+  s_7796a0311c3153::t_2ad3ce62d5dbb5 72-79
+internal/tui/edit.go
+  s_7796a0311c3153::t_54d5f9a1899fb9 47,231-234,242,812-815,819
+internal/setup/update.go
+  s_7796a0311c3153::t_56f8d0cb9565fd 235-240,317-344
+  s_7796a0311c3153::t_fcad26270f0050 345-346
+internal/filter/filter_test.go
+  s_7796a0311c3153::t_6cab95cec3cbfb 59,70,74,88,103,111-147
+  s_7796a0311c3153::t_b18783ec9cebe8 148
+internal/tui/activity.go
+  s_7796a0311c3153::t_c2b2923fad34b1 241-244,254-273
+internal/extensions/catalog.go
+  s_7796a0311c3153::t_25bad2d8d3a0a4 75
+  s_7796a0311c3153::t_83f870dc383caf 73
+cmd/asanamate/main.go
+  s_7796a0311c3153::t_c9461f61c5e2dd 580-586,590-615
+internal/tui/model.go
+  s_7796a0311c3153::t_54d5f9a1899fb9 164,263,267,270-271,621,625
+  s_7796a0311c3153::t_2ad3ce62d5dbb5 864
+internal/state/state.go
+  s_7796a0311c3153::t_3eda82a723a0db 39-41,256-270
+  s_7796a0311c3153::t_0ad83bceb7199d 271
+internal/tui/edit_test.go
+  s_7796a0311c3153::t_fc249857759ee9 444-450,452-455,457-461,466-467
+internal/tui/listrow.go
+  s_7796a0311c3153::t_2ad3ce62d5dbb5 90-101
+  s_7796a0311c3153::t_92dd96ae0fd63f 14
+docs/extensions.md
+  s_7796a0311c3153::t_fc48df1d4eb322 133
+  s_7796a0311c3153::t_8f5e09ae8d9968 114-117,140
+docs/migrations.md
+  s_7796a0311c3153::t_0d012f3155e4be 8-39
+internal/tui/hooks_test.go
+  s_7796a0311c3153::t_a2b3c93136837c 100-111
+  s_7796a0311c3153::t_c8e255612c62a2 1-99,112-175
+README.md
+  s_7796a0311c3153::t_90a52fe0b94d56 30-32,496-497,506-508,735-738,1085-1099,1373-1436,1506,1511,1516,1521,1940
+internal/config/actionfiles.go
+  s_7796a0311c3153::t_3b0ed152858201 52
+CONTEXT.md
+  s_7796a0311c3153::t_8f5e09ae8d9968 19-24
+internal/tui/cmds.go
+  s_7796a0311c3153::t_461617399308ca 113-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c34b5068d96fa855df8dea479c69b040f2b14b48",
+  "prompts": {},
+  "sessions": {
+    "s_7796a0311c3153": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90eb1009-82db-4478-a59e-91b5e240e1e6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

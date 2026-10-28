@@ -224,21 +224,7 @@ export async function setup(c, { provider }) {
       failed = true;
       continue;
     }
-    const out = [];
-    // Native install can keep an old cached version or marketplace path.
-    // Replace only our stale registration; native trust still checks its hash.
-    if (before[name].state === 'stale' && !(await run(c, name, NATIVE[name].unregister, out))) {
-      out.forEach(say);
-      failed = true;
-      continue;
-    }
-    if (await run(c, name, NATIVE[name].register(marketplaceRoot(name, c.pkg ?? PKG)), out)) {
-      say(`registered ${PLUGIN_ID} with ${NATIVE[name].label}`);
-      say(`next: ${NATIVE[name].next}`);
-    } else {
-      out.forEach(say);
-      failed = true;
-    }
+    failed = !(await register(c, name, before[name].state, say)) || failed;
   }
   say('');
   for (const name of chosen) {
@@ -247,6 +233,55 @@ export async function setup(c, { provider }) {
     failed ||= s.state !== 'ready';
   }
   return failed ? 1 : 0;
+}
+
+// refresh re-registers plugins that are registered but stale, as after an
+// upgrade. It never registers a provider the user has not chosen, and leaves
+// plugins alone unless this installation is the helper their hooks run.
+// Remaining trust or restart steps are reported, not treated as failures.
+export async function refresh(c) {
+  const say = (line) => c.stdout.write(`${line}\n`);
+  const helper = await helperOnPath(c);
+  if (!helper.ok) {
+    say(helper.line);
+    say('Plugins not refreshed; hooks do not run this installation.');
+    return 0;
+  }
+  let failed = false;
+  for (const name of NAMES) {
+    let s = await pluginStatus(name, c);
+    if (['missing', 'not registered'].includes(s.state)) {
+      continue;
+    }
+    if (s.state === 'stale') {
+      if (!(await register(c, name, s.state, say))) {
+        failed = true;
+        continue;
+      }
+      s = await pluginStatus(name, c);
+    }
+    say(`${name}: ${s.state}: ${s.detail}`);
+  }
+  return failed ? 1 : 0;
+}
+
+// register registers this installation's plugin with one provider and
+// reports whether every native command succeeded.
+async function register(c, name, state, say) {
+  const out = [];
+  // Native install can keep an old cached version or marketplace path.
+  // Replace only our stale registration; native trust still checks its hash.
+  if (state === 'stale' && !(await run(c, name, NATIVE[name].unregister, out))) {
+    out.forEach(say);
+    return false;
+  }
+  if (!(await run(c, name, NATIVE[name].register(marketplaceRoot(name, c.pkg ?? PKG)), out))) {
+    out.forEach(say);
+    return false;
+  }
+  say(`registered ${PLUGIN_ID} with ${NATIVE[name].label}`);
+  say(`next: ${NATIVE[name].next}`);
+  return true;
 }
 
 export async function remove(c, { provider }) {

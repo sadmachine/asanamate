@@ -13,7 +13,7 @@ import { Cancelled, createProviders, link, lookup, open, unlink } from './engine
 import { ProviderError, UsageError } from './errors.js';
 import { hook } from './hook.js';
 import { parseTask } from './marker.js';
-import { helperOnPath, pluginStatus, remove, runtimeStatus, setup } from './setup.js';
+import { helperOnPath, pluginStatus, refresh, remove, runtimeStatus, setup } from './setup.js';
 
 const pkg = JSON.parse(await readFile(join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8'));
 
@@ -27,6 +27,7 @@ Usage:
   asana-sessions link --provider <claude|codex> (--session <id> | --current) --task <task-url-or-gid> [--replace]
   asana-sessions unlink --provider <claude|codex> (--session <id> | --current)
   asana-sessions setup [--provider <claude|codex|both>]
+  asana-sessions setup --refresh
   asana-sessions remove [--provider <claude|codex|both>]
   asana-sessions doctor
   asana-sessions help | version
@@ -87,6 +88,7 @@ const OPTIONS = {
   task: { type: 'string' },
   replace: { type: 'boolean' },
   current: { type: 'boolean' },
+  refresh: { type: 'boolean' },
 };
 
 // parse requires every allowed string option except those in optional.
@@ -150,8 +152,13 @@ async function dispatch([command, ...rest], c) {
         throw new UsageError('expected `hook claude` or `hook codex`');
       }
       return hook(rest[0], c);
-    case 'setup':
-      return setup(c, parse(rest, ['provider'], 0, ['provider']));
+    case 'setup': {
+      const o = parse(rest, ['provider', 'refresh'], 0, ['provider']);
+      if (o.refresh && o.provider !== undefined) {
+        throw new UsageError('--refresh cannot be combined with --provider');
+      }
+      return o.refresh ? refresh(c) : setup(c, o);
+    }
     case 'remove':
       return remove(c, parse(rest, ['provider'], 0, ['provider']));
     case 'doctor':

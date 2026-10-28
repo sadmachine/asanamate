@@ -20,7 +20,7 @@ so it cannot be published to npm by accident.
 
 The package lives in the asanamate repository for now. From the repository
 root, `sh ./install.sh --interactive` builds and installs it as below, then runs
-`asana-sessions setup`; later `sh ./install.sh` runs update it. By hand, with
+`asana-sessions setup`; later `sh ./install.sh` runs update it and its plugins. By hand, with
 Node and npm:
 
 ```sh
@@ -64,6 +64,7 @@ No public npm registry name is reserved or published.
 | `link ... --replace` | Replace a link to another ticket |
 | `unlink --provider <name> --session <id>` | Remove the ticket marker and keep the rest of the title |
 | `setup [--provider <claude\|codex\|both>]` | Register optional native plugins; show remaining trust and restart steps |
+| `setup --refresh` | Re-register only stale registered plugins; the installer runs it after each install |
 | `remove [--provider <claude\|codex\|both>]` | Remove only this addon's plugins and pending state; preserve saved links |
 | `doctor` | Check Node, the Claude Agent SDK, both CLIs, and history access |
 | `help`, `version` | Work without any provider installed |
@@ -309,7 +310,11 @@ write status uncertain; inspect the saved title. Hooks never prompt or deny chat
 All linking stays local; GUI/Paseo title synchronization is not promised.
 
 Upgrade by running the installer with the new package tarball and the same
-prefix, then rerun setup. Doctor reports stale versions or source paths.
+prefix. The installer then runs `setup --refresh`, which re-registers plugins
+you already registered so their hooks match the new version. It skips
+providers you never registered, and skips everything when the new installation
+is not the `asana-sessions` on `PATH`, since hooks would not run it. Doctor
+reports stale versions or source paths; rerun setup if a refresh fails.
 Setup replaces only this addon's stale
 registration before reinstalling. Native hash checks retain trust for unchanged
 hooks; changed definitions require review again.

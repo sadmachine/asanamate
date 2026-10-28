@@ -1,0 +1,19 @@
+AGENTS.md
+  s_7796a0311c3153::t_454cab2ecbec43 43-46,50-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f576d13ca501fa5ee06f2bb85cd79329c85c5717",
+  "prompts": {},
+  "sessions": {
+    "s_7796a0311c3153": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90eb1009-82db-4478-a59e-91b5e240e1e6",
+        "model": "unknown"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

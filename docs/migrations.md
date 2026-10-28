@@ -5,7 +5,7 @@ workflow copies a version's section to the top of its GitHub release notes,
 so links here are absolute. Steps for changes not yet released wait under
 `## Unreleased`, which becomes the version's heading when it is tagged.
 
-## Unreleased
+## v0.4.0
 
 **Breaking:** `time_tracking.prompt_after` is replaced by
 [hooks](https://github.com/sadmachine/asanamate#hooks). asanamate names the

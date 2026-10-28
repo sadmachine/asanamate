@@ -131,7 +131,8 @@ as above. It updates extensions that are already installed (`asanamate-hrvst`,
 the others with the `asanamate extensions <id>` guide for each. Run
 `sh ./install.sh --interactive` to choose which extensions to install;
 `asana-sessions` needs Node 22 or later and npm, and choosing it also runs
-`asana-sessions setup` for the optional Claude and Codex plugins.
+`asana-sessions setup` for the optional Claude and Codex plugins. Updates
+refresh plugins you already registered.
 
 ### Upgrade and uninstall
 

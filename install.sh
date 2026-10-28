@@ -97,7 +97,6 @@ if $want_sessions; then
         "$sessions" setup || printf 'Run asana-sessions doctor to finish plugin setup.\n'
     else
         "$sessions" doctor || true
-        printf 'If doctor reports a stale plugin, run asana-sessions setup.\n'
     fi
 fi
 

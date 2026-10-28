@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The installer refreshes registered plugins after each install with the new
+  `setup --refresh`, so hooks no longer stay on the previous version until
+  setup is rerun by hand. Unregistered providers stay unregistered, and an
+  install that is not the `asana-sessions` on `PATH` leaves plugins alone.
+
 - Codex prompt hooks wait until Stop to link unnamed threads, preserving
   Codex's generated title instead of preventing it with the `Conversation`
   fallback. Named threads still link immediately. Rerun setup and review

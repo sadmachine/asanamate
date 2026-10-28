@@ -70,6 +70,10 @@ async function install(archive, prefix) {
     if (linkDirectory) await rm(linkDirectory, { recursive: true, force: true });
     if (!installed) await rm(directory, { recursive: true, force: true });
   }
+  // Registered plugins point at the previous installation's hooks until
+  // refreshed. A failed refresh leaves the new command installed.
+  const refresh = spawnSync(process.execPath, [join(directory, 'bin', 'asana-sessions.js'), 'setup', '--refresh'], { stdio: 'inherit' });
+  if (refresh.error || refresh.status !== 0) console.error('Plugin refresh failed; run asana-sessions setup.');
 }
 
 const args = process.argv.slice(2);

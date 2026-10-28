@@ -3,7 +3,7 @@ import { mkdtemp, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
-import { helperOnPath, pluginStatus, setup, remove, PLUGIN_ID, TESTED, AUTO_LINK_RULE } from '../src/setup.js';
+import { helperOnPath, pluginStatus, refresh, setup, remove, PLUGIN_ID, TESTED, AUTO_LINK_RULE } from '../src/setup.js';
 import { fakeIO } from './fakes.js';
 
 const pkg = resolve('.');
@@ -90,4 +90,28 @@ test('setup repairs stale owned registrations before reinstalling', async () => 
   const add = c.calls.findIndex((call) => call[1] === 'plugin' && call[2] === 'marketplace' && call[3] === 'add');
   assert.ok(uninstall >= 0, 'stale owned plugin must be removed');
   assert.ok(add > uninstall, 'replacement source registered after removal');
+});
+
+test('refresh re-registers only stale registrations of the helper on PATH', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'asana-sessions-refresh-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await symlink(join(pkg, 'bin/asana-sessions.js'), join(dir, 'asana-sessions'));
+  const registers = (c) => c.calls.filter((call) => call[1] === 'plugin' && ['add', 'install'].includes(call[2]));
+
+  const stale = context('claude', { entry: entry('claude', { version: '0.0.1' }) });
+  stale.env.PATH = dir;
+  assert.equal(await refresh(stale), 0);
+  assert.ok(stale.calls.some((call) => call.join(' ') === `claude plugin uninstall ${PLUGIN_ID}`));
+  assert.equal(registers(stale).length, 1);
+
+  for (const c of [context('claude'), context('claude', { entry: entry('claude') })]) {
+    c.env.PATH = dir;
+    assert.equal(await refresh(c), 0);
+    assert.deepEqual(registers(c), [], 'unregistered and current plugins are left alone');
+  }
+
+  const elsewhere = context('claude', { entry: entry('claude', { version: '0.0.1' }) });
+  assert.equal(await refresh(elsewhere), 0);
+  assert.deepEqual(elsewhere.calls, [], 'an installation hooks do not run never changes plugins');
+  assert.match(elsewhere.output, /not refreshed/);
 });

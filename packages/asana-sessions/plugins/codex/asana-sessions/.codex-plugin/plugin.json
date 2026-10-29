@@ -1,6 +1,6 @@
 {
   "name": "asana-sessions",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Link Codex conversations to Asana tasks by title marker",
   "author": {
     "name": "asana-sessions contributors"

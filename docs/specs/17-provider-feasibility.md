@@ -402,3 +402,14 @@ interactive-open observations above remain the host integration evidence;
 those interactive checks were not repeated for this packaging-only fix.
 Publication still requires all package/platform and integration CI jobs on the
 exact release commit, followed by downloaded-artifact verification.
+
+## 0.1.3 release without live gate (2026-10-29)
+
+The user waived the live provider gate for 0.1.3 and released it on
+deterministic tests and their own install check. This release adds Codex's
+PostToolUse hook, which completes a deferred link at the first tool call after
+Codex generates the thread title. Its command skips Node while the pending
+directory is empty; through a login zsh it measured about 17 ms per tool call.
+Codex 0.165.0 names this event `postToolUse` in its hook list. Not yet observed
+live: that Codex fires PostToolUse for every tool type, and that its event
+carries `transcript_path`. The next live gate should cover both.

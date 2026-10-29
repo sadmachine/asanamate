@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3
 
 - The installer refreshes registered plugins after each install with the new
   `setup --refresh`, so hooks no longer stay on the previous version until

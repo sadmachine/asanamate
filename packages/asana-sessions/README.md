@@ -27,7 +27,7 @@ Node and npm:
 cd packages/asana-sessions
 npm ci
 npm pack
-node install.mjs ./asana-sessions-0.1.2.tgz
+node install.mjs ./asana-sessions-0.1.3.tgz
 asana-sessions doctor
 ```
 

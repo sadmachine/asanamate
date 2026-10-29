@@ -199,10 +199,10 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 		}
 		return pickResult{cancelled: true}, nil
 	case "down":
-		p.cursor = max(min(p.cursor+1, p.rowCount()-1), 0)
+		p.move(1)
 		return pickResult{}, nil
 	case "up":
-		p.cursor = max(p.cursor-1, 0)
+		p.move(-1)
 		return pickResult{}, nil
 	case "top":
 		p.cursor = 0
@@ -211,14 +211,7 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 		p.cursor = max(p.rowCount()-1, 0)
 		return pickResult{}, nil
 	case "choose":
-		switch {
-		case p.multi:
-			return p.checkedResult(), nil
-		case p.cursor < len(p.matches):
-			return p.choose(p.matches[p.cursor]), nil
-		}
-		res, _ := p.freeText()
-		return res, nil
+		return p.chooseCurrent(), nil
 	case "toggle":
 		if p.multi && p.cursor < len(p.matches) {
 			i := p.matches[p.cursor]
@@ -255,6 +248,24 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 	p.err = ""
 	p.refilter()
 	return pickResult{}, cmd
+}
+
+// move moves the cursor step rows, staying on the list.
+func (p *picker) move(step int) {
+	p.cursor = max(min(p.cursor+step, p.rowCount()-1), 0)
+}
+
+// chooseCurrent returns what choose picks: a multi picker's checked items,
+// the highlighted item, or the typed text on the Use row.
+func (p *picker) chooseCurrent() pickResult {
+	switch {
+	case p.multi:
+		return p.checkedResult()
+	case p.cursor < len(p.matches):
+		return p.choose(p.matches[p.cursor])
+	}
+	res, _ := p.freeText()
+	return res
 }
 
 // moveItem keeps checks attached to their items, and the cursor on the moved
@@ -294,7 +305,7 @@ func (p *picker) view(width, height int, look modalLook) string {
 	if p.preview == nil || width < minPreviewWidth {
 		return p.listView(width, height, look)
 	}
-	listW := max(min(width*2/5, cmp.Or(p.listMaxWidth, 32)), 24)
+	listW := p.listWidth(width)
 	paneW := width - listW - 3 // divider with one space on either side
 	list := p.listView(listW, height, look)
 	preview := p.preview(p.current(), paneW, height)
@@ -304,31 +315,38 @@ func (p *picker) view(width, height int, look modalLook) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, list, divider, preview)
 }
 
-// listView draws the title, search, list, and key hints.
-func (p *picker) listView(width, height int, look modalLook) string {
-	accent := look.accent
-	var b strings.Builder
-	b.WriteString(accent.Render(ansi.Truncate(p.title, width, "…")) + "\n")
-	if !p.keySelect && p.searching {
-		styles := p.input.Styles()
-		styles.Focused.Prompt = accent
-		p.input.SetStyles(styles)
-		// Text input width excludes its prompt and trailing cursor cell.
-		p.input.SetWidth(max(width-ansi.StringWidth(p.input.Prompt)-1, 1))
-		b.WriteString(p.input.View() + "\n")
+// listWidth is the width of the list in a picker view width columns wide:
+// all of it, or its share beside a preview.
+func (p *picker) listWidth(width int) int {
+	if p.preview == nil || width < minPreviewWidth {
+		return width
 	}
-	help := ""
+	return max(min(width*2/5, cmp.Or(p.listMaxWidth, 32)), 24)
+}
+
+// pickerLayout is the parts listView draws around the rows, and where the
+// rows go: the line of the first row, its index, and how many rows fit.
+type pickerLayout struct {
+	help, hint, notice string
+	top, start, rows   int
+}
+
+func (p *picker) layout(width, height int, look modalLook) pickerLayout {
+	l := pickerLayout{top: 1}
+	if !p.keySelect && p.searching {
+		l.top++
+	}
 	for _, item := range p.items {
 		if item.Help != "" {
 			text := ""
 			if p.cursor < len(p.matches) {
 				text = p.items[p.matches[p.cursor]].Help
 			}
-			help = look.message(statusInfo, text, width, min(2, max(height-6, 1)))
+			l.help = look.message(statusInfo, text, width, min(2, max(height-6, 1)))
 			break
 		}
 	}
-	hint := ansi.Wrap(p.controls(accent), width, "")
+	l.hint = ansi.Wrap(p.controls(look.accent), width, "")
 	// Status lines, most urgent last so they sit next to the key hints.
 	var status []string
 	for _, msg := range []struct {
@@ -339,13 +357,37 @@ func (p *picker) listView(width, height int, look modalLook) string {
 			status = append(status, look.message(msg.level, msg.text, width, 0))
 		}
 	}
-	notice := strings.Join(status, "\n")
-	rows := max(height-3-lipgloss.Height(help)-lipgloss.Height(hint)-lipgloss.Height(notice), 1)
-	start := max(p.cursor-rows+1, 0)
+	l.notice = strings.Join(status, "\n")
+	l.rows = max(height-3-lipgloss.Height(l.help)-lipgloss.Height(l.hint)-lipgloss.Height(l.notice), 1)
+	l.start = max(p.cursor-l.rows+1, 0)
+	return l
+}
+
+// rowAt returns the row drawn on line of a list width by height cells.
+func (p *picker) rowAt(width, height int, look modalLook, line int) (int, bool) {
+	l := p.layout(width, height, look)
+	i := l.start + line - l.top
+	return i, line >= l.top && i < p.rowCount() && i < l.start+l.rows
+}
+
+// listView draws the title, search, list, and key hints.
+func (p *picker) listView(width, height int, look modalLook) string {
+	accent := look.accent
+	l := p.layout(width, height, look)
+	var b strings.Builder
+	b.WriteString(accent.Render(ansi.Truncate(p.title, width, "…")) + "\n")
+	if !p.keySelect && p.searching {
+		styles := p.input.Styles()
+		styles.Focused.Prompt = accent
+		p.input.SetStyles(styles)
+		// Text input width excludes its prompt and trailing cursor cell.
+		p.input.SetWidth(max(width-ansi.StringWidth(p.input.Prompt)-1, 1))
+		b.WriteString(p.input.View() + "\n")
+	}
 	if p.rowCount() == 0 {
 		b.WriteString(dimStyle.Render("no matches") + "\n")
 	}
-	for i := start; i < p.rowCount() && i < start+rows; i++ {
+	for i := l.start; i < p.rowCount() && i < l.start+l.rows; i++ {
 		var line string
 		if i == len(p.matches) {
 			line = fmt.Sprintf("Use %q", strings.TrimSpace(p.input.Value()))
@@ -378,13 +420,13 @@ func (p *picker) listView(width, height int, look modalLook) string {
 		}
 		b.WriteString(line + "\n")
 	}
-	if notice != "" {
-		b.WriteString(notice + "\n")
+	if l.notice != "" {
+		b.WriteString(l.notice + "\n")
 	}
-	if help != "" {
-		b.WriteString(help + "\n")
+	if l.help != "" {
+		b.WriteString(l.help + "\n")
 	}
-	b.WriteString(hint)
+	b.WriteString(l.hint)
 	return b.String()
 }
 

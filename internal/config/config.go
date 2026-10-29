@@ -82,6 +82,7 @@ type Config struct {
 	Picker   Picker   `toml:"picker"`
 	Activity Activity `toml:"activity"`
 	Feed     Feed     `toml:"feed"`
+	Mouse    Mouse    `toml:"mouse"`
 	// Keys overrides key bindings: scope, then binding name, then keys. See
 	// internal/keymap for the scopes and names, including Activity controls.
 	Keys map[string]map[string][]string `toml:"keys"`
@@ -278,6 +279,13 @@ type Picker struct {
 	TypeFirst bool `toml:"type_first"`
 }
 
+// Mouse configures mouse input. Enabled lets the wheel scroll and clicks
+// focus panes, select rows, and run statusline hints; false leaves the
+// mouse to the terminal, such as for selecting text.
+type Mouse struct {
+	Enabled bool `toml:"enabled"`
+}
+
 // Activity configures the Activity view. RefreshInterval is how often
 // Activity scans run in the background: a duration of at least one second,
 // or "0" for no background scans.
@@ -395,6 +403,7 @@ func Default() Config {
 		Images:   Images{Mode: "auto"},
 		Activity: Activity{RefreshInterval: "2m"},
 		Feed:     Feed{Expand: ExpandAuto, Height: 12, RefreshInterval: "1m", Commands: []string{}},
+		Mouse:    Mouse{Enabled: true},
 		Keymap:   keymap.Default(),
 	}
 }

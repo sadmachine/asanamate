@@ -417,6 +417,14 @@ refresh_interval = "1m"
 # entries, add "asanamate-hrvst".
 commands = []
 
+[mouse]
+# The wheel scrolls the pane under the pointer; a click focuses a pane and
+# selects a row; a double click runs enter; clicking a statusline hint runs
+# its key; clicking a link in the reader opens it. Hold shift (option in
+# iTerm2) while dragging to select text, or set false to leave the mouse to
+# the terminal.
+enabled = true
+
 # Optional: show running coding agents next to their tickets. Off unless
 # command is set. Explicit task GIDs from the source take precedence; otherwise
 # tickets match agents on their branch in linked repos. See the README for

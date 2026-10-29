@@ -83,6 +83,17 @@ func (m *Model) statusline() string {
 // renderStatusline hides the right side while a toast covers it, so a long
 // message cannot peek out from beside the toast. The left side stays in place.
 func (m *Model) renderStatusline(showMessage bool) string {
+	line, _, _ := m.statuslineLayout(showMessage)
+	return line
+}
+
+// statusHint is a statusline key hint as drawn, and the one key it shows, or
+// "" when it shows several.
+type statusHint struct{ text, key string }
+
+// statuslineLayout is renderStatusline's line, with the column its key hints
+// start at and the hints, or -1 and nil when they do not show.
+func (m *Model) statuslineLayout(showMessage bool) (line string, hintsX int, shown []statusHint) {
 	name, pillStyle, hints := m.mode()
 	pill := pillStyle.Render(" " + name + " ")
 	var segs []string
@@ -107,23 +118,28 @@ func (m *Model) renderStatusline(showMessage bool) string {
 		var parts []string
 		for _, h := range hints {
 			if h[0] != "" { // unbound
-				parts = append(parts, m.accentStyle.Render(h[0])+" "+dimStyle.Render(h[1]))
+				text := m.accentStyle.Render(h[0]) + " " + dimStyle.Render(h[1])
+				key, _ := keymap.Unlabel(h[0])
+				parts, shown = append(parts, text), append(shown, statusHint{text, key})
 			}
 		}
 		right = strings.Join(parts, "  ")
 	}
 	if !showMessage {
-		right = ""
+		right, shown = "", nil
 	}
 	gap := m.width - ansi.StringWidth(left) - ansi.StringWidth(right)
 	if gap < 2 {
 		// Status messages matter more than where the list is.
 		if status == "" {
-			return ansi.Truncate(pill+" "+connection+" "+strings.Join(segs[:len(segs)-1], dimStyle.Render(" │ ")), m.width, "…")
+			return ansi.Truncate(pill+" "+connection+" "+strings.Join(segs[:len(segs)-1], dimStyle.Render(" │ ")), m.width, "…"), -1, nil
 		}
-		return ansi.Truncate(pill+" "+connection+" "+right, m.width, "…")
+		return ansi.Truncate(pill+" "+connection+" "+right, m.width, "…"), -1, nil
 	}
-	return left + strings.Repeat(" ", gap) + right
+	if len(shown) == 0 {
+		return left + strings.Repeat(" ", gap) + right, -1, nil
+	}
+	return left + strings.Repeat(" ", gap) + right, m.width - ansi.StringWidth(right), shown
 }
 
 // listSegs are the statusline segments for the ticket list: where it is,

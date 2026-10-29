@@ -179,20 +179,30 @@ func appendMore(items []navItem, hidden int) []navItem {
 
 // navView renders the views panel's rows, width by height cells.
 func (m *Model) navView(width, height int) string {
+	lines, _ := m.navRows(width, height)
+	return strings.Join(lines, "\n")
+}
+
+// navRows draws the views panel's lines that fit in height rows, and for
+// each line its selectable row's index, the navCursor that selects it, or -1.
+func (m *Model) navRows(width, height int) (lines []string, rows []int) {
 	items := m.navItems()
-	lines := make([]string, 0, len(items))
-	selectedLine := -1
+	selectedLine, selectable := -1, 0
 	for i, it := range items {
 		if it.heading {
 			if i > 0 {
-				lines = append(lines, "")
+				lines, rows = append(lines, ""), append(rows, -1)
 			}
 			rule := m.navRule(it.label, it.right, width)
 			if it.dim {
 				rule = dimStyle.Render(ansi.Strip(rule))
 			}
-			lines = append(lines, rule)
+			lines, rows = append(lines, rule), append(rows, -1)
 			continue
+		}
+		row := -1
+		if it.selectable() {
+			row, selectable = selectable, selectable+1
 		}
 		mark := "  "
 		switch {
@@ -221,13 +231,13 @@ func (m *Model) navView(width, height int) string {
 			line = selectedStyle.Render(ansi.Strip(line))
 			selectedLine = len(lines)
 		}
-		lines = append(lines, line)
+		lines, rows = append(lines, line), append(rows, row)
 	}
 	if len(lines) > height {
 		start := max(selectedLine-height+1, 0)
-		lines = lines[start : start+height]
+		lines, rows = lines[start:start+height], rows[start:start+height]
 	}
-	return strings.Join(lines, "\n")
+	return lines, rows
 }
 
 // navRule is a heading rule with its section's key, if any, set in the

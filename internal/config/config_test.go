@@ -707,6 +707,17 @@ func TestPickerConfig(t *testing.T) {
 	}
 }
 
+func TestMouseConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
+	if err != nil || !cfg.Mouse.Enabled {
+		t.Fatalf("default: %+v, err = %v", cfg.Mouse, err)
+	}
+	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[mouse]\nenabled = false\n"))
+	if err != nil || cfg.Mouse.Enabled {
+		t.Fatalf("set: %+v, err = %v", cfg.Mouse, err)
+	}
+}
+
 func TestLayoutConfig(t *testing.T) {
 	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
 	if err != nil || cfg.Layout != (Layout{Reader: true, Focus: Focus{Dim: true, Resize: true}}) {

@@ -216,6 +216,7 @@ func (m *Model) overlayToast(frame string) string {
 	box := lipgloss.NewStyle().Border(m.sym.border).BorderForeground(border).Padding(0, 1).Width(width).
 		Render(strings.Join(lines, "\n"))
 	x, y := max(m.width-lipgloss.Width(box)-1, 0), max(h-lipgloss.Height(box), 0)
+	m.hits.toast = hitArea{x, y, lipgloss.Width(box), lipgloss.Height(box)}
 	canvas := lipgloss.NewCanvas(m.width, h).Compose(lipgloss.NewCompositor(
 		lipgloss.NewLayer(frame), lipgloss.NewLayer(box).X(x).Y(y).Z(1),
 	))

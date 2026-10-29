@@ -243,6 +243,18 @@ func Label(keys ...string) string {
 	return strings.Join(shown, "/")
 }
 
+// Unlabel returns the one key label shows, or false when label joins several
+// keys or names none.
+func Unlabel(label string) (string, bool) {
+	for k, g := range glyphs {
+		if g == label {
+			return k, true
+		}
+	}
+	key, err := Normalize(label)
+	return key, err == nil && key == label
+}
+
 func scopeNames() []string {
 	var out []string
 	for _, s := range catalog {

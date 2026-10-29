@@ -171,7 +171,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 				if n < first {
 					continue
 				}
-				row := dimStyle.Render(ansi.Truncate(ticket.Author(e.Story)+" · "+m.storyDay(e.CreatedAt)+" · "+ticket.OneLine(e.Text), width, "…"))
+				row := dimStyle.Render(ansi.Truncate(ticket.Author(e.Story)+" · "+m.storyTime(e.CreatedAt)+" · "+ticket.OneLine(e.Text), width, "…"))
 				if event {
 					items[len(items)-1] += "\n" + row
 					line++
@@ -280,12 +280,12 @@ func (m *Model) progress(done, total int) string {
 }
 
 // comment renders one comment of the timeline: a colored dot, the author, and
-// the day, over the body behind a gutter in the author's color. A preview
+// the date and time, over the body behind a gutter in the author's color. A preview
 // above 0 keeps only that many lines of the body's text, ending in see more,
 // and reports whether it cut any.
 func (m *Model) comment(c asana.Story, width int, selected bool, preview int) (string, bool) {
 	author := ticket.Author(c)
-	head := authorStyle(author).Render("●") + " " + titleStyle.Render(author) + dimStyle.Render(" · "+m.storyDay(c.CreatedAt))
+	head := authorStyle(author).Render("●") + " " + titleStyle.Render(author) + dimStyle.Render(" · "+m.storyTime(c.CreatedAt))
 	if selected {
 		head = m.fieldStyle().Render(ansi.Strip(head))
 	}
@@ -309,14 +309,16 @@ func (m *Model) comment(c asana.Story, width int, selected bool, preview int) (s
 	return head + "\n" + strings.Join(lines, "\n"), clipped
 }
 
-// storyDay is the short date of an Asana timestamp, or its date part when
-// that does not parse.
-func (m *Model) storyDay(timestamp string) string {
-	day, err := time.Parse(time.DateOnly, ticket.Day(timestamp))
+// storyTime is the short date and local time of an Asana timestamp, such as
+// "Sep 26 14:05", or the timestamp unchanged when it does not parse.
+func (m *Model) storyTime(timestamp string) string {
+	at, err := time.Parse(time.RFC3339Nano, timestamp)
 	if err != nil {
-		return ticket.Day(timestamp)
+		return timestamp
 	}
-	return shortDate(day, m.now())
+	now := m.now()
+	at = at.In(now.Location())
+	return shortDate(at, now) + " " + at.Format("15:04")
 }
 
 // previewText keeps the first n lines of text in lines, skipping blank ones,

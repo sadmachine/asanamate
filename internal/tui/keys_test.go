@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -436,7 +437,8 @@ func TestCardsAllTabInterleavesActivity(t *testing.T) {
 	}
 	// The newest three: two events on adjacent lines, then the newest comment.
 	at := m.fieldLines[allCommentsKey] + 2
-	if !strings.Contains(lines[at], "Sam · ") || !strings.Contains(lines[at], "assigned to Amy") ||
+	stamp := time.Date(2026, 9, 21, 10, 0, 0, 0, time.UTC).In(m.now().Location()).Format("Jan 2 15:04")
+	if !strings.Contains(lines[at], "Sam · "+stamp+" · ") || !strings.Contains(lines[at], "assigned to Amy") ||
 		!strings.Contains(lines[at+1], "changed the due date") || m.fieldLines["comment:c2"] != at+3 || !strings.Contains(lines[at+3], "Zed") {
 		t.Fatalf("All tab lines from %d:\n%s", at, strings.Join(lines[at:], "\n"))
 	}

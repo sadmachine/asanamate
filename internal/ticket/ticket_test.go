@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 )
@@ -28,7 +29,16 @@ func sample() Ticket {
 	}
 }
 
+// utc renders local times in UTC for the test, so expected times hold in
+// any time zone.
+func utc(t *testing.T) {
+	local := time.Local
+	time.Local = time.UTC
+	t.Cleanup(func() { time.Local = local })
+}
+
 func TestMarkdownSections(t *testing.T) {
+	utc(t)
 	md := sample().Markdown()
 	for _, want := range []string{
 		"- **Status:** open",
@@ -40,7 +50,7 @@ func TestMarkdownSections(t *testing.T) {
 		"- [x] Write test",
 		"1. [shot.png](https://app.asana.com/a/1)",
 		"## Activity",
-		"### Sam · 2026-09-20",
+		"### Sam · 2026-09-20 10:00",
 		"Looks good",
 	} {
 		if !strings.Contains(md, want) {
@@ -53,13 +63,14 @@ func TestMarkdownSections(t *testing.T) {
 }
 
 func TestMarkdownInterleavesActivity(t *testing.T) {
+	utc(t)
 	tk := sample()
 	tk.Events = []asana.Story{
 		{CreatedAt: "2026-09-19T09:00:00Z", CreatedBy: &asana.Ref{Name: "Amy"}, Text: "assigned to Sam"},
 		{CreatedAt: "2026-09-21T09:00:00Z", Text: "changed the due date\nto Oct 3"},
 	}
 	md := tk.Markdown()
-	first, comment, last := strings.Index(md, "- Amy · 2026-09-19 · assigned to Sam"), strings.Index(md, "### Sam · 2026-09-20"), strings.Index(md, "- Unknown · 2026-09-21 · changed the due date to Oct 3")
+	first, comment, last := strings.Index(md, "- Amy · 2026-09-19 09:00 · assigned to Sam"), strings.Index(md, "### Sam · 2026-09-20 10:00"), strings.Index(md, "- Unknown · 2026-09-21 09:00 · changed the due date to Oct 3")
 	if first < 0 || comment < first || last < comment {
 		t.Fatalf("activity out of order:\n%s", md)
 	}

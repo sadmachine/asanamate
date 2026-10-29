@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/JohannesKaufmann/dom"
 	"github.com/JohannesKaufmann/html-to-markdown/v2/converter"
@@ -107,12 +108,14 @@ func Author(c asana.Story) string {
 	return Clean(c.CreatedBy.Name)
 }
 
-// Day returns the date part of an Asana timestamp.
-func Day(timestamp string) string {
-	if len(timestamp) >= 10 {
-		return timestamp[:10]
+// Stamp returns an Asana timestamp as the local date and time, such as
+// "2026-09-20 14:05", or the timestamp unchanged when it does not parse.
+func Stamp(timestamp string) string {
+	at, err := time.Parse(time.RFC3339Nano, timestamp)
+	if err != nil {
+		return timestamp
 	}
-	return timestamp
+	return at.Local().Format("2006-01-02 15:04")
 }
 
 // Markdown renders the ticket for the reading pane and for $ASANAMATE_TICKET_MD.
@@ -150,9 +153,9 @@ func (t Ticket) MarkdownWith(extra string) string {
 	var activity []string
 	for _, s := range t.Timeline() {
 		if s.Comment {
-			activity = append(activity, fmt.Sprintf("### %s · %s\n\n%s", Author(s.Story), Day(s.CreatedAt), HTMLToMarkdown(s.HTMLText)))
+			activity = append(activity, fmt.Sprintf("### %s · %s\n\n%s", Author(s.Story), Stamp(s.CreatedAt), HTMLToMarkdown(s.HTMLText)))
 		} else {
-			activity = append(activity, fmt.Sprintf("- %s · %s · %s", Author(s.Story), Day(s.CreatedAt), OneLine(s.Text)))
+			activity = append(activity, fmt.Sprintf("- %s · %s · %s", Author(s.Story), Stamp(s.CreatedAt), OneLine(s.Text)))
 		}
 	}
 	section(&b, "Activity", strings.Join(activity, "\n\n"))

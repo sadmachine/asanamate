@@ -10,7 +10,7 @@ import { display } from './display.js';
 import { ProviderError, UsageError, providerError } from './errors.js';
 import { withLock } from './lock.js';
 import { DEFAULT_PREFIX, linkTitle, splitTitle, tagGID, ticketLink, validGID } from './marker.js';
-import { savePending, takePending } from './pending.js';
+import { peekPending, savePending, takePending } from './pending.js';
 
 // PROTOCOL_VERSION versions the JSON record shape, independently of package SemVer.
 export const PROTOCOL_VERSION = 1;
@@ -161,10 +161,14 @@ export async function linkFromPrompt(providers, { provider, sessionId, gid }, lo
 }
 
 // completePending also retitles a link saved before the provider generated a
-// title, at the first Stop that finds one.
-export async function completePending(providers, { provider, sessionId }, lockOptions) {
+// title, at the first Stop that finds one. With whenNamed, a session the
+// provider has not named yet keeps its pending link for a later call.
+export async function completePending(providers, { provider, sessionId, whenNamed = false }, lockOptions) {
   const p = pick(providers, provider, sessionId);
   return withLock(provider, sessionId, async () => {
+    if (whenNamed && !(await peekPending(lockOptions?.env, provider, sessionId) && (await readIfPersisted(p, sessionId))?.name)) {
+      return null;
+    }
     const gid = await takePending(lockOptions?.env, provider, sessionId);
     const result = gid ? await linkSaved(p, sessionId, gid, false, lockOptions) : null;
     await retitle(p, sessionId, lockOptions);

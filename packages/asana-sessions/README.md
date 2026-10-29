@@ -103,11 +103,11 @@ the verified `title`, and `changed`.
 - A different ticket's marker is a conflict unless you pass `--replace`.
 - An untitled conversation becomes `Conversation [asana:<GID>]`. The first
   prompt is never copied into a title.
-- Codex prompt hooks defer linking an unnamed thread until Stop, allowing
-  Codex to generate its title first. Stop appends the marker to that title,
-  or uses `Conversation` if the thread is still unnamed. Named threads and
-  explicit `link` commands still link immediately. During the first turn,
-  an unnamed thread has no saved ticket marker yet.
+- Codex prompt hooks defer linking an unnamed thread, allowing Codex to
+  generate its title first. The first tool call after that title appends the
+  marker to it. Otherwise Stop does, using `Conversation` if the thread is
+  still unnamed. Named threads and explicit `link` commands still link
+  immediately. Until then, an unnamed thread has no saved ticket marker.
 - Claude Code generates its own title after the conversation starts, but
   hides it once a title is set. For a `Conversation [asana:<GID>]` link,
   `list` shows the generated title from the transcript instead, and the Stop
@@ -198,8 +198,9 @@ and stops saving its transcript; run `claude --resume` from a plain shell.
 
 Earlier live checks pass for both providers at the versions above. They cover
 immediate Codex linking and Claude's real Stop hook completing the first
-deferred link after persistence. The new Codex title deferral has regression
-coverage; its native Stop/title timing still needs the live release gate.
+deferred link after persistence. The new Codex title deferral and its
+PostToolUse completion have regression coverage; their native timing still
+needs the live release gate.
 Both providers preserve links across later prompts and process restarts,
 reject ambiguity/conflicts without blocking, and support the explicit skill.
 Claude also preserves an unrelated tag through change/unlink/relink and reopens
@@ -274,8 +275,8 @@ registration status. Setup exits 1 while helper visibility or selected plugin re
 Registration is distinct from readiness: diagnostics report
 missing, incompatible, stale, disabled, untrusted, ready or error states. Claude
 loads hooks in a new session or after `/reload-plugins`. Codex requires hooks to
-be enabled in the host and the exact prompt and Stop hooks reviewed and trusted
-through `/hooks`. Setup does not enable features, approve trust or bypass host policy.
+be enabled in the host and the exact prompt, PostToolUse, and Stop hooks
+reviewed and trusted through `/hooks`. Setup does not enable features, approve trust or bypass host policy.
 Review changed hook definitions after upgrades.
 
 Hooks invoke `asana-sessions` from the provider's PATH. Nothing downloads at
@@ -294,11 +295,13 @@ helper into a directory on every PATH, such as the installer's default
 `~/.local/bin`, or restart the daemon from a shell where `asana-sessions` resolves.
 
 Named Codex threads link immediately through the native metadata API; unnamed
-threads defer linking until Stop so Codex can generate a title first. Claude
-can submit the first prompt before the session is saved. Both plugins use Stop
-to complete deferred links. Private pending files contain provider, session ID,
+threads defer linking so Codex can generate a title first. Codex's PostToolUse
+hook completes the link once the thread has a title. Its command skips Node
+while the pending directory below is empty, so it costs only a shell start
+on each tool call after linking. Claude can submit the first prompt before the
+session is saved. Both plugins use Stop to complete deferred links. Private pending files contain provider, session ID,
 GID and timestamp, never the prompt. They expire after 24 hours and are swept on subsequent linking
-attempts; Stop removes the entry after attempting completion. State lives under
+attempts and Codex tool calls; Stop removes the entry after attempting completion. State lives under
 `$XDG_STATE_HOME/asana-sessions/pending/` (default
 `~/.local/state/asana-sessions/pending/`). Errors do not silently replace links.
 

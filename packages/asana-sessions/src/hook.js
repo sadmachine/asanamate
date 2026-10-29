@@ -1,7 +1,8 @@
 // The provider plugin hook: `asana-sessions hook <provider>` reads one native
-// UserPromptSubmit or Stop event and links the conversation to the task in
-// ASANA_SESSIONS_TASK, else to the single Asana task URL in the submitted
-// prompt. It never blocks the prompt: every
+// UserPromptSubmit, PostToolUse, or Stop event. A prompt links the
+// conversation to the task in ASANA_SESSIONS_TASK, else to the single Asana
+// task URL in the submitted prompt. PostToolUse and Stop complete a link the
+// prompt deferred. It never blocks the prompt: every
 // outcome exits 0, and stdout carries only an optional nonblocking
 // {"systemMessage": ...} notice that both providers show to the user.
 import { isAbsolute } from 'node:path';
@@ -16,7 +17,7 @@ export const MAX_EVENT = 1024 * 1024;
 // DEADLINE_MS stays under the plugins' 15-second native hook timeout.
 export const DEADLINE_MS = 10000;
 
-const EVENTS = new Set(['UserPromptSubmit', 'Stop']);
+const EVENTS = new Set(['UserPromptSubmit', 'PostToolUse', 'Stop']);
 
 export async function hook(provider, c, { deadlineMs = DEADLINE_MS } = {}) {
   const notice = (text) => c.stdout.write(`${JSON.stringify({ systemMessage: `asana-sessions: ${display(text).slice(0, 500)}` })}\n`);
@@ -60,7 +61,13 @@ async function handle(provider, c) {
   }
   const lockOptions = { env: c.env, signal: c.abort.signal };
   if (event.name === 'Stop') {
-    return linkNow(p, event.sessionId, null, lockOptions, true);
+    return linkNow(p, event.sessionId, null, lockOptions, { deferred: true });
+  }
+  if (event.name === 'PostToolUse') {
+    // Codex's hook command runs Node only while pending/ holds an entry, so
+    // expired entries must not linger there.
+    await sweepPending(c.env);
+    return linkNow(p, event.sessionId, null, lockOptions, { deferred: true, whenNamed: true });
   }
   const gids = launchTask(p, event.sessionId, c.env) ?? taskGIDsInText(event.prompt);
   if (gids.length === 0) {
@@ -70,7 +77,7 @@ async function handle(provider, c) {
     return `the prompt links ${gids.length} Asana tasks (${gids.join(', ')}); not linking automatically. Ask to link one task explicitly.`;
   }
   await sweepPending(c.env);
-  return linkNow(p, event.sessionId, gids[0], lockOptions, false);
+  return linkNow(p, event.sessionId, gids[0], lockOptions);
 }
 
 // launchTask returns the task a launcher named in ASANA_SESSIONS_TASK, or null
@@ -111,12 +118,12 @@ function parseEvent(text, p) {
 }
 
 // linkNow never relinks: a different existing link is reported, not replaced.
-async function linkNow(p, sessionId, gid, lockOptions, deferred) {
+async function linkNow(p, sessionId, gid, lockOptions, { deferred = false, whenNamed = false } = {}) {
   try {
     const providers = { [p.name]: p };
     const target = { provider: p.name, sessionId, gid };
     const r = deferred
-      ? await completePending(providers, target, lockOptions)
+      ? await completePending(providers, { ...target, whenNamed }, lockOptions)
       : await linkFromPrompt(providers, target, lockOptions);
     if (r?.pendingTask) {
       return `task ${r.pendingTask} is already waiting to link to this conversation; not linking ${gid}`;

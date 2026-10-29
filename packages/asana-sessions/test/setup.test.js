@@ -11,7 +11,7 @@ function context(name, { entry, hooks, version = TESTED[name], missing = false }
   const calls = [];
   const c = { pkg, version: '0.1.0', env: { PATH: '' }, cwd: '/tmp', io: fakeIO([], { interactive: false }),
     output: '', stdout: { write: (s) => { c.output += s; } }, calls,
-    providers: { codex: { hooks: async () => hooks ?? ['userPromptSubmit', 'stop'].map((eventName) => ({ pluginId: PLUGIN_ID, eventName, enabled: true, trustStatus: 'trusted' })) } },
+    providers: { codex: { hooks: async () => hooks ?? ['userPromptSubmit', 'postToolUse', 'stop'].map((eventName) => ({ pluginId: PLUGIN_ID, eventName, enabled: true, trustStatus: 'trusted' })) } },
     exec: async (command, args) => {
       calls.push([command, ...args]);
       if (command !== name) return { missing: true, ok: false, stdout: '', stderr: '' };
@@ -34,7 +34,7 @@ test('plugin status distinguishes missing, incompatible, registered, stale, disa
     assert.equal((await pluginStatus(name, context(name, { entry: entry(name, { version: '0.0.1' }) }))).state, 'stale');
     assert.equal((await pluginStatus(name, context(name, { entry: entry(name, { enabled: false }) }))).state, 'disabled');
   }
-  const hooks = ['userPromptSubmit', 'stop'].map((eventName) => ({ pluginId: PLUGIN_ID, eventName, enabled: true, trustStatus: 'trusted' }));
+  const hooks = ['userPromptSubmit', 'postToolUse', 'stop'].map((eventName) => ({ pluginId: PLUGIN_ID, eventName, enabled: true, trustStatus: 'trusted' }));
   hooks[1].trustStatus = 'untrusted';
   const c = context('codex', { entry: entry('codex'), hooks });
   assert.equal((await pluginStatus('codex', c)).state, 'untrusted');

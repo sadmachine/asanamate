@@ -11,6 +11,17 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -n \"$(ls -A \"${XDG_STATE_HOME:-$HOME/.local/state}/asana-sessions/pending\" 2>/dev/null)\" || { cat >/dev/null; exit 0; }; asana-sessions hook codex",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readdir, readFile, rm, utimes } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { chmod, mkdir, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PassThrough, Readable } from 'node:stream';
 import test from 'node:test';
@@ -119,12 +120,46 @@ for (const mutation of ['unlink', 'replace', 'native rename']) {
   });
 }
 
-test('Codex Stop without a pending link never reads or renames a thread', async (t) => {
+test('Codex PostToolUse completes a pending link once Codex names the thread', async (t) => {
   const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
-  const p = fakeProvider('codex', [session({ name: 'Conversation [asana:42]' })]);
-  assert.equal(await run(p, JSON.stringify(event({ hook_event_name: 'Stop' })), env), '');
-  assert.deepEqual(p.calls, []);
+  const p = fakeProvider('codex', [session({ title: 'private first prompt' })]);
+  const send = (e) => run(p, JSON.stringify(event(e)), env);
+  assert.equal(await send(), '');
+  assert.equal(await send({ hook_event_name: 'PostToolUse' }), '');
+  assert.equal(p.store.get(ID).name, null);
+  assert.equal(p.calls.some(([method]) => method === 'rename'), false);
+  p.store.get(ID).name = 'Generated title';
+  assert.match(await send({ hook_event_name: 'PostToolUse' }), /linked this conversation to Asana task 42/);
+  assert.equal(p.store.get(ID).name, 'Generated title [asana:42]');
+  assert.equal(await takePending(env, 'codex', ID), '');
 });
+
+test('Codex PostToolUse command starts the helper only while a link is pending', async (t) => {
+  const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
+  const hooks = JSON.parse(await readFile(new URL('../plugins/codex/asana-sessions/hooks/hooks.json', import.meta.url), 'utf8'));
+  const bin = join(env.XDG_STATE_HOME, 'bin');
+  await mkdir(bin);
+  await writeFile(join(bin, 'asana-sessions'), '#!/bin/sh\ncat > "$XDG_STATE_HOME/ran"\n');
+  await chmod(join(bin, 'asana-sessions'), 0o755);
+  const input = 'x'.repeat(256 * 1024);
+  const ran = () => readFile(join(env.XDG_STATE_HOME, 'ran'), 'utf8').catch(() => null);
+  const runCommand = () => execFileSync('/bin/sh', ['-c', hooks.hooks.PostToolUse[0].hooks[0].command],
+    { input, env: { ...env, HOME: env.XDG_STATE_HOME, PATH: `${bin}:/usr/bin:/bin` } });
+  runCommand();
+  assert.equal(await ran(), null);
+  await savePending(env, 'codex', ID, '42');
+  runCommand();
+  assert.equal(await ran(), input);
+});
+
+for (const name of ['Stop', 'PostToolUse']) {
+  test(`Codex ${name} without a pending link never reads or renames a thread`, async (t) => {
+    const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
+    const p = fakeProvider('codex', [session({ name: 'Conversation [asana:42]' })]);
+    assert.equal(await run(p, JSON.stringify(event({ hook_event_name: name })), env), '');
+    assert.deepEqual(p.calls, []);
+  });
+}
 
 for (const persisted of [false, true]) {
   test(`explicit unlink cancels a deferred Claude link ${persisted ? 'after' : 'before'} persistence`, async (t) => {

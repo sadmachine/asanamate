@@ -168,6 +168,9 @@ type Model struct {
 	conversations       *conversationLookup
 	conversationResults map[string]conversations.Result
 
+	hits  mouseHits // where the last frame drew what the mouse can hit
+	click lastClick // the last click, to find double clicks
+
 	status                string
 	statusLevel           statusLevel
 	statusProgress        bool
@@ -400,6 +403,8 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 		m.setStatus(statusError, string(msg))
 	case tea.KeyPressMsg:
 		return m, m.handleKey(msg)
+	case tea.MouseMsg:
+		return m, m.handleMouse(msg)
 	}
 	// Editors also receive paste events and asynchronous clipboard results.
 	if m.activityOpen && m.activity.filtering {
@@ -758,8 +763,13 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 }
 
 func (m *Model) updateModal(msg tea.KeyPressMsg) tea.Cmd {
+	res, cmd := m.modal.update(msg)
+	return m.modalResult(res, cmd)
+}
+
+// modalResult closes the picker on a cancel, or runs its choice.
+func (m *Model) modalResult(res pickResult, cmd tea.Cmd) tea.Cmd {
 	p := m.modal
-	res, cmd := p.update(msg)
 	switch {
 	case res.cancelled:
 		if c := m.composer; c != nil {
@@ -1176,9 +1186,13 @@ func (m *Model) layout() {
 }
 
 func (m *Model) View() tea.View {
+	m.hits = mouseHits{panes: m.hits.panes[:0]}
 	frame := m.body() + "\n" + m.renderStatusline(!m.toastVisible())
 	v := tea.NewView(m.overlayToast(frame))
 	v.AltScreen = true
+	if m.deps.Config.Mouse.Enabled {
+		v.MouseMode = tea.MouseModeCellMotion
+	}
 	return v
 }
 
@@ -1192,8 +1206,10 @@ func (m *Model) body() string {
 	w, mh := max(min(m.width-4, 80), 10), max(h-2, 3)
 	var content string
 	style := modalStyle.BorderForeground(m.accentStyle.GetForeground())
+	kind := overlayOther
 	switch {
 	case m.noticeVisible():
+		kind = overlayNotice
 		notice := m.notices[0]
 		noticeStyle, _ := m.statusAppearance(notice.level)
 		content = noticeStyle.Bold(true).Render("Error") + "\n\n" + ansi.Wrap(m.renderStatus(notice.level, notice.text), w, "") +
@@ -1215,15 +1231,18 @@ func (m *Model) body() string {
 	case m.form != nil:
 		content = m.form.view(w, mh, m.modalLook())
 	case m.modal != nil:
+		kind = overlayPicker
 		if m.modal.preview != nil {
 			w = max(min(m.width-4, 140), 10)
 		}
 		content = m.modal.view(w, mh, m.modalLook())
 	case m.extension != nil:
+		kind = overlayExtension
 		content = m.extension.view(w, mh)
 	case m.composer != nil && m.input == nil && !m.composer.reading:
 		content = "Loading task details…\n" + hintLine(m.accentStyle, [2]string{keyLabel("picker", "cancel"), "cancel"})
 	case m.help:
+		kind = overlayHelp
 		if m.activityOpen {
 			content = m.activityHelp()
 		} else if m.filtering {
@@ -1245,6 +1264,7 @@ func (m *Model) body() string {
 	box := style.Render(content)
 	x := max((m.width-lipgloss.Width(box))/2, 0)
 	y := max((h-lipgloss.Height(box))/2, 0)
+	m.hits.overlay, m.hits.box, m.hits.boxW, m.hits.boxH = kind, hitArea{x, y, lipgloss.Width(box), lipgloss.Height(box)}, w, mh
 	canvas := lipgloss.NewCanvas(m.width, h).Compose(lipgloss.NewCompositor(
 		lipgloss.NewLayer(dimStyle.Render(ansi.Strip(panes))),
 		lipgloss.NewLayer(box).X(x).Y(y).Z(1),
@@ -1259,25 +1279,33 @@ func (m *Model) panes(h int) string {
 	}
 	listW, readerW, split := m.paneWidths()
 	inner := m.paneHeight()
+	x := m.navWidth()
 	var panes string
 	switch {
 	case split:
 		list := m.listPanel(listW, listW+panelFrame, h)
 		panes = lipgloss.JoinHorizontal(lipgloss.Top, list, m.readerPanel(readerW+panelFrame, h, true))
+		m.hitList(x, listW+panelFrame, h, true)
+		m.hitPane(paneReader, x+listW+panelFrame, 0, readerW+panelFrame, h, true)
 	case m.focusReader:
 		if m.showNav() {
 			panes = m.readerPanel(readerW+panelFrame, h, true)
+			m.hitPane(paneReader, x, 0, readerW+panelFrame, h, true)
 		} else {
 			panes = m.readerPanel(readerW, h, false)
+			m.hitPane(paneReader, 0, 0, readerW, h, false)
 		}
 	case m.showNav():
 		panes = m.listPanel(listW-panelFrame, listW, h)
+		m.hitList(x, listW, h, true)
 	default:
 		panes = lipgloss.NewStyle().Width(listW).Height(h).Render(m.listView(listW, h))
+		m.hitList(0, listW, h, false)
 	}
 	if m.showNav() {
 		nav := m.panel("[0] Views", "", m.navView(navW-panelFrame, inner), navW, h, m.focusNav, nil)
 		panes = lipgloss.JoinHorizontal(lipgloss.Top, nav, panes)
+		m.hitPane(paneNav, 0, 0, navW, h, true)
 	}
 	return panes
 }

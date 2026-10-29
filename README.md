@@ -488,6 +488,26 @@ reader. The first My Tasks load marks nothing. Press `i` to jump to the next
 marked ticket. Set `list.new.section = true` to list marked tickets first,
 under a **New** header; a ticket you open stays there until you move away.
 
+### Mouse
+
+The mouse does what keys do, on what it points at:
+
+- **Wheel:** scrolls the reader, or moves the selection in the list, the
+  views panel, the Feed panel, Activity, and pickers.
+- **Click:** focuses a pane and selects the row under the pointer; in the
+  views panel it opens the row, as `enter` does. A click closes key help,
+  dismisses a toast or an error notice, and runs a statusline hint's key,
+  such as `e edit`. Hints for a pair of keys, such as `j/k move`, do not run.
+- **Double click:** runs `enter` on the selected row: the action menu in the
+  list, the item in the Feed panel and Activity, the choice in a picker.
+- **Links:** clicking a link in the reader opens it in the browser. The
+  reader draws links as terminal hyperlinks, so a terminal that supports
+  them can also open them itself.
+
+While asanamate has the mouse, hold `shift` (`option` in iTerm2) as you drag
+to select text. Set `mouse.enabled = false` to leave the mouse to the
+terminal.
+
 ## Filtering
 
 Space-separated terms, all of which must match:
@@ -723,6 +743,7 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 | `feed.height` | `12` | Feed panel rows when expanded, borders included; at least `3` |
 | `feed.refresh_interval` | `"1m"` | how often feeds and the git check run, at least `1s`; `"0"` runs them only at start and on reload (`r`) |
 | `feed.commands` | `[]` | commands that answer the [feed protocol](docs/extensions.md#feeds), such as `["asanamate-hrvst"]` for today's Harvest time entries |
+| `mouse.enabled` | `true` | the wheel scrolls the pane under the pointer, clicks focus panes and select rows, a double click runs `enter`, statusline hints run their key, and reader links open; `false` leaves the mouse to the terminal. See [Mouse](#mouse) |
 | `picker.type_first` | `false` | open pickers in search mode, so typing filters at once; `esc` leaves search for browse mode |
 | `keys.<scope>.<name>` | see the template | key bindings: a list of keys per binding, such as `[keys.main] quit = ["q", "ctrl+q"]`; `[]` unbinds. Yank uses `keys.main.yank` and `keys.main.copy_selection`; legacy `copy_link` and `copy_comment` remain available without default keys. Scopes: `main`, `activity`, `views`, `filter`, `picker`, `form`, `form_field`, `input`, `builder`, `notice`. Keys are a character (`"j"`, `"?"`) or a key name with modifiers (`"ctrl+d"`, `"shift+tab"`, `"enter"`, `"space"`, `"pgdown"`); a letter with `ctrl` or `alt` is lower case, plus `shift` for the capital (`"ctrl+shift+q"`, not `"ctrl+Q"`); `ctrl+c` is reserved for quitting and protects unsent comments. `asanamate setup` and `asanamate config update` write every binding, commented, with its default |
 | `keys.input.save_draft` | `["ctrl+d"]` | save a comment draft and close; other text inputs keep their editing controls |

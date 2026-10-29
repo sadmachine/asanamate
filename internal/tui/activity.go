@@ -522,21 +522,7 @@ func (m *Model) handleActivityKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "next_pane", "prev_pane":
 		m.cycleActivityPane(name == "prev_pane")
 	case "open":
-		if _, _, split := m.paneWidths(); !split && !a.details {
-			a.details = true
-			return nil
-		}
-		if e, ok := a.selected(); ok {
-			m.activityOpen, m.activityTicket = false, true
-			m.layout()
-			cmd := m.showTicket(e.Task)
-			// The normal reader may have been cached before this workspace
-			// scan. Refresh it before the user acts on older ticket details.
-			if _, cached := m.details[e.Task.GID]; cached {
-				return tea.Batch(cmd, m.loadDetail(e.Task.GID))
-			}
-			return cmd
-		}
+		return m.openActivityEntry()
 	case "open_browser":
 		if e, ok := a.selected(); ok {
 			return openURL(e.Task.PermalinkURL)
@@ -599,6 +585,29 @@ func (m *Model) handleActivityKey(msg tea.KeyPressMsg) tea.Cmd {
 	return nil
 }
 
+// openActivityEntry shows the selected event's details in a single pane, or
+// else opens its ticket in the normal reader.
+func (m *Model) openActivityEntry() tea.Cmd {
+	a := m.activity
+	if _, _, split := m.paneWidths(); !split && !a.details {
+		a.details = true
+		return nil
+	}
+	e, ok := a.selected()
+	if !ok {
+		return nil
+	}
+	m.activityOpen, m.activityTicket = false, true
+	m.layout()
+	cmd := m.showTicket(e.Task)
+	// The normal reader may have been cached before this workspace
+	// scan. Refresh it before the user acts on older ticket details.
+	if _, cached := m.details[e.Task.GID]; cached {
+		return tea.Batch(cmd, m.loadDetail(e.Task.GID))
+	}
+	return cmd
+}
+
 // cycleActivityPane moves focus to the next or, with back, previous of the
 // views panel, the list and the event reader.
 func (m *Model) cycleActivityPane(back bool) {
@@ -648,13 +657,7 @@ func (m *Model) openActivityPeriod() {
 
 func (m *Model) activityList(width, height int) string {
 	a := m.activity
-	// An error or partial scan leads the list, above any older results.
-	var banner string
-	rows := height
-	if note := a.note(); note != "" {
-		banner = warnStyle.Render(ansi.Wrap(note, max(width, 1), "")) + "\n"
-		rows -= lipgloss.Height(banner) - 1
-	}
+	banner := m.activityBanner(width)
 	box := lipgloss.NewStyle().Width(width).Height(height).MaxHeight(height)
 	if len(a.rows) == 0 {
 		text := "No matching activity."
@@ -665,17 +668,40 @@ func (m *Model) activityList(width, height int) string {
 		}
 		return box.Render(banner + ansi.Wrap(text, max(width, 1), ""))
 	}
+	lines, _ := m.activityRows(width, height)
+	return box.Render(strings.Join(lines, "\n"))
+}
+
+// activityBanner leads the list with an error or partial scan, above any
+// older results, or is empty.
+func (m *Model) activityBanner(width int) string {
+	if note := m.activity.note(); note != "" {
+		return warnStyle.Render(ansi.Wrap(note, max(width, 1), "")) + "\n"
+	}
+	return ""
+}
+
+// activityRows draws the banner and the rows that fit below it in a list
+// height rows tall, and for each line the index of the row it belongs to, or
+// -1 for the banner. It needs a row.
+func (m *Model) activityRows(width, height int) (lines []string, rows []int) {
+	a := m.activity
+	if banner := m.activityBanner(width); banner != "" {
+		lines = strings.Split(strings.TrimSuffix(banner, "\n"), "\n")
+		rows = slices.Repeat([]int{-1}, len(lines))
+	}
+	fit := height - len(lines)
 	// The window ends at the cursor's row once it would pass the bottom.
 	first, used := a.cursor, activityRowHeight(a.rows[a.cursor])
-	for first > 0 && used+activityRowHeight(a.rows[first-1]) <= rows {
+	for first > 0 && used+activityRowHeight(a.rows[first-1]) <= fit {
 		first--
 		used += activityRowHeight(a.rows[first])
 	}
-	var lines []string
-	for i := first; i < len(a.rows) && len(lines) < rows; i++ {
-		lines = append(lines, m.activityRowLines(i, width)...)
+	for i := first; i < len(a.rows) && len(lines) < height; i++ {
+		row := m.activityRowLines(i, width)
+		lines, rows = append(lines, row...), append(rows, slices.Repeat([]int{i}, len(row))...)
 	}
-	return box.Render(banner + strings.Join(lines, "\n"))
+	return lines, rows
 }
 
 func activityRowHeight(r activityRow) int {
@@ -774,12 +800,17 @@ func (a *activityView) note() string {
 func (m *Model) activityPanes(h int) string {
 	a := m.activity
 	listW, readerW, split := m.paneWidths()
+	x := m.navWidth()
+	if m.showNav() {
+		m.hitPane(paneNav, 0, 0, navW, h, true)
+	}
 	if !split {
 		a.reader.SetHeight(h)
-		body := m.activityList(listW, h)
+		id, body := paneActivityList, m.activityList(listW, h)
 		if a.details {
-			body = a.reader.View()
+			id, body = paneActivityReader, a.reader.View()
 		}
+		m.hitPane(id, x, 0, listW, h, false)
 		if m.showNav() {
 			nav := m.panel("[0] Views", "", m.navView(navW-panelFrame, max(h-panelFrame, 1)), navW, h, m.focusNav, nil)
 			return lipgloss.JoinHorizontal(lipgloss.Top, nav, lipgloss.NewStyle().Width(listW).Height(h).Render(body))
@@ -794,6 +825,8 @@ func (m *Model) activityPanes(h int) string {
 	}
 	list := m.panel("[1] Activity · "+a.mode, count, m.activityList(listW, inner), listW+panelFrame, h, !a.details && !m.focusNav, nil)
 	reader := m.panel("[2] Event", "enter ticket", a.reader.View(), readerW+panelFrame, h, a.details, nil)
+	m.hitPane(paneActivityList, x, 0, listW+panelFrame, h, true)
+	m.hitPane(paneActivityReader, x+listW+panelFrame, 0, readerW+panelFrame, h, true)
 	if m.showNav() {
 		nav := m.panel("[0] Views", "", m.navView(navW-panelFrame, inner), navW, h, m.focusNav, nil)
 		return lipgloss.JoinHorizontal(lipgloss.Top, nav, list, reader)

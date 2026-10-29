@@ -593,6 +593,13 @@ func (m *Model) feedView(width, rows int) string {
 // view, under the source tabs while the panel has focus or a source is
 // picked.
 func (m *Model) feedLines(width, height int) string {
+	lines, _ := m.feedLayout(width, height)
+	return strings.Join(lines, "\n")
+}
+
+// feedLayout is feedLines as lines, with each line's index among the shown
+// items, or -1 for tabs, headers, and notes.
+func (m *Model) feedLayout(width, height int) (lines []string, shown []int) {
 	all := m.feedRows()
 	items := m.shownFeed(all)
 	var tabs []string
@@ -608,7 +615,8 @@ func (m *Model) feedLines(width, height int) string {
 		case len(m.deps.Config.Feed.Commands) == 0:
 			empty += " · add sources with feed.commands (docs/extensions.md#feeds)"
 		}
-		return strings.Join(append(tabs, dimStyle.Render(ansi.Truncate(empty, width, "…"))), "\n")
+		lines = append(tabs, dimStyle.Render(ansi.Truncate(empty, width, "…")))
+		return lines, slices.Repeat([]int{-1}, len(lines))
 	}
 	now := m.now()
 	cursor := m.feedCursor(items)
@@ -642,11 +650,11 @@ func (m *Model) feedLines(width, height int) string {
 	if !m.focusFeed {
 		start = 0
 	}
-	lines := tabs
+	lines, shown = tabs, slices.Repeat([]int{-1}, len(tabs))
 	for _, r := range rows[start:min(start+height, len(rows))] {
-		lines = append(lines, r.line)
+		lines, shown = append(lines, r.line), append(shown, r.item)
 	}
-	return strings.Join(lines, "\n")
+	return lines, shown
 }
 
 // feedTabs is the source filter: All, then each source, with their item

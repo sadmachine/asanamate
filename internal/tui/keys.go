@@ -2,7 +2,10 @@ package tui
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
+	"strings"
+	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -302,13 +305,63 @@ func (m *Model) available(b binding) bool {
 
 // bindingFor returns the binding k runs in the current layout.
 func (m *Model) bindingFor(k string) (binding, bool) {
-	name := keys.Name("main", k)
+	return m.bindingNamed(keys.Name("main", k))
+}
+
+// bindingNamed returns the binding called name, if it runs in the current
+// layout.
+func (m *Model) bindingNamed(name string) (binding, bool) {
 	for _, b := range m.bindings {
 		if b.Name == name && m.available(b) {
 			return b, true
 		}
 	}
 	return binding{}, false
+}
+
+// keyCodes are the key codes of the key names keymap accepts, besides the
+// function keys.
+var keyCodes = map[string]rune{
+	"enter": tea.KeyEnter, "tab": tea.KeyTab, "backspace": tea.KeyBackspace, "esc": tea.KeyEscape,
+	"space": tea.KeySpace, "up": tea.KeyUp, "down": tea.KeyDown, "left": tea.KeyLeft, "right": tea.KeyRight,
+	"home": tea.KeyHome, "end": tea.KeyEnd, "pgup": tea.KeyPgUp, "pgdown": tea.KeyPgDown,
+	"insert": tea.KeyInsert, "delete": tea.KeyDelete, "begin": tea.KeyBegin, "menu": tea.KeyMenu,
+}
+
+// keyMods are the key modifiers keymap accepts.
+var keyMods = map[string]tea.KeyMod{
+	"ctrl": tea.ModCtrl, "alt": tea.ModAlt, "shift": tea.ModShift,
+	"meta": tea.ModMeta, "hyper": tea.ModHyper, "super": tea.ModSuper,
+}
+
+// keyPress is the key press Bubble Tea reports as the normalized key k, so
+// the mouse can run what a key runs.
+func keyPress(k string) tea.KeyPressMsg {
+	var msg tea.KeyPressMsg
+	base := k
+	if i := strings.LastIndex(k[:len(k)-1], "+"); i >= 0 {
+		base = k[i+1:]
+		for _, mod := range strings.Split(k[:i], "+") {
+			msg.Mod |= keyMods[mod]
+		}
+	}
+	var f int
+	switch code, named := keyCodes[base]; {
+	case named:
+		msg.Code = code
+		if base == "space" && msg.Mod == 0 {
+			msg.Text = " "
+		}
+	case len(base) > 1 && base[0] == 'f':
+		fmt.Sscanf(base, "f%d", &f)
+		msg.Code = tea.KeyF1 + rune(f-1)
+	default:
+		msg.Code, _ = utf8.DecodeRuneInString(base)
+		if msg.Mod == 0 {
+			msg.Text = base
+		}
+	}
+	return msg
 }
 
 // keyHints are the statusline hints for the named bindings, in that order.

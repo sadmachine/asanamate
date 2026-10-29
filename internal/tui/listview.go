@@ -133,6 +133,17 @@ func (m *Model) listView(width, height int) string {
 	case len(m.visible) == 0:
 		return m.emptyView(width, height)
 	}
+	lines, _ := m.listRows(width, height)
+	return strings.Join(lines, "\n")
+}
+
+// listRows draws the tickets that fit in height rows, and for each line the
+// index in visible of the ticket it shows, or -1 for a header, separator, or
+// blank line. It needs a visible ticket.
+func (m *Model) listRows(width, height int) (lines []string, rows []int) {
+	add := func(line string, row int) {
+		lines, rows = append(lines, line), append(rows, row)
+	}
 	itemH, sepH := 1, 0
 	if m.deps.Config.List.Layout == config.LayoutMulti {
 		itemH = 2
@@ -200,12 +211,11 @@ func (m *Model) listView(width, height int) string {
 	}
 	rowW := max(width-ansi.StringWidth(gutter)-listGutter, 1)
 	cols := m.rowCols(rowW)
-	var lines []string
 	for i := start; i < end; i++ {
 		switch {
 		case header(i, start):
 			for range above(i, start) {
-				lines = append(lines, "")
+				add("", -1)
 			}
 			if label, n := m.retainedSection(i); label != "" {
 				style := m.viewingStyle
@@ -215,15 +225,15 @@ func (m *Model) listView(width, height int) string {
 				case label == newLabel:
 					style = newHeaderStyle()
 				}
-				lines = append(lines, m.groupHeader(m.headingStyle(style, m.listFocused()), label, n, width, m.foldedNote(i, label)))
+				add(m.groupHeader(m.headingStyle(style, m.listFocused()), label, n, width, m.foldedNote(i, label)), -1)
 			} else {
-				lines = append(lines, m.groupHeader(m.headingStyle(m.groupStyle(m.groups[i]), m.listFocused()), m.groups[i], counts[m.groups[i]], width, m.foldedNote(i, m.groups[i])))
+				add(m.groupHeader(m.headingStyle(m.groupStyle(m.groups[i]), m.listFocused()), m.groups[i], counts[m.groups[i]], width, m.foldedNote(i, m.groups[i])), -1)
 			}
 			for range spacing {
-				lines = append(lines, "")
+				add("", -1)
 			}
 		case sepH > 0:
-			lines = append(lines, sep)
+			add(sep, -1)
 		}
 		row, rowTail := m.listRow(i, cols)
 		for j, line := range row {
@@ -235,13 +245,13 @@ func (m *Model) listView(width, height int) string {
 			if i == m.cursor {
 				lead = cursor
 			}
-			lines = append(lines, lead+m.renderRowLine(line, flag, tail, rowW, i == m.cursor))
+			add(lead+m.renderRowLine(line, flag, tail, rowW, i == m.cursor), i)
 		}
 	}
 	if sepH > 0 {
-		lines = append(lines, sep)
+		add(sep, -1)
 	}
-	return strings.Join(lines, "\n")
+	return lines, rows
 }
 
 // emptyView centers a note on why the list is empty, with the keys that

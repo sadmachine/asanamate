@@ -6,11 +6,13 @@
   `setup --refresh`, so hooks no longer stay on the previous version until
   setup is rerun by hand. Unregistered providers stay unregistered, and an
   install that is not the `asana-sessions` on `PATH` leaves plugins alone.
-
-- Codex prompt hooks wait until Stop to link unnamed threads, preserving
-  Codex's generated title instead of preventing it with the `Conversation`
-  fallback. Named threads still link immediately. Rerun setup and review
-  both the prompt and new Stop hook in Codex `/hooks` after upgrading.
+- Codex prompt hooks defer linking unnamed threads, preserving Codex's
+  generated title instead of preventing it with the `Conversation` fallback.
+  The first tool call after Codex generates the title completes the link,
+  through a new PostToolUse hook that starts the helper only while a link is
+  pending; a new Stop hook completes it otherwise. Named threads still link
+  immediately. Review the prompt, PostToolUse, and Stop hooks in Codex
+  `/hooks` after upgrading.
 - A Claude conversation linked before Claude Code generated its title no
   longer stays `Conversation [asana:<GID>]`: `list` shows the generated title,
   and the Stop hook renames the conversation to it once one exists.

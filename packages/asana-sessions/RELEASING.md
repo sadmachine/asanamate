@@ -44,7 +44,9 @@ and model turns. Do not copy personal history. Run provider executables through
 - Validate Claude's plugin using `claude plugin validate <plugin-root>`. Register
   each marketplace and plugin natively in its disposable home. Repeat setup and
   upgrades; verify exactly one owned prompt hook runs per submission. Codex
-  `hooks/list` must show one prompt hook and one Stop hook for this plugin.
+  `hooks/list` must show one prompt, one PostToolUse, and one Stop hook for
+  this plugin. Verify an unnamed thread links at the first tool call after
+  Codex generates its title.
 - Review native feature and trust requirements manually. Setup must not enable
   unrelated features, approve trust, or bypass policy. Verify untrusted and
   disabled hooks skip safely.

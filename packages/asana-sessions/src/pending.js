@@ -1,7 +1,9 @@
 // Pending links: a task GID found in a prompt before Claude saved the
-// conversation or Codex generated its title. The Stop hook completes them.
+// conversation or Codex generated its title. Stop, or for Codex the first
+// PostToolUse after the title, completes them.
 // Entries hold only provider, session ID, task GID, and creation time, never
-// the prompt.
+// the prompt. Codex's PostToolUse hook command skips Node while this
+// directory is empty, so its location is part of that hook definition.
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -22,7 +24,7 @@ export async function savePending(env, provider, sessionId, gid) {
 }
 
 async function save(env, provider, sessionId, gid) {
-  const existing = await peek(env, provider, sessionId);
+  const existing = await peekPending(env, provider, sessionId);
   if (existing && existing !== gid) {
     return existing;
   }
@@ -38,7 +40,8 @@ async function save(env, provider, sessionId, gid) {
   return '';
 }
 
-async function peek(env, provider, sessionId) {
+// peekPending returns the session's pending GID without removing it, or ''.
+export async function peekPending(env, provider, sessionId) {
   try {
     const entry = JSON.parse(await readFile(file(env, provider, sessionId), 'utf8'));
     const age = Date.now() - Date.parse(entry?.created_at);
@@ -56,7 +59,7 @@ async function peek(env, provider, sessionId) {
 // takePending removes and returns the session's pending GID, or ''.
 export async function takePending(env, provider, sessionId) {
   return withLock(`pending-${provider}`, sessionId, async () => {
-    const gid = await peek(env, provider, sessionId);
+    const gid = await peekPending(env, provider, sessionId);
     await rm(file(env, provider, sessionId), { force: true });
     return gid;
   }, { env });

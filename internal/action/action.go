@@ -9,6 +9,7 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +18,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode"
+
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
@@ -314,20 +318,49 @@ func Command(a config.Action, c Context) *exec.Cmd {
 // RunBackground runs cmd in a new session with output appended to logPath,
 // and waits for it to exit. The new session has no controlling terminal, so a
 // confirmation prompt fails fast instead of blocking, and the process survives
-// asanamate quitting.
+// asanamate quitting. Failures include a bounded, display-safe output excerpt.
 func RunBackground(cmd *exec.Cmd, logPath string) error {
 	if err := os.MkdirAll(filepath.Dir(logPath), 0o700); err != nil {
 		return err
 	}
-	log, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	log, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o600)
 	if err != nil {
 		return err
 	}
 	defer log.Close()
 	fmt.Fprintf(log, "--- %s %s\n", time.Now().Format(time.RFC3339), cmd.Args[len(cmd.Args)-1])
+	start, seekErr := log.Seek(0, io.SeekEnd)
 	cmd.Stdout, cmd.Stderr = log, log
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	return cmd.Run()
+	err = cmd.Run()
+	if err != nil && seekErr == nil {
+		info, statErr := log.Stat()
+		if statErr != nil {
+			return err
+		}
+		// Read only this run's log range, keeping inherited output file-backed
+		// so detached children can keep logging after the action or TUI exits.
+		const limit = 4096
+		truncated := info.Size()-start > limit
+		start = max(start, info.Size()-limit)
+		output := make([]byte, max(info.Size()-start, 0))
+		if _, readErr := log.ReadAt(output, start); readErr != nil {
+			return err
+		}
+		text := strings.TrimSpace(strings.Map(func(r rune) rune {
+			if unicode.IsControl(r) || unicode.In(r, unicode.Cf) {
+				return ' '
+			}
+			return r
+		}, ansi.Strip(string(output))))
+		if text != "" {
+			if truncated {
+				text = "… " + text
+			}
+			return fmt.Errorf("%w: %s", err, text)
+		}
+	}
+	return err
 }
 
 // Exec replaces the current process with cmd, so the command owns the

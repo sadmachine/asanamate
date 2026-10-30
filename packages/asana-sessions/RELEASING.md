@@ -16,7 +16,7 @@ No npm registry name is reserved or published; the actual local package name is
 3. Complete the live gate below on supported provider versions. Record versions,
    timings and results in the provider feasibility notes. A missing result blocks
    release; deterministic fake tests cannot replace the gate.
-4. Merge and push the commit to `main`. Require every `package` and `integration` job in
+4. Push the release commit directly to `main`, as core releases do. Require every `package` and `integration` job in
    `asana-sessions-ci` to succeed on that exact commit. Recheck after any change.
 5. Verify local `main` and `origin/main` match that tested commit and the working
    tree is clean. Only on explicit user request, create an annotated

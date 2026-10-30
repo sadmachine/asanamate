@@ -29,23 +29,38 @@ The config is TOML, decoded into the structs in `internal/config/config.go`.
   absolute links), and tell the user the next release tag needs a breaking
   version bump (see Version bumps).
 
-## Incoming PRs
+## Pull requests
 
-- Before a release, check open PRs and identify relevant fixes for inclusion.
+Every change reaches `main` through a GitHub pull request, including the
+user's own branches. Release commits are the only direct pushes to `main`
+(see Version bumps and the standalone release gates).
+
+To land a branch when the user asks:
+
+1. Push it and open a PR with `gh pr create`. The title is a Conventional
+   Commits subject; the body states the problem, the change, and how it was
+   verified, and links the Asana task when there is one.
+2. Wait until `gh pr checks <n> --watch` shows every check passing on the
+   PR head. Any new push to the branch restarts the wait.
+3. Merge with a GitHub merge commit, which keeps each commit and its
+   authorship. Its subject is the Conventional Commits subject plus the PR
+   number:
+   `gh pr merge <n> --merge --delete-branch --subject "fix(tui): list accessible projects in the add-project picker (#2)"`.
+   That subject decides the PR's bump when its own commits are not
+   conventional.
+4. Update local `main` with `git pull --ff-only origin main`, then follow
+   "Version bumps".
+
+Contributor PRs take the same steps 2 to 4, after this review:
+
 - Review the full diff against the PR description and repository conventions
   before approving contributor CI workflows.
 - For bug fixes, verify that the regression test fails without the fix and
   passes with it.
 - Check compatibility with pending local changes. Adapt callers and tests to
   config or API changes while preserving the PR's intended behavior.
-- Require every `ci` job to succeed for the reviewed PR head before merging;
-  recheck if the head changes. Use a GitHub merge commit to preserve the
-  contributor's commits and authorship, with a Conventional Commits subject
-  ending in the PR number, such as
-  `fix(tui): list accessible projects in the add-project picker (#2)`. That
-  subject decides the PR's bump when its own commits are not conventional.
-- Validate the combined `main` after integration, then follow "Version bumps"
-  for the release gates on that exact commit.
+
+Before a release, check open PRs and identify relevant fixes for inclusion.
 
 ## Commits
 
@@ -83,7 +98,7 @@ needs:
 
 A `v2` or later tag also requires the module path in `go.mod` to end in `/v2`.
 
-After merging a branch into local `main`, read `git log --oneline <tag>..main`
+After a PR merges and local `main` is updated, read `git log --oneline <tag>..main`
 and tell the user the pending bump and the version it gives, such as "patch:
 v0.2.0 to v0.2.1". The user often holds several merges for one release, so
 recommend a tag; tag only when the user asks. Say whether this merge raised

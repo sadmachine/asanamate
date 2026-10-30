@@ -1,0 +1,20 @@
+internal/tui/cards.go
+  s_8d244b4c042bf7::t_4c54eeddaba5ae 24-25
+  s_8d244b4c042bf7::t_a745694e815031 31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "370c2ece168429bd0bd83f5035a7a33c1a393e09",
+  "prompts": {},
+  "sessions": {
+    "s_8d244b4c042bf7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fb25af56-7103-48a8-b15f-e21147487e23",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

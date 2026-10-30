@@ -4,6 +4,7 @@ import (
 	"html"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/sadmachine/asanamate/internal/asana"
@@ -27,6 +28,18 @@ func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (
 	doc := commentMarkdown.Parser().Parse(text.NewReader(source))
 	var b strings.Builder
 	var mentioned []asana.Ref
+	// Asana rejects images inside list items. An unordered list closes after
+	// the top-level item to show its images, then reopens. Reopening an ordered
+	// list restarts its numbering, so its images follow the whole list, each
+	// labeled where it appeared.
+	inList, ordered, labels := false, false, 0
+	var listImages []string
+	writeListImages := func() {
+		for _, img := range listImages {
+			b.WriteString("\n" + img)
+		}
+		listImages = nil
+	}
 	var render func(ast.Node, bool)
 	children := func(n ast.Node, mentions bool) {
 		for c := n.FirstChild(); c != nil; c = c.NextSibling() {
@@ -38,7 +51,7 @@ func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (
 		children(n, mentions)
 		b.WriteString("</" + tag + ">")
 	}
-	// Asana forbids pre/blockquote inside lists and lists inside blockquotes.
+	// Asana forbids pre/blockquote/img inside lists and lists inside blockquotes.
 	inside := func(n ast.Node, kind ast.NodeKind) bool {
 		for p := n.Parent(); p != nil; p = p.Parent() {
 			if p.Kind() == kind {
@@ -103,12 +116,28 @@ func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (
 				wrap(n, "blockquote", mentions)
 			}
 		case *ast.List:
+			tag := "ul"
+			if n.IsOrdered() {
+				tag = "ol"
+			}
 			if inside(n, ast.KindBlockquote) {
 				children(n, mentions)
-			} else if n.IsOrdered() {
-				wrap(n, "ol", mentions)
+			} else if inList {
+				wrap(n, tag, mentions)
 			} else {
-				wrap(n, "ul", mentions)
+				inList, ordered = true, n.IsOrdered()
+				b.WriteString("<" + tag + ">")
+				for c := n.FirstChild(); c != nil; c = c.NextSibling() {
+					render(c, mentions)
+					if !ordered && len(listImages) > 0 && c.NextSibling() != nil {
+						b.WriteString("</ul>")
+						writeListImages()
+						b.WriteString("\n<ul>")
+					}
+				}
+				b.WriteString("</" + tag + ">")
+				writeListImages()
+				inList = false
 			}
 		case *ast.ListItem:
 			if inside(n, ast.KindBlockquote) {
@@ -146,10 +175,17 @@ func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (
 			if gid == "" {
 				gid = asanaDestination(destination)
 			}
-			if gid != "" {
-				b.WriteString(`<img data-asana-gid="` + html.EscapeString(gid) + `"/>`)
-			} else {
+			if gid == "" {
 				children(n, false)
+			} else if img := `<img data-asana-gid="` + html.EscapeString(gid) + `"/>`; !inList {
+				b.WriteString(img)
+			} else if ordered {
+				labels++
+				label := "[image " + strconv.Itoa(labels) + "]"
+				b.WriteString(label)
+				listImages = append(listImages, label+"\n"+img)
+			} else {
+				listImages = append(listImages, img)
 			}
 		case *ast.RawHTML:
 			for i := 0; i < n.Segments.Len(); i++ {

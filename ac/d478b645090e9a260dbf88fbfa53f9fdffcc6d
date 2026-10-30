@@ -1,0 +1,27 @@
+internal/action/action.go
+  s_992bc5cdb82759::t_54b50a1bf7dd29 326,332,336-349,357-359
+  s_992bc5cdb82759::t_8ccd7a7cfa4686 12,21-23,321,335,350-356,360-363
+docs/extensions.md
+  s_992bc5cdb82759::t_bfefdffcfac800 158-159,171-172
+  s_992bc5cdb82759::t_3077adab53de9a 161-164
+internal/action/action_test.go
+  s_992bc5cdb82759::t_beb760b276a7a8 195-252
+internal/tui/flow_test.go
+  s_992bc5cdb82759::t_beb760b276a7a8 89-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "acd478b645090e9a260dbf88fbfa53f9fdffcc6d",
+  "prompts": {},
+  "sessions": {
+    "s_992bc5cdb82759": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15f6a-a267-72f3-b2f6-ae240c13c0cb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -192,6 +192,64 @@ func TestRunBackgroundLogsOutput(t *testing.T) {
 	}
 }
 
+func TestRunBackgroundFailureDetails(t *testing.T) {
+	for _, stream := range []string{"stdout", "stderr"} {
+		t.Run(stream, func(t *testing.T) {
+			logPath := filepath.Join(t.TempDir(), "actions.log")
+			if err := RunBackground(exec.Command("/bin/sh", "-c", "echo previous-output"), logPath); err != nil {
+				t.Fatal(err)
+			}
+			message := "Agent not started: branch already checked out."
+			output := "\x1b[31m" + message + "\x1b[0m\n"
+			command := `printf '%s' "$DETAIL"; exit 3`
+			if stream == "stderr" {
+				command = `printf '%s' "$DETAIL" >&2; exit 3`
+			}
+			cmd := exec.Command("/bin/sh", "-c", command)
+			cmd.Env = append(os.Environ(), "DETAIL="+output)
+			err := RunBackground(cmd, logPath)
+			var exit *exec.ExitError
+			if !errors.As(err, &exit) || exit.ExitCode() != 3 {
+				t.Fatalf("err = %v, want wrapped exit status 3", err)
+			}
+			if want := "exit status 3: " + message; err.Error() != want {
+				t.Fatalf("err = %q, want %q", err, want)
+			}
+			data, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(data), "previous-output\n") || !strings.Contains(string(data), output) {
+				t.Fatalf("log lost previous or raw current output: %q", data)
+			}
+			if err := RunBackground(exec.Command("/bin/sh", "-c", "exit 4"), logPath); err == nil || err.Error() != "exit status 4" {
+				t.Fatalf("silent failure = %v, want exit status 4 without stale output", err)
+			}
+		})
+	}
+}
+
+func TestRunBackgroundFailureDetailsBounded(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "actions.log")
+	output := "output-start\n" + strings.Repeat("x", 12000) + "\nfinal-error\n"
+	cmd := exec.Command("/bin/sh", "-c", `printf '%s' "$DETAIL"; exit 1`)
+	cmd.Env = append(os.Environ(), "DETAIL="+output)
+	err := RunBackground(cmd, logPath)
+	if err == nil {
+		t.Fatal("want an error")
+	}
+	if text := err.Error(); !strings.HasPrefix(text, "exit status 1: … ") || !strings.HasSuffix(text, "final-error") || len(text) > 4200 {
+		t.Fatalf("missing bounded output tail: %q", text)
+	}
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), output) {
+		t.Fatal("full output must remain in the log")
+	}
+}
+
 // TestCommandFixture runs testdata/action.sh, the minimal action
 // docs/extensions.md describes, the way a background action runs, so a change
 // to the variables, files, working directory, or exit status fails here.

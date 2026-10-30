@@ -86,6 +86,48 @@ func TestLinkedRepoRunsImmediately(t *testing.T) {
 	}
 }
 
+func TestBackgroundActionFailureDetailsInModal(t *testing.T) {
+	m := splitModel(t)
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	message := "Agent not started: Ticket branch 'bugfix/3126-event-reg-closed' is checked out in the main repository."
+	cmd := m.launch(&pendingRun{
+		action: config.Action{
+			Name:    "Start agent in a new tmux window",
+			Mode:    config.ModeBackground,
+			Command: `printf '%s\n' "$ASANAMATE_COMMENT_TEXT" >&2; exit 1`,
+		},
+		ticket:  ticket.Ticket{Task: asana.Task{GID: "1", Name: "Fix"}},
+		comment: &asana.Story{GID: "9", HTMLText: message},
+	})
+	if cmd == nil {
+		t.Fatal("background action did not launch")
+	}
+	m.Update(cmd())
+	if !m.noticeVisible() || m.toast != nil {
+		t.Fatal("failed action must show an error modal")
+	}
+	notice := m.notices[0].text
+	logPath := filepath.Join(m.deps.StateDir, "actions.log")
+	for _, want := range []string{message, "exit status 1", logPath} {
+		if !strings.Contains(notice, want) {
+			t.Errorf("modal message %q does not contain %q", notice, want)
+		}
+	}
+	view := ansi.Strip(m.body())
+	for _, want := range []string{"Error", "Agent not started", "bugfix/3126-event-reg-closed", "checked out"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("rendered modal does not show %q: %s", want, view)
+		}
+	}
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), message+"\n") {
+		t.Fatalf("failure details missing from log: %q", data)
+	}
+}
+
 func TestUnlinkedRepoPromptsAndSaves(t *testing.T) {
 	dir := gitRepo(t)
 	m, st := flowModel(t, web)

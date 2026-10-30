@@ -155,17 +155,21 @@ resumes it afterwards, `background` runs detached, and `exit` quits
 asanamate, then runs the command in its place. `asanamate --exit-on-action`
 turns background actions into exit actions.
 
-**Output.** asanamate does not read it. Foreground and exit actions write to
-the terminal. Background actions append to
+**Output.** Foreground and exit actions write to the terminal. Background
+actions append to
 `~/.local/state/asanamate/actions.log`, under a `--- <time> <command>` line.
+On failure, the error modal also includes the last 4 KiB of output logged
+during the action, with terminal escape sequences and control characters removed.
+The full output remains in the log. Output from overlapping background actions
+can interleave in this shared log and the displayed excerpt.
 To change the ticket, call `asanamate comment`, `move`, or `field`; they
 ask before writing unless `$ASANAMATE_CONFIRM_WRITES` is `0` or `--yes` is
 given.
 
 **Exit status.** For foreground and background actions, zero shows
 `<name>: done` in the status line, and non-zero shows `<name> failed: exit
-status <n>` (with the log path for background actions). An exit action
-replaces asanamate, so its exit status becomes asanamate's.
+status <n>` (with an output excerpt and the log path for background actions).
+An exit action replaces asanamate, so its exit status becomes asanamate's.
 
 **Timeouts.** None. A background action runs in its own session, without a
 terminal, and keeps running after asanamate quits.

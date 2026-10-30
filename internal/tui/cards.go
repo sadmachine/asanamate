@@ -21,14 +21,14 @@ import (
 // beside the details card instead of below it.
 const sideBySideW = 90
 
-// renderCards renders t as the reading pane's cards view: the name, the
-// local branch, repo, and time lines, a details card with the agents and
+// renderCards renders t as the reading pane's cards view: the name and dimmed
+// GID, the local branch, repo, and time lines, a details card with the agents and
 // subtasks beside it (or below, when narrow), titled sections, and the
 // comments, or the whole activity timeline, under their tabs, all width
 // columns wide. It records the line of each editable row in
 // m.fieldLines, and the last line of each multi-line one in m.fieldEnds.
 func (m *Model) renderCards(t ticket.Ticket, width int) string {
-	head := lipgloss.NewStyle().Width(width).Render(tagTitle(ticket.Clean(t.Name), titleStyle))
+	head := lipgloss.NewStyle().Width(width).Render(tagTitle(ticket.Clean(t.Name), titleStyle) + dimStyle.Render(" · "+t.GID))
 	if line := m.branchLine(t.Task, width); line != "" {
 		head += "\n" + line
 	}

@@ -1,0 +1,23 @@
+packages/asana-sessions/scripts/check-pack.sh
+  s_3d0c7060c7d2ae::t_8ee9da072de0e7 13-17
+packages/asana-sessions/install.mjs
+  s_3d0c7060c7d2ae::t_09b8cf465fc39e 69-78
+packages/asana-sessions/README.md
+  s_3d0c7060c7d2ae::t_09b8cf465fc39e 57-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d34bb66baf81c2673a485cbb6219620dd11d6454",
+  "prompts": {},
+  "sessions": {
+    "s_3d0c7060c7d2ae": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15a4b-03b3-71c0-a974-5f8f20c8809a",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

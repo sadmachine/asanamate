@@ -66,6 +66,16 @@ async function install(archive, prefix) {
     await rename(link, command);
     installed = true;
     console.log(`Installed asana-sessions ${pkg.version}: ${command}`);
+    console.log(`
+If asanamate-ccmux is installed, you can link running agents to Asana tickets using asana-sessions.
+In your asanamate config.toml, add or update the existing [agents] table:
+
+[agents]
+command = "asana-sessions asanamate agents -- asanamate-ccmux"
+
+This is optional and independent of conversation history. Existing repo/branch matching remains the fallback.
+Preserve custom agent commands unless you intend to replace them. Restart asanamate after editing config.
+Installation has not changed your configuration.`);
   } finally {
     if (linkDirectory) await rm(linkDirectory, { recursive: true, force: true });
     if (!installed) await rm(directory, { recursive: true, force: true });

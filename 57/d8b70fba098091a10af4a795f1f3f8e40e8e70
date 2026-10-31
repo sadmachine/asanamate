@@ -1,0 +1,44 @@
+internal/tui/model.go
+  s_5aa846c6d65111::t_82fad7a0593638 171-174,407,770,1188-1193
+  s_5aa846c6d65111::t_a7d48034ef598e 1301,1305,1308
+  s_5aa846c6d65111::t_54160235fadf46 1221-1224,1227,1230,1240-1243
+README.md
+  s_5aa846c6d65111::t_b7f2003f68b0ae 496-502,504-505,509-513,515-517,754
+internal/tui/mouse.go
+  s_5aa846c6d65111::t_82fad7a0593638 4,8,11,40-41,80-87,118-127,139-141,145,149-155,157-261,264-286,289-291,295-332,350-356,413-414,521-541,544-545,549,553,560-575
+  s_5aa846c6d65111::t_a7d48034ef598e 27,105-117,287-288,292-294
+  s_5aa846c6d65111::t_b7f2003f68b0ae 262-263
+  s_5aa846c6d65111::t_34f07a39b3eef8 576
+internal/tui/form.go
+  s_5aa846c6d65111::t_82fad7a0593638 156-161
+internal/config/config.go
+  s_5aa846c6d65111::t_b7f2003f68b0ae 282-284
+internal/setup/setup.go
+  s_5aa846c6d65111::t_b7f2003f68b0ae 423-425
+docs/deferred-ideas.md
+  s_5aa846c6d65111::t_b7f2003f68b0ae 168-169,182-183
+internal/tui/mouse_test.go
+  s_5aa846c6d65111::t_7785e6a7b10099 267,289
+  s_5aa846c6d65111::t_b2579272f317b4 288
+  s_5aa846c6d65111::t_08505eb590906c 334-360,366-367
+  s_5aa846c6d65111::t_1ca1d8f4e879a0 361-365
+  s_5aa846c6d65111::t_16397dd293ae93 256,284
+  s_5aa846c6d65111::t_6b2814c0fbb3f1 243-244,260,272,287,298,315
+  s_5aa846c6d65111::t_414a98942d3b05 12,237-238,242,245-255,257-259,261-266,268-271,273-283,285-286,290-297,299-314,316-333
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "57d8b70fba098091a10af4a795f1f3f8e40e8e70",
+  "prompts": {},
+  "sessions": {
+    "s_5aa846c6d65111": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "09af36e7-fcd5-47f3-b69d-90641d556d9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

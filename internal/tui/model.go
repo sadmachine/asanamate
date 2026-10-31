@@ -61,7 +61,7 @@ const listGutter = 1
 
 // Deps are the services the TUI uses.
 type Deps struct {
-	Version    string // core release for documentation links; empty means development
+	Version    string // core release for documentation links and update checks; empty means development
 	Config     config.Config
 	ConfigPath string // configuration path; empty uses config.Path
 	State      *state.State
@@ -257,7 +257,7 @@ func (m *Model) Init() tea.Cmd {
 	if m.deps.Config.AgentsEnabled() {
 		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents))
 	}
-	return cmd
+	return tea.Batch(cmd, checkForUpdate(m.deps.Version))
 }
 
 func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
@@ -274,6 +274,10 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 		return m, m.launchHookAction(msg)
 	case connectionTickMsg:
 		return m, nil
+	case updateAvailableMsg:
+		if msg.version != "" {
+			m.setStatus(statusInfo, "asanamate "+msg.version+" is available. Update instructions: https://github.com/sadmachine/asanamate#upgrading")
+		}
 	case toastTickMsg:
 		return m, m.toastTick(msg)
 	case refreshTickMsg:

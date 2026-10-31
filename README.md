@@ -698,6 +698,19 @@ asanamate list | fzf --delimiter '\t' --with-nth 2,4 --preview 'asanamate show {
 
 ## Upgrading
 
+When a release build opens the TUI, asanamate checks GitHub in the background
+for a newer stable core release. An available update appears as an informational
+toast with a link here and remains in Status history (Settings & tools, then
+Status history). The check runs once per launch, times out after five seconds, and
+silently skips network failures, rate limits, development builds, and prerelease
+builds. It sends no Asana token or configuration to GitHub. Companion releases
+do not trigger it.
+
+To update, follow [Release archive](#release-archive) with the new version, or
+repeat [From source](#from-source) from an updated checkout. See
+[Upgrade and uninstall](#upgrade-and-uninstall) for theme updates. Restart
+asanamate afterward. The app does not download or install updates itself.
+
 Upgrade steps for each release, such as moved settings and new adapter
 binaries, are in [docs/migrations.md](docs/migrations.md) and at the top of
 each [release's notes](https://github.com/sadmachine/asanamate/releases).

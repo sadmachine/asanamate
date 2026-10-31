@@ -17,10 +17,12 @@ import (
 )
 
 // live is a state an agent reported itself, and when. It corrects ccmux,
-// which can leave a busy session "idle".
+// which can leave a busy session "idle". Pane is the tmux pane a Codex hook
+// ran in, "" when unknown.
 type live struct {
 	State agents.State
 	At    time.Time
+	Pane  string
 }
 
 // HookDir is where `asanamate-ccmux hook codex` keeps one state file per
@@ -47,8 +49,9 @@ func HookEvents() []string {
 }
 
 // WriteHook records the session state that the hook event JSON on in implies,
-// as a file named for the session in dir. Events it does not track are ignored.
-func WriteHook(in io.Reader, dir string) error {
+// and the tmux pane the session runs in when pane is set, as a file named for
+// the session in dir. Events it does not track are ignored.
+func WriteHook(in io.Reader, dir, pane string) error {
 	var ev struct {
 		SessionID string `json:"session_id"`
 		Event     string `json:"hook_event_name"`
@@ -78,7 +81,7 @@ func WriteHook(in io.Reader, dir string) error {
 		return err
 	}
 	defer os.Remove(tmp.Name())
-	if _, err := tmp.WriteString(string(s) + "\n"); err != nil {
+	if _, err := tmp.WriteString(string(s) + "\n" + strings.TrimSpace(pane) + "\n"); err != nil {
 		tmp.Close()
 		return err
 	}
@@ -88,15 +91,15 @@ func WriteHook(in io.Reader, dir string) error {
 	return os.Rename(tmp.Name(), path)
 }
 
-// RunHook serves `hook codex`: it records the Codex hook event on in. It
-// never fails: Codex runs it on every event, and a hook error must not get in
-// the agent's way.
+// RunHook serves `hook codex`: it records the Codex hook event on in, with
+// the tmux pane Codex runs in. It never fails: Codex runs it on every event,
+// and a hook error must not get in the agent's way.
 func RunHook(args []string, in io.Reader) {
 	if len(args) != 1 || args[0] != "codex" {
 		return
 	}
 	if stateDir, err := config.StateDir(); err == nil {
-		_ = WriteHook(in, HookDir(stateDir))
+		_ = WriteHook(in, HookDir(stateDir), os.Getenv("TMUX_PANE"))
 	}
 }
 
@@ -163,7 +166,8 @@ func readClaudeSessions(dir string, into map[string]live) {
 	}
 }
 
-// readHookFiles reads the files WriteHook leaves in dir.
+// readHookFiles reads the files WriteHook leaves in dir: a state line, then a
+// pane line that files from older hooks lack.
 func readHookFiles(dir string, into map[string]live) {
 	entries, _ := os.ReadDir(dir)
 	for _, e := range entries {
@@ -175,8 +179,9 @@ func readHookFiles(dir string, into map[string]live) {
 		if err != nil || ierr != nil {
 			continue
 		}
-		if s := agents.State(strings.TrimSpace(string(data))); s != agents.Unknown && slices.Contains(agents.States, s) {
-			into[e.Name()] = live{State: s, At: info.ModTime()}
+		state, pane, _ := strings.Cut(strings.TrimSpace(string(data)), "\n")
+		if s := agents.State(state); s != agents.Unknown && slices.Contains(agents.States, s) {
+			into[e.Name()] = live{State: s, At: info.ModTime(), Pane: strings.TrimSpace(pane)}
 		}
 	}
 }

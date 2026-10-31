@@ -632,8 +632,9 @@ the foreground opener. Neither provider calls or imports the other.
 ### Optional conversation links
 
 `asanamate-ccmux` includes the provider and native session ID when ccmux knows
-those fields. The separately installed companion can decorate any compatible
-agent source, without enabling or calling `conversations.command`:
+those fields, and for Codex sessions takes the session ID from its Codex hook.
+The separately installed companion can decorate any compatible agent source,
+without enabling or calling `conversations.command`:
 
 ```toml
 [agents]

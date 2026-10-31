@@ -10,7 +10,11 @@ trap 'rm -rf "$work"' EXIT
 node "$pkg/scripts/check-plugins.js"
 tarball=$(cd "$pkg" && npm pack --silent --pack-destination "$work")
 tar -xOf "$work/$tarball" package/install.mjs > "$work/install.mjs"
-node "$work/install.mjs" "$work/$tarball" --prefix "$work/prefix"
+node "$work/install.mjs" "$work/$tarball" --prefix "$work/prefix" > "$work/install.txt"
+cat "$work/install.txt"
+grep -Fq 'If asanamate-ccmux is installed, you can link running agents to Asana tickets using asana-sessions.' "$work/install.txt"
+grep -Fxq '[agents]' "$work/install.txt"
+grep -Fxq 'command = "asana-sessions asanamate agents -- asanamate-ccmux"' "$work/install.txt"
 
 run() {
   (cd "$work" && env -i HOME="$work/home" PATH="$work/prefix/bin:$nodebin:/usr/bin:/bin" asana-sessions "$@")

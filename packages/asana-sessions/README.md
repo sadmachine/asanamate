@@ -54,6 +54,20 @@ Verify downloaded assets with `sha256sum -c checksums.txt`
 `node install.mjs ./asana-sessions-<version>.tgz`.
 No public npm registry name is reserved or published.
 
+After installation, the installer suggests optional agent ticket linking. If
+`asanamate-ccmux` is installed, you can link running agents to Asana tickets using
+`asana-sessions`. Add or update the existing table in your asanamate config:
+
+```toml
+[agents]
+command = "asana-sessions asanamate agents -- asanamate-ccmux"
+```
+
+This works independently of conversation history. Preserve custom agent commands
+unless you intend to replace them, then restart asanamate. Installation only
+prints this suggestion; it never edits your config. See
+[Live agent ticket links](#live-agent-ticket-links) for matching and fallbacks.
+
 ## Commands
 
 | Command | Behavior |

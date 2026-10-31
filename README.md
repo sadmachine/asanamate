@@ -1531,8 +1531,11 @@ reported itself, when that report is newer than ccmux's:
   `hooks.json.<time>.bak`. Codex asks you to trust the new
   hooks on its next start, and needs hooks on (`[features] hooks = true`). The
   Codex hook writes one file per session in `$XDG_STATE_HOME/asanamate/agents/`
-  (else `~/.local/state/asanamate/agents/`).
-  Without it, Codex states fall back to the Codex pane title, and are
+  (else `~/.local/state/asanamate/agents/`), with the tmux pane Codex runs
+  in. ccmux reports no session ID for Codex, so the adapter takes the one the
+  hook last recorded from the session's pane; that ID links the agent to its
+  saved conversation.
+  Without the hook, Codex states fall back to the Codex pane title, and are
   inaccurate or wrong when the title format changes.
 
   The Codex hook runs `asanamate-ccmux` by its full path. After you move or

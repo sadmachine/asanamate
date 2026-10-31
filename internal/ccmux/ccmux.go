@@ -27,7 +27,9 @@ const homepage = "https://github.com/motherskitchenblr2/ccmux"
 // session "idle", so an idle session takes the state its agent last reported
 // itself (Claude Code's session files, the Codex hook in hookDir) when that
 // report is newer than ccmux's, else a Codex pane title's state. Statuses
-// other than these pass through as ccmux reports them.
+// other than these pass through as ccmux reports them. ccmux knows no session
+// ID for a pane-tracked Codex session, so it takes the one the Codex hook last
+// reported from that tmux pane.
 func List(ctx context.Context, hookDir string) ([]agents.Agent, error) {
 	if _, err := exec.LookPath(command[0]); err != nil {
 		return nil, fmt.Errorf("%s not installed; see %s", command[0], homepage)
@@ -50,6 +52,7 @@ func parse(data []byte, reported map[string]live) ([]agents.Agent, error) {
 		Summary        *string  `json:"summary"`
 		Prompts        []string `json:"prompts"`
 		PaneTitle      string   `json:"paneTitle"`
+		TmuxPane       string   `json:"tmuxPane"`
 		NativeID       string   `json:"nativeSessionId"`
 		ChangedAt      *string  `json:"statusChangedAt"`
 		AgentType      string   `json:"agentType"`
@@ -64,6 +67,9 @@ func parse(data []byte, reported map[string]live) ([]agents.Agent, error) {
 		var paneStatus string
 		if s.AgentType == "codex" && s.TrackingMode == "pane" {
 			paneStatus, a.Title = codexPane(s.PaneTitle)
+			if a.SessionID == "" {
+				a.SessionID = paneSession(reported, s.TmuxPane)
+			}
 		}
 		if len(s.Prompts) > 0 && agents.Title(s.Prompts[0]) != "" {
 			a.Title = agents.Title(s.Prompts[0])
@@ -75,7 +81,7 @@ func parse(data []byte, reported map[string]live) ([]agents.Agent, error) {
 			a.Status = string(agents.Completed)
 		}
 		if a.Status == string(agents.Idle) {
-			if r, ok := reported[s.NativeID]; ok && r.At.After(changedAt(s.ChangedAt)) {
+			if r, ok := reported[a.SessionID]; ok && r.At.After(changedAt(s.ChangedAt)) {
 				a.Status = string(r.State)
 			} else if paneStatus != "" {
 				a.Status = paneStatus
@@ -90,6 +96,19 @@ func parse(data []byte, reported map[string]live) ([]agents.Agent, error) {
 		list = append(list, a)
 	}
 	return list, nil
+}
+
+// paneSession is the session that last reported from tmux pane, "" when none
+// did. A pane can outlive its session, so the newest report wins.
+func paneSession(reported map[string]live, pane string) string {
+	var id string
+	var at time.Time
+	for sid, r := range reported {
+		if pane != "" && r.Pane == pane && (id == "" || r.At.After(at)) {
+			id, at = sid, r.At
+		}
+	}
+	return id
 }
 
 // Print writes list as agents command lines,

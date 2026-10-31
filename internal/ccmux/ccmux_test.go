@@ -30,6 +30,8 @@ const ccmuxJSON = `[
   "mainRepoRoot":"/r","prompts":[],"paneTitle":"⠼ Fix editor | r"},
  {"id":"codex_pane5","agentType":"codex","trackingMode":"pane","nativeSessionId":"n5","cwd":"/r","status":"idle",
   "statusChangedAt":"2026-01-01T00:00:00.000Z","gitBranch":"main","mainRepoRoot":"/r","prompts":[],"paneTitle":"⠼ Fix editor | r"},
+ {"id":"codex_pane6","agentType":"codex","trackingMode":"pane","tmuxPane":"%6","cwd":"/r","status":"idle",
+  "statusChangedAt":"2026-01-01T00:00:00.000Z","gitBranch":"main","mainRepoRoot":"/r","prompts":[],"paneTitle":"codex"},
  {"id":"n6","nativeSessionId":"n6","cwd":"/r","status":"idle","statusChangedAt":"2026-01-01T00:00:00.000Z",
   "gitBranch":"main","mainRepoRoot":"/r","prompts":[],"paneTitle":"claude"},
  {"id":"s7","cwd":"/r","status":"starting","prompts":[],"paneTitle":"tab\there"}
@@ -41,6 +43,10 @@ func reported() map[string]live {
 	return map[string]live{
 		"n5": {State: agents.Idle, At: changed.Add(time.Minute)},     // newer than ccmux: wins over the pane title
 		"n6": {State: agents.Working, At: changed.Add(-time.Minute)}, // older than ccmux: ignored
+		// codex_pane6's pane: the newest report names its session.
+		"c6-old": {State: agents.Idle, At: changed.Add(-time.Hour), Pane: "%6"},
+		"c6":     {State: agents.Waiting, At: changed.Add(time.Minute), Pane: "%6"},
+		"c7":     {State: agents.Idle, At: changed.Add(2 * time.Minute), Pane: "%7"},
 	}
 }
 
@@ -58,6 +64,7 @@ func TestParse(t *testing.T) {
 		{Path: "/r", Status: "idle", Provider: "codex", Target: "codex_pane3", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
 		{Path: "/r", Status: "waiting", Provider: "codex", Target: "codex_pane4", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
 		{Path: "/r", Status: "idle", Provider: "codex", SessionID: "n5", Target: "codex_pane5", Branch: "main", Repo: "/r", Title: "Fix editor | r"},
+		{Path: "/r", Status: "waiting", Provider: "codex", SessionID: "c6", Target: "codex_pane6", Branch: "main", Repo: "/r", Title: "codex"},
 		{Path: "/r", Status: "idle", SessionID: "n6", Target: "n6", Branch: "main", Repo: "/r", Title: "claude"},
 		{Path: "/r", Status: "starting", Target: "s7", Title: "tab here"},
 	}
@@ -111,7 +118,7 @@ func TestOutputThroughAgentsCommand(t *testing.T) {
 	}
 	want := []agents.State{
 		agents.Completed, agents.Working, agents.Idle, agents.Waiting, agents.Working,
-		agents.Idle, agents.Waiting, agents.Idle, agents.Idle, agents.Working,
+		agents.Idle, agents.Waiting, agents.Idle, agents.Waiting, agents.Idle, agents.Working,
 	}
 	if len(got) != len(want) {
 		t.Fatalf("got %+v", got)
@@ -131,7 +138,7 @@ func TestHookRecordsSessionState(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "agents")
 	hook := func(event, id string) {
 		t.Helper()
-		if err := WriteHook(strings.NewReader(`{"hook_event_name":"`+event+`","session_id":"`+id+`"}`), dir); err != nil {
+		if err := WriteHook(strings.NewReader(`{"hook_event_name":"`+event+`","session_id":"`+id+`"}`), dir, "%3"); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -143,6 +150,11 @@ func TestHookRecordsSessionState(t *testing.T) {
 	hook("UserPromptSubmit", "s1")
 	if got := state("s1"); got != agents.Working {
 		t.Fatalf("after prompt = %q", got)
+	}
+	got := map[string]live{}
+	readHookFiles(dir, got)
+	if got["s1"].Pane != "%3" {
+		t.Fatalf("pane = %q, want %%3", got["s1"].Pane)
 	}
 	hook("PermissionRequest", "s1")
 	if got := state("s1"); got != agents.Waiting {

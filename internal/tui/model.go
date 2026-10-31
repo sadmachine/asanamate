@@ -168,8 +168,10 @@ type Model struct {
 	conversations       *conversationLookup
 	conversationResults map[string]conversations.Result
 
-	hits  mouseHits // where the last frame drew what the mouse can hit
-	click lastClick // the last click, to find double clicks
+	hits      mouseHits      // where the last frame drew what the mouse can hit
+	click     lastClick      // the last click, to find double clicks
+	drag      *drag          // the left button's drag in progress
+	selection *textSelection // text the last drag selected, highlighted until the next key or press
 
 	status                string
 	statusLevel           statusLevel
@@ -402,6 +404,7 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	case statusMsg:
 		m.setStatus(statusError, string(msg))
 	case tea.KeyPressMsg:
+		m.selection, m.drag = nil, nil
 		return m, m.handleKey(msg)
 	case tea.MouseMsg:
 		return m, m.handleMouse(msg)
@@ -763,13 +766,8 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 }
 
 func (m *Model) updateModal(msg tea.KeyPressMsg) tea.Cmd {
-	res, cmd := m.modal.update(msg)
-	return m.modalResult(res, cmd)
-}
-
-// modalResult closes the picker on a cancel, or runs its choice.
-func (m *Model) modalResult(res pickResult, cmd tea.Cmd) tea.Cmd {
 	p := m.modal
+	res, cmd := p.update(msg)
 	switch {
 	case res.cancelled:
 		if c := m.composer; c != nil {
@@ -1187,8 +1185,12 @@ func (m *Model) layout() {
 
 func (m *Model) View() tea.View {
 	m.hits = mouseHits{panes: m.hits.panes[:0]}
-	frame := m.body() + "\n" + m.renderStatusline(!m.toastVisible())
-	v := tea.NewView(m.overlayToast(frame))
+	frame := m.overlayToast(m.body() + "\n" + m.renderStatusline(!m.toastVisible()))
+	m.hits.frame = strings.Split(frame, "\n")
+	if m.selection != nil {
+		frame = m.selection.highlight(m.hits.frame)
+	}
+	v := tea.NewView(frame)
 	v.AltScreen = true
 	if m.deps.Config.Mouse.Enabled {
 		v.MouseMode = tea.MouseModeCellMotion
@@ -1216,10 +1218,16 @@ func (m *Model) body() string {
 			"\n\n" + hintLine(m.accentStyle, [2]string{keyLabel("notice", "dismiss"), "dismiss"}, [2]string{keyLabel("notice", "copy"), "copy"})
 		style = modalStyle.BorderForeground(noticeStyle.GetForeground())
 	case m.builder != nil:
+		kind = overlayPicker
+		if m.builder.input != nil {
+			kind = overlayInput
+		}
 		content = m.builder.view(w, mh, m.modalLook())
 	case m.composer != nil && m.composer.confirm != nil:
+		kind = overlayPicker
 		content = m.composer.confirm.view(w, mh, m.modalLook())
 	case m.input != nil && !(m.composer != nil && m.input == m.composer.box && m.composerPane()):
+		kind = overlayInput
 		if m.input.area.DynamicHeight {
 			w = max(min(m.width-4, 100), 10)
 		}
@@ -1229,6 +1237,10 @@ func (m *Model) body() string {
 			content = m.input.view(w, mh, m.modalLook())
 		}
 	case m.form != nil:
+		kind = overlayForm
+		if m.form.picker != nil {
+			kind = overlayPicker
+		}
 		content = m.form.view(w, mh, m.modalLook())
 	case m.modal != nil:
 		kind = overlayPicker
@@ -1286,14 +1298,14 @@ func (m *Model) panes(h int) string {
 		list := m.listPanel(listW, listW+panelFrame, h)
 		panes = lipgloss.JoinHorizontal(lipgloss.Top, list, m.readerPanel(readerW+panelFrame, h, true))
 		m.hitList(x, listW+panelFrame, h, true)
-		m.hitPane(paneReader, x+listW+panelFrame, 0, readerW+panelFrame, h, true)
+		m.hitReader(x+listW+panelFrame, readerW+panelFrame, h, true)
 	case m.focusReader:
 		if m.showNav() {
 			panes = m.readerPanel(readerW+panelFrame, h, true)
-			m.hitPane(paneReader, x, 0, readerW+panelFrame, h, true)
+			m.hitReader(x, readerW+panelFrame, h, true)
 		} else {
 			panes = m.readerPanel(readerW, h, false)
-			m.hitPane(paneReader, 0, 0, readerW, h, false)
+			m.hitReader(0, readerW, h, false)
 		}
 	case m.showNav():
 		panes = m.listPanel(listW-panelFrame, listW, h)

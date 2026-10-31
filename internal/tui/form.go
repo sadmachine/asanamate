@@ -153,6 +153,12 @@ func (f *formModal) update(msg tea.KeyPressMsg) (bool, tea.Cmd) {
 	return false, nil
 }
 
+// fieldAt returns the field view draws on line.
+func (f *formModal) fieldAt(line int) (int, bool) {
+	i := line - 1 - len(f.spec.Info) // below the title and info lines
+	return i, i >= 0 && i < len(f.spec.Fields)
+}
+
 func (f *formModal) view(width, height int, look modalLook) string {
 	if f.picker != nil {
 		return f.picker.view(width, height, look)

@@ -165,7 +165,8 @@ exists, switch `SetReaction` to it. If reactions now fail with
 ## Drag the pane divider
 
 **Now:** With `mouse.enabled`, the mouse scrolls, focuses panes, selects
-rows, and runs statusline hints, but cannot resize panes. The list's width
+rows, runs statusline hints, and drags to copy text inside a pane, but
+cannot resize panes. The list's width
 comes from `layout.list_width`, or else from `paneWidths`, which fits ticket
 titles and resizes on focus with `layout.focus.resize`. Mouse hit areas are
 recorded while drawing (`mouseHits` in `internal/tui/mouse.go`).
@@ -178,7 +179,8 @@ held (cell motion mode already reports drags), and set the width on release.
 saved, and how it overrides `layout.list_width` and the focus resize; the
 reader's minimum width and the views panel still bound it. Wrapped lines in
 the reader rerender at every new width, so redraw on release, not on each
-motion event.
+motion event. A press on a panel border starts no text drag today, so the
+divider drag can claim it.
 
 ## Known issues found during the review
 

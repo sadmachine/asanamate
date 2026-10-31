@@ -9,6 +9,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/feed"
+	"github.com/sadmachine/asanamate/internal/form"
 	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
@@ -233,7 +234,134 @@ func TestReaderDrawsDescriptionLinksAsHyperlinks(t *testing.T) {
 	if got := viewportLink(m.reader, x-c.x, y-c.y); got != "https://example.com/docs" {
 		t.Fatalf("link = %q", got)
 	}
-	if cmd := clickOn(t, m, "the docs"); cmd == nil {
+	clickOn(t, m, "the docs")
+	if _, cmd := m.Update(tea.MouseReleaseMsg{X: x, Y: y, Button: tea.MouseLeft}); cmd == nil {
 		t.Fatal("clicking a link opens nothing")
+	}
+}
+
+// dragFrom presses at from, moves to to, and releases there.
+func dragFrom(m *Model, from, to cell) tea.Cmd {
+	m.View()
+	m.Update(tea.MouseClickMsg{X: from.x, Y: from.y, Button: tea.MouseLeft})
+	m.View()
+	m.Update(tea.MouseMotionMsg{X: to.x, Y: to.y, Button: tea.MouseLeft})
+	m.View()
+	_, cmd := m.Update(tea.MouseReleaseMsg{X: to.x, Y: to.y, Button: tea.MouseLeft})
+	return cmd
+}
+
+func TestDragSelectsTextInsideOnePane(t *testing.T) {
+	m := splitModel(t)
+	m.focusReaderPane() // so the press does not redraw the ticket
+	m.reader.SetContent("alpha beta\ngamma delta\nepsilon")
+	x, y := cellOf(t, m, "beta")
+	gx, gy := cellOf(t, m, "gamma")
+	if cmd := dragFrom(m, cell{x, y}, cell{gx + 4, gy}); cmd == nil {
+		t.Fatal("a drag copied nothing")
+	}
+	if got := m.selection.text(m.hits.frame); got != "beta\ngamma" {
+		t.Fatalf("selection = %q", got)
+	}
+	view := m.View().Content
+	if ansi.Strip(view) != ansi.Strip(strings.Join(m.hits.frame, "\n")) || !strings.Contains(view, "\x1b[7m") {
+		t.Fatal("the selection is not highlighted in place")
+	}
+	// Dragging past the pane stops at its edge, leaving the list out.
+	lx, ly := cellOf(t, m, "Fix login")
+	dragFrom(m, cell{x, y}, cell{lx, ly + 3})
+	if got := m.selection.text(m.hits.frame); strings.Contains(got, "Fix login") || !strings.HasPrefix(got, "beta\n") {
+		t.Fatalf("selection = %q", got)
+	}
+	m.Update(key("j"))
+	if m.selection != nil {
+		t.Fatal("a key kept the selection")
+	}
+}
+
+func TestDragOverLinkCopiesInsteadOfOpening(t *testing.T) {
+	m := splitModel(t)
+	m.focusReaderPane()
+	m.reader.SetContent("see " + ansi.SetHyperlink("https://example.com") + "the docs" + ansi.ResetHyperlink())
+	x, y := cellOf(t, m, "the docs")
+	dragFrom(m, cell{x, y}, cell{x + 3, y})
+	if m.selection == nil || m.selection.text(m.hits.frame) != "the" {
+		t.Fatalf("selection = %q", m.selection.text(m.hits.frame))
+	}
+}
+
+func TestDragSelectsInEditor(t *testing.T) {
+	m := splitModel(t)
+	m.input = newInputBox("Title", "")
+	m.input.area.SetValue("hello world")
+	x, y := cellOf(t, m, "world")
+	if cmd := dragFrom(m, cell{x, y}, cell{x + 5, y}); cmd == nil {
+		t.Fatal("an editor drag copied nothing")
+	}
+	if got := m.input.area.SelectedText(); got != "world" {
+		t.Fatalf("selected = %q", got)
+	}
+	m.input.area.ClearSelection()
+	clickOn(t, m, "hello")
+	if m.input.area.Line() != 0 || m.input.area.Column() != 0 {
+		t.Fatalf("cursor = %d:%d", m.input.area.Line(), m.input.area.Column())
+	}
+}
+
+func TestClickFormFieldsAndTheirPicker(t *testing.T) {
+	m := splitModel(t)
+	spec := form.Spec{Info: []string{"Pick a project"}, Fields: []form.Field{
+		{ID: "notes", Label: "Notes", Type: form.String},
+		{ID: "project", Label: "Project", Type: form.Select, Options: []form.Option{{ID: "a", Name: "Apple"}, {ID: "b", Name: "Banana"}}},
+	}}
+	m.form = newFormModal("Log", spec, nil, func(map[string]string) tea.Cmd { return nil })
+	clickOn(t, m, "Project:")
+	if m.form.cursor != 1 {
+		t.Fatalf("cursor = %d", m.form.cursor)
+	}
+	clickOn(t, m, "Project:")
+	if m.form.picker == nil {
+		t.Fatal("a double click left the field closed")
+	}
+	clickOn(t, m, "Banana")
+	clickOn(t, m, "Banana")
+	if m.form.picker != nil || m.form.values["project"] != "b" {
+		t.Fatalf("picker = %v, values = %v", m.form.picker, m.form.values)
+	}
+	wheelOn(t, m, "Notes:", tea.MouseWheelUp)
+	if m.form.cursor != 0 {
+		t.Fatalf("cursor = %d", m.form.cursor)
+	}
+}
+
+func TestComposerPaneTakesClicksAndDrags(t *testing.T) {
+	for _, width := range []int{140, 80} { // beside the list, full-screen reader
+		m, _ := editModel(t)
+		m.width, m.height = width, 40
+		m.layout()
+		press(m, "c")
+		m.input.area.SetValue("first line\nsecond words")
+		press(m, "esc")
+		if !m.composerPane() || !m.composer.reading {
+			t.Fatalf("width %d: composer pane not shown beside the reader", width)
+		}
+		x, y := cellOf(t, m, "second")
+		if cmd := dragFrom(m, cell{x, y}, cell{x + 6, y}); cmd == nil {
+			t.Fatalf("width %d: a composer drag copied nothing", width)
+		}
+		if got := m.composer.box.area.SelectedText(); got != "second" || m.composer.reading {
+			t.Fatalf("width %d: selected = %q, reading = %v", width, got, m.composer.reading)
+		}
+		m.composer.box.area.ClearSelection()
+		fx, fy := cellOf(t, m, "first")
+		m.Update(tea.MouseClickMsg{X: fx + 2, Y: fy, Button: tea.MouseLeft})
+		if a := m.composer.box.area; a.Line() != 0 || a.Column() != 2 {
+			t.Fatalf("width %d: cursor = %d:%d", width, a.Line(), a.Column())
+		}
+		m.reader.SetContent(strings.Repeat("line\n", 100))
+		wheelOn(t, m, "first", tea.MouseWheelDown)
+		if m.reader.YOffset() != 0 {
+			t.Fatalf("width %d: the wheel over the composer scrolled the reader", width)
+		}
 	}
 }

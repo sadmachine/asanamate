@@ -279,9 +279,9 @@ type Picker struct {
 	TypeFirst bool `toml:"type_first"`
 }
 
-// Mouse configures mouse input. Enabled lets the wheel scroll and clicks
-// focus panes, select rows, and run statusline hints; false leaves the
-// mouse to the terminal, such as for selecting text.
+// Mouse configures mouse input. Enabled lets the wheel scroll, clicks focus
+// panes, select rows, and run statusline hints, and drags copy text from one
+// pane; false leaves the mouse to the terminal.
 type Mouse struct {
 	Enabled bool `toml:"enabled"`
 }

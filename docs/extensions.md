@@ -760,11 +760,11 @@ ignore.
   project a `links` entry suggests; a remembered choice that is still offered
   wins over it. A `bool` without a default starts as `"false"`, and a `date`
   as today. Optional `info` is a list of one-line strings shown dimmed under
-  the form's title, such as today's time per client; asanamate adds the
-  ticket's tracked time after them. Harvest sends today's hours per client.
+  the form's title, such as today's logged time; asanamate adds the
+  ticket's tracked time after them. Harvest sends today's total hours.
 
   ```json
-  {"info":["Today: Web 3h · Ops 45m"],"fields":[
+  {"info":["Today: 3h 45m logged"],"fields":[
     {"id":"project_id","label":"Project","type":"select","remember":true,
      "options":[{"id":"123","name":"Web"}]},
     {"id":"hours","label":"Hours","type":"hours"},

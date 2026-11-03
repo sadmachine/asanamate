@@ -106,7 +106,7 @@ func TestHarvestAdapterUsesExternalReference(t *testing.T) {
 		t.Fatal(err)
 	}
 	var spec form.Spec
-	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || len(spec.Fields) != 4 || spec.Fields[3].Type != form.Date || !slices.Equal(spec.Info, []string{"Today: Acme 3h · Foo 2h 20m · No client 15m"}) || spec.Fields[0].Options[0].ID != "123" || spec.Fields[1].Options[0] != (form.Option{ID: "456", Name: "Development"}) || !spec.Fields[0].Remember || !spec.Fields[1].Remember {
+	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || len(spec.Fields) != 4 || spec.Fields[3].Type != form.Date || !slices.Equal(spec.Info, []string{"Today: 5h 35m logged"}) || spec.Fields[0].Options[0].ID != "123" || spec.Fields[1].Options[0] != (form.Option{ID: "456", Name: "Development"}) || !spec.Fields[0].Remember || !spec.Fields[1].Remember {
 		t.Fatalf("response = %s, err = %v", out.String(), err)
 	}
 	out.Reset()
@@ -117,14 +117,14 @@ func TestHarvestAdapterUsesExternalReference(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || spec.Fields[0].Default != "123" || spec.Fields[1].Default != "" {
 		t.Fatalf("suggested response = %s, err = %v", out.String(), err)
 	}
-	// Losing today's breakdown costs only its line, never the form.
+	// Losing today's total costs only its line, never the form.
 	todayFails = true
 	out.Reset()
 	if err := runHarvest(context.Background(), strings.NewReader(`{"operation":"form"}`), &out, "456", credentials, server.URL); err != nil {
 		t.Fatal(err)
 	}
-	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || len(spec.Fields) != 4 || len(spec.Info) != 1 || !strings.HasPrefix(spec.Info[0], "Today by client unavailable: ") {
-		t.Fatalf("failed-breakdown response = %s, err = %v", out.String(), err)
+	if err := json.Unmarshal(out.Bytes(), &spec); err != nil || len(spec.Fields) != 4 || len(spec.Info) != 1 || !strings.HasPrefix(spec.Info[0], "Today unavailable: ") {
+		t.Fatalf("failed-total response = %s, err = %v", out.String(), err)
 	}
 	if err := runHarvest(context.Background(), strings.NewReader(request), &out, "456", credentials, server.URL); err != nil {
 		t.Fatal(err)

@@ -26,19 +26,32 @@ var commentMarkdown = goldmark.New(goldmark.WithExtensions(extension.Strikethrou
 func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (string, []asana.Ref) {
 	source := []byte(markdown)
 	doc := commentMarkdown.Parser().Parse(text.NewReader(source))
-	var b strings.Builder
+	b := new(strings.Builder)
 	var mentioned []asana.Ref
-	// Asana rejects images inside list items. An unordered list closes after
-	// the top-level item to show its images, then reopens. Reopening an ordered
-	// list restarts its numbering, so its images follow the whole list, each
+	// Asana rejects images and tables inside list items. An unordered list
+	// closes after the top-level item to show them, then reopens. Reopening an
+	// ordered list restarts its numbering, so they follow the whole list, each
 	// labeled where it appeared.
-	inList, ordered, labels := false, false, 0
-	var listImages []string
-	writeListImages := func() {
-		for _, img := range listImages {
-			b.WriteString("\n" + img)
+	inList, ordered, labels := false, false, map[string]int{}
+	var listBlocks []string
+	listBlock := func(kind, block string) {
+		if ordered {
+			labels[kind]++
+			label := "[" + kind + " " + strconv.Itoa(labels[kind]) + "]"
+			b.WriteString(label)
+			block = label + "\n" + block
 		}
-		listImages = nil
+		listBlocks = append(listBlocks, block)
+	}
+	writeListBlocks := func() {
+		for _, block := range listBlocks {
+			b.WriteString("\n" + block)
+		}
+		listBlocks = nil
+	}
+	// moved reports a table an unordered list shows after its item.
+	moved := func(n ast.Node) bool {
+		return n != nil && n.Kind() == extensionast.KindTable && inList && !ordered
 	}
 	var render func(ast.Node, bool)
 	children := func(n ast.Node, mentions bool) {
@@ -68,7 +81,7 @@ func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (
 				value = html.UnescapeString(string(util.UnescapePunctuations([]byte(value))))
 			}
 			if mentions {
-				mentioned = append(mentioned, writeMentions(&b, value, users)...)
+				mentioned = append(mentioned, writeMentions(b, value, users)...)
 			} else {
 				b.WriteString(escapeHTML.Replace(value))
 			}
@@ -99,7 +112,19 @@ func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (
 		case *extensionast.Strikethrough:
 			wrap(n, "s", mentions)
 		case *extensionast.Table:
+			if !inList {
+				wrap(n, "table", mentions)
+				break
+			}
+			outer := b
+			b, inList = new(strings.Builder), false
 			wrap(n, "table", mentions)
+			table := b.String()
+			b, inList = outer, true
+			listBlock("table", table)
+			if !ordered {
+				return
+			}
 		case *extensionast.TableHeader, *extensionast.TableRow:
 			wrap(n, "tr", mentions)
 			return
@@ -129,14 +154,14 @@ func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (
 				b.WriteString("<" + tag + ">")
 				for c := n.FirstChild(); c != nil; c = c.NextSibling() {
 					render(c, mentions)
-					if !ordered && len(listImages) > 0 && c.NextSibling() != nil {
+					if !ordered && len(listBlocks) > 0 && c.NextSibling() != nil {
 						b.WriteString("</ul>")
-						writeListImages()
+						writeListBlocks()
 						b.WriteString("\n<ul>")
 					}
 				}
 				b.WriteString("</" + tag + ">")
-				writeListImages()
+				writeListBlocks()
 				inList = false
 			}
 		case *ast.ListItem:
@@ -153,7 +178,7 @@ func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (
 			destination := html.UnescapeString(string(util.UnescapePunctuations(n.Destination)))
 			if gid := asanaDestination(destination); gid != "" {
 				b.WriteString(`<a data-asana-gid="` + gid + `"/>`)
-			} else if commentLink(&b, destination) {
+			} else if commentLink(b, destination) {
 				children(n, false)
 				b.WriteString("</a>")
 			} else {
@@ -164,7 +189,7 @@ func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (
 			if n.AutoLinkType == ast.AutoLinkEmail {
 				destination = "mailto:" + destination
 			}
-			linked := commentLink(&b, destination)
+			linked := commentLink(b, destination)
 			b.WriteString(escapeHTML.Replace(string(n.Label(source))))
 			if linked {
 				b.WriteString("</a>")
@@ -179,13 +204,8 @@ func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (
 				children(n, false)
 			} else if img := `<img data-asana-gid="` + html.EscapeString(gid) + `"/>`; !inList {
 				b.WriteString(img)
-			} else if ordered {
-				labels++
-				label := "[image " + strconv.Itoa(labels) + "]"
-				b.WriteString(label)
-				listImages = append(listImages, label+"\n"+img)
 			} else {
-				listImages = append(listImages, img)
+				listBlock("image", img)
 			}
 		case *ast.RawHTML:
 			for i := 0; i < n.Segments.Len(); i++ {
@@ -202,7 +222,11 @@ func CommentHTML(markdown string, users []asana.Ref, images map[string]string) (
 		default:
 			children(n, mentions)
 		}
-		if n.Type() == ast.TypeBlock && n.Kind() != ast.KindListItem && n.NextSibling() != nil {
+		next := n.NextSibling()
+		for moved(next) {
+			next = next.NextSibling()
+		}
+		if n.Type() == ast.TypeBlock && n.Kind() != ast.KindListItem && next != nil {
 			b.WriteString("\n\n")
 		}
 	}

@@ -50,7 +50,8 @@ func TestCommentMarkdown(t *testing.T) {
 		{"| Name | Value |\n|:---|---:|\n| @Sam Lee | `@Sam Lee` |", "<body><table><tr><td>Name</td><td>Value</td></tr><tr><td><a data-asana-gid=\"1\"/></td><td><code>@Sam Lee</code></td></tr></table></body>", 1},
 		{"| Key | Value |\n|---|---|\n| a\\|b | <script>bad()</script> &amp; [bad](javascript:alert(1)) |", "<body><table><tr><td>Key</td><td>Value</td></tr><tr><td>a|b</td><td>&lt;script&gt;bad()&lt;/script&gt; &amp; bad</td></tr></table></body>", 0},
 		{"Before\n\n| A | B |\n|---|---|\n| one | |\n\nAfter", "<body>Before\n\n<table><tr><td>A</td><td>B</td></tr><tr><td>one</td><td></td></tr></table>\n\nAfter</body>", 0},
-		{"1. Values\n\n   | A | B |\n   |---|---|\n   | **one** | [two](https://example.com) |", "<body><ol><li>Values\n\n<table><tr><td>A</td><td>B</td></tr><tr><td><strong>one</strong></td><td><a href=\"https://example.com\">two</a></td></tr></table></li></ol></body>", 0},
+		{"1. Values\n\n   | A | B |\n   |---|---|\n   | **one** | [two](https://example.com) |\n2. ![](asana:8)", "<body><ol><li>Values\n\n[table 1]</li><li>[image 1]</li></ol>\n[table 1]\n<table><tr><td>A</td><td>B</td></tr><tr><td><strong>one</strong></td><td><a href=\"https://example.com\">two</a></td></tr></table>\n[image 1]\n<img data-asana-gid=\"8\"/></body>", 0},
+		{"- Values:\n\n  | A | ![](asana:8) |\n  |---|---|\n  | one | two |\n\n  After\n- next\n  - | C |\n    |---|", "<body><ul><li>Values:\n\nAfter</li></ul>\n<table><tr><td>A</td><td><img data-asana-gid=\"8\"/></td></tr><tr><td>one</td><td>two</td></tr></table>\n<ul><li>next\n\n<ul><li></li></ul></li></ul>\n<table><tr><td>C</td></tr></table></body>", 0},
 	}
 	for _, c := range cases {
 		t.Run(c.in, func(t *testing.T) {

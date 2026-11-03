@@ -1,0 +1,24 @@
+cmd/asanamate-hrvst/harvest.go
+  s_251972746cae86::t_6d569a052abf99 98,465-468,471,473,475,477,480
+cmd/asanamate-hrvst/harvest_test.go
+  s_251972746cae86::t_6d569a052abf99 109,120,126-127
+docs/extensions.md
+  s_251972746cae86::t_7ede4a2fcbfd4a 763-764
+  s_251972746cae86::t_a48237ebb7c6f5 767
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a153831113c5530b704f95e041fa5bf4b6088fab",
+  "prompts": {},
+  "sessions": {
+    "s_251972746cae86": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8c392ac7-f084-4484-81bf-d92f6bdaee0c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

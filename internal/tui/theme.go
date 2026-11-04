@@ -191,7 +191,7 @@ func (s previewStyles) ticketDetail(w int) []string {
 		field("Type", lipStyle(a.Purple).Render("● Design")),
 		"",
 		s.header("Agents", w),
-		lipStyle(c.Working).Render("⠿ claude working") + s.muted.Render(" · 4m"),
+		lipStyle(c.Working).Render("/ claude working") + s.muted.Render(" · 4m"),
 		lipStyle(c.Warn).Render("▲ codex waiting for input"),
 		"",
 		s.header("Description", w),

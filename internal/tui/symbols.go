@@ -50,15 +50,15 @@ const (
 	iconNetwork      = "network"
 )
 
-// Spinners use dense glyphs, so a working agent stands out at a glance.
-var braille = []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
+// The classic line spinner reads clearly at any font size.
+var lineSpinner = []string{"|", "/", "-", "\\"}
 
 // Each set only sets what it changes: nerd falls back to unicode, unicode to
 // ascii, which defines everything.
 var (
 	asciiSymbols = symbolSet{connection: [4]string{"?", "+", "~", "x"}, open: "[ ]", done: "[x]", cursor: ">", robot: "@", barOn: "#", barOff: "-", codeWrap: ">", info: "(i)", statusInfo: "(i)", warning: "(!)", failure: "(x)", icons: map[string]string{iconNetwork: "(net)", iconClock: "(time)", iconProjectColor: "*"}, border: lipgloss.ASCIIBorder(), states: map[agents.State]string{
 		agents.Waiting: "(!)", agents.Working: "(~)", agents.Completed: "(+)", agents.Idle: "(-)", agents.Unknown: "(?)"}}
-	unicodeSymbols = asciiSymbols.with(symbolSet{connection: [4]string{"?", "●", "◐", "○"}, open: "□", done: "✓", cursor: "▌", robot: "🤖", barOn: "▰", barOff: "▱", codeWrap: "↪", warning: "⚠", failure: "✖", emoji: true, spinner: braille, icons: map[string]string{iconNetwork: "⇄", iconClock: "◷", iconProjectColor: "●"}, border: lipgloss.RoundedBorder(), states: map[agents.State]string{
+	unicodeSymbols = asciiSymbols.with(symbolSet{connection: [4]string{"?", "●", "◐", "○"}, open: "□", done: "✓", cursor: "▌", robot: "🤖", barOn: "▰", barOff: "▱", codeWrap: "↪", warning: "⚠", failure: "✖", emoji: true, spinner: lineSpinner, icons: map[string]string{iconNetwork: "⇄", iconClock: "◷", iconProjectColor: "●"}, border: lipgloss.RoundedBorder(), states: map[agents.State]string{
 		agents.Waiting: "⚠", agents.Working: "◐", agents.Completed: "●", agents.Idle: "○", agents.Unknown: "?"}})
 	// Nerd Font (Font Awesome) glyphs; needs a Nerd Font.
 	nerdSymbols = unicodeSymbols.with(symbolSet{open: "", done: "", robot: "󰚩", info: "\uf05a", statusInfo: "\U000f02fd", warning: "\uf071", failure: "\U000f05d6", states: map[agents.State]string{

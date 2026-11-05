@@ -111,11 +111,7 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 		targets := m.sectionTargets(t.Task)
 		switch len(targets) {
 		case 0:
-			m.edit = nil
-			m.setStatus(statusWarning, "ticket is not in any project or your My Tasks")
-			if m.composer != nil {
-				m.returnToDraft()
-			}
+			m.abandonEdit("ticket is not in any project or your My Tasks")
 		case 1:
 			return m.pickedEditProject(targets[0])
 		default:
@@ -228,18 +224,13 @@ func (m *Model) toggleComplete() tea.Cmd {
 		return m.stageChange(writeback.Change{Kind: "complete", Value: strconv.FormatBool(done)}, strconv.FormatBool(done), strconv.FormatBool(t.Completed))
 	}
 	svc, gid, done := m.writer(), t.GID, !t.Completed
-	var events []hookEvent
-	if !m.edit.hook {
-		events = m.changeEvents(t.Task, []writeback.Change{{Kind: "complete", Value: strconv.FormatBool(done)}})
-	}
 	what, status := "reopen "+ticket.Clean(t.Name), "Reopened "+ticket.Clean(t.Name)
 	if done {
 		what, status = "complete "+ticket.Clean(t.Name), "Completed "+ticket.Clean(t.Name)
 	}
-	m.edit = nil
-	m.setProgress(what + "…")
-	return request(func(ctx context.Context) tea.Msg {
-		return editDoneMsg{gid: gid, what: what, done: status, events: events, err: svc.Complete(ctx, gid, done)}
+	change := writeback.Change{Kind: "complete", Value: strconv.FormatBool(done)}
+	return m.saveChange(what, status, &change, func(ctx context.Context) error {
+		return svc.Complete(ctx, gid, done)
 	})
 }
 
@@ -300,11 +291,7 @@ func (m *Model) openAddProjectPicker() {
 		}
 	}
 	if len(items) == 0 {
-		m.edit = nil
-		m.setStatus(statusWarning, "no other accessible projects available")
-		if m.composer != nil {
-			m.returnToDraft()
-		}
+		m.abandonEdit("no other accessible projects available")
 		return
 	}
 	m.modal = newPicker(pickValue(m.addToProject), "Add to which project?", items)
@@ -312,11 +299,7 @@ func (m *Model) openAddProjectPicker() {
 
 func (m *Model) openRemoveProjectPicker() {
 	if len(m.edit.ticket.Memberships) == 0 {
-		m.edit = nil
-		m.setStatus(statusWarning, "ticket is not in any project")
-		if m.composer != nil {
-			m.returnToDraft()
-		}
+		m.abandonEdit("ticket is not in any project")
 		return
 	}
 	items := make([]pickItem, len(m.edit.ticket.Memberships))
@@ -398,15 +381,7 @@ func (m *Model) openSectionPicker(msg sectionsMsg) {
 		return
 	}
 	if msg.err != nil {
-		m.edit = nil
-		if m.composer != nil {
-			m.setInlineError("loading sections: " + msg.err.Error())
-			m.composer.box.err = m.status
-			m.returnToDraft()
-		} else if !connectionFailureError(msg.err) {
-			m.setStatus(statusError, "loading sections: "+msg.err.Error())
-		}
-		m.clearProgress()
+		m.failEdit("loading sections", msg.err)
 		return
 	}
 	m.clearProgress()
@@ -748,15 +723,7 @@ func (m *Model) openUserPicker(err error) {
 		return
 	}
 	if err != nil {
-		m.edit = nil
-		if m.composer != nil {
-			m.setInlineError("loading people: " + err.Error())
-			m.composer.box.err = m.status
-			m.returnToDraft()
-		} else if !connectionFailureError(err) {
-			m.setStatus(statusError, "loading people: "+err.Error())
-		}
-		m.clearProgress()
+		m.failEdit("loading people", err)
 		return
 	}
 	m.clearProgress()
@@ -819,20 +786,28 @@ func (m *Model) pickedUser(u asana.Ref) tea.Cmd {
 		what = "assign to " + ticket.Clean(u.Name)
 	}
 	svc, gid := m.writer(), m.edit.ticket.GID
+	change := writeback.Change{Kind: "assign", Value: u.GID}
+	return m.saveChange(what, "", &change, func(ctx context.Context) error {
+		return svc.Assign(ctx, gid, u.GID)
+	})
+}
+
+// saveEdit ends the edit and runs write for its ticket in the background.
+func (m *Model) saveEdit(what string, write func(context.Context) error) tea.Cmd {
+	return m.saveChange(what, "", nil, write)
+}
+
+// saveChange is saveEdit for an edit that raises change's hook events, unless
+// a hook opened it. done, when set, is the status line on success.
+func (m *Model) saveChange(what, done string, change *writeback.Change, write func(context.Context) error) tea.Cmd {
+	t := m.edit.ticket
 	var events []hookEvent
-	if !m.edit.hook {
-		events = m.changeEvents(m.edit.ticket.Task, []writeback.Change{{Kind: "assign", Value: u.GID}})
+	if change != nil && !m.edit.hook {
+		events = m.changeEvents(t.Task, []writeback.Change{*change})
 	}
 	m.edit = nil
 	m.setProgress(what + "…")
 	return request(func(ctx context.Context) tea.Msg {
-		return editDoneMsg{gid: gid, what: what, events: events, err: svc.Assign(ctx, gid, u.GID)}
+		return editDoneMsg{gid: t.GID, what: what, done: done, events: events, err: write(ctx)}
 	})
-}
-
-func (m *Model) saveEdit(what string, write func(context.Context) error) tea.Cmd {
-	gid := m.edit.ticket.GID
-	m.edit = nil
-	m.setProgress(what + "…")
-	return saveEdit(gid, what, write)
 }

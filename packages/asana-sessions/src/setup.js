@@ -75,9 +75,10 @@ function json(r) {
 
 // pluginStatus reports one provider's plugin as missing (no CLI),
 // incompatible, not registered, stale, disabled, untrusted, ready, or error.
-export async function pluginStatus(name, c) {
+// version is the result of `<name> --version`, when the caller already ran it.
+export async function pluginStatus(name, c, version) {
   const exec = c.exec ?? execNative;
-  const version = await exec(name, ['--version'], c.env);
+  version ??= await exec(name, ['--version'], c.env);
   if (version.missing) {
     return { state: 'missing', detail: `${name} is not on PATH` };
   }

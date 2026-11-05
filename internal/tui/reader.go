@@ -142,36 +142,34 @@ func (m *Model) stepField(dir int) bool {
 	if !ok || m.readerView == config.ViewMarkdown {
 		return false
 	}
-	keys := m.fieldTargets(t)
-	i := slices.Index(keys, m.fieldKey)
-	switch {
-	case i < 0 && dir < 0:
-		i = len(keys) - 1
-	case i < 0:
-		i = 0
-	default:
-		i = (i + dir + len(keys)) % len(keys)
-	}
-	m.fieldKey = keys[i]
-	m.showTarget()
-	return true
+	return m.stepTarget(m.fieldTargets(t), dir)
 }
 
 // stepCardTarget moves through fields, section headings, and comments.
 func (m *Model) stepCardTarget(dir int) bool {
-	if _, ok := m.selectedDetail(); !ok || m.readerView == config.ViewMarkdown || len(m.cardTargets) == 0 {
+	if _, ok := m.selectedDetail(); !ok || m.readerView == config.ViewMarkdown {
 		return false
 	}
-	i := slices.Index(m.cardTargets, m.fieldKey)
+	return m.stepTarget(m.cardTargets, dir)
+}
+
+// stepTarget moves the selected target by dir through targets, wrapping, and
+// scrolls it into view; with no target selected, it starts at an end. It
+// reports false when targets is empty.
+func (m *Model) stepTarget(targets []string, dir int) bool {
+	if len(targets) == 0 {
+		return false
+	}
+	i := slices.Index(targets, m.fieldKey)
 	switch {
 	case i < 0 && dir < 0:
-		i = len(m.cardTargets) - 1
+		i = len(targets) - 1
 	case i < 0:
 		i = 0
 	default:
-		i = (i + dir + len(m.cardTargets)) % len(m.cardTargets)
+		i = (i + dir + len(targets)) % len(targets)
 	}
-	m.fieldKey = m.cardTargets[i]
+	m.fieldKey = targets[i]
 	m.showTarget()
 	return true
 }

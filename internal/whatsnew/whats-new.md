@@ -11,7 +11,20 @@ section and, only when needed, a `### Changed` section; see AGENTS.md.
   header to hide tickets you don't need right now. Try it: press `-` on a
   ticket to fold its group, or `+` to fold every other group. Folds are
   saved per project and in saved views.
+- **Since you looked.** Opening a My Tasks ticket lists the comments and
+  changes others made since you last viewed it, in a card above the
+  description. Try it: open a ticket someone commented on. Press `s`, then
+  `w` to turn it off.
+- **Streamlined reader view.** The same ticket with less chrome: fields sit
+  in compact rows under the title. Try it: press `v` to step through cards,
+  streamlined, and markdown.
 - **What's new.** After an update, asanamate shows the release's highlights
   once. Reopen them from Settings & tools (`,`, then `e`), or run
   `asanamate whats-new`. Press `d` in What's new to stop it opening on
   startup.
+
+### Changed
+
+- **The reader starts on the title.** Entering the reader selects the
+  ticket's title, and `enter` edits it, like every other field in the cards
+  view.

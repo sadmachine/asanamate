@@ -1,0 +1,36 @@
+internal/tui/keys.go
+  s_a29860173a8c8e::t_96e5f7b74bb980 479-483,485-486
+internal/tui/model_test.go
+  s_a29860173a8c8e::t_96e5f7b74bb980 305-308
+internal/tui/edit_test.go
+  s_a29860173a8c8e::t_96e5f7b74bb980 623-661
+internal/config/config.go
+  s_a29860173a8c8e::t_96e5f7b74bb980 50-52,250-252,569
+internal/tui/settings_test.go
+  s_a29860173a8c8e::t_96e5f7b74bb980 89,97,224
+README.md
+  s_a29860173a8c8e::t_96e5f7b74bb980 297-306,394,822
+internal/tui/cards.go
+  s_a29860173a8c8e::t_96e5f7b74bb980 16,102-135,454,480,485-540
+  s_a29860173a8c8e::t_838e848871e8d3 541
+internal/tui/reader.go
+  s_a29860173a8c8e::t_96e5f7b74bb980 18,72
+internal/tui/streamlined.go
+  s_a29860173a8c8e::t_96e5f7b74bb980 1-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b9bdfa58753ddaa36d5d13ea0702046132bb86d1",
+  "prompts": {},
+  "sessions": {
+    "s_a29860173a8c8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28687d57-fb4d-4e2d-8355-acb12fff8b1f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

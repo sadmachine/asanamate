@@ -27,12 +27,13 @@ func ConversationCommand(stateDir, command string, c Context, selected conversat
 	if err := selected.Validate(c.Ticket.GID); err != nil {
 		return nil, err
 	}
-	dir := filepath.Dir(c.Files.JSON)
+	dir, created := filepath.Dir(c.Files.JSON), false
 	if c.Files.JSON == "" {
 		var err error
 		if dir, err = runDir(stateDir, c.Ticket.GID); err != nil {
 			return nil, err
 		}
+		created = true
 	}
 	snapshot, err := filepath.Abs(filepath.Join(dir, "conversation.json"))
 	if err != nil {
@@ -47,7 +48,11 @@ func ConversationCommand(stateDir, command string, c Context, selected conversat
 		err = os.WriteFile(snapshot, data, 0o600)
 	}
 	if err != nil {
-		os.RemoveAll(dir)
+		// Remove only a run directory made here; the caller's holds its
+		// ticket snapshots and input.
+		if created {
+			os.RemoveAll(dir)
+		}
 		return nil, err
 	}
 	c.Files.Conversation, c.Conversation = snapshot, &selected

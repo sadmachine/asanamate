@@ -64,17 +64,17 @@ func handlers() map[string]handler {
 		}
 	}
 	// Arrow keys scroll the reader when it has focus.
-	move := func(dir int, to func(m *Model) int) func(*Model, tea.KeyPressMsg) tea.Cmd {
+	move := func(dir int) func(*Model, tea.KeyPressMsg) tea.Cmd {
 		return func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			if m.focusReader {
 				scroll(m, dir)
 				return nil
 			}
-			m.moveTo(to(m))
+			m.step(dir)
 			return m.selectionChanged()
 		}
 	}
-	cardMove := func(dir int, to func(m *Model) int) func(*Model, tea.KeyPressMsg) tea.Cmd {
+	cardMove := func(dir int) func(*Model, tea.KeyPressMsg) tea.Cmd {
 		return func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			if m.focusReader {
 				if m.readerView != config.ViewMarkdown {
@@ -84,7 +84,7 @@ func handlers() map[string]handler {
 				scroll(m, dir)
 				return nil
 			}
-			m.moveTo(to(m))
+			m.step(dir)
 			return m.selectionChanged()
 		}
 	}
@@ -126,7 +126,7 @@ func handlers() map[string]handler {
 			if up {
 				n = -n
 			}
-			m.moveTo(m.cursor + n)
+			m.step(n)
 			return m.selectionChanged()
 		}
 	}
@@ -136,10 +136,10 @@ func handlers() map[string]handler {
 		}
 	}
 	return map[string]handler{
-		"down":           {run: cardMove(1, func(m *Model) int { return m.cursor + 1 })},
-		"up":             {run: cardMove(-1, func(m *Model) int { return m.cursor - 1 })},
-		"scroll_down":    {run: move(1, func(m *Model) int { return m.cursor + 1 })},
-		"scroll_up":      {run: move(-1, func(m *Model) int { return m.cursor - 1 })},
+		"down":           {run: cardMove(1)},
+		"up":             {run: cardMove(-1)},
+		"scroll_down":    {run: move(1)},
+		"scroll_up":      {run: move(-1)},
 		"top":            {run: jump(true, func(m *Model) int { return 0 })},
 		"bottom":         {run: jump(false, func(m *Model) int { return len(m.visible) - 1 })},
 		"half_page_down": {run: page(2, false)},
@@ -237,6 +237,8 @@ func handlers() map[string]handler {
 		"group_by":         {listOnly: true, run: do((*Model).openGroupPicker)},
 		"sort_by":          {listOnly: true, run: do((*Model).openSortPicker)},
 		"fit_list":         {listOnly: true, run: do((*Model).fitList)},
+		"toggle_fold":      {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.toggleFold() }},
+		"fold_others":      {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.foldOthers() }},
 		"help":             {run: do(func(m *Model) { m.help = true })},
 		"quit":             {run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.closeActivity(); return tea.Quit }},
 	}
@@ -248,6 +250,9 @@ func handlers() map[string]handler {
 // other branches, or opens the agents modal from the Agents section.
 func (m *Model) open(tea.KeyPressMsg) tea.Cmd {
 	if !m.focusReader {
+		if m.onFoldedHeader() {
+			return m.toggleFold()
+		}
 		m.focusReaderPane()
 		return nil
 	}

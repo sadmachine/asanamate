@@ -48,7 +48,7 @@ func TestTicketSearchSelectsWithoutChangingFilter(t *testing.T) {
 			if got := m.modal.current(); got == nil || got.Value.(asana.Task).GID != sideTask.GID {
 				t.Fatalf("highlighted = %+v, want Fix footer", got)
 			}
-			if sel, _ := m.selected(); sel.GID != openTask.GID || m.focusReader || m.currentView() != wantView {
+			if sel, _ := m.selected(); sel.GID != openTask.GID || m.focusReader || !m.currentView().Equal(wantView) {
 				t.Fatal("typing or moving in search changed the underlying selection or filter")
 			}
 
@@ -59,14 +59,14 @@ func TestTicketSearchSelectsWithoutChangingFilter(t *testing.T) {
 			if !strings.Contains(m.reader.View(), sideTask.Name) {
 				t.Fatal("reader does not show the chosen ticket")
 			}
-			if m.currentView() != wantView || len(m.visible) != 2 || m.visible[0].GID != openTask.GID || m.visible[1].GID != sideTask.GID {
+			if !m.currentView().Equal(wantView) || len(m.visible) != 2 || m.visible[0].GID != openTask.GID || m.visible[1].GID != sideTask.GID {
 				t.Fatal("selection changed the original filter or its results")
 			}
 			loaded, err := state.Load(st.Path())
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, ok := loaded.View(""); !ok || got != wantView {
+			if got, ok := loaded.View(""); !ok || !got.Equal(wantView) {
 				t.Fatalf("persisted view = %+v, exists = %v, want %+v", got, ok, wantView)
 			}
 			m.Update(key("esc"))
@@ -93,10 +93,10 @@ func TestTicketSearchCancelPreservesSelectionAndReader(t *testing.T) {
 		t.Fatal("first escape must clear the temporary search")
 	}
 	m.Update(key("esc"))
-	if sel, _ := m.selected(); m.modal != nil || sel.GID != sideTask.GID || m.focusReader || m.readerOn() || m.currentView() != wantView {
+	if sel, _ := m.selected(); m.modal != nil || sel.GID != sideTask.GID || m.focusReader || m.readerOn() || !m.currentView().Equal(wantView) {
 		t.Fatal("cancel must preserve selection, reader visibility, and original filter")
 	}
-	if got, ok := st.View(""); !ok || got != wantView {
+	if got, ok := st.View(""); !ok || !got.Equal(wantView) {
 		t.Fatal("cancel changed the saved view")
 	}
 	m.Update(key("S"))

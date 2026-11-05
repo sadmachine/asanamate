@@ -59,7 +59,7 @@ func (m *Model) splitNew(tasks []asana.Task) (fresh, rest []asana.Task) {
 func (m *Model) nextNew() tea.Cmd {
 	for step := 1; step <= len(m.visible); step++ {
 		if i := (m.cursor + step) % len(m.visible); m.newBadge(i) != "" {
-			m.moveTo(i)
+			m.reveal(i)
 			return m.selectionChanged()
 		}
 	}

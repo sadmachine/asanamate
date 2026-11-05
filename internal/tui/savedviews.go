@@ -45,12 +45,12 @@ func (m *Model) recentSavedViewNames() []string {
 }
 
 func (m *Model) currentView() state.View {
-	return state.View{Filter: m.filterInput.Value(), GroupBy: m.groupBy, Sort: m.sortBy}
+	return state.View{Filter: m.filterInput.Value(), GroupBy: m.groupBy, Sort: m.sortBy, Folded: slices.Clone(m.foldedGroups)}
 }
 
 func (m *Model) savedViewModified() bool {
 	v, exists := m.deps.State.SavedViews[m.savedView]
-	return exists && v != m.currentView()
+	return exists && !v.Equal(m.currentView())
 }
 
 // savedViewLabel names the current preset without implying edits were saved.
@@ -105,7 +105,7 @@ func (m *Model) applySavedView(name string) tea.Cmd {
 	m.deps.State.TouchSavedView(name)
 	m.filterInput.SetValue(v.Filter)
 	m.viewing = nil
-	m.groupBy, m.sortBy = v.GroupBy, v.Sort
+	m.groupBy, m.sortBy, m.foldedGroups = v.GroupBy, v.Sort, slices.Clone(v.Folded)
 	m.setStatus(statusInfo, "view: "+ticket.OneLine(name))
 	return m.listViewChanged()
 }

@@ -154,8 +154,12 @@ func (m *Model) openGroupPicker() {
 	m.modal.cursor = current
 }
 
-// pickedGroup groups the list by the named field, keeping the selected ticket.
+// pickedGroup groups the list by the named field, keeping the selected
+// ticket. A new grouping starts with every group open.
 func (m *Model) pickedGroup(by string) tea.Cmd {
+	if !strings.EqualFold(by, m.groupBy) {
+		m.foldedGroups = nil
+	}
 	m.groupBy = by
 	return m.listViewChanged()
 }

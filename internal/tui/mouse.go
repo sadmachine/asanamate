@@ -377,7 +377,7 @@ func (m *Model) mouseWheel(msg tea.MouseWheelMsg) tea.Cmd {
 		a.reader, _ = a.reader.Update(msg)
 	case paneList:
 		m.focusList()
-		m.moveTo(m.cursor + step)
+		m.step(step)
 		return m.selectionChanged()
 	case paneNav:
 		if !m.focusNav {
@@ -506,6 +506,9 @@ func (m *Model) doubleClickPane(p hitPane, inside bool) tea.Cmd {
 		// Not on a header or below the last row.
 		if _, rows := m.listRows(c.w, c.h); m.click.y-c.y >= len(rows) || rows[m.click.y-c.y] < 0 {
 			return nil
+		}
+		if m.onFoldedHeader() {
+			return m.toggleFold()
 		}
 		if b, ok := m.bindingNamed("action"); ok {
 			return b.run(m, tea.KeyPressMsg{})

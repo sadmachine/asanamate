@@ -369,6 +369,8 @@ key press.
 | `u` | links in the selected ticket's description and comments, in order, by label and URL (the ticket's own link and user mentions are left out); search matches either, `enter` opens an Asana task link as a ticket in asanamate and any other link in the browser, and `y` (`ctrl+y` while searching) copies it (requires terminal OSC 52 support) |
 | `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) |
 | `B` | sort by field and direction, or restore Asana order |
+| `-` | fold the selected ticket's group to its header, or open the folded group under the cursor (also `enter` or a double-click on its header) |
+| `+` | fold every group except the selected one, or open them all when they are already folded |
 | `=` | fit the list pane to its content (also on project, grouping, sorting, and filter changes); does nothing while `layout.list_width` is set |
 | `v` | switch the reader between the cards and markdown views |
 | `z` | show or hide the reader for the session (see [Layout](#layout)) |
@@ -543,7 +545,7 @@ with `list.default_view.filter`.
 ### Saved views
 
 Press `ctrl+s`, type a friendly name, then press `ctrl+s` again to save the
-current filter, grouping, and sorting. Press `V` to search saved views by name and press
+current filter, grouping, sorting, and folded groups. Press `V` to search saved views by name and press
 `enter` to apply one to the current project or My Tasks. Saved views are reusable
 across projects and persist between sessions; they do not switch projects.
 Changing a filter, grouping, or sorting after recall leaves the saved view unchanged.
@@ -837,6 +839,13 @@ chronologically; other fields sort alphabetically, ignoring case. Equal
 values keep Asana order. Missing or invalid due dates sort last in both
 directions. Pinned tickets keep their own order at the top. Sorting persists
 per project and is included in saved views.
+
+Press `-` to fold a group to its header, which keeps its count. The cursor
+stops on a folded header, and `-` or `enter` opens it again; `+` folds every
+group except the selected one, or opens them all. Pinned, Viewing, and New
+always stay open, and selecting a ticket in a folded group, such as from
+search, history, or `i`, opens that group. Folds persist per project, are
+included in saved views, and clear when the grouping changes.
 
 Custom fields are separate Asana objects, so two can share a name (for example
 one per project). When that happens, asanamate uses the one attached to the

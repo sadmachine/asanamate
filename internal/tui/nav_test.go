@@ -124,7 +124,7 @@ func TestViewsPanelAppliesAndResetsSavedViewWithoutSwitchingProject(t *testing.T
 	st := m.deps.State
 	st.SavedViews["Work"] = state.View{Filter: "is:open", GroupBy: "section", Sort: config.Sort{By: "due", Direction: "asc"}}
 	sendKeys(m, "0", "j", "j", "enter") // My Tasks, Activity, then Work
-	if m.focusNav || m.viewProject != nil || m.savedViewLabel() != "Work" || m.currentView() != st.SavedViews["Work"] {
+	if m.focusNav || m.viewProject != nil || m.savedViewLabel() != "Work" || !m.currentView().Equal(st.SavedViews["Work"]) {
 		t.Fatalf("sidebar recall failed: name = %q, view = %+v", m.savedViewLabel(), m.currentView())
 	}
 	m.filterInput.SetValue("is:done")

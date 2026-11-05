@@ -43,6 +43,7 @@ type listState struct {
 	spacing        bool        // blank lines around group headers; starts at list.header.spacing
 	selectionStyle string      // selected row style; starts at list.selection.style
 	viewing        *asana.Task // edited ticket kept listed after a reload drops it, until the selection moves
+	foldedGroups   []string    // group labels shown as a header only, sorted
 }
 
 // listTitle is the list panel's title and its right-hand count, or a
@@ -154,7 +155,8 @@ func (m *Model) listRows(width, height int) (lines []string, rows []int) {
 	// Separators frame every item and neighbours share one; a group header
 	// takes the place of the separator above its item. The first row shown
 	// always has its group header. With spacing, headers get a blank line
-	// below, and above too unless they top the view.
+	// below, and above too unless they top the view. A folded group shows its
+	// header alone, on its first ticket's row index, and hides its tickets.
 	spacing := 0
 	if m.spacing {
 		spacing = 1
@@ -177,7 +179,12 @@ func (m *Model) listRows(width, height int) (lines []string, rows []int) {
 		return spacing
 	}
 	rowH := func(i, start int) int {
-		if header(i, start) {
+		switch {
+		case m.hidden(i):
+			return 0
+		case m.groupFolded(i):
+			return above(i, start) + 1
+		case header(i, start):
 			return above(i, start) + itemH + 1 + spacing
 		}
 		return itemH + sepH
@@ -185,11 +192,15 @@ func (m *Model) listRows(width, height int) (lines []string, rows []int) {
 	// Scroll so the cursor's row is the last that fits, then fill below it.
 	start, used := m.cursor, sepH+rowH(m.cursor, m.cursor)
 	for start > 0 {
-		next := used - rowH(start, start) + rowH(start, start-1) + rowH(start-1, start-1)
+		prev := start - 1
+		if m.hidden(prev) {
+			prev = m.sectionStart(prev)
+		}
+		next := used - rowH(start, start) + rowH(start, prev) + rowH(prev, prev)
 		if next > height {
 			break
 		}
-		start, used = start-1, next
+		start, used = prev, next
 	}
 	end := m.cursor + 1
 	for end < len(m.visible) && used+rowH(end, start) <= height {
@@ -212,7 +223,16 @@ func (m *Model) listRows(width, height int) (lines []string, rows []int) {
 	rowW := max(width-ansi.StringWidth(gutter)-listGutter, 1)
 	cols := m.rowCols(rowW)
 	for i := start; i < end; i++ {
+		if m.hidden(i) {
+			continue
+		}
 		switch {
+		case m.groupFolded(i):
+			for range above(i, start) {
+				add("", -1)
+			}
+			add(m.foldedHeader(i, counts[m.groups[i]], width, cursor), i)
+			continue
 		case header(i, start):
 			for range above(i, start) {
 				add("", -1)
@@ -252,6 +272,24 @@ func (m *Model) listRows(width, height int) (lines []string, rows []int) {
 		add(sep, -1)
 	}
 	return lines, rows
+}
+
+// foldedHeader renders the header of the folded group visible ticket i
+// opens, marked like a selected row when the cursor rests on it. cursor is
+// the styled selection marker, or "" without one.
+func (m *Model) foldedHeader(i, n, width int, cursor string) string {
+	label := m.groups[i]
+	style := m.headingStyle(m.groupStyle(label), m.listFocused())
+	text, note := m.sym.fold+" "+label, m.foldedNote(i, label)
+	switch {
+	case i != m.cursor:
+		return m.groupHeader(style, text, n, width, note)
+	case m.selectionBar():
+		return selectedStyle.Render(ansi.Strip(m.groupHeader(style, text, n, width, note)))
+	case cursor != "":
+		return cursor + m.groupHeader(style, text, n, max(width-ansi.StringWidth(cursor), 1), note)
+	}
+	return m.groupHeader(style.Bold(true), text, n, width, note)
 }
 
 // emptyView centers a note on why the list is empty, with the keys that
@@ -492,7 +530,12 @@ func (m *Model) fitList() {
 			if label == "" {
 				label, n = m.groups[i], counts[m.groups[i]]
 			}
-			w = max(w, groupHeaderWidth(label, n, m.foldedNote(i, label)))
+			// A selected folded header also holds the selection marker.
+			text, lead := label, 0
+			if m.groupFolded(i) {
+				text, lead = m.sym.fold+" "+label, gutter
+			}
+			w = max(w, lead+groupHeaderWidth(text, n, m.foldedNote(i, label)))
 		}
 	}
 	for i := range m.visible {

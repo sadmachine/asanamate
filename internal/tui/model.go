@@ -859,9 +859,11 @@ func (m *Model) reload() tea.Cmd {
 // applyFilter recomputes the visible tasks and their groups, keeping the
 // selected ticket selected when it is still visible.
 func (m *Model) applyFilter() {
-	var prevGID string
+	var prevGID, prevFolded string
 	if prev, ok := m.selected(); ok {
 		prevGID = prev.GID
+	} else if m.onFoldedHeader() {
+		prevFolded = m.groups[m.cursor]
 	}
 	pins := m.pinnedTasks()
 	var pinned []asana.Task
@@ -898,12 +900,16 @@ func (m *Model) applyFilter() {
 		m.groups = slices.Concat(labels, freshLabels, m.groups)
 	}
 	m.measureColumns()
-	if prevGID != "" {
-		for i, t := range m.visible {
-			if t.GID == prevGID {
-				m.cursor = i
-				break
-			}
+	// The selected ticket stays selected, opening its group if an edit moved
+	// it into a folded one; a selected folded header stays selected.
+	for i, t := range m.visible {
+		if prevGID != "" && t.GID == prevGID {
+			m.reveal(i)
+			return
+		}
+		if prevFolded != "" && m.foldable(i) && m.groups[i] == prevFolded {
+			m.moveTo(i)
+			return
 		}
 	}
 	m.moveTo(m.cursor)
@@ -959,12 +965,19 @@ func (m *Model) anyWorking() bool {
 	return false
 }
 
+// moveTo puts the cursor on visible ticket i, or on the header of the folded
+// group hiding it.
 func (m *Model) moveTo(i int) {
-	m.cursor = max(min(i, len(m.visible)-1), 0)
+	i = max(min(i, len(m.visible)-1), 0)
+	if m.hidden(i) {
+		i = m.sectionStart(i)
+	}
+	m.cursor = i
 }
 
+// selected returns the cursor's ticket; a folded group's header has none.
 func (m *Model) selected() (asana.Task, bool) {
-	if m.cursor < len(m.visible) {
+	if m.cursor < len(m.visible) && !m.onFoldedHeader() {
 		return m.visible[m.cursor], true
 	}
 	return asana.Task{}, false
@@ -998,7 +1011,7 @@ func (m *Model) selectionChanged() tea.Cmd {
 	}
 	if !ok {
 		m.shownGID = ""
-		m.reader.SetContent("")
+		m.reader.SetContent(m.foldNote())
 		return nil
 	}
 	if t.GID == m.shownGID {
@@ -1068,7 +1081,7 @@ func (m *Model) restoreView() {
 	if !ok {
 		v = state.View{GroupBy: strings.TrimSpace(m.deps.Config.List.DefaultView.GroupBy), Sort: m.deps.Config.List.DefaultView.Sort, Filter: m.deps.Config.List.DefaultView.Filter}
 	}
-	m.groupBy, m.sortBy = v.GroupBy, v.Sort
+	m.groupBy, m.sortBy, m.foldedGroups = v.GroupBy, v.Sort, slices.Clone(v.Folded)
 	m.filterInput.SetValue(v.Filter)
 	m.savedView = m.deps.State.CurrentSavedViews[gidOf(m.viewProject)]
 	if _, exists := m.deps.State.SavedViews[m.savedView]; !exists {

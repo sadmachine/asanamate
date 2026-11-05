@@ -93,6 +93,13 @@ type View struct {
 	GroupBy string      `toml:"group_by"`
 	Sort    config.Sort `toml:"sort"`
 	Filter  string      `toml:"filter"`
+	// Folded lists the group labels shown as a header only, sorted.
+	Folded []string `toml:"folded,omitempty"`
+}
+
+// Equal reports whether v and o are the same view.
+func (v View) Equal(o View) bool {
+	return v.GroupBy == o.GroupBy && v.Sort == o.Sort && v.Filter == o.Filter && slices.Equal(v.Folded, o.Folded)
 }
 
 // Column identifies a list value. Field is a built-in or legacy custom field

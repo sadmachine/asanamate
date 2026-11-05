@@ -1,0 +1,21 @@
+internal/tui/whatsnew_test.go
+  s_3ac5f700c1c895::t_98c47d0d466032 146
+internal/tui/settings.go
+  s_3ac5f700c1c895::t_72f6a9962a8ab5 74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6fad590909c2da6db27dc058b48f0268a00a949a",
+  "prompts": {},
+  "sessions": {
+    "s_3ac5f700c1c895": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2e81d0c5-6f82-4a36-a056-27188bdd1259",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -150,9 +150,7 @@ export async function linkFromPrompt(providers, { provider, sessionId, gid }, lo
   return withLock(provider, sessionId, async () => {
     const saved = await readIfPersisted(p, sessionId);
     lockOptions?.signal?.throwIfAborted();
-    // Claude may not have persisted yet. Codex must stay unnamed until its
-    // first turn can generate a title; setting a name prevents generation.
-    if ((!saved && provider === 'claude') || (provider === 'codex' && saved && !saved.name)) {
+    if (p.deferLink?.(saved)) {
       const other = await savePending(lockOptions?.env, provider, sessionId, gid);
       return other ? { pendingTask: other } : null;
     }
@@ -193,13 +191,13 @@ async function retitle(p, sessionId, lockOptions) {
   await p.rename(sessionId, linkTitle(title, gids[0])).catch(() => {});
 }
 
-// Claude's first prompt can precede even the projects directory.
+// readIfPersisted returns null for a session not saved yet, including missing
+// history when the provider saves only after the first prompt.
 async function readIfPersisted(p, sessionId) {
   try {
     return await p.read(sessionId);
   } catch (err) {
-    if (p.name === 'claude' && err instanceof ProviderError && err.code === 'unavailable'
-      && err.message === 'Claude Code is not installed or has no history') {
+    if (p.missingIsUnsaved && err instanceof ProviderError && err.missing) {
       return null;
     }
     throw err;

@@ -72,7 +72,7 @@ export async function sweepPending(env, { provider, now = Date.now() } = {}) {
   let names;
   try {
     names = (await readdir(dir(env), { withFileTypes: true }))
-      .filter((e) => e.isFile() && /^(claude|codex)-[a-f0-9]{32}\.json(?:\..*\.tmp)?$/.test(e.name))
+      .filter((e) => e.isFile() && /^[a-z]+-[a-f0-9]{32}\.json(?:\..*\.tmp)?$/.test(e.name))
       .map((e) => e.name);
   } catch {
     return;

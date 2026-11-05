@@ -26,12 +26,19 @@ const NATIVE = {
     register: (root) => [['plugin', 'marketplace', 'add', root], ['plugin', 'install', PLUGIN_ID]],
     unregister: [['plugin', 'uninstall', PLUGIN_ID], ['plugin', 'marketplace', 'remove', MARKETPLACE]],
     next: 'Start a new Claude Code session, or run /reload-plugins in an open one, to load the hooks and skill.',
+    // `plugin list --json` returns the entries; each names its source folder.
+    entries: (data) => data,
+    source: (entry) => entry.readFromFolder,
+    hooks: async () => ({ state: 'ready', detail: 'hooks load in new sessions' }),
   },
   codex: {
     label: 'Codex',
     register: (root) => [['plugin', 'marketplace', 'add', root], ['plugin', 'add', PLUGIN_ID]],
     unregister: [['plugin', 'remove', PLUGIN_ID], ['plugin', 'marketplace', 'remove', MARKETPLACE]],
     next: 'Start Codex, run /hooks, then review and trust the asana-sessions prompt, PostToolUse, and Stop hooks; Codex skips untrusted plugin hooks.',
+    entries: (data) => data?.installed,
+    source: (entry) => entry.source?.path,
+    hooks: (c) => codexHooks(c),
   },
 };
 const NAMES = Object.keys(NATIVE);
@@ -94,19 +101,20 @@ export async function pluginStatus(name, c, version) {
   if (!listed.ok || data === undefined) {
     return { state: 'error', detail: `${name} plugin list failed: ${firstLine(listed)}` };
   }
-  const entries = name === 'claude' ? data : data?.installed;
+  const native = NATIVE[name];
+  const entries = native.entries(data);
   const entry = Array.isArray(entries) ? entries.find((e) => (e?.id ?? e?.pluginId) === PLUGIN_ID) : undefined;
   if (!entry) {
     return { state: 'not registered', detail: 'run `asana-sessions setup`' };
   }
-  const source = name === 'claude' ? entry.readFromFolder : entry.source?.path;
+  const source = native.source(entry);
   if (entry.version !== c.version || !(await same(source, pluginRoot(name, c.pkg ?? PKG)))) {
     return { state: 'stale', detail: `registered ${display(entry.version)} from ${display(source ?? 'unknown')}; rerun \`asana-sessions setup\`` };
   }
   if (entry.enabled === false) {
-    return { state: 'disabled', detail: `enable ${PLUGIN_ID} in ${NATIVE[name].label}` };
+    return { state: 'disabled', detail: `enable ${PLUGIN_ID} in ${native.label}` };
   }
-  return name === 'codex' ? codexHooks(c) : { state: 'ready', detail: 'hooks load in new sessions' };
+  return native.hooks(c);
 }
 
 // codexHooks checks that Codex sees exactly one prompt, PostToolUse, and Stop

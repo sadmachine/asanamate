@@ -7,8 +7,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { ProviderError, providerError } from './errors.js';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './ids.js';
 // Interactive, noninteractive, and app-server sources; defaults omit some.
 const SOURCE_KINDS = ['cli', 'vscode', 'exec', 'appServer'];
 const PAGE_SIZE = 100;
@@ -41,6 +40,9 @@ export function createCodex({ spawn = nodeSpawn, env = process.env, timeoutMs = 
     validID: (id) => UUID.test(id),
     // The CLI exports the current thread's ID to its tool commands.
     currentEnv: 'CODEX_THREAD_ID',
+    // A thread must stay unnamed until its first turn can generate a title;
+    // setting a name prevents generation.
+    deferLink: (saved) => Boolean(saved && !saved.name),
     // homeEnv names the Codex home holding a hook event's transcript,
     // <home>/sessions/YYYY/MM/DD/rollout-<time>-<id>.jsonl, or returns null.
     homeEnv: (transcript, id) => {

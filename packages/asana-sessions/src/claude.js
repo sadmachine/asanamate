@@ -5,8 +5,7 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { ProviderError, providerError } from './errors.js';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './ids.js';
 
 export function createClaude({ sdk, env = process.env, starts = processStarts } = {}) {
   const load = async () => {
@@ -48,6 +47,10 @@ export function createClaude({ sdk, env = process.env, starts = processStarts } 
     validID: (id) => UUID.test(id),
     // The CLI exports the current conversation's ID to its tool commands.
     currentEnv: 'CLAUDE_CODE_SESSION_ID',
+    // The first prompt can precede the saved conversation, and even the
+    // projects directory; a prompt link waits until Stop finds it saved.
+    missingIsUnsaved: true,
+    deferLink: (saved) => !saved,
     // homeEnv names the config directory holding a hook event's transcript,
     // <home>/projects/<project>/<id>.jsonl, or returns null.
     homeEnv: (transcript, id) => {

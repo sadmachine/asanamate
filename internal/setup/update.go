@@ -26,7 +26,8 @@ var (
 )
 
 // Update rewrites the config file from the current template, keeping every
-// value the user set. The previous file is saved next to it, see backupPath.
+// value the user set. The previous file is saved next to it as a timestamped
+// backup (see safefile.Backup).
 func Update(o Options, yes bool) error {
 	old, err := os.ReadFile(o.ConfigPath)
 	if errors.Is(err, os.ErrNotExist) {

@@ -127,3 +127,17 @@ func TestNewWriterResolvesConfirmation(t *testing.T) {
 		}
 	}
 }
+
+func TestConfigUpdateRewritesMovedKeys(t *testing.T) {
+	path := cliConfig(t, "workspace = \"1\"\naccent_color = \"2\"\n")
+	if err := runConfig([]string{"update", "--yes"}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(path)
+	if err != nil || cfg.Colors.Accent.FG != "2" {
+		t.Fatalf("accent = %+v, err = %v", cfg.Colors.Accent, err)
+	}
+	if err := runConfig([]string{"update", "extra"}); err == nil || !strings.Contains(err.Error(), "unexpected arguments") {
+		t.Fatalf("extra argument: %v", err)
+	}
+}

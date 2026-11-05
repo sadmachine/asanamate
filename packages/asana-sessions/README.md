@@ -42,8 +42,8 @@ An unsuccessful install leaves the current command intact. Existing ordinary
 files or directories at the command path are never replaced. Previous install
 directories remain available to processes already using them.
 
-Dependencies install only at installation time. Package CI targets Node 22 and
-24 on macOS and Linux. Use this installer rather than `npm install --global`:
+Dependencies install only at installation time. Package CI targets Node 22, 24,
+and 26 on Linux and Node 26 on macOS. Use this installer rather than `npm install --global`:
 global tarball installs can re-resolve dependencies despite the included
 shrinkwrap. No registry account is needed to build or install locally.
 

@@ -3,21 +3,35 @@ on:
   push:
     branches: [main]
   pull_request:
+permissions:
+  contents: read
+# Superseded pull request pushes stop; every main commit keeps its own run,
+# since release tags require a successful run on their exact commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  # Linux covers every supported Node line; macOS covers the current LTS.
   package:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        node: [22, 24]
+        os: [ubuntu-latest]
+        node: [22, 24, 26]
+        include:
+          - os: macos-latest
+            node: 26
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: packages/asana-sessions
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: packages/asana-sessions/npm-shrinkwrap.json
       - run: npm ci --no-audit --no-fund
       - run: npm test
       - run: npm run check
@@ -25,20 +39,22 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - uses: actions/setup-go@v5
+          cache: npm
+          cache-dependency-path: packages/asana-sessions/npm-shrinkwrap.json
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
       - run: npm ci --no-audit --no-fund
         working-directory: packages/asana-sessions
-      - name: Check protocol 1 adapter and core consumer
-        run: |
-          node --test packages/asana-sessions/test/cli.test.js
-          go test ./internal/conversations ./internal/asana
+      # Shipped dependencies only; the release installs with --omit=dev.
+      - run: npm audit --omit=dev --audit-level=moderate
+        working-directory: packages/asana-sessions
       # A packed, separately installed companion drives asanamate's
       # conversations CLI end to end in a disposable home, without an Asana
       # token: real SDK link and lookup, then the foreground open handoff.

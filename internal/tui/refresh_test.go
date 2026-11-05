@@ -422,10 +422,29 @@ func TestAutoRefreshShowsNoModal(t *testing.T) {
 	if m.listHighlight() != warnStyle.GetForeground() {
 		t.Fatal("timer refresh did not highlight the list")
 	}
-	m.Update(key("r")) // keys wait for the refresh
 	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
 	m.Update(key("r"))
 	if strings.Contains(ansi.Strip(m.body()), "Loading tasks") || !m.background {
 		t.Fatal("a manual refresh must keep the view without a loading modal")
+	}
+}
+
+func TestBackgroundRefreshKeepsKeysAndClicks(t *testing.T) {
+	m, _ := testModel(t, config.Default())
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 12})
+	second := asana.Task{GID: "2", Name: "Second"}
+	m.Update(tasksMsg{tasks: []asana.Task{openTask, second}})
+	m.Update(refreshTickMsg{seq: m.refreshSeq})
+	if !m.loading || !m.background {
+		t.Fatal("timer refresh did not start")
+	}
+	m.Update(key("j"))
+	if got, _ := m.selected(); got.GID != second.GID {
+		t.Fatalf("selected %q during a background refresh, want %q", got.GID, second.GID)
+	}
+	m.reload()
+	m.Update(key("k"))
+	if got, _ := m.selected(); got.GID != second.GID {
+		t.Fatal("a foreground load must still hold keys")
 	}
 }

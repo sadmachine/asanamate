@@ -368,7 +368,7 @@ func (m *Model) mouseWheel(msg tea.MouseWheelMsg) tea.Cmd {
 		return nil
 	}
 	p, ok := m.paneAt(msg.X, msg.Y)
-	if !ok || (m.composer != nil && p.id != paneReader) || m.loading || m.filtering {
+	if !ok || (m.composer != nil && p.id != paneReader) || m.blockingLoad() || m.filtering {
 		return nil
 	}
 	a := m.activity
@@ -429,7 +429,7 @@ func (m *Model) mouseClick(ms tea.Mouse) tea.Cmd {
 		return m.clickStatusline(ms.X)
 	}
 	p, ok := m.paneAt(ms.X, ms.Y)
-	if !ok || m.loading || m.filtering {
+	if !ok || m.blockingLoad() || m.filtering {
 		return nil
 	}
 	c := p.content()

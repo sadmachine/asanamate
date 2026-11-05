@@ -748,7 +748,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		m.help = false
 		return nil
 	}
-	if m.loading {
+	if m.blockingLoad() {
 		if keys.Name("main", k) == "quit" {
 			return tea.Quit
 		}
@@ -858,6 +858,12 @@ func (m *Model) finishFilter() {
 }
 
 // reload refetches the tasks, keeping the current view until they land.
+// blockingLoad reports a task load the user started, which holds input until
+// it finishes; timer refreshes load behind the current view.
+func (m *Model) blockingLoad() bool {
+	return m.loading && !m.background
+}
+
 func (m *Model) reload() tea.Cmd {
 	// Retain the displayed ticket until its replacement arrives. Other cached
 	// tickets must be fetched again when selected after a reload.
@@ -1322,7 +1328,7 @@ func (m *Model) body() string {
 			content = m.helpView()
 		}
 		style = style.Padding(0, 2)
-	case m.waiting != "" || (m.loading && m.tasks != nil && !m.background):
+	case m.waiting != "" || (m.blockingLoad() && m.tasks != nil):
 		content = cmp.Or(m.waiting, "Loading tasks…")
 		if m.sym.spinner != nil {
 			content = m.sym.spinner[m.frame%len(m.sym.spinner)] + " " + content

@@ -2,6 +2,8 @@
 
 Curated highlights shown after an upgrade. Each version gets a `### New`
 section and, only when needed, a `### Changed` section; see AGENTS.md.
+Unreleased highlights wait in `unreleased/`, one file per change, until a
+release moves them here.
 
 ## v0.4.4
 

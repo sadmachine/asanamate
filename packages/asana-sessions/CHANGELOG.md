@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Update the shipped `body-parser` (2.4.0) and `fast-uri` (3.1.9)
+  dependencies to fix published vulnerabilities.
+
 ## 0.1.3
 
 - The installer refreshes registered plugins after each install with the new

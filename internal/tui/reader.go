@@ -35,6 +35,9 @@ type readerState struct {
 	allActivity    bool              // the cards view shows the All tab, every story, not only comments; kept across tickets
 	showComments   bool              // the cards view lists every comment or story, not only the newest; resets per ticket
 	openComments   map[string]bool   // comments shown in full instead of a preview, by target key; resets per ticket
+	sinceShow      bool              // the reader lists what is new since you looked; reader.since.show
+	sinceGID       string            // ticket sinceCutoff belongs to
+	sinceCutoff    string            // sinceGID's modified_at when last seen, saved as its visit began; "" when never seen
 	clipped        map[string]bool   // comments the last render cut to a preview, by target key
 	fieldLines     map[string]int    // reader line of each cards view target, by key
 	fieldEnds      map[string]int    // last reader line of multi-line targets, by key
@@ -54,6 +57,7 @@ func (m *Model) renderDetail(keepScroll bool) {
 	if !ok {
 		return
 	}
+	m.keepSinceCutoff(t.GID)
 	m.markSeen(t.Task)
 	m.checkDraft()
 	if !m.readerOn() {
@@ -97,6 +101,12 @@ func (m *Model) renderDetail(keepScroll bool) {
 		for i := range t.Comments {
 			t.Comments[i].HTMLText = mentionHTML(t.Comments[i].HTMLText)
 		}
+		// New entries move from the activity to their own section.
+		fresh, _ := m.splitActivity(t)
+		extra += sinceMarkdown(fresh)
+		isNew := func(s asana.Story) bool { return m.isNew(t.GID, s) }
+		t.Comments = slices.DeleteFunc(t.Comments, isNew)
+		t.Events = slices.DeleteFunc(slices.Clone(t.Events), isNew)
 		content = m.glamour(t.MarkdownWith(extra), width, false)
 	} else {
 		content = m.flashGutter(lipgloss.NewStyle().PaddingLeft(1).Render(m.renderCards(t, width)))

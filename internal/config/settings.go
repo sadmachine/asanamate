@@ -17,7 +17,7 @@ import (
 var SettingKeys = []string{
 	"theme.name", "theme.auto.dark", "theme.auto.light",
 	"list.separator", "list.header.spacing", "list.selection.style",
-	"list.refresh_interval", "reader.view", "layout.focus.dim",
+	"list.refresh_interval", "reader.view", "reader.since.show", "layout.focus.dim",
 }
 
 const settingsHeader = `# Settings you can also change in asanamate (s for visuals; comma for tools).

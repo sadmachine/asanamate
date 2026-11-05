@@ -315,6 +315,13 @@ func (s *State) MarkSeen(t asana.Task) bool {
 	return true
 }
 
+// SeenAt returns the modified_at the task with gid had when it was last
+// seen, and whether it has been seen. It changes nothing.
+func (s *State) SeenAt(gid string) (string, bool) {
+	at, ok := s.SeenTasks[gid]
+	return at, ok
+}
+
 // Changed reports whether t was modified since it was last seen, or was never
 // seen, once a My Tasks list has loaded.
 func (s *State) Changed(t asana.Task) bool {

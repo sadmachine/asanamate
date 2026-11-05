@@ -294,6 +294,15 @@ comments; `enter` on the tabs switches them, and the choice holds until you
 quit. The markdown view always shows the whole activity. In narrower terminals the list
 fills the screen and `enter` opens the reader in its place.
 
+When you open a My Tasks ticket you have viewed before, a **Since you
+looked** card above its description lists, oldest first, the comments and
+changes others made since then. Those entries move out of the activity below,
+so nothing shows twice, and a comment there works as it does anywhere. The
+card holds still while you read, refreshes included, and starts over on your
+next visit; a visit with nothing new shows no card, and neither does your
+first view of a ticket. The markdown view shows it as its own section. `s`,
+then `w` turns it off or on (`reader.since.show`).
+
 Fit asanamate to its spot with the `[layout]` table in `config.toml`:
 
 - `reader = false` starts with the reader hidden, such as for a tmux
@@ -378,7 +387,7 @@ key press.
 | `V` | recall or manage saved views |
 | `]` / `[` | apply the next/previous saved view, in name order |
 | `ctrl+s` | save the current filter, grouping, and sorting under a name |
-| `s` | visual settings: separators, header spacing, reader view, selection style, dim unfocused panes, and theme save in `settings.toml`; list columns save per project in state |
+| `s` | visual settings: separators, header spacing, reader view, selection style, dim unfocused panes, Since you looked, and theme save in `settings.toml`; list columns save per project in state |
 | `,` | settings & tools: `a` builds / edits actions, `o` opens extensions, `i` sets the auto-update interval (saved in `settings.toml`), `n` opens session status history, and `c` opens connection status |
 | `o` | open the ticket in the browser |
 | `w` | agents: the ticket's running agents, then its saved conversations (see [Conversations](#conversations-optional)); also `enter` on the reader's Agents section. `enter` on an agent runs `agents.focus`. Skipped when your `[keys.main]` already binds `w` |
@@ -801,6 +810,7 @@ they take effect at the next start or the next app write.
 | `list.selection.style` | `"marker"` | `marker` or `bar`; `s`, then `l` toggles |
 | `list.refresh_interval` | `"30s"` | automatic list reload interval, at least `1s`; `R` or `,`, then `i` saves a duration such as `"15s"` or `"1m"` with `ctrl+s` |
 | `reader.view` | `"cards"` | `cards` or `markdown`; `v` or `s`, then `v` switches and saves |
+| `reader.since.show` | `true` | list what others added to a My Tasks ticket since you last viewed it, above its description; `s`, then `w` toggles. See [Layout](#layout) |
 | `layout.focus.dim` | `true` | draw unfocused panes faint; `s`, then `d` toggles |
 
 ### List fields and views

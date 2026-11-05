@@ -28,7 +28,7 @@ const sideBySideW = 90
 // columns wide. It records the line of each editable row in
 // m.fieldLines, and the last line of each multi-line one in m.fieldEnds.
 func (m *Model) renderCards(t ticket.Ticket, width int) string {
-	m.fieldLines, m.fieldEnds = map[string]int{}, map[string]int{}
+	m.fieldLines, m.fieldEnds, m.clipped = map[string]int{}, map[string]int{}, map[string]bool{}
 	head := m.titleHead(t, width)
 	if line := m.branchLine(t.Task, width); line != "" {
 		head += "\n" + line
@@ -79,6 +79,13 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	// Rows start below the head, a blank line, and the card's top edge.
 	top := lipgloss.Height(head) + 2
 	var blocks []string
+	fresh, rest := m.splitActivity(t)
+	// addSince adds the Since you looked card, when anything is new.
+	addSince := func() {
+		if card := m.sinceCard(fresh, width, lipgloss.Height(strings.Join(blocks, "\n\n"))+1); card != "" {
+			blocks = append(blocks, card)
+		}
+	}
 	add := func(key, title, body string) {
 		if body != "" {
 			block := m.rule(title, width, m.fieldKey == key, m.focusReader) + "\n" + body
@@ -116,11 +123,13 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		}
 		details := m.card("Details", m.detailsBody(t, leftW-4, top), leftW, false, flash == detailsKey)
 		blocks = []string{head, lipgloss.JoinHorizontal(lipgloss.Top, details, " ", strings.Join(side, "\n"))}
+		addSince()
 		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 	} else {
 		blocks = []string{head, m.card("Details", m.detailsBody(t, width-4, top), width, false, flash == detailsKey)}
 		add(agentsKey, "Agents", cutLines(agentLines, width))
 		markOthers(m.fieldLines[agentsKey] + 1)
+		addSince()
 		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 		add("section:subtasks", subtaskTitle, wrap(subtasks, width))
 	}
@@ -137,73 +146,32 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	m.fieldLines[commentKey] = lipgloss.Height(strings.Join(blocks, "\n\n")) + 2
 	m.fieldLines[tabsKey] = m.fieldLines[commentKey] - 1
 	m.cardTargets = append(m.cardTargets, tabsKey, commentKey)
-	m.clipped = map[string]bool{}
-	var entries []ticket.Entry
-	if m.allActivity {
-		entries = t.Timeline()
-	} else {
-		for _, c := range t.Comments {
-			entries = append(entries, ticket.Entry{Story: c, Comment: true})
-		}
+	var items []string
+	if len(rest) == 0 && len(fresh) == 0 {
+		items = []string{dimStyle.Render("none")}
 	}
-	items := []string{dimStyle.Render("none")}
-	if len(entries) > 0 {
-		items = nil
+	if len(rest) > 0 {
 		line := m.fieldLines[commentKey] + 2
-		first := 0
 		opts := m.deps.Config.Reader.Comments
-		if latest := opts.Latest; !m.showComments && latest > 0 && len(entries) > latest {
-			first = len(entries) - latest
+		if latest := opts.Latest; !m.showComments && latest > 0 && len(rest) > latest {
 			m.fieldLines[allCommentsKey] = line
 			m.cardTargets = append(m.cardTargets, allCommentsKey)
 			style := dimStyle.Italic(true)
 			if m.fieldKey == allCommentsKey {
 				style = m.fieldStyle()
 			}
-			items = append(items, style.Render(fmt.Sprintf("+ Show all %d", len(entries))))
+			items = append(items, style.Render(fmt.Sprintf("+ Show all %d", len(rest))))
+			rest = rest[len(rest)-latest:]
 			line += 2
 		}
-		// i counts comments, keeping their keys the same in either tab;
-		// consecutive events share one block, a line each.
-		i, event := 0, false
-		for n, e := range entries {
-			if !e.Comment {
-				if n < first {
-					continue
-				}
-				row := dimStyle.Render(ansi.Truncate(ticket.Author(e.Story)+" · "+m.storyTime(e.CreatedAt)+" · "+ticket.OneLine(e.Text), width, "…"))
-				if event {
-					items[len(items)-1] += "\n" + row
-					line++
-				} else {
-					items = append(items, row)
-					line += 2
-				}
-				event = true
-				continue
-			}
-			c, last := e.Story, i == len(t.Comments)-1
-			key := commentTarget(c, i)
-			i++
-			if n < first {
-				continue
-			}
-			event = false
-			m.fieldLines[key] = line
-			m.cardTargets = append(m.cardTargets, key)
-			preview := 0
-			if !last && !m.openComments[key] {
-				preview = opts.PreviewLines
-			}
-			block, clipped := m.comment(c, width, m.fieldKey == key, preview)
-			m.clipped[key] = clipped
-			m.fieldEnds[key] = line + lipgloss.Height(block) - 1
-			line += lipgloss.Height(block) + 1
-			items = append(items, block)
-		}
+		items = append(items, m.entryBlocks(rest, width, line, opts.PreviewLines, lastCommentKey(t))...)
 	}
 	addComment := m.addRow(commentKey, "+ Add comment")
-	blocks = append(blocks, m.tabs(t, width)+"\n"+addComment+"\n\n"+strings.Join(items, "\n\n"))
+	activity := m.tabs(t, width) + "\n" + addComment
+	if len(items) > 0 {
+		activity += "\n\n" + strings.Join(items, "\n\n")
+	}
+	blocks = append(blocks, activity)
 	out := strings.Join(blocks, "\n\n")
 	if flash == commentKey {
 		m.flashLines = [2]int{m.fieldLines[tabsKey], lipgloss.Height(out) - 1}
@@ -606,14 +574,19 @@ func (m *Model) card(title, body string, width int, selected, flashed bool) stri
 	if flashed {
 		border = m.accentStyle.GetForeground()
 	}
-	box := lipgloss.NewStyle().Border(m.sym.border).BorderTop(false).BorderForeground(border).
-		Padding(0, 1).Width(width).Render(body)
-	edge := lipgloss.NewStyle().Foreground(border)
 	head := titleStyle
 	if selected {
 		head = m.fieldStyle()
 	}
-	return m.topEdge(head.Render(title), "", lipgloss.Width(box), edge) + "\n" + box
+	return m.box(head.Render(title), body, width, border)
+}
+
+// box draws body in a border of color border with the styled title set into
+// the top edge. body must already fit width-4 columns.
+func (m *Model) box(title, body string, width int, border color.Color) string {
+	box := lipgloss.NewStyle().Border(m.sym.border).BorderTop(false).BorderForeground(border).
+		Padding(0, 1).Width(width).Render(body)
+	return m.topEdge(title, "", lipgloss.Width(box), lipgloss.NewStyle().Foreground(border)) + "\n" + box
 }
 
 // panel boxes a pane's body, width by height cells in all, with title and

@@ -372,7 +372,8 @@ style = "rule"
 section = false
 
 [reader]
-# Reading pane view lives in settings.toml (reader.view).
+# Reading pane view and the Since you looked section live in settings.toml
+# (reader.view, reader.since.show).
 # Wrap description and comment text in the cards view, and the comment
 # editor, at this many columns; 0 wraps at the pane width.
 max_text_width = 0

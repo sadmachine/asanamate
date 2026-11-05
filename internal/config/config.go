@@ -249,10 +249,20 @@ type Selection struct {
 // (sections and boxed comments) or markdown (the rendered ticket Markdown).
 // MaxTextWidth caps the wrap width of the cards view's description and
 // comment text, and of the comment editor; 0 wraps at the pane width. Comments shapes its comments.
+// Since shapes what a ticket gained since you last looked.
 type Reader struct {
 	View         string   `toml:"view"`
 	MaxTextWidth int      `toml:"max_text_width"`
 	Comments     Comments `toml:"comments"`
+	Since        Since    `toml:"since"`
+}
+
+// Since configures the reader's Since you looked section. Show lists the
+// comments and changes others made to a My Tasks ticket since you last
+// viewed it above its description, and leaves them out of the activity
+// below.
+type Since struct {
+	Show bool `toml:"show"`
 }
 
 // Comments configures the cards view's comments. Latest is how many of the
@@ -399,7 +409,7 @@ func Default() Config {
 			Layout:          LayoutSingle, Fields: []string{"section", "due"},
 			Header: Header{Style: StyleRule}, Selection: Selection{Style: StyleMarker},
 		},
-		Reader:   Reader{View: ViewCards, Comments: Comments{Latest: 3, PreviewLines: 2}},
+		Reader:   Reader{View: ViewCards, Comments: Comments{Latest: 3, PreviewLines: 2}, Since: Since{Show: true}},
 		Images:   Images{Mode: "auto"},
 		Activity: Activity{RefreshInterval: "2m"},
 		Feed:     Feed{Expand: ExpandAuto, Height: 12, RefreshInterval: "1m", Commands: []string{}},

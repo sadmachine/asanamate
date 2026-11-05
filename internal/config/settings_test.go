@@ -34,6 +34,7 @@ func TestSettingsLoadAndValidation(t *testing.T) {
 		{"list.selection.style = \"invalid\"\n", "list.selection.style"},
 		{"list.header.spacing = 1\n", "list.header.spacing"},
 		{"reader.view = \"grid\"\n", "reader.view"},
+		{"reader.since.show = \"yes\"\n", "reader.since.show"},
 		{"list.refresh_interval = \"0s\"\n", "list.refresh_interval"},
 		{"theme.name = \"dark\"\n", `theme.name: "dark" is now "ansi-dark"`},
 		{"theme.auto.light = \"light\"\n", `theme.auto.light: "light" is now "ansi-light"`},
@@ -66,8 +67,11 @@ func TestSaveSettingPreservesHandEditsAndRejectsInvalidWrites(t *testing.T) {
 	if err := SaveSetting(path, "list.header.spacing", true); err != nil {
 		t.Fatal(err)
 	}
+	if err := SaveSetting(path, "reader.since.show", false); err != nil {
+		t.Fatal(err)
+	}
 	cfg, err := Load(path)
-	if err != nil || cfg.Reader.View != ViewMarkdown || !cfg.List.Separator || !cfg.List.Header.Spacing || cfg.List.Selection.Style != StyleBar || cfg.Layout.Focus.Dim {
+	if err != nil || cfg.Reader.View != ViewMarkdown || !cfg.List.Separator || !cfg.List.Header.Spacing || cfg.List.Selection.Style != StyleBar || cfg.Layout.Focus.Dim || cfg.Reader.Since.Show {
 		t.Fatalf("settings = %+v, err = %v", cfg, err)
 	}
 	before, err := os.ReadFile(SettingsPath(path))

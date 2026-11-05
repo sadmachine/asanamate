@@ -363,15 +363,7 @@ func (m *Model) focusConversation(t ticket.Ticket, selected conversations.Record
 		m.setStatus(statusError, "Focus agent failed: "+err.Error())
 		return nil
 	}
-	logPath := filepath.Join(m.deps.StateDir, "actions.log")
-	m.setProgress("Focus agent: running…")
-	return func() tea.Msg {
-		err := action.RunBackground(cmd, logPath)
-		if err != nil {
-			err = fmt.Errorf("%w; refresh conversations before retrying", err)
-		}
-		return actionDoneMsg{name: "Focus agent", log: logPath, err: err}
-	}
+	return m.runBackground("Focus agent", cmd, "refresh conversations before retrying")
 }
 
 // focusAgent runs agents.focus in the background for a, with the exports an

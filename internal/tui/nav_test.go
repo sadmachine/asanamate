@@ -19,7 +19,7 @@ func wideModel(t *testing.T, width int) *Model {
 	st.RecentProjects = []string{"p2", "p1"}
 	m.projects = []asana.Project{{GID: "p1", Name: "Web"}, {GID: "p2", Name: "Mobile"}}
 	m.Update(tea.WindowSizeMsg{Width: width, Height: 24})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, doneTask}})
 	return m
 }
 
@@ -139,7 +139,7 @@ func TestViewsPanelAppliesAndResetsSavedViewWithoutSwitchingProject(t *testing.T
 		t.Fatalf("active modified view did not reset: %q", m.savedViewLabel())
 	}
 	m.pickedProject(&asana.Ref{GID: "p1", Name: "Web"})
-	m.Update(tasksMsg{project: m.viewProject, tasks: []asana.Task{openTask, doneTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, project: m.viewProject, tasks: []asana.Task{openTask, doneTask}})
 	sendKeys(m, "0", "g", "j", "j", "j", "enter")
 	if m.viewProject == nil || m.viewProject.GID != "p1" || m.savedViewLabel() != "Work" {
 		t.Fatalf("sidebar recall switched project: %+v", m.viewProject)

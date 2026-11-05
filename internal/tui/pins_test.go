@@ -165,7 +165,7 @@ func TestLoadTasksFetchesMissingPinsAndReportsFailures(t *testing.T) {
 	c := asana.New("token")
 	c.BaseURL = srv.URL
 	pins := []string{"1", "2", "3"}
-	cmd := loadTasks(c, "", &asana.Ref{GID: "p"}, pins)
+	cmd := loadTasks(c, "", &asana.Ref{GID: "p"}, pins, 0)
 	pins[1] = "changed after scheduling"
 	msg := cmd().(tasksMsg)
 	if msg.err != nil || len(msg.tasks) != 1 || len(msg.pins) != 1 || !msg.pins[0].Completed || !slices.Equal(fetched, []string{"2", "3"}) || !strings.Contains(msg.warning, "3:") {

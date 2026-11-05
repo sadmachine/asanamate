@@ -33,6 +33,7 @@ func scheduleSpinner() tea.Cmd {
 }
 
 type tasksMsg struct {
+	seq              uint64 // the load that produced it; older loads are dropped
 	project          *asana.Ref
 	tasks            []asana.Task
 	pins             []asana.Task // explicitly pinned tasks absent from the normal list
@@ -143,10 +144,10 @@ func request(fn func(ctx context.Context) tea.Msg) tea.Cmd {
 	}
 }
 
-func loadTasks(c *asana.Client, workspace string, project *asana.Ref, pins []string) tea.Cmd {
+func loadTasks(c *asana.Client, workspace string, project *asana.Ref, pins []string, seq uint64) tea.Cmd {
 	pins = slices.Clone(pins)
 	return request(func(ctx context.Context) tea.Msg {
-		msg := tasksMsg{project: project}
+		msg := tasksMsg{seq: seq, project: project}
 		var catalog []asana.Ref
 		done := make(chan struct{})
 		go func() {

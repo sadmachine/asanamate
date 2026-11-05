@@ -120,6 +120,7 @@ type Model struct {
 	refreshInterval time.Duration    // auto-update interval, from saved settings or config
 	refreshSeq      uint64           // invalidates timers from earlier session intervals
 	agentSeq        uint64           // the current agent poll chain; older chains stop
+	taskSeq         uint64           // the latest task load; an older load's result is stale
 
 	focusReader  bool
 	focusNav     bool   // the Places panel has focus; wide layout only
@@ -262,7 +263,7 @@ func (m *Model) Init() tea.Cmd {
 		m.setProgress("loading ticket…")
 		cmd = tea.Batch(m.loadDetail(m.deps.Ticket), m.startSpinner(), m.scheduleRefresh())
 	} else {
-		cmd = tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks()), m.startSpinner(), m.scheduleRefresh(), m.startActivity(), m.startFeed())
+		cmd = tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks(), m.taskSeq), m.startSpinner(), m.scheduleRefresh(), m.startActivity(), m.startFeed())
 	}
 	if m.deps.Config.AgentsEnabled() {
 		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents, m.agentSeq))
@@ -439,7 +440,9 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 
 // gotTasks applies a task list load for the viewed project.
 func (m *Model) gotTasks(msg tasksMsg) tea.Cmd {
-	if !sameProject(msg.project, m.viewProject) {
+	// A load that started before a newer one, such as an auto-refresh racing
+	// the reload after an edit, would show data from before the edit.
+	if !sameProject(msg.project, m.viewProject) || msg.seq < m.taskSeq {
 		return nil
 	}
 	refreshing := m.loading
@@ -876,7 +879,8 @@ func (m *Model) reload() tea.Cmd {
 		return m.loadDetail(m.deps.Ticket)
 	}
 	m.loading, m.background = true, false
-	return tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks()), m.startSpinner())
+	m.taskSeq++
+	return tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks(), m.taskSeq), m.startSpinner())
 }
 
 // applyFilter recomputes the visible tasks and their groups, keeping the

@@ -84,7 +84,7 @@ var (
 
 func TestTasksFilteredByDefault(t *testing.T) {
 	m, _ := testModel(t, config.Config{List: config.List{DefaultView: config.DefaultView{Filter: "is:open"}}})
-	_, cmd := m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask}})
+	_, cmd := m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, doneTask}})
 	if len(m.visible) != 1 || m.visible[0].GID != "1" || m.loading {
 		t.Fatalf("visible = %+v, loading = %v", m.visible, m.loading)
 	}
@@ -96,7 +96,7 @@ func TestTasksFilteredByDefault(t *testing.T) {
 func TestStaleTasksIgnored(t *testing.T) {
 	m, _ := testModel(t, config.Config{})
 	m.viewProject = &asana.Ref{GID: "p2"}
-	m.Update(tasksMsg{project: &asana.Ref{GID: "p1"}, tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, project: &asana.Ref{GID: "p1"}, tasks: []asana.Task{openTask}})
 	if m.tasks != nil || !m.loading {
 		t.Fatalf("stale response applied: tasks = %+v", m.tasks)
 	}
@@ -104,7 +104,7 @@ func TestStaleTasksIgnored(t *testing.T) {
 
 func TestDetailForOtherTicketCachedNotShown(t *testing.T) {
 	m, _ := testModel(t, config.Config{})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask, sideTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, sideTask}})
 	m.Update(detailMsg{gid: "3", ticket: ticket.Ticket{Task: sideTask}})
 	if _, ok := m.details["3"]; !ok || m.shownGID != "" {
 		t.Fatalf("details = %v, shown = %q", m.details, m.shownGID)
@@ -117,16 +117,16 @@ func TestDetailForOtherTicketCachedNotShown(t *testing.T) {
 
 func TestReloadReselectsTicket(t *testing.T) {
 	m, _ := testModel(t, config.Config{})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask, sideTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, doneTask, sideTask}})
 	m.Update(key("j"))
 	m.Update(key("j"))
 	m.Update(key("r"))
-	m.Update(tasksMsg{tasks: []asana.Task{openTask, sideTask, doneTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, sideTask, doneTask}})
 	if t2, _ := m.selected(); t2.GID != "3" {
 		t.Fatalf("selected = %q, want 3 after reorder", t2.GID)
 	}
 	m.Update(key("r"))
-	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, doneTask}})
 	if t2, _ := m.selected(); t2.GID != "1" {
 		t.Fatalf("selected = %q, want first when ticket is gone", t2.GID)
 	}
@@ -134,7 +134,7 @@ func TestReloadReselectsTicket(t *testing.T) {
 
 func TestFilterTyping(t *testing.T) {
 	m, _ := testModel(t, config.Config{List: config.List{DefaultView: config.DefaultView{Filter: "is:open"}}})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask, sideTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, doneTask, sideTask}})
 	m.Update(key("/"))
 	for _, r := range " footer" {
 		m.Update(key(string(r)))
@@ -176,12 +176,12 @@ func TestPickingProjectRecordsRecent(t *testing.T) {
 
 func TestSwitchingBackToDueGroupedMyTasksRendersStaleProjectRows(t *testing.T) {
 	m, st := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, DefaultView: config.DefaultView{GroupBy: "due"}}})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 
 	project := &asana.Ref{GID: "p", Name: "Project"}
 	st.SetView(project.GID, state.View{})
 	m.pickedProject(project)
-	m.Update(tasksMsg{project: project, tasks: []asana.Task{sideTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, project: project, tasks: []asana.Task{sideTask}})
 	if m.groups != nil {
 		t.Fatalf("project groups = %q, want ungrouped", m.groups)
 	}
@@ -207,7 +207,7 @@ func historyGIDs(st *state.State) []string {
 func TestFocusingReaderRecordsHistory(t *testing.T) {
 	m, st := testModel(t, config.Config{})
 	m.Update(tea.WindowSizeMsg{Width: 160, Height: 30})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask, doneTask, sideTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, doneTask, sideTask}})
 	for _, k := range []string{"j", "j", "k"} {
 		m.Update(key(k))
 	}
@@ -231,7 +231,7 @@ func TestFocusingReaderRecordsHistory(t *testing.T) {
 func TestPickingHistoryShowsTicket(t *testing.T) {
 	m, st := testModel(t, config.Config{})
 	m.Update(tea.WindowSizeMsg{Width: 160, Height: 30})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask, sideTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, sideTask}})
 	st.TouchTicket(state.RecentTicket{GID: "3", Name: "Fix footer"})
 	st.TouchTicket(state.RecentTicket{GID: "9", Name: "Elsewhere", Project: "Other"})
 
@@ -262,7 +262,7 @@ func TestPickingHistoryShowsTicket(t *testing.T) {
 func TestTaskLinkOpensTicket(t *testing.T) {
 	m, _ := testModel(t, config.Config{})
 	m.Update(tea.WindowSizeMsg{Width: 160, Height: 30})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	withLink := openTask
 	withLink.HTMLNotes = `<body>See <a href="https://app.asana.com/0/0/9">Elsewhere</a></body>`
 	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: withLink}})
@@ -282,7 +282,7 @@ func TestTaskLinkOpensTicket(t *testing.T) {
 
 func TestEmptyHistoryOpensNothing(t *testing.T) {
 	m, _ := testModel(t, config.Config{})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	m.Update(key("H"))
 	if m.modal != nil || m.status != "no ticket history yet" {
 		t.Fatalf("modal = %v, status = %q", m.modal, m.status)
@@ -292,7 +292,7 @@ func TestEmptyHistoryOpensNothing(t *testing.T) {
 func TestReaderViewSwitch(t *testing.T) {
 	m, _ := testModel(t, config.Config{Reader: config.Reader{View: config.ViewCards}})
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask,
 		Comments: []asana.Story{{CreatedBy: &asana.Ref{Name: "Sam"}, CreatedAt: "2026-09-20T10:00:00Z", HTMLText: "<body>Looks good</body>"}}}})
 	cards := ansi.Strip(m.reader.GetContent())
@@ -390,7 +390,7 @@ func TestImageCellSizeChanges(t *testing.T) {
 func TestImageViewerStepsThroughImages(t *testing.T) {
 	m, _ := testModel(t, config.Config{})
 	m.deps.Images = true
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	atts := []asana.Attachment{
 		{GID: "a", Name: "one.png", Host: "asana"},
 		{GID: "b", Name: "notes.pdf", Host: "asana"},
@@ -442,11 +442,11 @@ func TestNextImageIDKeepsLowByteValid(t *testing.T) {
 
 func TestEditedTicketStaysSelectedAfterReloadDropsIt(t *testing.T) {
 	m, _ := testModel(t, config.Config{})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask, sideTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, sideTask}})
 	m.moveTo(1)
 	m.selectionChanged()
 	m.Update(editDoneMsg{gid: sideTask.GID, what: "assign"})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	if got, _ := m.selected(); got.GID != sideTask.GID || !m.viewingRow || m.cursor != 0 {
 		t.Fatalf("selected = %q, cursor = %d, viewingRow = %v; want the edited ticket on top", got.GID, m.cursor, m.viewingRow)
 	}

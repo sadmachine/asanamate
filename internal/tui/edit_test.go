@@ -284,7 +284,7 @@ func TestCompleteKeyKeepsTicketInViewing(t *testing.T) {
 	}
 	done := m.tasks[0]
 	done.Completed = true
-	m.Update(tasksMsg{tasks: []asana.Task{done}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{done}})
 	if got, _ := m.selected(); got.GID != "1" || !got.Completed || !m.viewingRow {
 		t.Fatalf("selected = %+v, viewingRow = %v; want the completed ticket kept in Viewing", got, m.viewingRow)
 	}

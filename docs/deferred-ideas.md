@@ -29,15 +29,14 @@ what project navigation shows.
 
 **Now:** `internal/jsoncmd` runs every captured command (providers, sources,
 `agents.List`, and `repo.Candidates`) with `/bin/sh -c`, bounded output, and
-process-group cleanup. `action.Command` and the editor launches in
-`internal/tui/editor.go`, `internal/tui/extensions.go`, and
-`cmd/asanamate/main.go` still build `/bin/sh -c <command>` themselves, since
-they run in the terminal without capture.
+process-group cleanup, and `internal/editor` builds every editor launch.
+`action.Command` still builds `/bin/sh -c <command>` itself, since actions
+run in the terminal without capture.
 
 **Idea:** Add one helper that builds the terminal command too.
 
-**Why deferred:** It is a one-line duplicate, and a helper for it costs more
-than it saves. Revisit if shell handling grows, for example a configurable
+**Why deferred:** It is a one-line duplicate in one place, and a helper for
+it costs more than it saves. Revisit if shell handling grows, for example a configurable
 shell or Windows support.
 
 ## Key sequences and a which-key popup

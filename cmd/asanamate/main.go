@@ -24,11 +24,13 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/charmbracelet/x/term"
+
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/browser"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/editor"
 	"github.com/sadmachine/asanamate/internal/extensions"
 	"github.com/sadmachine/asanamate/internal/feed"
 	"github.com/sadmachine/asanamate/internal/filter"
@@ -416,21 +418,15 @@ func runConfig(args []string) error {
 	if _, err := os.Stat(path); err != nil {
 		return fmt.Errorf("%w (run asanamate setup first)", err)
 	}
-	// The value may carry arguments ("code --wait"), so the shell splits it.
-	editor := editorCommand()
-	cmd := exec.Command("sh", "-c", editor+` "$1"`, "sh", path)
+	// Like git: $VISUAL, then $EDITOR, then vi.
+	name := editor.Name("vi")
+	cmd := editor.Command(name, path)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("editor %q: %w", editor, err)
+		return fmt.Errorf("editor %q: %w", name, err)
 	}
 	_, err = config.Load(path)
 	return err
-}
-
-// editorCommand is the editor `asanamate config` runs, like git: $VISUAL,
-// then $EDITOR, then vi.
-func editorCommand() string {
-	return cmp.Or(os.Getenv("VISUAL"), os.Getenv("EDITOR"), "vi")
 }
 
 func runConfigUpdate(args []string) error {
@@ -819,9 +815,8 @@ func checkFeatures(w io.Writer, cfg config.Config) {
 	if slices.ContainsFunc(cfg.Actions, func(a config.Action) bool { return strings.Contains(a.Command, "PAGER") }) {
 		tool("pager", setup.Pager(), "pager actions need it; install less or set $PAGER")
 	}
-	editor := strings.Fields(editorCommand())
-	if len(editor) > 0 {
-		tool("editor", editor[0], "asanamate config needs it; set $EDITOR or edit the config file directly")
+	if fields := strings.Fields(editor.Name("vi")); len(fields) > 0 {
+		tool("editor", fields[0], "asanamate config needs it; set $EDITOR or edit the config file directly")
 	}
 	tool("browser", browser.Opener(), "opening tickets in a browser needs it; on Linux, install xdg-utils and a desktop browser")
 	if cfg.TimeTracking.Command == "" {

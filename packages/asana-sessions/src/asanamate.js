@@ -1,7 +1,7 @@
 // The asanamate adapter: the only module that knows asanamate's conversation
 // protocol (spec 16) and its ASANAMATE_* environment. It translates requests
 // into plain engine calls.
-import { readFile } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import { lookup, open } from './engine.js';
 import { UsageError } from './errors.js';
 import { readBounded } from './input.js';
@@ -56,10 +56,7 @@ export async function asanamateOpen(c) {
   if (!path) {
     throw new UsageError('ASANAMATE_CONVERSATION_JSON is not set');
   }
-  const text = await readFile(path, 'utf8');
-  if (Buffer.byteLength(text) > MAX_REQUEST) {
-    throw new UsageError('conversation snapshot is too large');
-  }
+  const text = await readBounded(createReadStream(path), MAX_REQUEST, () => new UsageError('conversation snapshot is too large'));
   const req = request(text, 'open');
   const conv = object(req.conversation, 'conversation');
   if (typeof conv.provider !== 'string' || typeof conv.session_id !== 'string' || conv.task_gid !== req.asana.task_gid) {

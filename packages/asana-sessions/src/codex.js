@@ -5,7 +5,6 @@ import { spawn as nodeSpawn } from 'node:child_process';
 import { stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { createInterface } from 'node:readline';
 import { ProviderError, providerError } from './errors.js';
 import { UUID } from './ids.js';
 // Interactive, noninteractive, and app-server sources; defaults omit some.
@@ -142,8 +141,23 @@ export class Rpc {
     child.on('exit', () => this.fail(new ProviderError('provider_error', 'Codex app-server exited before replying')));
     child.stdin.on('error', () => {});
     child.stderr.resume();
-    const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
-    lines.on('line', (line) => this.receive(line));
+    // Split lines here rather than with readline, which buffers a whole line
+    // before any length check.
+    let partial = '';
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      partial += chunk;
+      for (let end = partial.indexOf('\n'); end >= 0; end = partial.indexOf('\n')) {
+        const line = partial.slice(0, end).replace(/\r$/, '');
+        partial = partial.slice(end + 1);
+        this.receive(line);
+      }
+      if (partial.length > MAX_LINE) {
+        partial = '';
+        this.fail(new ProviderError('provider_error', 'Codex app-server sent a malformed reply'));
+      }
+    });
+    child.stdout.on('end', () => partial && this.receive(partial));
     this.timer = setTimeout(() => this.fail(new ProviderError('incomplete', 'Codex app-server timed out')), timeoutMs);
   }
 

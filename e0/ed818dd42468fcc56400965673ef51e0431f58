@@ -1,0 +1,19 @@
+internal/tui/settings.go
+  s_ba5d61e9a44b8c::t_ec924c8a8d240a 23-26,33-47,51-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e0ed818dd42468fcc56400965673ef51e0431f58",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

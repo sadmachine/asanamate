@@ -135,7 +135,7 @@ func TestNativeAssignmentsPaginationAndEligibility(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	all, err := harvestAssignments(context.Background(), "", server.URL+"/v2/time_entries")
+	all, err := testCredentials(t, "").assignments(context.Background(), server.URL+"/v2/time_entries")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func TestAssignmentsRejectInvalidOrPartialPages(t *testing.T) {
 				}
 			}))
 			defer server.Close()
-			all, err := harvestAssignments(context.Background(), "", server.URL)
+			all, err := testCredentials(t, "").assignments(context.Background(), server.URL)
 			if err == nil || all != nil {
 				t.Fatalf("partial success: %d assignments, %v", len(all), err)
 			}

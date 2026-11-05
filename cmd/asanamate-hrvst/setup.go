@@ -38,7 +38,7 @@ func checkHarvest(ctx context.Context, out io.Writer, online bool, endpoint stri
 	if err != nil {
 		return err
 	}
-	credentials, err := loadHarvestCredentials(path)
+	credentials, err := credentialsFrom(settings, path)
 	if err != nil {
 		return err
 	}

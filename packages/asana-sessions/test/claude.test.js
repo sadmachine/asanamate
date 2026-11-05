@@ -59,6 +59,20 @@ test('generatedTitle reads the latest generated title from the transcript', asyn
   assert.equal(await claude.generatedTitle('../../etc/passwd'), null);
 });
 
+test('generatedTitle finds a title far from the end of a long transcript', async () => {
+  const env = await home();
+  const claude = createClaude({ sdk: fakeSDK([]), env });
+  await mkdir(join(env.CLAUDE_CONFIG_DIR, 'projects', '-w'));
+  const filler = JSON.stringify({ type: 'user', message: 'é'.repeat(50 * 1024) });
+  const lines = [
+    JSON.stringify({ type: 'ai-title', aiTitle: 'Old', sessionId: ID }),
+    JSON.stringify({ type: 'ai-title', aiTitle: 'Titré', sessionId: ID }),
+    filler, filler, filler,
+  ];
+  await writeFile(join(env.CLAUDE_CONFIG_DIR, 'projects', '-w', `${ID}.jsonl`), `${lines.join('\n')}\n`);
+  assert.equal(await claude.generatedTitle(ID), 'Titré');
+});
+
 test('missing history is unavailable; resumption is refused by default', async () => {
   const claude = createClaude({ sdk: fakeSDK([]), env: { CLAUDE_CONFIG_DIR: '/nonexistent/claude-home' } });
   await assert.rejects(claude.list(), (err) => err.code === 'unavailable');

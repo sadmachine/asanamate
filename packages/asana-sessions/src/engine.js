@@ -43,6 +43,7 @@ export async function lookup(providers, gid) {
   if (!validGID(gid)) {
     throw new UsageError('invalid task GID');
   }
+  const until = Date.now() + LIST_TIMEOUT_MS;
   const outcomes = await Promise.all(Object.values(providers).map(async (p) => {
     try {
       return { p, sessions: await deadline(p.list(gid), LIST_TIMEOUT_MS, p.name) };
@@ -50,7 +51,7 @@ export async function lookup(providers, gid) {
       return { p, err: providerError(err, p.name) };
     }
   }));
-  const conversations = [];
+  const linked = [];
   const diagnostics = [];
   for (const { p, sessions, err } of outcomes) {
     if (err) {
@@ -60,7 +61,7 @@ export async function lookup(providers, gid) {
     for (const s of sessions) {
       const link = ticketLink(s.name, s.tag);
       if (link.gid === gid) {
-        conversations.push({ ...record(s, gid), title: await shownTitle(p, s, gid) });
+        linked.push({ p, s });
       } else if (link.conflict.includes(gid)) {
         diagnostics.push({
           provider: p.name, code: 'metadata_conflict', severity: 'warning',
@@ -69,6 +70,11 @@ export async function lookup(providers, gid) {
       }
     }
   }
+  // Generated titles share the listing deadline; a late one keeps the saved title.
+  const conversations = await Promise.all(linked.map(async ({ p, s }) => ({
+    ...record(s, gid),
+    title: await deadline(shownTitle(p, s, gid), Math.max(0, until - Date.now()), p.name).catch(() => s.title),
+  })));
   conversations.sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''));
   const available = outcomes.some((o) => o.err?.code !== 'unavailable');
   const status = !available ? 'unavailable' : diagnostics.every((d) => d.severity === 'info') ? 'complete' : 'partial';

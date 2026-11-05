@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `asanamate list` reads generated Claude titles concurrently, backward from
+  the end of each transcript, within the listing's 8-second deadline. A
+  title that is not found in time leaves the saved title in the listing.
+- Lookups omit a `cwd` that is relative or contains NUL, which asanamate
+  rejects along with the whole response.
+- Codex reply lines and the asanamate snapshot are limited as they are read,
+  so an oversize reply or snapshot no longer has to fit in memory first.
 - In `asanamate agents --`, one provider's 6-second lookup timeout no longer
   stops the other provider's lookup.
 - Codex's PostToolUse hook starts the helper only while a Codex link is

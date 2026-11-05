@@ -31,7 +31,7 @@ type release struct {
 }
 
 func check(ctx context.Context, client *http.Client, endpoint, current string) (string, error) {
-	installed, ok := stableVersion(current)
+	installed, ok := ParseStable(current)
 	if !ok {
 		return "", nil
 	}
@@ -47,7 +47,7 @@ func check(ctx context.Context, client *http.Client, endpoint, current string) (
 			if !strings.HasPrefix(r.Tag, "v") || r.Draft || r.Prerelease {
 				continue
 			}
-			if v, ok := stableVersion(r.Tag); ok && compare(v, latest) > 0 {
+			if v, ok := ParseStable(r.Tag); ok && Compare(v, latest) > 0 {
 				latest, tag = v, r.Tag
 			}
 		}
@@ -88,9 +88,9 @@ func fetch(ctx context.Context, client *http.Client, endpoint string) ([]release
 	return releases, nil
 }
 
-// stableVersion accepts only release versions: vMAJOR.MINOR.PATCH, with an
+// ParseStable accepts only release versions: vMAJOR.MINOR.PATCH, with an
 // optional v for GoReleaser's injected version. Unknown builds never notify.
-func stableVersion(raw string) ([3]uint64, bool) {
+func ParseStable(raw string) ([3]uint64, bool) {
 	var version [3]uint64
 	parts := strings.Split(strings.TrimPrefix(raw, "v"), ".")
 	if len(parts) != len(version) {
@@ -106,7 +106,8 @@ func stableVersion(raw string) ([3]uint64, bool) {
 	return version, true
 }
 
-func compare(a, b [3]uint64) int {
+// Compare orders two parsed versions like cmp.Compare.
+func Compare(a, b [3]uint64) int {
 	for i := range a {
 		if order := cmp.Compare(a[i], b[i]); order != 0 {
 			return order

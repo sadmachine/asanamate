@@ -1,0 +1,32 @@
+internal/dateinput/dateinput_test.go
+  s_ba5d61e9a44b8c::t_0b158438679e6e 5-6,31-46,48,50-51
+cmd/asanamate-hrvst/harvest.go
+  s_ba5d61e9a44b8c::t_8b7f319a0ec787 45-48,300,481
+cmd/asanamate-hrvst/harvest_test.go
+  s_ba5d61e9a44b8c::t_c082926e4245cd 48
+  s_ba5d61e9a44b8c::t_8b7f319a0ec787 72,156-157,346-351
+  s_ba5d61e9a44b8c::t_7eed3bfdadaf5a 352
+internal/tui/form_test.go
+  s_ba5d61e9a44b8c::t_c082926e4245cd 181,183-185
+internal/writeback/writeback_test.go
+  s_ba5d61e9a44b8c::t_0b158438679e6e 10-11,477-481,483
+  s_ba5d61e9a44b8c::t_ff99bd14207633 484,495-497
+internal/ticket/ticket_test.go
+  s_ba5d61e9a44b8c::t_4a2e6e814777e5 33-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "61c4786283edb6746c8c008e36162e9d03cd65e7",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

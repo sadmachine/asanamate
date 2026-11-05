@@ -1,0 +1,33 @@
+cmd/asanamate/main.go
+  s_ba5d61e9a44b8c::t_28926db0991dfa 27,33,811-812
+  s_ba5d61e9a44b8c::t_c011743a352b85 417-418,421
+internal/tui/extensions.go
+  s_ba5d61e9a44b8c::t_28926db0991dfa 18
+  s_ba5d61e9a44b8c::t_c011743a352b85 206
+internal/editor/editor_test.go
+  s_ba5d61e9a44b8c::t_c011743a352b85 29-31
+  s_ba5d61e9a44b8c::t_a957e837e895cc 1-28,32-40
+internal/editor/editor.go
+  s_ba5d61e9a44b8c::t_a957e837e895cc 1-21
+internal/tui/editor.go
+  s_ba5d61e9a44b8c::t_28926db0991dfa 9-10
+  s_ba5d61e9a44b8c::t_c011743a352b85 35
+docs/deferred-ideas.md
+  s_ba5d61e9a44b8c::t_4bca3be887cb7f 32-34,38-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "507fe343d502d11929b87b3e458296207bfaacf1",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -28,6 +28,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/kitty"
 	"github.com/sadmachine/asanamate/internal/state"
 	"github.com/sadmachine/asanamate/internal/ticket"
+	"github.com/sadmachine/asanamate/internal/whatsnew"
 )
 
 const narrowWidth = 100
@@ -77,6 +78,8 @@ type Deps struct {
 	ReducedMotion bool
 	// NoPreview starts with the reading pane hidden, overriding layout.reader.
 	NoPreview bool
+	// WhatsNew holds the release highlights built into the binary.
+	WhatsNew []whatsnew.Section
 	// ExitOnAction runs background actions as exit actions, so asanamate
 	// quits first. It suits popups, which close when asanamate exits.
 	ExitOnAction bool
@@ -147,6 +150,7 @@ type Model struct {
 	// Modals, and the actions, edits, and time entries they collect.
 	modal          *picker
 	extension      *extensionDetail
+	whatsNew       *whatsNewModal
 	input          *inputBox // free-text modal for input actions
 	composer       *commentComposer
 	builder        *actionBuilder
@@ -239,6 +243,8 @@ func New(d Deps) *Model {
 	if m.ticketOnly() {
 		m.loading, m.readerHidden, m.navHidden, m.focusReader = false, false, true, true
 		m.openGID = d.Ticket
+	} else {
+		m.startupWhatsNew()
 	}
 	return m
 }
@@ -727,6 +733,9 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.extension != nil {
 		return m.updateExtension(msg)
+	}
+	if m.whatsNew != nil {
+		return m.updateWhatsNew(msg)
 	}
 	if m.help {
 		m.help = false
@@ -1269,6 +1278,9 @@ func (m *Model) body() string {
 	case m.extension != nil:
 		kind = overlayExtension
 		content = m.extension.view(w, mh)
+	case m.whatsNew != nil:
+		kind = overlayExtension
+		content = m.whatsNewView(w, mh)
 	case m.composer != nil && m.input == nil && !m.composer.reading:
 		content = "Loading task details…\n" + hintLine(m.accentStyle, [2]string{keyLabel("picker", "cancel"), "cancel"})
 	case m.help:

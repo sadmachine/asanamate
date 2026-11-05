@@ -39,6 +39,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/state"
 	"github.com/sadmachine/asanamate/internal/ticket"
 	"github.com/sadmachine/asanamate/internal/tui"
+	"github.com/sadmachine/asanamate/internal/whatsnew"
 	"github.com/sadmachine/asanamate/internal/writeback"
 )
 
@@ -476,6 +477,7 @@ func runRead(args []string) error {
 // the command an exit-mode action left.
 func startTUI(d tui.Deps) error {
 	d.Version = currentVersion()
+	d.WhatsNew = whatsnew.Embedded()
 	configPath, err := config.Path()
 	if err != nil {
 		return err

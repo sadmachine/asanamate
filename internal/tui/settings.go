@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/whatsnew"
 )
 
 // onOff names a toggle's state for the settings menu.
@@ -70,6 +71,12 @@ func (m *Model) openTools() {
 		}},
 		{Label: "Status history", Key: "n", Value: func() tea.Cmd { m.openStatusHistory(); return nil }},
 		{Label: "Connection status", Key: "c", Value: func() tea.Cmd { m.openConnectionStatus(); return nil }},
+		{Label: "What's new", Key: "e", Value: func() tea.Cmd { m.openWhatsNew(whatsnew.All(m.deps.WhatsNew, m.deps.Version)); return nil }},
+		{Label: "Show what's new on startup", Hint: onOff(m.deps.Config.WhatsNew.OnStartup), Key: "u", Value: func() tea.Cmd {
+			m.setWhatsNewOnStartup(!m.deps.Config.WhatsNew.OnStartup)
+			m.openTools()
+			return nil
+		}},
 	}
 	p := newPicker(pickValue(func(open func() tea.Cmd) tea.Cmd { return open() }), "Settings & tools", items)
 	p.keySelect = true

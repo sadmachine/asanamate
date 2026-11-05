@@ -66,10 +66,15 @@ install_sessions() {
         return 1
     fi
     tmp=$(mktemp -d) || return 1
+    # Remove the pack directory on interrupt too.
+    trap 'rm -rf "$tmp"' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
     archive=$(cd packages/asana-sessions && npm pack --silent --pack-destination "$tmp") &&
         node packages/asana-sessions/install.mjs "$tmp/$archive"
     status=$?
     rm -rf "$tmp"
+    trap - EXIT INT TERM
     return "$status"
 }
 

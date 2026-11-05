@@ -51,6 +51,20 @@ test('ASANA_SESSIONS_TASK links its task when the hook runs in that session', as
   assert.match(await send({ prompt: 'no task' }, { ASANA_SESSIONS_TASK: '43' }), /already links ticket 42/);
 });
 
+test('ASANA_SESSIONS_TASK applies once, so unlink and replace stick', async (t) => {
+  const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
+  const p = fakeProvider('codex', [session({ name: 'Work' })], { currentEnv: 'CODEX_THREAD_ID' });
+  const launch = { ...env, CODEX_THREAD_ID: ID, ASANA_SESSIONS_TASK: '42' };
+  const send = (e) => run(p, JSON.stringify(event(e)), launch);
+  assert.match(await send({ prompt: 'no task' }), /linked this conversation/);
+  await unlink({ codex: p }, { provider: 'codex', sessionId: ID }, { env });
+  assert.equal(await send({ prompt: 'no task' }), '');
+  assert.equal(p.store.get(ID).name, 'Work');
+  await link({ codex: p }, { provider: 'codex', sessionId: ID, gid: '43' }, { env });
+  assert.equal(await send({ prompt: 'no task' }), '');
+  assert.equal(p.store.get(ID).name, 'Work [asana:43]');
+});
+
 test('ASANA_SESSIONS_TASK from another session falls back to the prompt', async (t) => {
   const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
   const p = fakeProvider('codex', [session({ name: 'Work' })], { currentEnv: 'CODEX_THREAD_ID' });

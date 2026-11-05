@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `ASANA_SESSIONS_TASK` links its task once per conversation. An `unlink`
+  or `link --replace` in that conversation is no longer undone or flagged as
+  a conflict on every later prompt.
 - A hook that hits its deadline no longer blocks other writes to the same
   conversation for 30 seconds: locks record their owner process and free at
   once when it exits, and a slow holder no longer releases another's lock.

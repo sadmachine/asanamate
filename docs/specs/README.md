@@ -35,6 +35,7 @@ can run in parallel, each on its own branch.
 | [20-extension-discovery](20-extension-discovery.md) (done) | Shared CLI/TUI extension catalog, guided setup, contract documentation, and readiness checks | none | no |
 | [21-native-harvest](21-native-harvest.md) (implemented, native live gate pending) | Direct Harvest API, independent credentials, task selection, and compatible legacy setup | existing protocols; independent of 20 | no |
 | [22-hooks](22-hooks.md) (done) | `[[hooks]]` run a prompt or action on ticket open, assign, complete, or new activity; replaces `time_tracking.prompt_after` | none | yes |
+| [23-whats-new](23-whats-new.md) | Curated "what's new" modal on the first launch after an upgrade; `[whats_new] on_startup` turns it off | none | no |
 
 Specs 12 to 15 are complete and shipped together in v0.3.0.
 

@@ -77,8 +77,10 @@ Before a release, check open PRs and identify relevant fixes for inclusion.
 `internal/whatsnew/whats-new.md` holds the curated highlights the TUI shows
 after an upgrade and the release notes open with. Every `feat` and every
 `fix` commit gets a highlight decision, recorded in the same commit by adding
-an entry under `## Unreleased` when it earns one. The commit type does not
-pick the section; what users experience does:
+a file to `internal/whatsnew/unreleased/` when it earns one, named for the
+change (`command-palette.md`). Never edit `whats-new.md` for an unreleased
+change: one file per change keeps pull requests from conflicting. The
+commit type does not pick the section; what users experience does:
 
 - **New:** something users could not do before (a command, key, view, or
   setting). Usually a `feat`.
@@ -89,7 +91,8 @@ pick the section; what users experience does:
   behavior, and internal work.
 
 Each entry is a bold title, one or two sentences, and how to try it, under
-`### New` or `### Changed`; links are absolute.
+`### New` or `### Changed` in that file; links are absolute. A test fails
+on a file with any other heading or no entries.
 
 ## Deferred ideas
 
@@ -126,13 +129,14 @@ bump already pending, needs no new recommendation beyond naming it.
 
 When the user asks for a release, on local `main`:
 
-1. Compare `## Unreleased` in `internal/whatsnew/whats-new.md` with every
-   `feat` and `fix` commit in `git log --oneline <tag>..main`, and add any
-   missed or misfiled highlight (see What's new).
-2. In `docs/migrations.md` and `internal/whatsnew/whats-new.md`, rename
-   `## Unreleased` to the tag's `## vX.Y.Z`; the release workflow copies only
-   the sections whose heading matches the tag exactly. Delete the heading
-   instead if nothing is under it. Commit it as
+1. Compare the files in `internal/whatsnew/unreleased/` with every `feat`
+   and `fix` commit in `git log --oneline <tag>..main`, and add any missed or
+   misfiled highlight (see What's new).
+2. Run `go run ./internal/whatsnew/release vX.Y.Z`, which moves those files
+   into `internal/whatsnew/whats-new.md` under `## vX.Y.Z` and deletes them.
+   In `docs/migrations.md`, rename `## Unreleased` to `## vX.Y.Z`, or delete
+   the heading if nothing is under it. The release workflow copies only the
+   sections whose heading matches the tag exactly. Commit it as
    `docs(release): release vX.Y.Z`.
 3. Push `main` without a tag: `git push origin main`.
 4. Wait for the `ci` workflow on that exact `main` commit to finish with

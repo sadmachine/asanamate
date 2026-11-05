@@ -7,6 +7,8 @@ import { join } from 'node:path';
 import { ProviderError, providerError } from './errors.js';
 import { UUID } from './ids.js';
 
+let sdkQueue = Promise.resolve();
+
 export function createClaude({ sdk, env = process.env, starts = processStarts } = {}) {
   const load = async () => {
     try {
@@ -19,7 +21,14 @@ export function createClaude({ sdk, env = process.env, starts = processStarts } 
   const history = () => stat(join(home(), 'projects')).catch((err) => {
     throw providerError(err, 'Claude Code');
   });
-  const call = async (fn) => {
+  // SDK calls run one at a time across instances: each sets the process-wide
+  // CLAUDE_CONFIG_DIR, and overlapping calls would restore the wrong value.
+  const call = (fn) => {
+    const run = sdkQueue.then(() => callNow(fn));
+    sdkQueue = run.catch(() => {});
+    return run;
+  };
+  const callNow = async (fn) => {
     const previous = process.env.CLAUDE_CONFIG_DIR;
     try {
       // The SDK reads its config directory from the process environment only.

@@ -73,6 +73,23 @@ test('generatedTitle finds a title far from the end of a long transcript', async
   assert.equal(await claude.generatedTitle(ID), 'Titré');
 });
 
+test('concurrent calls with different homes each see their own config directory', async () => {
+  const seen = [];
+  const sdk = {
+    getSessionInfo: async (id) => {
+      const dir = process.env.CLAUDE_CONFIG_DIR;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      seen.push([id, dir, process.env.CLAUDE_CONFIG_DIR]);
+      return undefined;
+    },
+  };
+  const [a, b] = [await home(), await home()];
+  const before = process.env.CLAUDE_CONFIG_DIR;
+  await Promise.all([createClaude({ sdk, env: a }).read(ID), createClaude({ sdk, env: b }).read(ID)]);
+  assert.deepEqual(seen.map(([, start, end]) => [start, end]), [[a.CLAUDE_CONFIG_DIR, a.CLAUDE_CONFIG_DIR], [b.CLAUDE_CONFIG_DIR, b.CLAUDE_CONFIG_DIR]]);
+  assert.equal(process.env.CLAUDE_CONFIG_DIR, before);
+});
+
 test('missing history is unavailable; resumption is refused by default', async () => {
   const claude = createClaude({ sdk: fakeSDK([]), env: { CLAUDE_CONFIG_DIR: '/nonexistent/claude-home' } });
   await assert.rejects(claude.list(), (err) => err.code === 'unavailable');

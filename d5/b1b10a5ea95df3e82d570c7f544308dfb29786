@@ -1,0 +1,19 @@
+internal/whatsnew/unreleased/command-palette.md
+  s_a29860173a8c8e::t_acfb0418b311ea 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d5b1b10a5ea95df3e82d570c7f544308dfb29786",
+  "prompts": {},
+  "sessions": {
+    "s_a29860173a8c8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28687d57-fb4d-4e2d-8355-acb12fff8b1f",
+        "model": "unknown"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

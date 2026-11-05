@@ -147,17 +147,23 @@ func (m *Model) repeatAction() tea.Cmd {
 		m.setStatus(statusInfo, "no action run yet")
 		return nil
 	}
+	return m.runActionAt(m.lastAction)
+}
+
+// runActionAt runs action i on the current selection, when the selection is
+// the context the action needs.
+func (m *Model) runActionAt(i int) tea.Cmd {
 	context, ok := m.startRun()
 	if !ok {
 		return nil
 	}
-	a := m.deps.Config.Actions[m.lastAction]
+	a := m.deps.Config.Actions[i]
 	if a.Context != "" && a.Context != context {
 		m.run = nil
 		m.setStatus(statusWarning, a.Name+" needs a highlighted "+a.Context)
 		return nil
 	}
-	return m.pickedAction(m.lastAction)
+	return m.pickedAction(i)
 }
 
 // selectedComment returns the comment highlighted in the reader, or nil.

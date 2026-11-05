@@ -168,6 +168,7 @@ func handlers() map[string]handler {
 		"history":       {splitOnly: true, listOnly: true, run: do((*Model).openHistory)},
 		"next_new":      {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.nextNew() }},
 		"action":        {run: menu(func(m *Model) func() { return m.openActionMenu })},
+		"palette":       {run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.openPalette() }},
 		"repeat_action": {run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.requestMenu(m.repeatAction) }},
 		"pin":           {listOnly: true, run: (*Model).togglePin},
 		"edit":          {run: menu(func(m *Model) func() { return m.openEditMenu })},
@@ -293,19 +294,23 @@ func (m *Model) readsInPlace() bool {
 	return m.readerView != config.ViewMarkdown && m.clipped[m.fieldKey]
 }
 
-// available reports whether b runs in the current layout.
+// available reports whether a key runs b in the current layout.
 func (m *Model) available(b binding) bool {
-	if b.listOnly && m.ticketOnly() {
+	return len(b.keys) > 0 && m.runnable(b)
+}
+
+// runnable reports whether b runs in the current layout, bound to a key or
+// not, such as from the command palette.
+func (m *Model) runnable(b binding) bool {
+	switch {
+	case b.listOnly && m.ticketOnly():
 		return false
+	case b.Name == "focus_views":
+		return m.showNav()
+	case b.Name == "next_pane" || b.Name == "prev_pane":
+		return m.readerOn() || m.showNav()
 	}
-	if b.Name == "focus_views" {
-		return len(b.keys) > 0 && m.showNav()
-	}
-	if b.Name == "next_pane" || b.Name == "prev_pane" {
-		return len(b.keys) > 0 && (m.readerOn() || m.showNav())
-	}
-	return len(b.keys) > 0 && (!b.splitOnly || m.readerOn()) &&
-		(b.Name != "log_time" || m.deps.Config.TimeTrackingEnabled())
+	return (!b.splitOnly || m.readerOn()) && (b.Name != "log_time" || m.deps.Config.TimeTrackingEnabled())
 }
 
 // bindingFor returns the binding k runs in the current layout.

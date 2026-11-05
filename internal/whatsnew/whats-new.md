@@ -3,6 +3,15 @@
 Curated highlights shown after an upgrade. Each version gets a `### New`
 section and, only when needed, a `### Changed` section; see AGENTS.md.
 
+## Unreleased
+
+### New
+
+- **Command palette.** Find and run any command without remembering its
+  key: type a few words, see the command's key, and press `enter`. It also
+  lists your actions and commands that have no key. Try it: press `:` and
+  type `due`.
+
 ## v0.4.4
 
 ### New

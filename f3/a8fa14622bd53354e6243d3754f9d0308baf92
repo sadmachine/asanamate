@@ -1,0 +1,46 @@
+internal/tui/feedpanel_test.go
+  s_a29860173a8c8e::t_6936d92fec5832 6,291-293,296,300-302
+  s_a29860173a8c8e::t_6452ed5df02674 303
+internal/tui/filterhelp.go
+  s_a29860173a8c8e::t_56303023003576 103-106
+  s_a29860173a8c8e::t_7a3d52b3da4070 88-89
+cmd/asanamate/main.go
+  s_a29860173a8c8e::t_2c86fde4769324 617-622
+internal/asana/api.go
+  s_a29860173a8c8e::t_0e520f7c296924 15
+internal/filter/filter.go
+  s_a29860173a8c8e::t_2c86fde4769324 135-137
+  s_a29860173a8c8e::t_0e520f7c296924 10-20,24,33-43,121-122,124-134,138-151,157,180-182,185,187,189-198
+README.md
+  s_a29860173a8c8e::t_ee557e7413cff3 558-563
+  s_a29860173a8c8e::t_fe232b0506b85b 564
+internal/tui/listrow.go
+  s_a29860173a8c8e::t_2c86fde4769324 92-96,99-101,103-106
+internal/tui/feedpanel.go
+  s_a29860173a8c8e::t_bfb4b24e040fe3 36,86,175-176,180-183,222,225-233,242-249
+  s_a29860173a8c8e::t_6936d92fec5832 203,205-206,208-210
+  s_a29860173a8c8e::t_379a956efa3ad7 7,29-35,37
+  s_a29860173a8c8e::t_f7d3445293c485 184-186,190,193-202,204,207,211-213,215-218
+internal/filter/filter_test.go
+  s_a29860173a8c8e::t_009c375b0d8507 4
+  s_a29860173a8c8e::t_6936d92fec5832 89,118-123,136
+  s_a29860173a8c8e::t_f41bf35f12d3e0 156-199
+internal/asana/types.go
+  s_a29860173a8c8e::t_0e520f7c296924 27-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f3a8fa14622bd53354e6243d3754f9d0308baf92",
+  "prompts": {},
+  "sessions": {
+    "s_a29860173a8c8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28687d57-fb4d-4e2d-8355-acb12fff8b1f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -2,7 +2,11 @@
 package whatsnew
 
 import (
-	_ "embed"
+	"embed"
+	"fmt"
+	"io/fs"
+	"path"
+	"slices"
 	"strings"
 
 	"github.com/sadmachine/asanamate/internal/updatecheck"
@@ -10,6 +14,118 @@ import (
 
 //go:embed whats-new.md
 var content string
+
+// unreleasedFS holds unreleased/, one highlights file per change.
+//
+//go:embed unreleased
+var unreleasedFS embed.FS
+
+// UnreleasedDir is where each change's highlights wait for a release,
+// relative to this package.
+const UnreleasedDir = "unreleased"
+
+// unreleasedReadme explains UnreleasedDir and is not a highlight.
+const unreleasedReadme = "README.md"
+
+// fragmentHeadings are the headings a highlights file may use, in the order
+// a release lists them.
+var fragmentHeadings = []string{"### New", "### Changed"}
+
+// Fragment is one change's highlights file: its name and Markdown.
+type Fragment struct {
+	Name, Body string
+}
+
+// ReadFragments returns the highlights files in fsys's dir, by name,
+// leaving out its README.
+func ReadFragments(fsys fs.FS, dir string) ([]Fragment, error) {
+	entries, err := fs.ReadDir(fsys, dir)
+	if err != nil {
+		return nil, err
+	}
+	var frags []Fragment
+	for _, e := range entries {
+		if e.IsDir() || e.Name() == unreleasedReadme || path.Ext(e.Name()) != ".md" {
+			continue
+		}
+		body, err := fs.ReadFile(fsys, path.Join(dir, e.Name()))
+		if err != nil {
+			return nil, err
+		}
+		frags = append(frags, Fragment{Name: e.Name(), Body: string(body)})
+	}
+	return frags, nil
+}
+
+// UnreleasedBody merges fragments into one version's body: each heading
+// once, in fragmentHeadings order, with every fragment's entries under it
+// in file name order. It names the first fragment that is empty, has text
+// outside a heading, or uses another heading.
+func UnreleasedBody(frags []Fragment) (string, error) {
+	entries := map[string][]string{}
+	for _, f := range frags {
+		heading, any := "", false
+		var cur strings.Builder
+		flush := func() {
+			if text := strings.TrimSpace(cur.String()); text != "" {
+				entries[heading] = append(entries[heading], text)
+				any = true
+			}
+			cur.Reset()
+		}
+		for line := range strings.Lines(f.Body) {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "#") {
+				if !slices.Contains(fragmentHeadings, trimmed) {
+					return "", fmt.Errorf("%s: heading %q must be one of %s", f.Name, trimmed, strings.Join(fragmentHeadings, ", "))
+				}
+				flush()
+				heading = trimmed
+				continue
+			}
+			if heading == "" && trimmed != "" {
+				return "", fmt.Errorf("%s: text must follow a %s heading", f.Name, strings.Join(fragmentHeadings, " or "))
+			}
+			cur.WriteString(line)
+		}
+		flush()
+		if !any {
+			return "", fmt.Errorf("%s: has no entries", f.Name)
+		}
+	}
+	var parts []string
+	for _, h := range fragmentHeadings {
+		if len(entries[h]) > 0 {
+			parts = append(parts, h+"\n\n"+strings.Join(entries[h], "\n"))
+		}
+	}
+	return strings.Join(parts, "\n\n"), nil
+}
+
+// Release returns src, the highlights file, with frags merged under a new
+// "## version" heading above the newest version. It returns src unchanged
+// when there are no fragments, and fails when version is already there.
+func Release(src, version string, frags []Fragment) (string, error) {
+	// The release workflow copies the section whose heading is the tag.
+	if _, ok := updatecheck.ParseStable(version); !ok || !strings.HasPrefix(version, "v") {
+		return "", fmt.Errorf("version %q must look like vX.Y.Z", version)
+	}
+	if slices.ContainsFunc(Parse(src), func(s Section) bool { return s.Version == version }) {
+		return "", fmt.Errorf("%s already has highlights", version)
+	}
+	body, err := UnreleasedBody(frags)
+	if err != nil || body == "" {
+		return src, err
+	}
+	section := "## " + version + "\n\n" + body + "\n\n"
+	if strings.HasPrefix(src, "## ") {
+		return section + src, nil
+	}
+	if i := strings.Index(src, "\n## "); i >= 0 {
+		return src[:i+1] + section + src[i+1:], nil
+	}
+	return strings.TrimRight(src, "\n") + "\n\n" + section[:len(section)-1], nil
+}
 
 const unreleased = "Unreleased"
 
@@ -46,8 +162,20 @@ func Parse(src string) []Section {
 	return sections
 }
 
-// Embedded returns the highlights built into this binary.
-func Embedded() []Section { return Parse(content) }
+// Embedded returns the highlights built into this binary, led by an
+// Unreleased section built from the waiting highlights files, if any.
+// Released builds never show Unreleased; see Since and All.
+func Embedded() []Section {
+	sections := Parse(content)
+	frags, err := ReadFragments(unreleasedFS, UnreleasedDir)
+	if err != nil {
+		return sections
+	}
+	if body, err := UnreleasedBody(frags); err == nil && body != "" {
+		sections = append([]Section{{Version: unreleased, Body: body}}, sections...)
+	}
+	return sections
+}
 
 // Newer reports whether current is a stable release newer than lastSeen. A
 // lastSeen that is missing or not a stable version counts as older.

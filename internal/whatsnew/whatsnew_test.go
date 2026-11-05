@@ -1,6 +1,7 @@
 package whatsnew
 
 import (
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -95,4 +96,59 @@ func TestEmbeddedContentIsWellFormed(t *testing.T) {
 		prev = v
 	}
 	Embedded() // must not panic
+}
+
+func TestUnreleasedBodyMergesFragmentsByHeading(t *testing.T) {
+	frags := []Fragment{
+		{Name: "a.md", Body: "### New\n\n- **A.** New thing.\n\n### Changed\n\n- **A2.** Moved thing.\n"},
+		{Name: "b.md", Body: "\n### New\n\n- **B.** Another,\n  over two lines.\n"},
+	}
+	got, err := UnreleasedBody(frags)
+	want := "### New\n\n- **A.** New thing.\n- **B.** Another,\n  over two lines.\n\n### Changed\n\n- **A2.** Moved thing."
+	if err != nil || got != want {
+		t.Fatalf("body = %q, %v\nwant %q", got, err, want)
+	}
+	for _, bad := range []Fragment{
+		{Name: "x.md", Body: "### Fixed\n\n- nope\n"},
+		{Name: "x.md", Body: "- no heading\n"},
+		{Name: "x.md", Body: "### New\n\n"},
+	} {
+		if _, err := UnreleasedBody([]Fragment{bad}); err == nil || !strings.HasPrefix(err.Error(), "x.md: ") {
+			t.Errorf("fragment %q: error = %v, want one naming x.md", bad.Body, err)
+		}
+	}
+}
+
+func TestReleaseAddsAVersionAboveTheNewest(t *testing.T) {
+	src := "# What's new\n\nIntro.\n\n## v0.4.4\n\n### New\n\n- **Old.**\n"
+	frags := []Fragment{{Name: "a.md", Body: "### New\n\n- **Fresh.**\n"}}
+	got, err := Release(src, "v0.4.5", frags)
+	want := "# What's new\n\nIntro.\n\n## v0.4.5\n\n### New\n\n- **Fresh.**\n\n## v0.4.4\n\n### New\n\n- **Old.**\n"
+	if err != nil || got != want {
+		t.Fatalf("release = %q, %v\nwant %q", got, err, want)
+	}
+	if s := Parse(got); len(s) != 2 || s[0].Version != "v0.4.5" {
+		t.Fatalf("parsed = %+v", s)
+	}
+	if got, err := Release(src, "v0.4.5", nil); err != nil || got != src {
+		t.Fatal("no fragments must leave the file unchanged")
+	}
+	if _, err := Release(src, "v0.4.4", frags); err == nil {
+		t.Fatal("a version already present must fail")
+	}
+	if _, err := Release(src, "0.4.5", frags); err == nil {
+		t.Fatal("a version without v must fail")
+	}
+}
+
+// The waiting highlights files must merge, so a malformed one fails CI
+// before it reaches a release.
+func TestUnreleasedFilesAreValid(t *testing.T) {
+	frags, err := ReadFragments(os.DirFS("."), UnreleasedDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := UnreleasedBody(frags); err != nil {
+		t.Fatal(err)
+	}
 }

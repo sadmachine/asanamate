@@ -386,7 +386,7 @@ key press.
 | `t` | log completed time for the selected ticket (only when time tracking is configured) |
 | `f` | attachments: view images inline (`j`/`k` step between them) or open in the browser |
 | `u` | links in the selected ticket's description and comments, in order, by label and URL (the ticket's own link and user mentions are left out); search matches either, `enter` opens an Asana task link as a ticket in asanamate and any other link in the browser, and `y` (`ctrl+y` while searching) copies it (requires terminal OSC 52 support) |
-| `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) |
+| `b` | group the list by a field (built-ins, `list.fields`, or a custom field on the loaded tickets) or a [rule grouping](#rule-groupings) such as `state` |
 | `B` | sort by field and direction, or restore Asana order |
 | `-` | fold the selected ticket's group to its header, or open the folded group under the cursor (also `enter` or a double-click on its header) |
 | `+` | fold every group except the selected one, or open them all when they are already folded |
@@ -555,7 +555,13 @@ Space-separated terms, all of which must match:
 - `agent:any`, `agent:none`, `agent:<state>` match linked [agents](#agents-optional)
 - `branch:any` matches a ticket with a branch saved for it (**Set branch**) or
   set in its `branch_field`; `branch:none` one whose branch falls back to its
-  ID field or title slug
+  ID field or title slug; `branch:<name>` that exact branch
+- `git:dirty` matches a ticket whose branch has uncommitted files and
+  `git:unpushed` one with commits not pushed (or no upstream), in the working
+  trees the [Feed panel](#feed-panel)'s git check finds; `git:any` either,
+  `git:none` neither. They update when that check runs
+- `blocked:any` matches a ticket waiting on a dependency that is still open,
+  `blocked:none` one that is not
 - `-term` negates a term; `"double quotes"` group words
 
 Example: `is:open section:"in progress" -tag:blocked`. Set the startup filter
@@ -781,7 +787,8 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 | `conversations.open` | `""` (off) | foreground opener reading a private selection snapshot, such as `"asana-sessions asanamate open"`; requires `conversations.command`. asana-sessions is not bundled |
 | `symbols` | `unicode` on UTF-8, else `ascii` | `unicode`, `nerd`, or `ascii` for ticket markers and agent states |
 | `reduced_motion` | OS setting | `true` shows static agent symbols instead of the spinner |
-| `list.default_view.group_by` | `""` (ungrouped) | starting grouping, until the project has its own saved view: any `list.fields` name; `b` picks another |
+| `list.default_view.group_by` | `""` (ungrouped) | starting grouping, until the project has its own saved view: any `list.fields` name or [rule grouping](#rule-groupings); `b` picks another |
+| `groupings` | built-in `state` | [rule groupings](#rule-groupings): `name`, then `[[groupings.sections]]` with a `label` and `match` filter queries |
 | `list.default_view.sort.by` | `""` (Asana order) | starting sort, until the project has its own saved view: any list field or `title`; `B` picks a field and direction; applies within groups or across an ungrouped list |
 | `list.default_view.sort.direction` | `"asc"` | `asc` (earliest dates / A–Z) or `desc` (latest dates / Z–A); missing values always last |
 | `list.header.style` | `"rule"` | group headers: `rule` (`── Label (n) ───`) or `bar` (reversed bar) |
@@ -859,7 +866,43 @@ column has no value on tasks where the field is absent.
 `list.default_view.group_by` takes the same names and puts a `Value (count)`
 header above each group. Groups keep Asana's order (first seen), with tickets missing
 the value last. `due` groups into Overdue, Today, Tomorrow, Next 7 days, Later,
-and No due date.
+and No due date. It also takes a rule grouping's name.
+
+#### Rule groupings
+
+A rule grouping sorts tickets into sections you define with
+[filter](#filtering) queries: each ticket joins the first section with a
+`match` query it satisfies, and the rest go to **Other**, last. Sections keep
+the order you list them in. The built-in `state` grouping sorts your work by
+where it stands:
+
+```toml
+[[groupings]]
+name = "state"
+
+[[groupings.sections]]
+label = "Needs me"
+match = ["agent:waiting"]
+
+[[groupings.sections]]
+label = "Active"
+match = ["agent:working", "git:dirty", "git:unpushed"]
+
+[[groupings.sections]]
+label = "Blocked"
+match = ["blocked:any"]
+
+[[groupings.sections]]
+label = "Ready"
+match = ["is:open"]
+```
+
+Add your own `[[groupings]]` the same way; each joins the `b` picker and can
+be a `list.default_view.group_by` or a saved view's grouping. A grouping
+named like a built-in one replaces it, so copy `state` above to change it.
+Names must be unique, each section needs a label (not `Other`) and at least
+one query, and a query with an unknown key, such as `agnet:waiting`, is an
+error rather than title words.
 
 `list.default_view.sort.by` sorts tickets within each group without changing
 group order, or the whole list when ungrouped. Press `B` to pick a field and direction,

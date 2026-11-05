@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"errors"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -287,13 +288,18 @@ func TestGitItemsReportPendingWork(t *testing.T) {
 		}
 	}
 	targets := []gitTarget{{gid: "1", branch: "feat/x", repos: []string{main}}, {gid: "2", branch: "feat/x", repos: []string{main}}, {gid: "3", branch: "none", repos: []string{main}}}
-	if items, n := gitItems(context.Background(), targets); len(items) != 1 || items[0].Text != "not pushed" || items[0].TicketGID != "1" || n != 1 {
-		t.Fatalf("clean branch without upstream = %+v, %d unpushed", items, n)
+	if items, n, states := gitItems(context.Background(), targets); len(items) != 1 || items[0].Text != "not pushed" || items[0].TicketGID != "1" || n != 1 ||
+		!maps.EqualFunc(states, map[string][]string{"1": {gitUnpushed}, "2": {gitUnpushed}}, slices.Equal) {
+		t.Fatalf("clean branch without upstream = %+v, %d unpushed, states %v", items, n, states)
 	}
 	os.WriteFile(filepath.Join(wt, "a.txt"), []byte("x"), 0o600)
-	items, n := gitItems(context.Background(), targets)
+	items, n, states := gitItems(context.Background(), targets)
 	if got := itemTexts(wrapRows(items)); !slices.Equal(got, []string{"1 uncommitted file", "not pushed"}) || n != 1 {
 		t.Fatalf("dirty = %q, %d unpushed", got, n)
+	}
+	// Tickets sharing a working tree share its git values; the items show once.
+	if want := []string{gitDirty, gitUnpushed}; !slices.Equal(states["1"], want) || !slices.Equal(states["2"], want) || states["3"] != nil {
+		t.Fatalf("dirty states = %v", states)
 	}
 	m := feedModel(t)
 	m.Update(gitMsg{seq: m.feed.gitSeq, items: items, unpushed: 2})

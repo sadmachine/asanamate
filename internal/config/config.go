@@ -75,15 +75,18 @@ type Config struct {
 	ProjectLinks ProjectLinks `toml:"project_links"`
 	// Hooks run a built-in prompt or an action when an event happens to a
 	// ticket, in this order.
-	Hooks    []Hook   `toml:"hooks"`
-	Layout   Layout   `toml:"layout"`
-	List     List     `toml:"list"`
-	Reader   Reader   `toml:"reader"`
-	Images   Images   `toml:"images"`
-	Picker   Picker   `toml:"picker"`
-	Activity Activity `toml:"activity"`
-	Feed     Feed     `toml:"feed"`
-	Mouse    Mouse    `toml:"mouse"`
+	Hooks []Hook `toml:"hooks"`
+	// Groupings are named rule groupings for the list, besides the
+	// built-in ones; see AllGroupings.
+	Groupings []Grouping `toml:"groupings"`
+	Layout    Layout     `toml:"layout"`
+	List      List       `toml:"list"`
+	Reader    Reader     `toml:"reader"`
+	Images    Images     `toml:"images"`
+	Picker    Picker     `toml:"picker"`
+	Activity  Activity   `toml:"activity"`
+	Feed      Feed       `toml:"feed"`
+	Mouse     Mouse      `toml:"mouse"`
 	// WhatsNew controls the what's-new modal shown after an upgrade.
 	WhatsNew WhatsNew `toml:"whats_new"`
 	// Keys overrides key bindings: scope, then binding name, then keys. See
@@ -568,6 +571,13 @@ func (c Config) validate() error {
 		if err := h.validate(c.TimeTrackingEnabled()); err != nil {
 			return fmt.Errorf("hooks[%d].%w", i+1, err)
 		}
+	}
+	var names []string
+	for i, g := range c.Groupings {
+		if err := g.validate(names); err != nil {
+			return fmt.Errorf("groupings[%d].%w", i+1, err)
+		}
+		names = append(names, g.Name)
 	}
 	if c.ProjectLinks.Command != "" && strings.TrimSpace(c.ProjectLinks.Command) == "" {
 		return errors.New("project_links.command must not be blank; remove it to turn project links off")

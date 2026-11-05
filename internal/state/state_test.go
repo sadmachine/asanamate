@@ -256,3 +256,22 @@ func TestEmptySeenBaselineSurvivesSave(t *testing.T) {
 		t.Fatal("an empty baseline was lost, so new tasks would be seeded as seen")
 	}
 }
+
+func TestFreshAndLastSeenVersion(t *testing.T) {
+	path := filepath.Join(t.TempDir(), FileName)
+	s, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !s.Fresh() {
+		t.Fatal("missing file is not fresh")
+	}
+	s.LastSeenVersion = "v0.5.0"
+	if err := s.Save(); err != nil {
+		t.Fatal(err)
+	}
+	again, err := Load(path)
+	if err != nil || again.Fresh() || again.LastSeenVersion != "v0.5.0" {
+		t.Fatalf("fresh = %v, last = %q, err = %v", again.Fresh(), again.LastSeenVersion, err)
+	}
+}

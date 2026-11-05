@@ -283,9 +283,10 @@ At 100 columns and wider, the ticket list and the reader sit side by side in
 bordered panels; the focused one has an accent-colored border. The list widens
 to fit full ticket titles, but leaves the reader at least 80 columns and cuts
 titles that no longer fit. At 160 columns
-and wider, a views panel on the left lists My Tasks, recent projects, the
-groupings, sorting, and running agents: press `0`, move with `j`/`k`, and open one
-with `enter`. Press `Z` to show or hide this panel independently of the reader.
+and wider, a Places panel on the left lists where you can go: My Tasks,
+Activity, your recent saved views, and recent projects. Press `0`, move with
+`j`/`k`, and open one with `enter`. How the open place is grouped, sorted, or
+filtered shows in the bottom bar and changes with `b`, `B`, and `/`. Press `Z` to show or hide this panel independently of the reader.
 It hides automatically below 160 columns. In a reader at least 90 columns wide,
 the cards view puts the agents and subtasks beside the details card. The cards
 view's Comments and All tabs show the ticket's comments, or its whole activity
@@ -322,9 +323,9 @@ Fit asanamate to its spot with the `[layout]` table in `config.toml`:
 - `list_width = 60` fixes the list at 60 columns, borders included, and gives
   the reader the rest of the width. `=` and the automatic fitting leave it
   alone. When fewer than 30 columns would be left for the reader beside the
-  list and the views panel, the reader hides, as in narrow terminals.
+  list and the Places panel, the reader hides, as in narrow terminals.
 - `focus.resize = false` keeps the list one width. By default, the list fits
-  full titles while it, the views panel, or the Feed panel has focus, and
+  full titles while it, the Places panel, or the Feed panel has focus, and
   shrinks to 40-column titles while the reader has focus, giving the reader
   the rest.
 - `focus.dim = false` keeps every pane at full color. By default, panes
@@ -346,7 +347,7 @@ add it to another project. The picker includes accessible, unarchived projects
 in your workspace, even ones you haven't joined, and excludes projects already
 on the ticket. Project navigation still lists only projects you've joined.
 
-The bottom bar shows the mode (`NORMAL`, `READ`, `EDIT`, `FILTER`, `VIEWS`,
+The bottom bar shows the mode (`NORMAL`, `READ`, `EDIT`, `FILTER`, `PLACES`,
 or `FEED`), the view, filter, grouping, sorting, ticket count, and agents, with the keys
 for what has focus on the right. Messages take the keys' place until the next
 key press.
@@ -360,11 +361,11 @@ key press.
 | `g`/`G` | first/last ticket; in the reader, jump to its top or bottom (in cards view, selecting the first or last field, section, or comment) |
 | `ctrl+d`/`ctrl+u` | half page down/up in the list, or scroll the reader half a page |
 | `ctrl+f`/`ctrl+b` (or pgdown/pgup) | page down/up in the list, or scroll the reader a page |
-| `tab`/`shift+tab`, `l`/`h` | focus the next/previous pane: the views panel (wide screens), the list, and the reader; in the cards view, entering the reader selects its first editable row, the title |
+| `tab`/`shift+tab`, `l`/`h` | focus the next/previous pane: the Places panel (wide screens), the list, and the reader; in the cards view, entering the reader selects its first editable row, the title |
 | `enter` | in the list, open the ticket in the reader; in the reader, edit the selected row (the title opens the title editor; Add comment opens the comment editor; the Comments and All tabs switch between comments and the whole activity; Show all lists the older entries, since the cards view shows the newest `reader.comments.latest`), show a comment cut to its preview in full, or open the selected comment's menu: `e` edits, `d` deletes after confirmation, `r` reacts with an emoji (`1`-`9` pick one; picking one you reacted with removes it). Edit and Delete appear only for comments Asana allows you to edit |
 | `'` | jump to a section of the reader's cards view, from the list or the reader: `t` details, `a` agents, `d` description, `s` subtasks, `b` blocked by, `B` blocking, `f` attachments, `c` comments; the menu lists only the sections the ticket has, and picking one focuses the reader on it and outlines the section in the accent color for a moment |
 | `esc` | return focus to the list |
-| `0` / `1` / `2` / `3` | focus the views panel (wide screens) / the list / the reader / the Feed panel (expanding it) |
+| `0` / `1` / `2` / `3` | focus the Places panel (wide screens) / the list / the reader / the Feed panel (expanding it) |
 | `F` | expand or collapse the Feed panel until the view changes |
 | `/` | edit the filter (available fields appear while editing; `ctrl+/` opens the filter guide; `enter` keeps the filter, `esc` restores the previous one) |
 | `S` | search the current ticket list: type words from a title or a ticket GID, use arrows or `ctrl+n`/`ctrl+p` to move, and `enter` to open the ticket in the reader. The original filter stays unchanged; `esc` clears the search, then `esc` closes. Remap with `keys.main.search`; an existing binding for `S` takes priority over this default |
@@ -393,7 +394,7 @@ key press.
 | `=` | fit the list pane to its content (also on project, grouping, sorting, and filter changes); does nothing while `layout.list_width` is set |
 | `v` | switch the reader to its next view: cards, streamlined, then markdown |
 | `z` | show or hide the reader for the session (see [Layout](#layout)) |
-| `Z` | show or hide the views sidebar; automatically hidden below 160 columns |
+| `Z` | show or hide the Places panel; automatically hidden below 160 columns |
 | `V` | recall or manage saved views |
 | `]` / `[` | apply the next/previous saved view, in name order |
 | `ctrl+s` | save the current filter, grouping, and sorting under a name |
@@ -514,9 +515,9 @@ under a **New** header; a ticket you open stays there until you move away.
 The mouse does what keys do, on what it points at:
 
 - **Wheel:** scrolls the reader, or moves the selection in the list, the
-  views panel, the Feed panel, Activity, pickers, and forms.
+  Places panel, the Feed panel, Activity, pickers, and forms.
 - **Click:** focuses a pane and selects the row, picker item, or form field
-  under the pointer; in the views panel it opens the row, as `enter` does.
+  under the pointer; in the Places panel it opens the row, as `enter` does.
   In a text editor, such as the comment composer, it moves the cursor. A
   click closes key help, dismisses a toast or an error notice, and runs a
   statusline hint's key, such as `e edit`. Hints for a pair of keys, such as
@@ -569,7 +570,7 @@ current filter, grouping, sorting, and folded groups. Press `V` to search saved 
 across projects and persist between sessions; they do not switch projects.
 Changing a filter, grouping, or sorting after recall leaves the saved view unchanged.
 
-On wide terminals, the Views panel shows the current saved view and up to four
+On wide terminals, the Places panel shows the current saved view and up to four
 other recently used views. Focus it with `0`, select a view with `j`/`k`, then
 press `enter` to apply it to the current project. `V` offers the full list;
 `[` and `]` still cycle in name order. Views that have never been used appear
@@ -577,7 +578,7 @@ alphabetically after recent views.
 
 The ticket list's title shows the current view name, or `Custom` when no saved
 view is associated with the current project. After edits it shows `(modified)`;
-the Views panel marks the name with `*`. Reverting those edits clears the mark.
+the Places panel marks the name with `*`. Reverting those edits clears the mark.
 In narrow and list-only layouts, the name appears in the status bar instead.
 The view name and its settings are remembered separately for My Tasks and each
 project, while recently used view names are shared across projects.
@@ -588,7 +589,7 @@ work in narrow terminals and list-only mode too.
 
 ### Activity
 
-Press `I`, or choose Activity in the wide Views panel. The view shows Asana's
+Press `I`, or choose Activity in the wide Places panel. The view shows Asana's
 stories from recently changed tasks across the workspace, including tasks you
 reassigned to someone else, newest first.
 
@@ -597,7 +598,7 @@ Activity scans in the background at launch and every
 first scan covers 30 days; later scans fetch only what changed since the last
 one. Results are cached in `~/.cache/asanamate/activity.json`, so a restart
 keeps them. The cache holds comment and task text; delete the file to clear
-it. In the Views panel, the Activity row counts new related events (not your
+it. In the Places panel, the Activity row counts new related events (not your
 own actions or automated reminders) found since you last opened Activity.
 Opening it clears the count and badges those events `NEW` (styled by
 `colors.new`, like changed My Tasks tickets) until you leave.
@@ -644,7 +645,7 @@ such as `3h 10m logged · 4 new · 2 unpushed`, each led by an icon when
 - **Upcoming** items from feeds, such as meetings, soonest first under a
   `Next` header, shown as `in 25m`.
 - **Asana:** today's related Activity events (not your own actions or
-  reminders); the summary counts new ones, as the Views panel does.
+  reminders); the summary counts new ones, as the Places panel does.
 - **Agents:** each running agent once, from when it entered its state, such
   as `mocpa · completed`. Agents linked to no loaded ticket show as
   `no ticket`, so agents on other branches are visible somewhere. Agents
@@ -681,7 +682,7 @@ commands = ["asanamate-hrvst"]
 - `asanamate --hide-preview` starts with the preview hidden, whatever
   `[layout]` says; `z` shows or hides it for the session. It is handy in a small
   popup or a tmux sidebar: pick a ticket, press `space` or `a`, and run an
-  action. The views sidebar is independent: `Z` toggles it, and it hides
+  action. The Places panel is independent: `Z` toggles it, and it hides
   automatically below 160 columns (see [Layout](#layout)).
 
   ```tmux
@@ -704,7 +705,7 @@ commands = ["asanamate-hrvst"]
 - `asanamate show <gid>` prints one ticket as Markdown. `--format json` prints
   JSON instead.
 - `asanamate read <gid>` opens one ticket in the reader, full screen, with no
-  list, views panel, or pane border. The reader's keys, ticket edits, and
+  list, Places panel, or pane border. The reader's keys, ticket edits, and
   actions work as usual; `r` and the auto-update reload only that ticket, and
   `q` quits. `--exit-on-action` works as it does for the list.
 
@@ -862,8 +863,8 @@ the value last. `due` groups into Overdue, Today, Tomorrow, Next 7 days, Later,
 and No due date.
 
 `list.default_view.sort.by` sorts tickets within each group without changing
-group order, or the whole list when ungrouped. Press `B` to pick a field and direction,
-or choose one from the wide terminal's Sort by section. Due dates sort
+group order, or the whole list when ungrouped. Press `B` to pick a field and direction.
+Due dates sort
 chronologically; other fields sort alphabetically, ignoring case. Equal
 values keep Asana order. Missing or invalid due dates sort last in both
 directions. Pinned tickets keep their own order at the top. Sorting persists
@@ -1032,7 +1033,7 @@ pink = "#f76c7c"
 | `accent` | informational status messages, reader headings, focused panel border, NORMAL and VIEWS pills |
 | `border` | unfocused panel and card borders |
 | `muted` | secondary text: distant due dates, list fields, and tickets in the Later and No due date groups |
-| `highlight` | bar selection and the views panel cursor |
+| `highlight` | bar selection and the Places panel cursor |
 | `ok`, `warn`, `error` | warning and error status messages (`warn`, `error`), due-date urgency, Today and Overdue group headers, positive time logged today (`ok`), and applied filter text (`warn`) |
 | `working` | working coding agents |
 | `header`, `selection` | group headers, selection marker |

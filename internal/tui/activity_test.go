@@ -149,12 +149,12 @@ func TestActivityDimsTaskOnlyViews(t *testing.T) {
 		if (it.project != nil || it.savedView != "") && !it.dim {
 			t.Fatalf("%q must be dim in Activity", it.label)
 		}
-		if (it.activity || it.activityMode != "") && it.dim {
+		if it.activity && it.dim {
 			t.Fatalf("%q must not be dim in Activity", it.label)
 		}
 	}
 	if projects == 0 {
-		t.Fatal("views panel lists no projects")
+		t.Fatal("Places panel lists no projects")
 	}
 }
 
@@ -302,7 +302,7 @@ func TestActivityNewCountAndMarks(t *testing.T) {
 	}
 }
 
-// activityNavLabel is the right column of the Views panel's Activity row.
+// activityNavLabel is the right column of the Places panel's Activity row.
 func activityNavLabel(m *Model) string {
 	for _, it := range m.navItems() {
 		if it.activity {

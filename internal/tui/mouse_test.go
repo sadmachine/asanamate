@@ -148,16 +148,16 @@ func TestWheelMovesPickerCursor(t *testing.T) {
 	}
 }
 
-func TestClickViewsPanelOpensItem(t *testing.T) {
+func TestClickPlacesPanelOpensItem(t *testing.T) {
 	m := wideModel(t, 200)
 	m.Update(tea.WindowSizeMsg{Width: 200, Height: 40})
-	clickOn(t, m, "section")
-	if m.groupBy != "section" || m.focusNav {
-		t.Fatalf("groupBy = %q, focusNav = %v", m.groupBy, m.focusNav)
-	}
-	clickOn(t, m, "[0] Views")
+	clickOn(t, m, "[0] Places")
 	if !m.focusNav {
-		t.Fatal("clicking the views panel's title leaves it unfocused")
+		t.Fatal("clicking the Places panel's title leaves it unfocused")
+	}
+	clickOn(t, m, "Web")
+	if m.viewProject == nil || m.viewProject.Name != "Web" || m.focusNav {
+		t.Fatalf("viewProject = %+v, focusNav = %v", m.viewProject, m.focusNav)
 	}
 }
 

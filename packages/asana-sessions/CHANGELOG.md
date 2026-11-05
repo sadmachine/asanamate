@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The installer removes install directories older than the previous one once
+  plugins refresh. Each upgrade used to leave its whole directory behind.
 - Update the shipped `body-parser` (2.4.0) and `fast-uri` (3.1.9)
   dependencies to fix published vulnerabilities.
 

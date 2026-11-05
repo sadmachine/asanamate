@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 // Install a release with its shrinkwrap as the npm project root.
 import { spawnSync } from 'node:child_process';
-import { chmod, lstat, mkdir, mkdtemp, readFile, rename, rm, symlink } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, stat, symlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+
+// Install directories younger than this may belong to a concurrent install.
+const PRUNE_AGE_MS = 60 * 60 * 1000;
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { stdio: 'inherit', ...options });
@@ -19,13 +22,35 @@ async function checkCommand(path) {
   if (entry && !entry.isSymbolicLink()) throw new Error(`Refusing to replace existing file or directory: ${path}`);
 }
 
+// installDirectory returns the install directory the command links to, if any.
+async function installDirectory(command, library) {
+  const target = await realpath(command).catch(() => undefined);
+  const directory = target && dirname(dirname(target));
+  return directory && dirname(directory) === library ? directory : undefined;
+}
+
+// prune removes install directories other than the current and previous ones.
+// Processes and plugin registrations still using the previous installation
+// keep working; directories younger than an hour may be concurrent installs.
+async function prune(library, keep) {
+  const now = Date.now();
+  for (const name of await readdir(library)) {
+    const path = join(library, name);
+    if (!name.startsWith('install-') || keep.includes(path)) continue;
+    const info = await stat(path).catch(() => undefined);
+    if (info?.isDirectory() && now - info.mtimeMs > PRUNE_AGE_MS) {
+      await rm(path, { recursive: true, force: true });
+    }
+  }
+}
+
 async function install(archive, prefix) {
   if (Number(process.versions.node.split('.')[0]) < 22) throw new Error('Node.js 22 or later is required');
   archive = resolve(archive);
   prefix = resolve(prefix);
   const bin = join(prefix, 'bin');
   const command = join(bin, 'asana-sessions');
-  const library = join(prefix, 'lib', 'asana-sessions');
+  let library = join(prefix, 'lib', 'asana-sessions');
   await mkdir(bin, { recursive: true });
   await checkCommand(command);
 
@@ -40,6 +65,8 @@ async function install(archive, prefix) {
   if (entries.some((entry) => !['-', 'd'].includes(entry[0]))) throw new Error('Archive contains links or special files');
 
   await mkdir(library, { recursive: true });
+  library = await realpath(library);
+  const previous = await installDirectory(command, library);
   const directory = await mkdtemp(join(library, 'install-'));
   let linkDirectory;
   let installed = false;
@@ -83,7 +110,13 @@ Installation has not changed your configuration.`);
   // Registered plugins point at the previous installation's hooks until
   // refreshed. A failed refresh leaves the new command installed.
   const refresh = spawnSync(process.execPath, [join(directory, 'bin', 'asana-sessions.js'), 'setup', '--refresh'], { stdio: 'inherit' });
-  if (refresh.error || refresh.status !== 0) console.error('Plugin refresh failed; run asana-sessions setup.');
+  if (refresh.error || refresh.status !== 0) {
+    console.error('Plugin refresh failed; run asana-sessions setup.');
+    return;
+  }
+  await prune(library, [directory, previous]).catch((error) => {
+    console.error(`Could not remove old installations: ${error.message}`);
+  });
 }
 
 const args = process.argv.slice(2);

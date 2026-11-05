@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Codex's PostToolUse hook starts the helper only while a Codex link is
+  pending. A pending Claude link or a leftover temporary file used to start
+  Node on every Codex tool call. The hook's definition changed, so review and trust
+  it again in Codex `/hooks` after upgrading.
 - `ASANA_SESSIONS_TASK` links its task once per conversation. An `unlink`
   or `link --replace` in that conversation is no longer undone or flagged as
   a conflict on every later prompt.

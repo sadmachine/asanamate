@@ -3,7 +3,8 @@
 // PostToolUse after the title, completes them.
 // Entries hold only provider, session ID, task GID, and creation time, never
 // the prompt. Codex's PostToolUse hook command skips Node while this
-// directory is empty, so its location is part of that hook definition.
+// directory holds no codex-*.json entry, so its location and file names are
+// part of that hook definition.
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';

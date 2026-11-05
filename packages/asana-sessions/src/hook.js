@@ -66,8 +66,8 @@ async function handle(provider, c) {
     return linkNow(p, event.sessionId, null, lockOptions, { deferred: true });
   }
   if (event.name === 'PostToolUse') {
-    // Codex's hook command runs Node only while pending/ holds an entry, so
-    // expired entries must not linger there.
+    // Codex's hook command runs Node only while pending/ holds a Codex
+    // entry, so expired entries must not linger there.
     await sweepPending(c.env);
     return linkNow(p, event.sessionId, null, lockOptions, { deferred: true, whenNamed: true });
   }

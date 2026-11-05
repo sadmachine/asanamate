@@ -161,6 +161,10 @@ test('Codex PostToolUse command starts the helper only while a link is pending',
     { input, env: { ...env, HOME: env.XDG_STATE_HOME, PATH: `${bin}:/usr/bin:/bin` } });
   runCommand();
   assert.equal(await ran(), null);
+  await savePending(env, 'claude', ID, '42');
+  await writeFile(join(env.XDG_STATE_HOME, 'asana-sessions/pending/codex-0.json.1.tmp'), '');
+  runCommand();
+  assert.equal(await ran(), null);
   await savePending(env, 'codex', ID, '42');
   runCommand();
   assert.equal(await ran(), input);

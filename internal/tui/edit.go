@@ -373,7 +373,7 @@ func (m *Model) pickedEditProject(project asana.Ref) tea.Cmd {
 		m.edit.project = writeback.MyTasks
 	}
 	m.setProgress("loading sections…")
-	return loadSections(m.deps.Client, m.deps.Config.Workspace, project)
+	return loadSections(m.deps.Client, m.deps.Config.Workspace, project, m.edit)
 }
 
 // requestUsers opens the user picker, first loading the workspace users.
@@ -387,7 +387,7 @@ func (m *Model) requestUsers() tea.Cmd {
 }
 
 func (m *Model) openSectionPicker(msg sectionsMsg) {
-	if m.edit == nil {
+	if m.edit == nil || m.edit != msg.edit {
 		return
 	}
 	project := msg.project.GID

@@ -78,9 +78,13 @@ type projectsMsg struct {
 
 // linkNamesMsg carries names for linked projects outside m.projects; a
 // project that failed to load maps to "".
-type linkNamesMsg struct{ names map[string]string }
+type linkNamesMsg struct {
+	names map[string]string
+	seq   uint64 // the request; only the latest may open the picker
+}
 
 type candidatesMsg struct {
+	seq       uint64 // the request; a cancelled wait's late reply is dropped
 	paths     []string
 	suggested []string // paths matching the project's links, best first
 	err       error
@@ -102,6 +106,7 @@ type actionDoneMsg struct {
 }
 
 type sectionsMsg struct {
+	edit     *pendingEdit // the edit that asked; replies for others are dropped
 	project  asana.Ref
 	sections []asana.Ref
 	err      error
@@ -247,25 +252,24 @@ func loadProjects(c *asana.Client, workspace string) tea.Cmd {
 	})
 }
 
-func loadLinkNames(c *asana.Client, gids []string) tea.Cmd {
+func loadLinkNames(c *asana.Client, gids []string, seq uint64) tea.Cmd {
 	return request(func(ctx context.Context) tea.Msg {
 		names := make(map[string]string, len(gids))
 		for _, gid := range gids {
 			p, _ := c.Project(ctx, gid)
 			names[gid] = p.Name
 		}
-		return linkNamesMsg{names: names}
+		return linkNamesMsg{names: names, seq: seq}
 	})
 }
 
-// loadCandidates loads the repo picker's paths; link is set when editing a
-// link from the repo links picker.
 // loadCandidates lists the repo picker's paths and, when projectGID is set,
-// the ones whose remote matches a git link of that project from links.
-func loadCandidates(src config.RepoSource, link *linkTarget, links projectlinks.Provider, projectGID string) tea.Cmd {
+// the ones whose remote matches a git link of that project from links. link
+// is set when editing a link from the repo links picker.
+func loadCandidates(src config.RepoSource, link *linkTarget, links projectlinks.Provider, projectGID string, seq uint64) tea.Cmd {
 	return request(func(ctx context.Context) tea.Msg {
 		paths, err := repo.Candidates(ctx, src)
-		msg := candidatesMsg{paths: paths, err: err, link: link}
+		msg := candidatesMsg{seq: seq, paths: paths, err: err, link: link}
 		if projectGID != "" {
 			found, err := links.Links(ctx, projectGID)
 			msg.suggested, msg.linksErr = repo.Matching(ctx, paths, projectlinks.Values(found, projectlinks.Git)), err
@@ -276,18 +280,18 @@ func loadCandidates(src config.RepoSource, link *linkTarget, links projectlinks.
 
 // loadSections loads a project's sections, or My Tasks' sections when
 // project has no gid.
-func loadSections(c *asana.Client, workspace string, project asana.Ref) tea.Cmd {
+func loadSections(c *asana.Client, workspace string, project asana.Ref, edit *pendingEdit) tea.Cmd {
 	return request(func(ctx context.Context) tea.Msg {
 		gid := project.GID
 		if gid == "" {
 			list, err := c.MyTaskList(ctx, workspace)
 			if err != nil {
-				return sectionsMsg{project: project, err: err}
+				return sectionsMsg{edit: edit, project: project, err: err}
 			}
 			gid = list.GID
 		}
 		sections, err := c.Sections(ctx, gid)
-		return sectionsMsg{project: project, sections: sections, err: err}
+		return sectionsMsg{edit: edit, project: project, sections: sections, err: err}
 	})
 }
 

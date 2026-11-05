@@ -121,6 +121,8 @@ type Model struct {
 	refreshSeq      uint64           // invalidates timers from earlier session intervals
 	agentSeq        uint64           // the current agent poll chain; older chains stop
 	taskSeq         uint64           // the latest task load; an older load's result is stale
+	candidatesSeq   uint64           // the latest repo candidates request
+	linkNamesSeq    uint64           // the latest linked-project names request
 
 	focusReader  bool
 	focusNav     bool   // the Places panel has focus; wide layout only
@@ -331,11 +333,19 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	case projectsMsg:
 		return m, m.gotProjects(msg)
 	case linkNamesMsg:
-		m.clearProgress()
 		if m.linkNames == nil {
 			m.linkNames = map[string]string{}
 		}
 		maps.Copy(m.linkNames, msg.names)
+		// The picker opens only for the latest request, and only if the user
+		// has not opened something else meanwhile.
+		if msg.seq != m.linkNamesSeq {
+			return m, nil
+		}
+		m.clearProgress()
+		if !m.idle() {
+			return m, nil
+		}
 		return m, m.openLinks()
 	case agentsMsg:
 		return m, m.gotAgents(msg)
@@ -354,7 +364,7 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	case projectFieldsMsg:
 		return m, m.gotProjectFields(msg)
 	case candidatesMsg:
-		if m.waiting != "" {
+		if m.waiting != "" && msg.seq == m.candidatesSeq {
 			m.waiting = ""
 			m.openRepoPicker(msg)
 		}

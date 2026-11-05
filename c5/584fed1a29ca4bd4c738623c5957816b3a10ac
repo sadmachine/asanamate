@@ -1,0 +1,50 @@
+internal/setup/update.go
+  s_ba5d61e9a44b8c::t_4183df1c7e6e88 19,86,88,93-94,105
+cmd/asanamate-hrvst/setup.go
+  s_ba5d61e9a44b8c::t_5e4b6c88555551 16,18,343,350
+README.md
+  s_ba5d61e9a44b8c::t_b8a14a820922b5 162-163,1099-1101,1226-1227
+internal/setup/setup_test.go
+  s_ba5d61e9a44b8c::t_64bc85435e066d 136-167
+internal/activity/cache.go
+  s_ba5d61e9a44b8c::t_f4d3dbaa303a9f 4,10-11
+  s_ba5d61e9a44b8c::t_d5771a4a2c8c89 62-63,66
+internal/config/settings.go
+  s_ba5d61e9a44b8c::t_d5771a4a2c8c89 130
+  s_ba5d61e9a44b8c::t_f4d3dbaa303a9f 13-14
+internal/config/actionfiles.go
+  s_ba5d61e9a44b8c::t_d5771a4a2c8c89 13-14,115,120,122
+internal/safefile/safefile.go
+  s_ba5d61e9a44b8c::t_d6c190de1cfaae 1-110
+internal/ccmux/live.go
+  s_ba5d61e9a44b8c::t_f4d3dbaa303a9f 17
+  s_ba5d61e9a44b8c::t_d5771a4a2c8c89 80
+internal/state/state.go
+  s_ba5d61e9a44b8c::t_d5771a4a2c8c89 196-197,200
+  s_ba5d61e9a44b8c::t_f4d3dbaa303a9f 7,20
+internal/setup/setup.go
+  s_ba5d61e9a44b8c::t_4183df1c7e6e88 22,69-79,172-175,179-180,184,610
+internal/safefile/safefile_test.go
+  s_ba5d61e9a44b8c::t_d0eb03c1ee3297 1-97
+cmd/asanamate-hrvst/setup_test.go
+  s_ba5d61e9a44b8c::t_53aaf9c3a0bbab 227,236-242
+internal/drafts/comment.go
+  s_ba5d61e9a44b8c::t_f4d3dbaa303a9f 15-17
+  s_ba5d61e9a44b8c::t_d5771a4a2c8c89 91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c5584fed1a29ca4bd4c738623c5957816b3a10ac",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

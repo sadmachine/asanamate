@@ -1,0 +1,30 @@
+internal/writeback/writeback.go
+  s_ba5d61e9a44b8c::t_4cd1351285efae 35-38,40,42-43,45-49
+README.md
+  s_ba5d61e9a44b8c::t_4cd1351285efae 1851-1853
+cmd/asanamate/config_test.go
+  s_ba5d61e9a44b8c::t_b25cf97cf3fd3b 101-129
+docs/extensions.md
+  s_ba5d61e9a44b8c::t_4cd1351285efae 139
+cmd/asanamate/main.go
+  s_ba5d61e9a44b8c::t_4cd1351285efae 191-195
+internal/writeback/writeback_test.go
+  s_ba5d61e9a44b8c::t_4cd1351285efae 155,158-159,164-165,168-169
+  s_ba5d61e9a44b8c::t_f66da274e4fd7c 170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6eed9abcccd3ce20d27096eb18f40dc9fc2d6747",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

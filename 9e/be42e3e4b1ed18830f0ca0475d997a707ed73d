@@ -1,0 +1,21 @@
+internal/action/conversation.go
+  s_ba5d61e9a44b8c::t_db5077949cd861 30,36,51-55
+internal/action/conversation_test.go
+  s_ba5d61e9a44b8c::t_a4e67bef14079f 142-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9ebe42e3e4b1ed18830f0ca0475d997a707ed73d",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

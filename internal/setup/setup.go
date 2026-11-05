@@ -240,7 +240,8 @@ const configTemplate = `# asanamate configuration.
 # Asana workspace: %s
 workspace = %q
 
-# Ask before "asanamate comment/move/field" writes to Asana.
+# Ask before the asanamate write subcommands (comment, move, field, batch,
+# and the others) write to Asana.
 # Override per action with confirm_writes, or per call with --yes.
 confirm_writes = true
 
@@ -446,8 +447,8 @@ enabled = true
 # command is set. Explicit task GIDs from the source take precedence; otherwise
 # tickets match agents on their branch in linked repos. See the README for
 # optional conversation links and agent actions.
-# The command prints one line per agent,
-#   path<TAB>status[<TAB>target[<TAB>title]]
+# The command prints one line per agent (docs/extensions.md#agent-sources),
+#   path<TAB>status[<TAB>target<TAB>title<TAB>branch<TAB>repo<TAB>task_gid<TAB>provider<TAB>session_id]
 # such as the ccmux adapter, asanamate-ccmux, or your own tool.
 # [agents]
 # command = "asanamate-ccmux"

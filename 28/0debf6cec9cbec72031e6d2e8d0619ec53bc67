@@ -1,0 +1,19 @@
+internal/tui/reader.go
+  s_ba5d61e9a44b8c::t_265e2fe58aeae8 135,140-150,153,156,160,162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "280debf6cec9cbec72031e6d2e8d0619ec53bc67",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

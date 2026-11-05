@@ -1,0 +1,19 @@
+.github/workflows/release.yml
+  s_3ac5f700c1c895::t_48c9aaa013a1bc 17-19,22-28,30-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df2a833c19ff4498a3ff9f843efcdadbbc0ca70d",
+  "prompts": {},
+  "sessions": {
+    "s_3ac5f700c1c895": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2e81d0c5-6f82-4a36-a056-27188bdd1259",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

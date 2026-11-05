@@ -1,0 +1,25 @@
+cmd/asanamate/whatsnew_test.go
+  s_3ac5f700c1c895::t_33d525acf89f3f 1-26
+cmd/asanamate/whatsnew.go
+  s_3ac5f700c1c895::t_f95e97fcf0c222 1-22
+cmd/asanamate/main.go
+  s_3ac5f700c1c895::t_f95e97fcf0c222 96,126-127
+README.md
+  s_3ac5f700c1c895::t_6c04b8a9f669e0 738-742,744-745
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fdad09d65c931de107285e0ec74006fd3d77f577",
+  "prompts": {},
+  "sessions": {
+    "s_3ac5f700c1c895": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2e81d0c5-6f82-4a36-a056-27188bdd1259",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -15,3 +15,6 @@ shot d-whichkey 1100,560
 shot e-list-row 1000,470
 shot f-empty-loading 1300,560
 shot h-image-viewer 1100,560
+shot i-now 1600,900
+shot i-now 1600,900 '#state' j-work-state
+shot i-now 1600,900 '#reader' k-reader-title

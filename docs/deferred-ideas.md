@@ -127,9 +127,9 @@ before they can be bound there.
   member of `theme.auto`.
 - Add `asanamate config settings` to open `settings.toml` in the user's editor.
 
-## Views panel layout
+## Places panel layout
 
-**Now:** The views panel shows whenever the reader sits beside the list in a
+**Now:** The Places panel shows whenever the reader sits beside the list in a
 terminal at least 160 columns wide (`showNav` in `internal/tui/nav.go`). It
 takes 26 columns from the reader, so `layout.list_width` leaves the reader
 less room at 160 columns and up than just below.
@@ -177,7 +177,7 @@ held (cell motion mode already reports drags), and set the width on release.
 
 **Watch out for:** Decide whether a dragged width lasts for the session or is
 saved, and how it overrides `layout.list_width` and the focus resize; the
-reader's minimum width and the views panel still bound it. Wrapped lines in
+reader's minimum width and the Places panel still bound it. Wrapped lines in
 the reader rerender at every new width, so redraw on release, not on each
 motion event. A press on a panel border starts no text drag today, so the
 divider drag can claim it.

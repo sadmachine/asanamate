@@ -10,50 +10,45 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
-	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
-// wideWidth is the narrowest terminal that shows the views panel.
+// wideWidth is the narrowest terminal that shows the Places panel.
 const wideWidth = 160
 
-// navW is the views panel's width, border included.
+// navW is the Places panel's width, border included.
 const navW = 26
 
-// maxNavProjects caps the recent projects the views panel lists; p finds the rest.
+// maxNavProjects caps the recent projects the Places panel lists; p finds the rest.
 const maxNavProjects = 8
 
 // maxNavSavedViews caps named views; V offers the full list.
 const maxNavSavedViews = 5
 
-// navItem is one row of the views panel: a project or saved view to open, a grouping or sort to
-// pick, or, with neither, a heading or an agent count.
+// navItem is one row of the Places panel: a place to open (My Tasks,
+// Activity, a saved view, or a project), or, with none, a heading or note.
 type navItem struct {
 	label, right string
 	project      *asana.Ref // nil with isView means My Tasks
 	isView       bool
 	savedView    string
-	sort         *config.Sort
-	group        *string
 	heading      bool
 	active       bool
 	activity     bool
-	activityMode string
 	dim          bool // the row does not apply to the open view
 }
 
 func (it navItem) selectable() bool {
-	return it.isView || it.activity || it.activityMode != "" || it.savedView != "" || it.group != nil || it.sort != nil
+	return it.isView || it.activity || it.savedView != ""
 }
 
-// showNav reports whether the layout has room for the views panel.
+// showNav reports whether the layout has room for the Places panel.
 func (m *Model) showNav() bool {
 	return !m.navHidden && m.width >= wideWidth
 }
 
-// navWidth is the width the views panel takes, 0 when it is hidden.
+// navWidth is the width the Places panel takes, 0 when it is hidden.
 func (m *Model) navWidth() int {
 	if m.showNav() {
 		return navW
@@ -61,8 +56,9 @@ func (m *Model) navWidth() int {
 	return 0
 }
 
-// navItems lists My Tasks, saved views and recent projects, groupings and sorts, and the
-// linked agents by state.
+// navItems lists the places to go: My Tasks, Activity, saved views, and
+// recent projects. How the open place is grouped, sorted, or filtered lives
+// in the statusline and its own keys.
 func (m *Model) navItems() []navItem {
 	count := fmt.Sprint(len(m.visible))
 	items := []navItem{{label: "My Tasks", isView: true, active: m.viewProject == nil && !m.activityOpen}}
@@ -120,51 +116,6 @@ func (m *Model) navItems() []navItem {
 		items = appendMore(items, hidden)
 	}
 
-	if m.activityOpen {
-		items = append(items, navItem{label: "Activity filter", right: keyLabel("activity", "next_mode", "prev_mode"), heading: true})
-		for _, mode := range activityModes {
-			items = append(items, navItem{label: mode, right: fmt.Sprint(m.activityCount(mode)), activityMode: mode, active: mode == m.activity.mode})
-		}
-		return items
-	}
-	items = append(items, navItem{label: "Group by", right: "b", heading: true})
-	groups := uniqueFold(append(append([]string{""}, m.deps.Config.List.Fields...), m.deps.Config.List.DefaultView.GroupBy, m.groupBy))
-	for _, g := range groups {
-		items = append(items, navItem{label: cmp.Or(ticket.OneLine(g), "none"), group: &g, active: strings.EqualFold(g, m.groupBy)})
-	}
-	hidden := 0
-	for _, g := range m.groupings() {
-		if !slices.ContainsFunc(groups, func(o string) bool { return strings.EqualFold(o, g) }) {
-			hidden++
-		}
-	}
-	items = appendMore(items, hidden)
-
-	items = append(items, navItem{label: "Sort by", right: "B", heading: true})
-	sorts := uniqueFold(append([]string{"", "due", "assignee", "title"}, m.deps.Config.List.DefaultView.Sort.By, m.sortBy.By))
-	for _, by := range sorts {
-		sort := config.Sort{By: by, Direction: cmp.Or(m.sortBy.Direction, "asc")}
-		label := cmp.Or(ticket.OneLine(by), "none")
-		active := strings.EqualFold(by, m.sortBy.By)
-		if active && by != "" {
-			label = sortLabel(m.sortBy)
-		}
-		items = append(items, navItem{label: label, sort: &sort, active: active})
-	}
-	items = appendMore(items, len(m.sortings())-len(sorts))
-
-	if m.deps.Config.AgentsEnabled() {
-		items = append(items, navItem{label: "Agents", heading: true})
-		linked := m.linkedAgents()
-		for _, st := range agents.States {
-			if n := countState(linked, st); n > 0 {
-				items = append(items, navItem{label: stateStyles[st].Render(m.sym.agent(st, m.frame)) + " " + string(st), right: fmt.Sprint(n)})
-			}
-		}
-		if len(linked) == 0 {
-			items = append(items, navItem{label: dimStyle.Render("none running")})
-		}
-	}
 	return items
 }
 
@@ -177,13 +128,13 @@ func appendMore(items []navItem, hidden int) []navItem {
 	return append(items, navItem{label: dimStyle.Render(fmt.Sprintf("+%d more", hidden))})
 }
 
-// navView renders the views panel's rows, width by height cells.
+// navView renders the Places panel's rows, width by height cells.
 func (m *Model) navView(width, height int) string {
 	lines, _ := m.navRows(width, height)
 	return strings.Join(lines, "\n")
 }
 
-// navRows draws the views panel's lines that fit in height rows, and for
+// navRows draws the Places panel's lines that fit in height rows, and for
 // each line its selectable row's index, the navCursor that selects it, or -1.
 func (m *Model) navRows(width, height int) (lines []string, rows []int) {
 	items := m.navItems()
@@ -205,12 +156,7 @@ func (m *Model) navRows(width, height int) (lines []string, rows []int) {
 			row, selectable = selectable, selectable+1
 		}
 		mark := "  "
-		switch {
-		case (it.group != nil || it.sort != nil || it.activityMode != "") && it.active:
-			mark = m.headingStyle(m.accentStyle, m.focusNav).Render("●") + " "
-		case it.group != nil || it.sort != nil || it.activityMode != "":
-			mark = dimStyle.Render("○") + " "
-		case (it.isView || it.activity || it.savedView != "") && it.active:
+		if it.active {
 			mark = m.headingStyle(m.accentStyle, m.focusNav).Render("▌") + " "
 		}
 		label := it.label
@@ -267,7 +213,7 @@ func (m *Model) navIndex(items []navItem) int {
 	return -1
 }
 
-// focusNavPanel gives the views panel focus, starting on the viewed view.
+// focusNavPanel gives the Places panel focus, starting on the viewed view.
 func (m *Model) focusNavPanel() {
 	m.focusNav, m.navCursor = true, 0
 	n := 0
@@ -283,7 +229,7 @@ func (m *Model) focusNavPanel() {
 	}
 }
 
-// updateNav runs a [keys.views] binding while the views panel has focus.
+// updateNav runs a [keys.views] binding while the Places panel has focus.
 func (m *Model) updateNav(name string) tea.Cmd {
 	items := m.navItems()
 	var selectable []navItem
@@ -292,8 +238,7 @@ func (m *Model) updateNav(name string) tea.Cmd {
 			selectable = append(selectable, it)
 		}
 	}
-	// The rows can shrink under the cursor, such as when a grouping by a
-	// custom field is dropped.
+	// The rows can shrink under the cursor, such as when projects reload.
 	m.navCursor = min(m.navCursor, len(selectable)-1)
 	switch name {
 	case "down":
@@ -313,23 +258,12 @@ func (m *Model) updateNav(name string) tea.Cmd {
 			}
 			return m.openActivity()
 		}
-		if it.activityMode != "" {
-			m.activity.mode = it.activityMode
-			m.filterActivity()
-			return nil
-		}
 		if m.activityOpen {
 			m.closeActivity()
 			m.layout()
 		}
 		if it.savedView != "" {
 			return m.applySavedView(it.savedView)
-		}
-		if it.sort != nil {
-			return m.pickedSort(*it.sort)
-		}
-		if it.group != nil {
-			return m.pickedGroup(*it.group)
 		}
 		if it.active {
 			return nil

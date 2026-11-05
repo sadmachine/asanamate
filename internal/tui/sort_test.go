@@ -2,10 +2,8 @@ package tui
 
 import (
 	"slices"
-	"strings"
 	"testing"
 
-	"github.com/charmbracelet/x/ansi"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/state"
@@ -133,20 +131,5 @@ func TestSortCustomFieldUsesActiveProject(t *testing.T) {
 	sortTasks(tasks, nil, config.Sort{By: "Priority"}, rowContext{preferred: map[string]bool{"active": true}})
 	if tasks[0].GID != "2" {
 		t.Fatal("sort ignored active project's field")
-	}
-}
-
-func TestViewsPanelSortAndScroll(t *testing.T) {
-	m := wideModel(t, 200)
-	sendKeys(m, "0", "G")
-	if body := ansi.Strip(m.navView(navW-panelFrame, 8)); !strings.Contains(body, "title") || !strings.Contains(body, "Sort by") {
-		t.Fatalf("sort cursor not visible: %s", body)
-	}
-	sendKeys(m, "k", "enter")
-	if m.focusNav || m.sortBy.By != "assignee" {
-		t.Fatalf("sort = %v, focus = %v", m.sortBy, m.focusNav)
-	}
-	if !strings.Contains(ansi.Strip(m.statusline()), "sort: assignee asc") {
-		t.Fatal("statusline missing sort")
 	}
 }

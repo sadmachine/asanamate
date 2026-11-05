@@ -609,7 +609,7 @@ func (m *Model) openActivityEntry() tea.Cmd {
 }
 
 // cycleActivityPane moves focus to the next or, with back, previous of the
-// views panel, the list and the event reader.
+// Places panel, the list and the event reader.
 func (m *Model) cycleActivityPane(back bool) {
 	a := m.activity
 	first, i := 1, 1
@@ -812,7 +812,7 @@ func (m *Model) activityPanes(h int) string {
 		}
 		m.hitPane(id, x, 0, listW, h, false)
 		if m.showNav() {
-			nav := m.panel("[0] Views", "", m.navView(navW-panelFrame, max(h-panelFrame, 1)), navW, h, m.focusNav, nil)
+			nav := m.panel("[0] Places", "", m.navView(navW-panelFrame, max(h-panelFrame, 1)), navW, h, m.focusNav, nil)
 			return lipgloss.JoinHorizontal(lipgloss.Top, nav, lipgloss.NewStyle().Width(listW).Height(h).Render(body))
 		}
 		return lipgloss.NewStyle().Width(m.width).Height(h).Render(body)
@@ -828,7 +828,7 @@ func (m *Model) activityPanes(h int) string {
 	m.hitPane(paneActivityList, x, 0, listW+panelFrame, h, true)
 	m.hitPane(paneActivityReader, x+listW+panelFrame, 0, readerW+panelFrame, h, true)
 	if m.showNav() {
-		nav := m.panel("[0] Views", "", m.navView(navW-panelFrame, inner), navW, h, m.focusNav, nil)
+		nav := m.panel("[0] Places", "", m.navView(navW-panelFrame, inner), navW, h, m.focusNav, nil)
 		return lipgloss.JoinHorizontal(lipgloss.Top, nav, list, reader)
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, list, reader)
@@ -840,7 +840,7 @@ func (m *Model) activityMode() (name string, pill lipgloss.Style, hints [][2]str
 	case a.filtering:
 		return "FILTER", filterPill, [][2]string{{typedLabel("filter", "done"), "apply"}, {typedLabel("filter", "cancel"), "cancel"}}
 	case m.focusNav:
-		return "VIEWS", normalPill, [][2]string{{keyLabel("views", "down", "up"), "move"}, {keyLabel("views", "open"), "open"}, {keyLabel("main", "focus_list"), "activity"}}
+		return "PLACES", normalPill, [][2]string{{keyLabel("views", "down", "up"), "move"}, {keyLabel("views", "open"), "open"}, {keyLabel("main", "focus_list"), "activity"}}
 	case a.details:
 		return "ACTIVITY", readPill, [][2]string{{keyLabel("main", "down", "up"), "scroll"}, {keyLabel("main", "open"), "ticket"}, {keyLabel("main", "focus_list"), "list"}}
 	}
@@ -898,7 +898,7 @@ func (m *Model) activityHelp() string {
 		{"main", "open", "open ticket; narrow list first shows event"},
 		{"main", "focus_list", "event list; from opened ticket, Activity"},
 		{"main", "toggle_reader", "show / hide preview"},
-		{"main", "toggle_sidebar", "show / hide views panel"},
+		{"main", "toggle_sidebar", "show / hide Places panel"},
 		{"main", "reload", "rescan the period from the API"},
 		{"main", "open_browser", "open ticket in browser"},
 		{"main", "yank", "yank menu"},

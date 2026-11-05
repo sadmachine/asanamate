@@ -31,11 +31,11 @@ func sendKeys(m *Model, ks ...string) {
 }
 
 func TestViewsPanelOnlyOnWideScreens(t *testing.T) {
-	if top := strings.Split(ansi.Strip(wideModel(t, 200).body()), "\n")[0]; !strings.HasPrefix(top, "╭─ [0] Views") {
+	if top := strings.Split(ansi.Strip(wideModel(t, 200).body()), "\n")[0]; !strings.HasPrefix(top, "╭─ [0] Places") {
 		t.Fatalf("wide top = %q", top)
 	}
 	m := wideModel(t, 140)
-	if top := strings.Split(ansi.Strip(m.body()), "\n")[0]; strings.Contains(top, "Views") {
+	if top := strings.Split(ansi.Strip(m.body()), "\n")[0]; strings.Contains(top, "Places") {
 		t.Fatalf("narrow top = %q", top)
 	}
 	m.Update(key("0"))
@@ -44,12 +44,18 @@ func TestViewsPanelOnlyOnWideScreens(t *testing.T) {
 	}
 }
 
-func TestViewsPanelListsRecentProjectsAndGroupings(t *testing.T) {
+func TestPlacesPanelListsOnlyPlaces(t *testing.T) {
 	m := wideModel(t, 200)
 	body := ansi.Strip(m.navView(navW-panelFrame, 20))
-	for _, want := range []string{"My Tasks", "Mobile", "Web", "Group by", "● none", "○ section", "○ due", "Projects ────── [p] ─", "Group by ────── [b] ─", "+5 more"} {
+	for _, want := range []string{"My Tasks", "Activity", "Mobile", "Web", "Projects ────── [p] ─"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %q in:\n%s", want, body)
+		}
+	}
+	// The statusline and b, B, and the agent counts cover these.
+	for _, gone := range []string{"Group by", "Sort by", "Agents"} {
+		if strings.Contains(body, gone) {
+			t.Fatalf("the Places panel lists %q:\n%s", gone, body)
 		}
 	}
 	if strings.Index(body, "Mobile") > strings.Index(body, "Web") {
@@ -57,18 +63,14 @@ func TestViewsPanelListsRecentProjectsAndGroupings(t *testing.T) {
 	}
 }
 
-func TestViewsPanelPicksGroupingAndProject(t *testing.T) {
+func TestPlacesPanelOpensProjects(t *testing.T) {
 	m := wideModel(t, 200)
 	m.Update(key("0"))
-	if !m.focusNav || m.navCursor != 0 || !strings.HasPrefix(ansi.Strip(m.statusline()), " VIEWS ") {
+	if !m.focusNav || m.navCursor != 0 || !strings.HasPrefix(ansi.Strip(m.statusline()), " PLACES ") {
 		t.Fatalf("focusNav = %v, navCursor = %d", m.focusNav, m.navCursor)
 	}
-	// My Tasks, Activity, Mobile, Web, then none, section, due.
-	sendKeys(m, "j", "j", "j", "j", "j", "enter")
-	if m.focusNav || m.groupBy != "section" {
-		t.Fatalf("focusNav = %v, groupBy = %q", m.focusNav, m.groupBy)
-	}
-	sendKeys(m, "0", "j", "j", "enter")
+	// My Tasks, Activity, Mobile, Web.
+	sendKeys(m, "j", "j", "enter")
 	if gidOf(m.viewProject) != "p2" {
 		t.Fatalf("viewProject = %+v", m.viewProject)
 	}
@@ -82,14 +84,14 @@ func TestViewsPanelPicksGroupingAndProject(t *testing.T) {
 	}
 }
 
-func TestViewsPanelCursorSurvivesShrinkingRows(t *testing.T) {
+func TestPlacesPanelCursorSurvivesShrinkingRows(t *testing.T) {
 	m := wideModel(t, 200)
-	m.groupBy = "Priority"
 	sendKeys(m, "0", "G")
-	m.groupBy = "" // Priority's row is gone
+	last := m.navCursor
+	m.projects = m.projects[:1] // a reload drops the last project's row
 	sendKeys(m, "enter")
-	if m.sortBy.By != "title" || m.groupBy != "" {
-		t.Fatalf("sort = %v, group = %q, want the last row, title sort", m.sortBy, m.groupBy)
+	if m.viewProject == nil || m.navCursor >= last {
+		t.Fatalf("enter on shrunken rows opened %+v from cursor %d", m.viewProject, m.navCursor)
 	}
 }
 

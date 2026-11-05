@@ -259,7 +259,7 @@ branch_field = ""
 # Secondary text: distant due dates, list fields, and tickets in the Later
 # and No due date groups.
 # muted = { faint = true }
-# Bar selection and the views panel cursor.
+# Bar selection and the Places panel cursor.
 # highlight = { reverse = true }
 # Status messages and due-date urgency (today: warn, overdue: error), also
 # on the Today and Overdue group headers.
@@ -401,7 +401,7 @@ type_first = false
 
 [activity]
 # Scan Activity (I) in the background at this interval (at least 1s), so it
-# opens ready and the views panel counts new related events. "0" turns
+# opens ready and the Places panel counts new related events. "0" turns
 # background scans off; Activity then scans when you open it.
 refresh_interval = "2m"
 

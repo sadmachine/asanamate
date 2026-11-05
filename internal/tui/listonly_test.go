@@ -97,7 +97,7 @@ func TestReaderAndSidebarToggleIndependently(t *testing.T) {
 	if m.readerOn() || !m.showNav() || !m.focusNav {
 		t.Fatal("hiding reader must preserve sidebar and its focus")
 	}
-	if body := m.body(); !strings.Contains(body, "Views") || !strings.Contains(body, "Fix login") || lipgloss.Width(body) != 200 {
+	if body := m.body(); !strings.Contains(body, "Places") || !strings.Contains(body, "Fix login") || lipgloss.Width(body) != 200 {
 		t.Fatalf("sidebar and list must render together: %q", body)
 	}
 	m.Update(key("tab"))

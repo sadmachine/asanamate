@@ -34,7 +34,7 @@ var (
 	asanaStyles   map[string]lipgloss.Style // by Asana project or enum option color
 	branchStyle   lipgloss.Style
 	tagStyles     []lipgloss.Style // leading [TAG] of ticket titles
-	// Mode pills: normal (also VIEWS and loading), filter, read, and edit.
+	// Mode pills: normal (also PLACES and loading), filter, read, and edit.
 	normalPill, filterPill, readPill, editPill lipgloss.Style
 )
 

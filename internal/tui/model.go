@@ -87,7 +87,7 @@ type Deps struct {
 	// theme.auto.dark.
 	LightBackground bool
 	// Ticket opens only this ticket's reader, full screen, with no list or
-	// views panel.
+	// Places panel.
 	Ticket string
 }
 
@@ -121,13 +121,13 @@ type Model struct {
 	refreshSeq      uint64           // invalidates timers from earlier session intervals
 
 	focusReader  bool
-	focusNav     bool   // the views panel has focus; wide layout only
+	focusNav     bool   // the Places panel has focus; wide layout only
 	focusFeed    bool   // the Feed panel has focus
-	navCursor    int    // selected row among the views panel's selectable rows
+	navCursor    int    // selected row among the Places panel's selectable rows
 	help         bool   // the key help is open
 	savedView    string // named view associated with the current project's settings
 	readerHidden bool   // the reader is hidden for this session
-	navHidden    bool   // the views panel is hidden for this session
+	navHidden    bool   // the Places panel is hidden for this session
 
 	projects        []asana.Project
 	allProjects     []asana.Project            // accessible projects for task membership edits; not persisted
@@ -307,7 +307,7 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 		m.width, m.height = msg.Width, msg.Height
 		m.layout()
 		m.decideFeed()
-		// The views panel lists recent projects by name.
+		// The Places panel lists recent projects by name.
 		if m.showNav() {
 			return m, tea.Batch(m.refreshProjects(), m.requestImageCellSize())
 		}
@@ -1345,7 +1345,7 @@ func (m *Model) panes(h int) string {
 		m.hitList(0, listW, h, false)
 	}
 	if m.showNav() {
-		nav := m.panel("[0] Views", "", m.navView(navW-panelFrame, inner), navW, h, m.focusNav, nil)
+		nav := m.panel("[0] Places", "", m.navView(navW-panelFrame, inner), navW, h, m.focusNav, nil)
 		panes = lipgloss.JoinHorizontal(lipgloss.Top, nav, panes)
 		m.hitPane(paneNav, 0, 0, navW, h, true)
 	}
@@ -1371,7 +1371,7 @@ func (m *Model) readerPanel(width, h int, framed bool) string {
 }
 
 // readerFramed reports whether the reader sits in its [2] Ticket panel:
-// beside the list, or full screen beside the views panel.
+// beside the list, or full screen beside the Places panel.
 func (m *Model) readerFramed(split bool) bool {
 	return split || m.showNav()
 }

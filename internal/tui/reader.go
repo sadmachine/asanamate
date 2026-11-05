@@ -15,7 +15,7 @@ import (
 // images, the selected cards view target, and the attachment viewer.
 type readerState struct {
 	reader         viewport.Model
-	readerView     string // config.ViewCards or config.ViewMarkdown
+	readerView     string // config.ViewCards, config.ViewStreamlined, or config.ViewMarkdown
 	renderers      map[rendererKey]*markdownRenderer
 	details        map[string]ticket.Ticket
 	images         map[string]*inlineImage // inline images by attachment gid
@@ -69,7 +69,7 @@ func (m *Model) renderDetail(keepScroll bool) {
 	offset := m.reader.YOffset()
 	anchor, anchorLine := "", -1
 	selectedIndex := slices.Index(m.cardTargets, m.fieldKey)
-	if keepScroll && m.readerView == config.ViewCards {
+	if keepScroll && m.readerView != config.ViewMarkdown {
 		// Keep the content at the viewport's top in place even when earlier
 		// fields change height. Prefer a selected target that is on screen.
 		for _, key := range m.cardTargets {

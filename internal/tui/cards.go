@@ -13,6 +13,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
@@ -98,7 +99,40 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 			}
 		}
 	}
-	if width >= sideBySideW && (len(agentLines) > 0 || subtasks != "") {
+	if m.readerView == config.ViewStreamlined {
+		// The details go in rows of chips: built-in fields under the
+		// head, custom fields under a Fields rule.
+		chipTop := lipgloss.Height(head)
+		head += "\n" + strings.Join(m.chipRows(m.metaChips(t, width), width, chipTop), "\n")
+		blocks = []string{head}
+		if chips := m.fieldChips(t, width); len(chips) > 0 {
+			rows := m.chipRows(chips, width, lipgloss.Height(head)+2)
+			blocks = append(blocks, m.rule("Fields", width, false, m.focusReader)+"\n"+strings.Join(rows, "\n"))
+		}
+		if flash == detailsKey {
+			m.flashLines = [2]int{chipTop, lipgloss.Height(strings.Join(blocks, "\n\n")) - 1}
+		}
+		addSince()
+		if width >= sideBySideW && len(agentLines) > 0 && subtasks != "" {
+			top := lipgloss.Height(strings.Join(blocks, "\n\n")) + 1
+			leftW := (width - 1) / 2
+			rightW := width - leftW - 1
+			agents := m.card(m.sym.robot+"   Agents", cutLines(agentLines, leftW-4), leftW, m.fieldKey == agentsKey, flash == agentsKey)
+			m.fieldLines[agentsKey], m.fieldEnds[agentsKey] = top, top+lipgloss.Height(agents)-1
+			m.cardTargets = append(m.cardTargets, agentsKey)
+			markOthers(top + 1)
+			key := "section:subtasks"
+			list := m.card(subtaskTitle, wrap(subtasks, rightW-4), rightW, m.fieldKey == key, flash == key)
+			m.fieldLines[key], m.fieldEnds[key] = top, top+lipgloss.Height(list)-1
+			m.cardTargets = append(m.cardTargets, key)
+			blocks = append(blocks, lipgloss.JoinHorizontal(lipgloss.Top, agents, " ", list))
+		} else {
+			add(agentsKey, "Agents", cutLines(agentLines, width))
+			markOthers(m.fieldLines[agentsKey] + 1)
+			add("section:subtasks", subtaskTitle, wrap(subtasks, width))
+		}
+		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
+	} else if width >= sideBySideW && (len(agentLines) > 0 || subtasks != "") {
 		leftW := (width - 1) / 2
 		rightW := width - leftW - 1
 		var side []string
@@ -417,47 +451,7 @@ func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
 				line += lipgloss.Height(out[i])
 				continue
 			}
-			value := f.Value
-			if value == "" {
-				value = dimStyle.Render("—")
-			}
-			switch {
-			case f.Label == "Status" && f.Key == "":
-				value = m.statusBadge(t.Completed)
-			case strings.HasPrefix(f.Key, ticket.KeyProject+":"):
-				gid := strings.TrimPrefix(f.Key, ticket.KeyProject+":")
-				for _, membership := range t.Memberships {
-					if membership.Project.GID == gid {
-						var section string
-						if membership.Section != nil {
-							section = " / " + ticket.Clean(membership.Section.Name)
-						}
-						// Cut the project name so its section stays on the row,
-						// unless that leaves too little of the name to read.
-						value = m.projectLabel(membership.Project, lipgloss.NewStyle())
-						if room := width - labelW - 2 - ansi.StringWidth(section); room >= 12 {
-							value = ansi.Truncate(value, room, "…")
-						}
-						value += section
-						break
-					}
-				}
-			case strings.HasPrefix(f.Key, ticket.KeyField+":"):
-				for _, field := range t.CustomFields {
-					if f.Key == ticket.FieldKey(field.GID) && m.deps.Config.BranchField != "" && asana.SameFieldName(field.Name, m.deps.Config.BranchField) {
-						value = branchStyle.Render(value)
-						break
-					}
-				}
-				if style, ok := fieldEnumStyle(t, f.Key); ok {
-					value = style.Render("● " + value)
-				}
-			case f.Key == ticket.KeyDue:
-				if due, _, ok := asana.DueDays(t.DueOn, m.now()); ok {
-					rel, style := dueLabel(t.DueOn, m.now())
-					value = style.Render(shortDate(due, m.now()) + " (" + rel + ")")
-				}
-			}
+			value := m.fieldValue(t, f, width-labelW-2)
 			labelStyle := dimStyle
 			if f.Key != "" {
 				m.fieldLines[f.Key] = line
@@ -483,13 +477,66 @@ func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
 		if m.fieldKey == emptyFieldsKey {
 			style = m.fieldStyle()
 		}
-		label := fmt.Sprintf("+ Show %d empty fields", len(empty))
-		if len(empty) == 1 {
-			label = "+ Show 1 empty field"
-		}
-		lines = append(lines, style.Render(label))
+		lines = append(lines, style.Render(emptyFieldsLabel(len(empty))))
 	}
 	return strings.Join(lines, "\n")
+}
+
+// fieldValue styles field f of t to show in room columns: the status as a
+// badge, a project's name cut so its section stays, an enum value with its
+// color, the branch field in the branch color, a due date with how far off
+// it is, and "—" for an empty value.
+func (m *Model) fieldValue(t ticket.Ticket, f ticket.Field, room int) string {
+	value := f.Value
+	if value == "" {
+		value = dimStyle.Render("—")
+	}
+	switch {
+	case f.Label == "Status" && f.Key == "":
+		value = m.statusBadge(t.Completed)
+	case strings.HasPrefix(f.Key, ticket.KeyProject+":"):
+		gid := strings.TrimPrefix(f.Key, ticket.KeyProject+":")
+		for _, membership := range t.Memberships {
+			if membership.Project.GID == gid {
+				var section string
+				if membership.Section != nil {
+					section = " / " + ticket.Clean(membership.Section.Name)
+				}
+				// Cut the project name so its section stays on the row,
+				// unless that leaves too little of the name to read.
+				value = m.projectLabel(membership.Project, lipgloss.NewStyle())
+				if room := room - ansi.StringWidth(section); room >= 12 {
+					value = ansi.Truncate(value, room, "…")
+				}
+				value += section
+				break
+			}
+		}
+	case strings.HasPrefix(f.Key, ticket.KeyField+":"):
+		for _, field := range t.CustomFields {
+			if f.Key == ticket.FieldKey(field.GID) && m.deps.Config.BranchField != "" && asana.SameFieldName(field.Name, m.deps.Config.BranchField) {
+				value = branchStyle.Render(value)
+				break
+			}
+		}
+		if style, ok := fieldEnumStyle(t, f.Key); ok {
+			value = style.Render("● " + value)
+		}
+	case f.Key == ticket.KeyDue:
+		if due, _, ok := asana.DueDays(t.DueOn, m.now()); ok {
+			rel, style := dueLabel(t.DueOn, m.now())
+			value = style.Render(shortDate(due, m.now()) + " (" + rel + ")")
+		}
+	}
+	return value
+}
+
+// emptyFieldsLabel is the Show empty fields row's label for n fields.
+func emptyFieldsLabel(n int) string {
+	if n == 1 {
+		return "+ Show 1 empty field"
+	}
+	return fmt.Sprintf("+ Show %d empty fields", n)
 }
 
 // fieldEnumStyle is the enum color style of t's custom field with key, and

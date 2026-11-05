@@ -620,14 +620,45 @@ func TestReaderFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `POST /tasks/1/stories {"data":{"text":"hello"}}`},
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			m, writes := editModel(t)
-			tc.do(m)
-			if len(*writes) != 1 || strings.TrimSpace((*writes)[0]) != tc.want {
-				t.Fatalf("writes = %q, want %q (status %q)", *writes, tc.want, m.status)
-			}
-		})
+	// Both card views share their targets, so the same keys make the same
+	// edits.
+	for _, view := range []string{config.ViewCards, config.ViewStreamlined} {
+		for _, tc := range cases {
+			t.Run(view+"/"+tc.name, func(t *testing.T) {
+				m, writes := editModel(t)
+				m.readerView = view
+				tc.do(m)
+				if len(*writes) != 1 || strings.TrimSpace((*writes)[0]) != tc.want {
+					t.Fatalf("writes = %q, want %q (status %q)", *writes, tc.want, m.status)
+				}
+			})
+		}
+	}
+}
+
+func TestStreamlinedFieldLinesMatchChips(t *testing.T) {
+	m, _ := editModel(t)
+	m.readerView = config.ViewStreamlined
+	tk := m.details["1"]
+	for _, width := range []int{120, 50} {
+		lines := cardLines(t, m, tk, width)
+		if text := strings.Join(lines, "\n"); strings.Contains(text, "Details") || !strings.Contains(text, "Fields") {
+			t.Fatalf("streamlined view at %d must put fields in chips, not a Details card:\n%s", width, text)
+		}
+		if line := lines[m.fieldLines[emptyFieldsKey]]; !strings.HasPrefix(line, "+ Show ") {
+			t.Fatalf("empty fields row = %q, want a row of its own", line)
+		}
+	}
+	m.fieldKey = emptyFieldsKey
+	m.showEmptyFields()
+	lines := cardLines(t, m, tk, 120)
+	if line := lines[m.fieldLines[ticket.FieldKey("f2")]]; !strings.Contains(line, "Due —") {
+		t.Fatalf("shown empty field line = %q", line)
+	}
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m.jumpTo(tk, detailsKey)
+	if m.fieldKey != "assignee" || m.flashLines[0] != m.fieldLines["assignee"] || m.flashLines[1] < m.fieldLines[ticket.FieldKey("f2")] {
+		t.Fatalf("jump to details: target %q, flash %v, want the chips from line %d", m.fieldKey, m.flashLines, m.fieldLines["assignee"])
 	}
 }
 

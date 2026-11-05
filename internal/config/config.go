@@ -47,8 +47,9 @@ const (
 
 // Reading pane views.
 const (
-	ViewCards    = "cards"
-	ViewMarkdown = "markdown"
+	ViewCards       = "cards"
+	ViewStreamlined = "streamlined"
+	ViewMarkdown    = "markdown"
 )
 
 // ErrNotConfigured means the config file does not exist yet.
@@ -246,7 +247,9 @@ type Selection struct {
 }
 
 // Reader configures the reading pane. View is its starting view: cards
-// (sections and boxed comments) or markdown (the rendered ticket Markdown).
+// (a details card, sections, and boxed comments), streamlined (the cards
+// view's parts with the fields in compact rows under the title), or markdown
+// (the rendered ticket Markdown).
 // MaxTextWidth caps the wrap width of the cards view's description and
 // comment text, and of the comment editor; 0 wraps at the pane width. Comments shapes its comments.
 // Since shapes what a ticket gained since you last looked.
@@ -563,7 +566,7 @@ func (c Config) validate() error {
 	for _, e := range []error{
 		oneOf("images.mode", c.Images.Mode, "auto", "kitty", "off"),
 		oneOf("list.layout", c.List.Layout, LayoutSingle, LayoutMulti),
-		oneOf("reader.view", c.Reader.View, ViewCards, ViewMarkdown),
+		oneOf("reader.view", c.Reader.View, ViewCards, ViewStreamlined, ViewMarkdown),
 		oneOf("list.header.style", c.List.Header.Style, StyleBar, StyleRule),
 		oneOf("list.selection.style", c.List.Selection.Style, StyleMarker, StyleBar),
 	} {

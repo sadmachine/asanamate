@@ -294,6 +294,16 @@ comments; `enter` on the tabs switches them, and the choice holds until you
 quit. The markdown view always shows the whole activity. In narrower terminals the list
 fills the screen and `enter` opens the reader in its place.
 
+The streamlined view shows the same ticket with less chrome: the built-in
+fields sit in rows of short chips under the title, each led by its label (or
+its icon with `symbols = "nerd"`), and custom fields keep their labels in
+rows under a Fields rule, with a long value on a row of its own. Agents and
+subtasks sit side by side when the reader is wide enough for both. Every row
+you can select in the cards view is there in the same order and edits the
+same way, so `j`/`k`, `enter`, and the jump menu work alike in both, and
+what this README says of the cards view holds for the streamlined view too.
+`v` steps through cards, streamlined, and markdown.
+
 When you open a My Tasks ticket you have viewed before, a **Since you
 looked** card above its description lists, oldest first, the comments and
 changes others made since then. Those entries move out of the activity below,
@@ -381,7 +391,7 @@ key press.
 | `-` | fold the selected ticket's group to its header, or open the folded group under the cursor (also `enter` or a double-click on its header) |
 | `+` | fold every group except the selected one, or open them all when they are already folded |
 | `=` | fit the list pane to its content (also on project, grouping, sorting, and filter changes); does nothing while `layout.list_width` is set |
-| `v` | switch the reader between the cards and markdown views |
+| `v` | switch the reader to its next view: cards, streamlined, then markdown |
 | `z` | show or hide the reader for the session (see [Layout](#layout)) |
 | `Z` | show or hide the views sidebar; automatically hidden below 160 columns |
 | `V` | recall or manage saved views |
@@ -809,7 +819,7 @@ they take effect at the next start or the next app write.
 | `list.header.spacing` | `false` | blank lines around group headers; `s`, then `h` toggles |
 | `list.selection.style` | `"marker"` | `marker` or `bar`; `s`, then `l` toggles |
 | `list.refresh_interval` | `"30s"` | automatic list reload interval, at least `1s`; `R` or `,`, then `i` saves a duration such as `"15s"` or `"1m"` with `ctrl+s` |
-| `reader.view` | `"cards"` | `cards` or `markdown`; `v` or `s`, then `v` switches and saves |
+| `reader.view` | `"cards"` | `cards`, `streamlined`, or `markdown` (see [Layout](#layout)); `v` or `s`, then `v` steps to the next and saves |
 | `reader.since.show` | `true` | list what others added to a My Tasks ticket since you last viewed it, above its description; `s`, then `w` toggles. See [Layout](#layout) |
 | `layout.focus.dim` | `true` | draw unfocused panes faint; `s`, then `d` toggles |
 

@@ -1,0 +1,53 @@
+internal/tui/nav.go
+  s_a29860173a8c8e::t_cbbac2ee51dcd3 17,20,23,29-30,43,46,51,59-61,131,137,159,216,232
+  s_a29860173a8c8e::t_6220111c2d9445 241
+internal/tui/model.go
+  s_a29860173a8c8e::t_cbbac2ee51dcd3 90,124,126,130,310,1348,1374
+internal/tui/statusline.go
+  s_a29860173a8c8e::t_cbbac2ee51dcd3 71
+internal/tui/ticketonly_test.go
+  s_a29860173a8c8e::t_cbbac2ee51dcd3 49
+internal/tui/keys.go
+  s_a29860173a8c8e::t_cbbac2ee51dcd3 40,403,440,451
+internal/tui/nav_test.go
+  s_a29860173a8c8e::t_f39fbc14044719 69
+  s_a29860173a8c8e::t_246ab16930eef0 34,38,47,50,55-60,66,72-73,87,90-91,93-94
+internal/tui/mouse_test.go
+  s_a29860173a8c8e::t_37322e58abaedf 151,154,156-160
+internal/keymap/catalog.go
+  s_a29860173a8c8e::t_cbbac2ee51dcd3 18,55,81
+internal/tui/activity_test.go
+  s_a29860173a8c8e::t_cbbac2ee51dcd3 157,305
+  s_a29860173a8c8e::t_5135f14453dc90 152
+README.md
+  s_a29860173a8c8e::t_b5600c91b8d89e 286-289,326,328,350,364,368,397,518,520,573,581,592,601,648,685,708,1036
+  s_a29860173a8c8e::t_e92759d577fb97 866-867
+internal/whatsnew/whats-new.md
+  s_a29860173a8c8e::t_e92759d577fb97 6-15
+internal/tui/styles.go
+  s_a29860173a8c8e::t_cbbac2ee51dcd3 37
+internal/tui/activity.go
+  s_a29860173a8c8e::t_cbbac2ee51dcd3 612,815,831,843,901
+docs/deferred-ideas.md
+  s_a29860173a8c8e::t_b5600c91b8d89e 130,132,180
+internal/setup/setup.go
+  s_a29860173a8c8e::t_cbbac2ee51dcd3 262,403
+internal/tui/listonly_test.go
+  s_a29860173a8c8e::t_12af700afd6a36 100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "096061cabf7fbb45d62f0668c650be95f97f66d6",
+  "prompts": {},
+  "sessions": {
+    "s_a29860173a8c8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28687d57-fb4d-4e2d-8355-acb12fff8b1f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

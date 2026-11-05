@@ -652,8 +652,9 @@ var errDoctorBlocking = errors.New("doctor found problems that block browsing (m
 
 // runDoctor reports whether asanamate is ready to browse and which optional
 // features can work, then, for a ticket, why agents link to it or not. Only
-// core failures (config, token, workspace) make it fail. It runs no actions
-// and writes nothing.
+// core failures (config, token, workspace) make it fail. It runs the read-only
+// sources it checks (feed commands, agents.command, and, with a ticket,
+// conversations.command), but no actions, and writes nothing.
 func runDoctor(args []string) error {
 	if len(args) > 1 || (len(args) == 1 && !asana.ValidGID(args[0])) {
 		return fmt.Errorf("doctor takes at most one numeric task gid\n%s", usage)
@@ -790,7 +791,8 @@ func checkAsana(ctx context.Context, w io.Writer, workspace string) *asana.Clien
 }
 
 // checkFeatures reports the tools optional features need. Missing ones only
-// warn: browsing works without them. Custom commands are not run.
+// warn: browsing works without them. It runs no custom command: repo_source,
+// time_tracking, and project_links commands are reported but not run.
 func checkFeatures(w io.Writer, cfg config.Config) {
 	tool := func(label, name, need string) {
 		if p, err := exec.LookPath(name); err == nil {

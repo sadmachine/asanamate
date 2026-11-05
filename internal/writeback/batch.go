@@ -2,7 +2,6 @@ package writeback
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -106,20 +105,9 @@ func (s Service) prepareChange(ctx context.Context, t asana.Task, c Change) (fun
 		if err != nil {
 			return nil, "", err
 		}
-		if f.IsValueReadOnly || f.IsFormulaField || (f.RepresentationType != "" && f.RepresentationType != f.ResourceSubtype) {
-			return nil, "", fmt.Errorf("%s is read-only", ticket.FieldName(f))
-		}
-		switch f.ResourceSubtype {
-		case asana.FieldText, asana.FieldNumber, asana.FieldEnum, asana.FieldMultiEnum, asana.FieldDate, asana.FieldPeople:
-		default:
-			return nil, "", fmt.Errorf("%s: custom field type %q is not supported", ticket.FieldName(f), f.ResourceSubtype)
-		}
 		value, err := s.fieldValue(ctx, f, c.Value)
 		if err != nil {
 			return nil, "", err
-		}
-		if _, err := json.Marshal(value); err != nil {
-			return nil, "", fmt.Errorf("%s: %w", ticket.FieldName(f), err)
 		}
 		label = ticket.FieldName(f) + ": " + c.Value
 		write = func(ctx context.Context) error { return s.Client.SetCustomField(ctx, t.GID, f.GID, value) }

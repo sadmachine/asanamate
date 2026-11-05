@@ -26,7 +26,8 @@ const taskJSON = `{"data":{"gid":"1","name":"Fix login",
   {"gid":"f3","name":"Stage","resource_subtype":"enum","enum_options":[{"gid":"o1","name":"Review"}]},
   {"gid":"f4","name":"When","resource_subtype":"date"},
   {"gid":"f5","name":"Areas","resource_subtype":"multi_enum","enum_options":[{"gid":"o2","name":"Frontend"},{"gid":"o3","name":"Backend"}]},
-  {"gid":"f6","name":"Reviewers","resource_subtype":"people"}]}}`
+  {"gid":"f6","name":"Reviewers","resource_subtype":"people"},
+  {"gid":"f7","name":"Total","resource_subtype":"number","is_formula_field":true}]}}`
 
 type write struct {
 	method, path string
@@ -624,7 +625,7 @@ func TestSetFieldRejectsUnknownOrAmbiguousPeople(t *testing.T) {
 func TestSetFieldRejectsBadInput(t *testing.T) {
 	c, writes := fake(t)
 	svc := Service{Client: c}
-	for _, args := range [][2]string{{"Points", "many"}, {"Stage", "Shipped"}, {"When", "nonsense"}, {"Nope", "x"}} {
+	for _, args := range [][2]string{{"Points", "many"}, {"Points", "NaN"}, {"Points", "-Inf"}, {"Stage", "Shipped"}, {"When", "nonsense"}, {"Nope", "x"}, {"Total", "3"}} {
 		if err := svc.SetField(ctx, "1", args[0], args[1], ""); err == nil {
 			t.Errorf("SetField(%q, %q) succeeded", args[0], args[1])
 		}

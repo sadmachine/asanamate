@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -752,8 +753,11 @@ func (s Service) resolveField(ctx context.Context, t asana.Task, name, projectGI
 }
 
 // fieldValue is FieldValue, plus people fields, whose names it resolves to
-// workspace users.
+// workspace users. It refuses fields Asana does not let users write.
 func (s Service) fieldValue(ctx context.Context, f asana.CustomField, value string) (any, error) {
+	if f.IsValueReadOnly || f.IsFormulaField || (f.RepresentationType != "" && f.RepresentationType != f.ResourceSubtype) {
+		return nil, fmt.Errorf("%s is read-only", ticket.FieldName(f))
+	}
 	if f.ResourceSubtype != asana.FieldPeople || value == "" {
 		return FieldValue(ctx, f, value)
 	}
@@ -842,7 +846,7 @@ func FieldValue(ctx context.Context, f asana.CustomField, value string) (any, er
 		return value, nil
 	case asana.FieldNumber:
 		n, err := strconv.ParseFloat(value, 64)
-		if err != nil {
+		if err != nil || math.IsNaN(n) || math.IsInf(n, 0) {
 			return nil, fmt.Errorf("%s needs a number, got %q", name, value)
 		}
 		return n, nil

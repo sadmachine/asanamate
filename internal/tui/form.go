@@ -179,10 +179,13 @@ func (f *formModal) view(width, height int, look modalLook) string {
 		} else if value == "" {
 			value = "(choose)"
 		}
-		line := ticket.OneLine(field.Label) + ": " + ticket.OneLine(value)
+		label := ticket.OneLine(field.Label) + ": "
+		line := label + ticket.OneLine(value)
 		if i == f.cursor && f.editing {
-			f.input.SetWidth(max(width-len(field.Label)-4, 1))
-			line = ticket.OneLine(field.Label) + ": " + f.input.View()
+			// Sized like the picker's input: from the cells left beside the
+			// label, the "▸ " marker, and the border.
+			f.input.SetWidth(max(width-ansi.StringWidth(label)-2, 1))
+			line = label + f.input.View()
 		}
 		line = ansi.Truncate(line, max(width-2, 1), "…")
 		if i == f.cursor && !f.editing {

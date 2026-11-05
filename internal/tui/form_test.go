@@ -584,3 +584,14 @@ func TestBuilderSaveFollowsItsBinding(t *testing.T) {
 		t.Fatal("a printable save key must type while searching")
 	}
 }
+
+func TestFormInputWidthUsesDisplayCells(t *testing.T) {
+	spec := form.Spec{Fields: []form.Field{{ID: "d", Label: "Durée", Type: form.String}}}
+	f := newFormModal("Time", spec, nil, nil)
+	f.editing = true
+	f.view(40, 10, modalLook{})
+	// "Durée: " is 7 cells; the marker and border take 2 more.
+	if got := f.input.Width(); got != 40-7-2 {
+		t.Fatalf("input width = %d, want %d", got, 40-7-2)
+	}
+}

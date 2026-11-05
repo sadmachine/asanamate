@@ -494,6 +494,24 @@ func TestLoadedProjectsAreCachedOncePerSession(t *testing.T) {
 	}
 }
 
+func TestFailedProjectLoadAbandonsWaitingPicker(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	m.deps.Client = asana.New("tok")
+	m.edit = &pendingEdit{}
+	opened := false
+	m.afterProjects = func() tea.Cmd { opened = true; return nil }
+	m.loadingProjects = true
+	m.Update(projectsMsg{err: errBoom})
+	if m.edit != nil || m.afterProjects != nil {
+		t.Fatal("a failed project load must abandon the waiting edit and picker")
+	}
+	m.loadingProjects = true
+	m.Update(projectsMsg{projects: []asana.Project{{GID: "p2", Name: "API"}}})
+	if opened {
+		t.Fatal("a later project load opened the abandoned picker")
+	}
+}
+
 func TestPanelFocus(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	tab := lipgloss.NewStyle().Bold(true).Reverse(true).Foreground(m.accentStyle.GetForeground()).Render("[1] T")

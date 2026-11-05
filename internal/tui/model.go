@@ -542,13 +542,21 @@ func (m *Model) gotProjects(msg projectsMsg) tea.Cmd {
 	connectionError := m.observeAsana("loading projects", msg.err)
 	if msg.err != nil {
 		message := "loading projects: " + msg.err.Error()
-		if m.composer != nil && m.afterProjects != nil {
+		// Whatever waited for the projects is abandoned, so a later load
+		// cannot open its picker for a ticket the user has left.
+		waiting := m.afterProjects != nil
+		m.afterProjects = nil
+		if m.composer != nil && waiting {
 			m.setInlineError(message)
-			m.afterProjects = nil
 			m.composer.setError(m.status)
 			m.returnToDraft()
-		} else if !connectionError {
-			m.setBackgroundError("projects", message)
+		} else {
+			if waiting {
+				m.edit = nil // an add-project edit waiting for its picker
+			}
+			if !connectionError {
+				m.setBackgroundError("projects", message)
+			}
 		}
 		m.clearProgress()
 		return nil

@@ -887,18 +887,26 @@ func (m *Model) blockingLoad() bool {
 
 func (m *Model) reload() tea.Cmd {
 	// Retain the displayed ticket until its replacement arrives. Other cached
-	// tickets must be fetched again when selected after a reload.
+	// tickets must be fetched again when selected after a reload, and so must
+	// their inline images.
 	for gid := range m.details {
 		if gid != m.shownGID {
 			delete(m.details, gid)
 		}
 	}
+	shown := map[string]bool{}
+	if t, ok := m.details[m.shownGID]; ok {
+		for _, gid := range imageGIDs(t) {
+			shown[gid] = true
+		}
+	}
+	drop := m.dropImages(func(gid string) bool { return shown[gid] })
 	if m.ticketOnly() {
-		return m.loadDetail(m.deps.Ticket)
+		return tea.Batch(drop, m.loadDetail(m.deps.Ticket))
 	}
 	m.loading, m.background = true, false
 	m.taskSeq++
-	return tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks(), m.taskSeq), m.startSpinner())
+	return tea.Batch(drop, loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks(), m.taskSeq), m.startSpinner())
 }
 
 // applyFilter recomputes the visible tasks and their groups, keeping the

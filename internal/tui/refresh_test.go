@@ -85,12 +85,19 @@ func TestManualRefreshRejectsStaleImageResults(t *testing.T) {
 func TestAutoRefreshKeepsImageCache(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.loading = false
+	shown := ticket.Ticket{Task: openTask, Comments: []asana.Story{{HTMLText: `<body><img data-asana-gid="10"></body>`}}}
+	shown.HTMLNotes = `<body><img data-asana-gid="9"></body>`
+	m.details[openTask.GID], m.shownGID = shown, openTask.GID
 	loaded, failed := &inlineImage{id: 20}, &inlineImage{}
 	m.images["9"], m.images["10"] = loaded, failed
+	m.images["elsewhere"] = &inlineImage{id: 21}
 	epoch := m.imageEpoch
 	_, cmd := m.Update(refreshTickMsg{seq: m.refreshSeq})
 	if cmd == nil || !m.loading || m.images["9"] != loaded || m.images["10"] != failed || m.imageEpoch != epoch {
-		t.Fatal("automatic refresh must reload tasks without invalidating images")
+		t.Fatal("automatic refresh must reload tasks without invalidating the shown ticket's images")
+	}
+	if _, ok := m.images["elsewhere"]; ok {
+		t.Fatal("automatic refresh must drop images of tickets no longer cached")
 	}
 }
 

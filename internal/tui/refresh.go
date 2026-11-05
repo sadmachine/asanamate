@@ -15,13 +15,13 @@ type refreshTickMsg struct{ seq uint64 }
 // the displayed images immediately, even if the task refresh fails.
 func (m *Model) refreshWithImages() tea.Cmd {
 	m.imageEpoch++
-	m.images = map[string]*inlineImage{}
+	drop := m.dropImages(nil)
 	var images tea.Cmd
 	if t, ok := m.selectedDetail(); ok {
 		images = m.loadInlineImages(t)
 		m.renderDetail(true)
 	}
-	return tea.Batch(m.refresh(), images)
+	return tea.Batch(m.refresh(), drop, images)
 }
 
 // refresh updates the current view without covering it with a loading modal.

@@ -1,0 +1,23 @@
+packages/asana-sessions/src/codex.js
+  s_ba5d61e9a44b8c::t_06a73eaf84c75b 144-160
+packages/asana-sessions/src/asanamate.js
+  s_ba5d61e9a44b8c::t_06a73eaf84c75b 4,59
+packages/asana-sessions/test/codex.test.js
+  s_ba5d61e9a44b8c::t_31cdaa66115775 101-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f81cc9b4290c24edc5008aaafb41286138395c26",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

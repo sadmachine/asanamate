@@ -13,6 +13,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/filter"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -63,6 +64,12 @@ func groupTasks(tasks []asana.Task, by string, rc rowContext, today time.Time) (
 	if !isDue(by) {
 		rank[none] = len(rank)
 	}
+	return orderGroups(tasks, labels, rank)
+}
+
+// orderGroups orders tasks by the rank of their group labels, keeping their
+// order within a group, and returns each task's label.
+func orderGroups(tasks []asana.Task, labels []string, rank map[string]int) ([]asana.Task, []string) {
 	order := make([]int, len(tasks))
 	for i := range order {
 		order[i] = i
@@ -74,6 +81,41 @@ func groupTasks(tasks []asana.Task, by string, rc rowContext, today time.Time) (
 		grouped[i], groups[i] = tasks[j], labels[j]
 	}
 	return grouped, groups
+}
+
+// ruleGroups orders tasks into the sections of grouping g: each joins the
+// first section with a match query it satisfies, and the rest go to
+// config.OtherSection. Sections keep their configured order, Other last.
+func ruleGroups(tasks []asana.Task, g config.Grouping, env filter.Env) ([]asana.Task, []string) {
+	rank := map[string]int{}
+	queries := make([][]filter.Filter, len(g.Sections))
+	for i, s := range g.Sections {
+		rank[s.Label] = i
+		for _, q := range s.Match {
+			queries[i] = append(queries[i], filter.Parse(q))
+		}
+	}
+	rank[config.OtherSection] = len(g.Sections)
+	labels := make([]string, len(tasks))
+	for i, t := range tasks {
+		labels[i] = config.OtherSection
+		for j, qs := range queries {
+			if slices.ContainsFunc(qs, func(f filter.Filter) bool { return f.Match(t, env) }) {
+				labels[i] = g.Sections[j].Label
+				break
+			}
+		}
+	}
+	return orderGroups(tasks, labels, rank)
+}
+
+// groupList groups tasks by the list's grouping: a rule grouping by that
+// name, else a list field.
+func (m *Model) groupList(tasks []asana.Task) ([]asana.Task, []string) {
+	if g, ok := m.deps.Config.Grouping(m.groupBy); ok && m.groupBy != "" {
+		return ruleGroups(tasks, g, m.filterEnv())
+	}
+	return groupTasks(tasks, m.groupBy, m.rowContext(), m.now())
 }
 
 func isDue(by string) bool { return strings.EqualFold(by, "due") }
@@ -112,11 +154,14 @@ func dueBucket(dueOn *string, today time.Time) string {
 	}
 }
 
-// groupings lists the fields the list can group by: none, the built-in
-// fields, then the configured list fields and group_by, and the custom fields
-// on loaded tickets.
+// groupings lists what the list can group by: none, the built-in fields,
+// the rule groupings, then the configured list fields and group_by, and the
+// custom fields on loaded tickets.
 func (m *Model) groupings() []string {
 	names := append([]string{""}, builtinFields...)
+	for _, g := range m.deps.Config.AllGroupings() {
+		names = append(names, g.Name)
+	}
 	names = append(names, m.deps.Config.List.Fields...)
 	names = append(names, m.deps.Config.List.DefaultView.GroupBy)
 	for _, t := range m.tasks {

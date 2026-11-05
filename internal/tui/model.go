@@ -888,7 +888,7 @@ func (m *Model) applyFilter() {
 	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.filterEnv())
 	visible = slices.DeleteFunc(visible, func(t asana.Task) bool { return slices.Contains(pins, t.GID) })
 	fresh, rest := m.splitNew(visible)
-	m.visible, m.groups = groupTasks(rest, m.groupBy, m.rowContext(), m.now())
+	m.visible, m.groups = m.groupList(rest)
 	sortTasks(m.visible, m.groups, m.sortBy, m.rowContext())
 	freshLabels := slices.Repeat([]string{newLabel}, len(fresh))
 	sortTasks(fresh, freshLabels, m.sortBy, m.rowContext())

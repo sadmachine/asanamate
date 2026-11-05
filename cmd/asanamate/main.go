@@ -614,9 +614,12 @@ func listFilterEnv(ctx context.Context, client *asana.Client, cfg config.Config,
 	if err != nil {
 		return env, err
 	}
-	env.HasBranch = func(t asana.Task) bool {
-		return action.ExplicitBranch(t, st.TaskBranches[t.GID], cfg.BranchField, nil) != ""
-	}
+	env.Lookup = map[string]func(asana.Task) []string{filter.KeyBranch: func(t asana.Task) []string {
+		if b := action.ExplicitBranch(t, st.TaskBranches[t.GID], cfg.BranchField, nil); b != "" {
+			return []string{b}
+		}
+		return nil
+	}}
 	return env, nil
 }
 

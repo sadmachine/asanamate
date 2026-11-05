@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	listFields       = "name,completed,due_on,modified_at,assignee.name,assignee_section.name,memberships.project.name,memberships.project.color,memberships.section.name,tags.name,permalink_url,custom_fields.name,custom_fields.display_value,custom_fields.is_value_read_only,custom_fields.is_formula_field,custom_fields.enum_value.color"
+	listFields       = "name,completed,due_on,modified_at,assignee.name,assignee_section.name,memberships.project.name,memberships.project.color,memberships.section.name,tags.name,permalink_url,dependencies.completed,custom_fields.name,custom_fields.display_value,custom_fields.is_value_read_only,custom_fields.is_formula_field,custom_fields.enum_value.color"
 	detailFields     = listFields + ",html_notes,custom_fields.resource_subtype,custom_fields.representation_type,custom_fields.enum_options.name,custom_fields.multi_enum_values.name,custom_fields.people_value.name,custom_fields.date_value.date,dependencies.name,dependents.name,parent.name,created_at"
 	attachmentFields = "name,host,download_url,permanent_url,view_url"
 )

@@ -85,8 +85,8 @@ func (m *Model) filterHelpView() string {
 			key("is:open  is:done") + "\n" +
 			key("due:") + " overdue today week none\n" +
 			key("agent:any  agent:none  agent:<state>") + "\n" +
-			dimStyle.Render("waiting, working, completed,") + "\n" +
-			dimStyle.Render("idle, unknown") + "\n\n" +
+			dimStyle.Render("waiting working completed idle unknown") + "\n" +
+			key("branch:  git:  blocked:") + " any none\n\n" +
 			"Spaces combine terms. " + key("-term") + " excludes.\n" +
 			key(`"two words"`) + " groups words.\n\n" +
 			dimStyle.Render(`is:open section:"in progress"`) + "\n" +
@@ -100,7 +100,10 @@ func (m *Model) filterHelpView() string {
 		key("is:open  is:done") + " filter completion\n" +
 		key("due:overdue  due:today  due:week  due:none") + " filter due dates\n" +
 		key("agent:any  agent:none  agent:<state>") + " filter linked agents\n" +
-		dimStyle.Render("States: waiting, working, completed, idle, unknown") + "\n\n" +
+		dimStyle.Render("States: waiting, working, completed, idle, unknown") + "\n" +
+		key("branch:any  branch:none  branch:<name>") + " filter saved branches\n" +
+		key("git:dirty  git:unpushed  git:any  git:none") + " filter work on the branch\n" +
+		key("blocked:any  blocked:none") + " filter open dependencies\n\n" +
 		"Spaces combine terms. " + key("-term") + " excludes. " + key(`"two words"`) + " groups words.\n\n" +
 		dimStyle.Render(`is:open section:"in progress" -tag:blocked`) + "\n\n" +
 		dimStyle.Render("any key closes · return to filter")

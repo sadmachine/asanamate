@@ -359,6 +359,8 @@ func (m *Model) mouseWheel(msg tea.MouseWheelMsg) tea.Cmd {
 	case overlayExtension:
 		if m.extension != nil {
 			m.extension.reader, _ = m.extension.reader.Update(msg)
+		} else if m.whatsNew != nil {
+			m.whatsNew.reader, _ = m.whatsNew.reader.Update(msg)
 		}
 		return nil
 	case overlayNone:

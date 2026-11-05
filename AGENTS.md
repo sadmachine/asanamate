@@ -72,6 +72,25 @@ Before a release, check open PRs and identify relevant fixes for inclusion.
 - One logical change per commit, with its tests and docs in the same commit.
 - Breaking changes follow "Approved breaking changes" under Config keys.
 
+## What's new
+
+`internal/whatsnew/whats-new.md` holds the curated highlights the TUI shows
+after an upgrade and the release notes open with. Every `feat` and every
+`fix` commit gets a highlight decision, recorded in the same commit by adding
+an entry under `## Unreleased` when it earns one. The commit type does not
+pick the section; what users experience does:
+
+- **New:** something users could not do before (a command, key, view, or
+  setting). Usually a `feat`.
+- **Changed:** something users rely on now behaves or looks different (a
+  moved key, a new default, a reworked screen). A `feat`, a `fix`, or a
+  breaking change.
+- **No entry:** polish nobody would look for, fixes that restore intended
+  behavior, and internal work.
+
+Each entry is a bold title, one or two sentences, and how to try it, under
+`### New` or `### Changed`; links are absolute.
+
 ## Deferred ideas
 
 `docs/deferred-ideas.md` records improvements set aside with their reasons.
@@ -107,10 +126,14 @@ bump already pending, needs no new recommendation beyond naming it.
 
 When the user asks for a release, on local `main`:
 
-1. In `docs/migrations.md`, rename `## Unreleased` to the tag's `## vX.Y.Z`;
-   the release workflow copies only the section whose heading matches the tag
-   exactly. Delete the heading instead if nothing is under it.
-2. Commit it as `docs(migrations): release vX.Y.Z`.
+1. Compare `## Unreleased` in `internal/whatsnew/whats-new.md` with every
+   `feat` and `fix` commit in `git log --oneline <tag>..main`, and add any
+   missed or misfiled highlight (see What's new).
+2. In `docs/migrations.md` and `internal/whatsnew/whats-new.md`, rename
+   `## Unreleased` to the tag's `## vX.Y.Z`; the release workflow copies only
+   the sections whose heading matches the tag exactly. Delete the heading
+   instead if nothing is under it. Commit it as
+   `docs(release): release vX.Y.Z`.
 3. Push `main` without a tag: `git push origin main`.
 4. Wait for the `ci` workflow on that exact `main` commit to finish with
    every job successful. All tests must pass on every environment in

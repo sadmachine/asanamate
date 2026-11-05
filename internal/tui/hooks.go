@@ -81,7 +81,7 @@ func (m *Model) runHooks(events []hookEvent) tea.Cmd {
 func (m *Model) canPrompt(gid string) bool {
 	t, ok := m.selectedDetail()
 	return ok && t.GID == gid && m.modal == nil && m.input == nil && m.form == nil &&
-		m.composer == nil && m.builder == nil && m.extension == nil && m.waiting == "" &&
+		m.composer == nil && m.builder == nil && m.extension == nil && m.whatsNew == nil && m.waiting == "" &&
 		len(m.notices) == 0 && !m.help
 }
 

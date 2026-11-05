@@ -71,8 +71,13 @@ type State struct {
 	FormChoices map[string]map[string]map[string][]string `toml:"form_choices"`
 	// LegacyDisplay migrates pre-v0.3 settings. Remove in v0.5.0.
 	LegacyDisplay LegacyDisplay `toml:"display,omitempty"`
+	// LastSeenVersion is the newest release whose what's-new entries the
+	// user has been offered.
+	LastSeenVersion string `toml:"last_seen_version,omitempty"`
 
 	path string
+	// fresh is true when Load found no file: a first run.
+	fresh bool
 }
 
 // LegacyDisplay decodes settings saved before settings.toml existed.
@@ -126,7 +131,9 @@ type RecentTicket struct {
 // Load reads the state file. A missing file yields empty state.
 func Load(path string) (*State, error) {
 	s := &State{path: path}
-	if _, err := toml.DecodeFile(path, s); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if _, err := toml.DecodeFile(path, s); errors.Is(err, os.ErrNotExist) {
+		s.fresh = true
+	} else if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if s.Repos == nil {
@@ -345,6 +352,9 @@ func (s *State) View(projectGID string) (View, bool) {
 
 // Path returns the file the state is saved to.
 func (s *State) Path() string { return s.path }
+
+// Fresh reports whether Load found no state file, as on a first run.
+func (s *State) Fresh() bool { return s.fresh }
 
 // LinkedRepos returns t's own repo when set, otherwise the repos linked to its
 // projects, in membership order.

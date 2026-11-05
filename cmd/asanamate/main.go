@@ -39,6 +39,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/state"
 	"github.com/sadmachine/asanamate/internal/ticket"
 	"github.com/sadmachine/asanamate/internal/tui"
+	"github.com/sadmachine/asanamate/internal/whatsnew"
 	"github.com/sadmachine/asanamate/internal/writeback"
 )
 
@@ -92,6 +93,7 @@ const usage = `usage:
   asanamate conversation open <gid | url> --provider <name> --session <id>
                                                    resume one exact linked conversation in this terminal
   asanamate doctor [<gid>]                         check setup and optional tools; for a ticket, why agents link (or not)
+  asanamate whats-new                              print release highlights up to this version
   asanamate version
 `
 
@@ -121,6 +123,8 @@ func run(args []string) int {
 	case "version":
 		fmt.Println(currentVersion())
 		return 0
+	case "whats-new":
+		err = runWhatsNew(args[1:], os.Stdout, whatsnew.Embedded(), currentVersion())
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 		return 0
@@ -476,6 +480,7 @@ func runRead(args []string) error {
 // the command an exit-mode action left.
 func startTUI(d tui.Deps) error {
 	d.Version = currentVersion()
+	d.WhatsNew = whatsnew.Embedded()
 	configPath, err := config.Path()
 	if err != nil {
 		return err

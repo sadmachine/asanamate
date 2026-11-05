@@ -735,6 +735,14 @@ silently skips network failures, rate limits, development builds, and prerelease
 builds. It sends no Asana token or configuration to GitHub. Companion releases
 do not trigger it.
 
+After an update, the first launch of the TUI opens **What's new**: a short,
+curated list of the features and changes in each release since the one you last
+ran, newest first. It is built into the binary, so nothing is fetched. Press
+`esc` to close it, or `d` to stop it from opening on startup
+(`whats_new.on_startup` in `settings.toml`). Reopen it any time from Settings &
+tools (`,`, then `e`; `u` turns startup display back on), or print it with
+`asanamate whats-new`. A fresh install and development builds never open it.
+
 To update, follow [Release archive](#release-archive) with the new version, or
 repeat [From source](#from-source) from an updated checkout. See
 [Upgrade and uninstall](#upgrade-and-uninstall) for theme updates. Restart
@@ -822,6 +830,7 @@ they take effect at the next start or the next app write.
 | `reader.view` | `"cards"` | `cards`, `streamlined`, or `markdown` (see [Layout](#layout)); `v` or `s`, then `v` steps to the next and saves |
 | `reader.since.show` | `true` | list what others added to a My Tasks ticket since you last viewed it, above its description; `s`, then `w` toggles. See [Layout](#layout) |
 | `layout.focus.dim` | `true` | draw unfocused panes faint; `s`, then `d` toggles |
+| `whats_new.on_startup` | `true` | open What's new on the first launch after an upgrade; `d` in What's new turns it off, and `,`, then `u` toggles it. See [Upgrading](#upgrading) |
 
 ### List fields and views
 

@@ -84,6 +84,8 @@ type Config struct {
 	Activity Activity `toml:"activity"`
 	Feed     Feed     `toml:"feed"`
 	Mouse    Mouse    `toml:"mouse"`
+	// WhatsNew controls the what's-new modal shown after an upgrade.
+	WhatsNew WhatsNew `toml:"whats_new"`
 	// Keys overrides key bindings: scope, then binding name, then keys. See
 	// internal/keymap for the scopes and names, including Activity controls.
 	Keys map[string]map[string][]string `toml:"keys"`
@@ -299,6 +301,12 @@ type Mouse struct {
 	Enabled bool `toml:"enabled"`
 }
 
+// WhatsNew controls the what's-new modal. OnStartup opens it on the first
+// launch of a newer release; the modal and Settings & tools can turn it off.
+type WhatsNew struct {
+	OnStartup bool `toml:"on_startup"`
+}
+
 // Activity configures the Activity view. RefreshInterval is how often
 // Activity scans run in the background: a duration of at least one second,
 // or "0" for no background scans.
@@ -417,6 +425,7 @@ func Default() Config {
 		Activity: Activity{RefreshInterval: "2m"},
 		Feed:     Feed{Expand: ExpandAuto, Height: 12, RefreshInterval: "1m", Commands: []string{}},
 		Mouse:    Mouse{Enabled: true},
+		WhatsNew: WhatsNew{OnStartup: true},
 		Keymap:   keymap.Default(),
 	}
 }

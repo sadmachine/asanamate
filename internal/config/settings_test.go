@@ -33,6 +33,7 @@ func TestSettingsLoadAndValidation(t *testing.T) {
 		{"[unknown]\n", "unknown"},
 		{"list.selection.style = \"invalid\"\n", "list.selection.style"},
 		{"list.header.spacing = 1\n", "list.header.spacing"},
+		{"whats_new.on_startup = 1\n", "whats_new.on_startup"},
 		{"reader.view = \"grid\"\n", "reader.view"},
 		{"reader.since.show = \"yes\"\n", "reader.since.show"},
 		{"list.refresh_interval = \"0s\"\n", "list.refresh_interval"},
@@ -174,5 +175,19 @@ func TestLoadReportsEverySettingAndDefaultViewMove(t *testing.T) {
 				t.Fatalf("err = %v", err)
 			}
 		})
+	}
+}
+
+func TestSaveSettingWhatsNew(t *testing.T) {
+	path := writeSettingsFixture(t, "workspace = \"1\"\n", string(DefaultSettings()))
+	if !Default().WhatsNew.OnStartup {
+		t.Fatal("whats_new.on_startup defaults off")
+	}
+	if err := SaveSetting(path, "whats_new.on_startup", false); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil || cfg.WhatsNew.OnStartup {
+		t.Fatalf("on_startup = %v, err = %v", cfg.WhatsNew.OnStartup, err)
 	}
 }

@@ -14,13 +14,22 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      # The tag's docs/migrations.md section, if any, heads the release notes.
-      - name: Upgrade notes
+      # The tag's what's-new and docs/migrations.md sections, if any, head the
+      # release notes.
+      - name: Release notes header
         id: notes
         run: |
-          awk -v tag="## $GITHUB_REF_NAME" '$0 == tag { on = 1; next } on && /^## / { exit } on' docs/migrations.md > "$RUNNER_TEMP/notes.md"
+          section() { awk -v tag="## $GITHUB_REF_NAME" '$0 == tag { on = 1; next } on && /^## / { exit } on' "$1"; }
+          section internal/whatsnew/whats-new.md > "$RUNNER_TEMP/whatsnew.md"
+          section docs/migrations.md > "$RUNNER_TEMP/notes.md"
+          : > "$RUNNER_TEMP/header.md"
+          if grep -q '[^[:space:]]' "$RUNNER_TEMP/whatsnew.md"; then
+            { echo "## What's new"; cat "$RUNNER_TEMP/whatsnew.md"; } >> "$RUNNER_TEMP/header.md"
+          fi
           if grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
-            { echo '## Upgrading'; cat "$RUNNER_TEMP/notes.md"; } > "$RUNNER_TEMP/header.md"
+            { echo '## Upgrading'; cat "$RUNNER_TEMP/notes.md"; } >> "$RUNNER_TEMP/header.md"
+          fi
+          if [ -s "$RUNNER_TEMP/header.md" ]; then
             echo "flags=--release-header=$RUNNER_TEMP/header.md" >> "$GITHUB_OUTPUT"
           fi
       - uses: goreleaser/goreleaser-action@v6

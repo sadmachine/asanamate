@@ -426,6 +426,9 @@ commands = []
 # terminal's own selection, or set false to leave the mouse to the terminal.
 enabled = true
 
+# Opening What's new after an upgrade lives in settings.toml
+# (whats_new.on_startup); its d key and Settings & tools save it.
+
 # Optional: show running coding agents next to their tickets. Off unless
 # command is set. Explicit task GIDs from the source take precedence; otherwise
 # tickets match agents on their branch in linked repos. See the README for

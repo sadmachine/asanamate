@@ -1,0 +1,56 @@
+internal/tui/settings_test.go
+  s_a29860173a8c8e::t_274e1518541222 25,80-83,89,97
+internal/state/state.go
+  s_a29860173a8c8e::t_274e1518541222 318-324
+internal/tui/reader.go
+  s_a29860173a8c8e::t_274e1518541222 38-40,60,104-109
+README.md
+  s_a29860173a8c8e::t_274e1518541222 297-305,390,813
+internal/tui/since_test.go
+  s_a29860173a8c8e::t_e0239ebc8ff5b0 1-114
+internal/config/settings_test.go
+  s_a29860173a8c8e::t_274e1518541222 37,70-72,74
+internal/ticket/markdown.go
+  s_a29860173a8c8e::t_274e1518541222 153-159,161,168
+internal/tui/cards.go
+  s_a29860173a8c8e::t_274e1518541222 31,82-88,126,132,149-151,153,156,163-164,167,170-174,581-589
+internal/config/settings.go
+  s_a29860173a8c8e::t_274e1518541222 20
+internal/tui/settings.go
+  s_a29860173a8c8e::t_274e1518541222 44-48
+internal/tui/model.go
+  s_a29860173a8c8e::t_274e1518541222 212
+internal/state/state_test.go
+  s_a29860173a8c8e::t_274e1518541222 221-223,227-232
+internal/tui/since.go
+  s_a29860173a8c8e::t_dea856f629dae0 5,9
+  s_a29860173a8c8e::t_68b8dcf9581458 1-4,6-8,10-143
+internal/setup/setup.go
+  s_a29860173a8c8e::t_274e1518541222 375-376
+internal/config/config.go
+  s_a29860173a8c8e::t_274e1518541222 252,257-265,412
+internal/tui/edit.go
+  s_a29860173a8c8e::t_7cc1d6c5c1c04e 509-510
+internal/tui/edit_test.go
+  s_a29860173a8c8e::t_71cc3c3911612a 382,409,569,572,579,587,590,598
+internal/tui/jumpmenu.go
+  s_a29860173a8c8e::t_b77b007d201ee5 47,70
+internal/tui/keys_test.go
+  s_a29860173a8c8e::t_5fe4559638f06e 211,241,258
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "540559a0a1ba2b282eed2362d38e87bd728e3e9e",
+  "prompts": {},
+  "sessions": {
+    "s_a29860173a8c8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28687d57-fb4d-4e2d-8355-acb12fff8b1f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

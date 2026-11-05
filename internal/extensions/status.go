@@ -8,10 +8,9 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-	"unicode"
 
-	"github.com/charmbracelet/x/ansi"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/jsoncmd"
 )
 
@@ -32,22 +31,12 @@ func Load(path string) Saved {
 	return Saved{Path: path, Config: cfg, Err: err}
 }
 
-// Clean removes terminal controls from local diagnostics and file paths.
-func Clean(s string) string {
-	return strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) && r != '\n' && r != '\t' || unicode.In(r, unicode.Cf) {
-			return -1
-		}
-		return r
-	}, ansi.Strip(s))
-}
-
 func (s Saved) Status() string {
 	if errors.Is(s.Err, config.ErrNotConfigured) {
 		return "core setup required: run asanamate setup"
 	}
 	if s.Err != nil {
-		return "invalid saved config: " + Clean(s.Err.Error())
+		return "invalid saved config: " + display.Clean(s.Err.Error())
 	}
 	return "saved config valid"
 }
@@ -108,7 +97,7 @@ func Inspect(e Entry, saved Saved) Report {
 		r.Capabilities = append(r.Capabilities, cs)
 	}
 	if saved.Err != nil {
-		r.Next = saved.Status() + ". Guides remain available; edit " + Clean(saved.Path) + "."
+		r.Next = saved.Status() + ". Guides remain available; edit " + display.Clean(saved.Path) + "."
 	}
 	if r.Next == "" {
 		r.Next = "Run asanamate extensions check " + e.ID + ", then follow the first-use example."
@@ -248,9 +237,9 @@ func Detail(e Entry, saved Saved, r Report) string {
 		b.WriteString("Documentation: development build; default-branch reference may differ from this checkout.\n")
 	}
 	fmt.Fprintf(&b, "Build your own extension: %s\nConforming custom commands need no catalog registration or core changes. Optional capabilities are implementation-specific, not discovered by executing commands.\n", DocumentURL(saved.Version, "docs/extensions.md", "implementing-an-extension"))
-	fmt.Fprintf(&b, "\nRequirements and current local status\n%s\nConfig: %s\n%s\n", e.Availability, Clean(saved.Path), saved.Status())
+	fmt.Fprintf(&b, "\nRequirements and current local status\n%s\nConfig: %s\n%s\n", e.Availability, display.Clean(saved.Path), saved.Status())
 	for _, t := range r.Tools {
-		fmt.Fprintf(&b, "%s: %s %s\n", t.Name, t.Status, Clean(t.Path))
+		fmt.Fprintf(&b, "%s: %s %s\n", t.Name, t.Status, display.Clean(t.Path))
 	}
 	for _, c := range r.Capabilities {
 		fmt.Fprintf(&b, "%s: %s\n", c.Name, c.Status)
@@ -278,6 +267,6 @@ func Detail(e Entry, saved Saved, r Report) string {
 		}
 		b.WriteString("Recheck after each step: asanamate extensions check " + e.ID + "\n\n")
 	}
-	fmt.Fprintf(&b, "%s\n\nEdit %s with asanamate config, or your editor. Hand edits require restarting asanamate. Saved configuration shown here may differ from the current session's active configuration. No snippets are applied automatically.\n\nChecks and first use\n%s\n%s\n\nDisable, uninstall and help\n%s\nGuide: %s\nExtension protocols: %s\n", e.Snippet, Clean(saved.Path), e.Verify, e.Example, e.Remove, e.Guide, DocumentURL(saved.Version, "docs/extensions.md", ""))
+	fmt.Fprintf(&b, "%s\n\nEdit %s with asanamate config, or your editor. Hand edits require restarting asanamate. Saved configuration shown here may differ from the current session's active configuration. No snippets are applied automatically.\n\nChecks and first use\n%s\n%s\n\nDisable, uninstall and help\n%s\nGuide: %s\nExtension protocols: %s\n", e.Snippet, display.Clean(saved.Path), e.Verify, e.Example, e.Remove, e.Guide, DocumentURL(saved.Version, "docs/extensions.md", ""))
 	return b.String()
 }

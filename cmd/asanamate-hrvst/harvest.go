@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/feed"
 	"github.com/sadmachine/asanamate/internal/form"
 	"github.com/sadmachine/asanamate/internal/projectlinks"
@@ -447,7 +448,7 @@ func harvestFeed(ctx context.Context, configPath, endpoint, date string) (feed.R
 		}
 		// A linked entry's notes are its ticket's title, kept for tickets
 		// the panel has not loaded.
-		if notes := feed.OneLine(entry.Notes); notes != "" {
+		if notes := display.Line(entry.Notes); notes != "" {
 			item.Text += " · " + notes
 		}
 		if ref := entry.Reference; ref != nil && digits(ref.ID) {

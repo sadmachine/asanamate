@@ -81,7 +81,7 @@ func TestMarkdownStripsControlCharacters(t *testing.T) {
 	if strings.ContainsAny(md, "\x1b\u009b") {
 		t.Fatalf("control characters leaked: %q", md)
 	}
-	if !strings.HasPrefix(md, "# Fix [31mlogin\n") {
+	if !strings.HasPrefix(md, "# Fix login\n") {
 		t.Fatalf("title line = %q", strings.SplitN(md, "\n", 2)[0])
 	}
 }

@@ -11,12 +11,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 	"syscall"
 	"time"
-	"unicode"
 
-	"github.com/charmbracelet/x/ansi"
+	"github.com/sadmachine/asanamate/internal/display"
 )
 
 // Run executes command with /bin/sh -c and returns its stdout. Data goes
@@ -103,12 +101,7 @@ func runBounded(ctx context.Context, label string, cmd *exec.Cmd, cancel context
 		return nil, fmt.Errorf("%s: %w", label, ctx.Err())
 	}
 	if err != nil {
-		message := strings.TrimSpace(strings.Map(func(r rune) rune {
-			if unicode.IsControl(r) || unicode.In(r, unicode.Cf) {
-				return ' '
-			}
-			return r
-		}, ansi.Strip(stderr.String())))
+		message := display.Line(stderr.String())
 		if message != "" {
 			return nil, fmt.Errorf("%s: %s: %w", label, message, err)
 		}

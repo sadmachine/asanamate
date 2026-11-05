@@ -12,10 +12,10 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/charmbracelet/x/ansi"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/jsoncmd"
 )
 
@@ -120,12 +120,7 @@ func FetchArgs(ctx context.Context, args []string, states map[string][]string) (
 	if err != nil {
 		return nil, fmt.Errorf("local agent check failed; run asanamate extensions for verification guidance")
 	}
-	out = []byte(strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) && r != '\n' && r != '\t' || unicode.In(r, unicode.Cf) {
-			return -1
-		}
-		return r
-	}, ansi.Strip(string(out))))
+	out = []byte(display.Clean(string(out)))
 	list, err := parseList(ctx, out)
 	if err != nil {
 		return nil, fmt.Errorf("local agent check returned invalid metadata; run asanamate extensions for verification guidance")

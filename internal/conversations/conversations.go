@@ -14,8 +14,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/charmbracelet/x/ansi"
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/jsoncmd"
 )
 
@@ -49,7 +49,7 @@ type Request struct {
 }
 
 // Record is native saved metadata. Provider and SessionID together identify it.
-// Preserve raw metadata for opening; use DisplayText before rendering it.
+// Preserve raw metadata for opening; use display.Line before rendering it.
 type Record struct {
 	Provider  string `json:"provider"`
 	SessionID string `json:"session_id"`
@@ -180,7 +180,7 @@ func Failure(err error) Diagnostic {
 	case errors.Is(err, jsoncmd.ErrOutputLimit), errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
 		code = "incomplete"
 	}
-	return Diagnostic{Provider: SourceProvider, Code: code, Severity: "error", Message: bounded(DisplayText(err.Error()))}
+	return Diagnostic{Provider: SourceProvider, Code: code, Severity: "error", Message: bounded(display.Line(err.Error()))}
 }
 
 // bounded truncates a display-safe diagnostic message to MaxDiagnosticMessage.
@@ -314,7 +314,7 @@ func decode(data []byte, taskGID string) (Result, error) {
 		default:
 			return Result{}, fmt.Errorf("diagnostic %d: unsupported severity", i)
 		}
-		d.Message = DisplayText(d.Message)
+		d.Message = display.Line(d.Message)
 		if d.Message == "" {
 			return Result{}, fmt.Errorf("diagnostic %d: message must be nonempty", i)
 		}
@@ -347,17 +347,4 @@ func object(data []byte, required, optional []string) (map[string]json.RawMessag
 		}
 	}
 	return fields, nil
-}
-
-// DisplayText strips terminal escape sequences, controls, and Unicode format
-// characters, then makes a single line. Never use it to transform native IDs or
-// paths passed to an opener: keep exact selection data in the private snapshot.
-func DisplayText(s string) string {
-	s = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) || unicode.In(r, unicode.Cf) {
-			return ' '
-		}
-		return r
-	}, ansi.Strip(s))
-	return strings.Join(strings.Fields(s), " ")
 }

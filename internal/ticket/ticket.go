@@ -6,11 +6,11 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/display"
 )
 
 // RecentlyCompleted is how far back completed tasks are included in lists.
@@ -79,16 +79,9 @@ func (t Ticket) Timeline() []Entry {
 	return all
 }
 
-// Clean removes control characters (except newline and tab) so untrusted
-// Asana text cannot inject terminal escape sequences.
-func Clean(s string) string {
-	return strings.Map(func(r rune) rune {
-		if r == '\n' || r == '\t' || !unicode.IsControl(r) {
-			return r
-		}
-		return -1
-	}, s)
-}
+// Clean makes untrusted Asana text safe to print, keeping newlines and tabs;
+// see display.Clean.
+func Clean(s string) string { return display.Clean(s) }
 
 var flatten = strings.NewReplacer("\t", " ", "\n", " ")
 

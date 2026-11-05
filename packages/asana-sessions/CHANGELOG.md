@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- A hook that hits its deadline no longer blocks other writes to the same
+  conversation for 30 seconds: locks record their owner process and free at
+  once when it exits, and a slow holder no longer releases another's lock.
+- A relative `XDG_STATE_HOME` is ignored, as the XDG spec requires, instead
+  of writing state into the project directory.
 - The installer removes install directories older than the previous one once
   plugins refresh. Each upgrade used to leave its whole directory behind.
 - Update the shipped `body-parser` (2.4.0) and `fast-uri` (3.1.9)

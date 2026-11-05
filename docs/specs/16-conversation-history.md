@@ -129,6 +129,10 @@ are display context, not implicit ticket links in the first release.
 Extend these seams rather than adding a plugin manager, daemon, or provider
 SDK dependency to core. Do not force persisted conversations into
 `agents.command`; its running-state and branch-linking semantics differ.
+(Since then, agent lines gained optional `task_gid`, `provider`, and
+`session_id` columns, and `asana-sessions asanamate agents --` decorates a
+running-agent source with them. That links running agents, not persisted
+conversations; see `docs/extensions.md#agent-sources`.)
 
 ## Configuration
 

@@ -117,6 +117,7 @@ on `main` when you start. Any such value moves too; add it to this table.
 
     ```toml
     # Settings you can also change in asanamate (press s).
+    # (Since then: "(s for visuals; comma for tools)".)
     # asanamate rewrites this file when you change a setting there. It keeps
     # every value, but not comments below this header.
     ```

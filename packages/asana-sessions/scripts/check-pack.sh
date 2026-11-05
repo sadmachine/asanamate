@@ -10,7 +10,11 @@ trap 'rm -rf "$work"' EXIT
 node "$pkg/scripts/check-plugins.js"
 tarball=$(cd "$pkg" && npm pack --silent --pack-destination "$work")
 tar -xOf "$work/$tarball" package/install.mjs > "$work/install.mjs"
-node "$work/install.mjs" "$work/$tarball" --prefix "$work/prefix" > "$work/install.txt"
+mkdir "$work/home"
+# The installer's plugin refresh must see only this installation, never the
+# host's home, providers, or another asana-sessions on PATH.
+env -i HOME="$work/home" PATH="$work/prefix/bin:$nodebin:/usr/bin:/bin" \
+  node "$work/install.mjs" "$work/$tarball" --prefix "$work/prefix" > "$work/install.txt"
 cat "$work/install.txt"
 grep -Fq 'If asanamate-ccmux is installed, you can link running agents to Asana tickets using asana-sessions.' "$work/install.txt"
 grep -Fxq '[agents]' "$work/install.txt"
@@ -20,7 +24,6 @@ run() {
   (cd "$work" && env -i HOME="$work/home" PATH="$work/prefix/bin:$nodebin:/usr/bin:/bin" asana-sessions "$@")
 }
 id=01a14609-3a63-7c02-bd2b-c313bedc3c37
-mkdir "$work/home"
 
 installed=$(node -p 'require("node:path").dirname(require("node:path").dirname(require("node:fs").realpathSync(process.argv[1])))' "$work/prefix/bin/asana-sessions")
 test -f "$installed/npm-shrinkwrap.json"

@@ -30,8 +30,13 @@ type Client struct {
 	BaseURL string
 	token   string
 	http    *http.Client
+	upload  *http.Client // attachment uploads, which may take minutes
 	sleep   func(context.Context, time.Duration) error
 }
+
+// uploadTimeout covers a 100 MiB attachment, Asana's limit, at about
+// 1.5 Mbit/s; other requests keep the 30-second timeout.
+const uploadTimeout = 10 * time.Minute
 
 // New returns a client that authenticates with token.
 func New(token string) *Client {
@@ -39,6 +44,7 @@ func New(token string) *Client {
 		BaseURL: DefaultBaseURL,
 		token:   token,
 		http:    &http.Client{Timeout: 30 * time.Second},
+		upload:  &http.Client{Timeout: uploadTimeout},
 		sleep:   sleep,
 	}
 }
@@ -67,6 +73,10 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 // send makes the request, retrying once on a short rate limit. A non-empty
 // contentType labels payload.
 func (c *Client) send(ctx context.Context, method, path string, query url.Values, payload []byte, contentType string, out any) error {
+	return c.sendWith(ctx, c.http, method, path, query, payload, contentType, out)
+}
+
+func (c *Client) sendWith(ctx context.Context, client *http.Client, method, path string, query url.Values, payload []byte, contentType string, out any) error {
 	target := c.BaseURL + path
 	if len(query) > 0 {
 		target += "?" + query.Encode()
@@ -85,7 +95,7 @@ func (c *Client) send(ctx context.Context, method, path string, query url.Values
 		if contentType != "" {
 			req.Header.Set("Content-Type", contentType)
 		}
-		resp, err := c.http.Do(req)
+		resp, err := client.Do(req)
 		if err != nil {
 			return err
 		}

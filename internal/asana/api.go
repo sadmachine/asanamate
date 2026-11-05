@@ -105,7 +105,7 @@ func (c *Client) UploadAttachment(ctx context.Context, taskGID, name string, dat
 	var r struct {
 		Data Attachment `json:"data"`
 	}
-	err = c.send(ctx, http.MethodPost, "/attachments", nil, body.Bytes(), w.FormDataContentType(), &r)
+	err = c.sendWith(ctx, c.upload, http.MethodPost, "/attachments", nil, body.Bytes(), w.FormDataContentType(), &r)
 	return r.Data, err
 }
 

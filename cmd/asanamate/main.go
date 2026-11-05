@@ -93,6 +93,7 @@ const usage = `usage:
   asanamate conversation open <gid | url> --provider <name> --session <id>
                                                    resume one exact linked conversation in this terminal
   asanamate doctor [<gid>]                         check setup and optional tools; for a ticket, why agents link (or not)
+  asanamate whats-new                              print release highlights up to this version
   asanamate version
 `
 
@@ -122,6 +123,8 @@ func run(args []string) int {
 	case "version":
 		fmt.Println(currentVersion())
 		return 0
+	case "whats-new":
+		err = runWhatsNew(args[1:], os.Stdout, whatsnew.Embedded(), currentVersion())
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 		return 0

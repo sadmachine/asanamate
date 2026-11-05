@@ -61,7 +61,10 @@ export async function main(argv, ctx = {}) {
     ...ctx,
   };
   c.abort ??= new AbortController();
-  c.makeProviders ??= (env) => createProviders({ env, version: VERSION, signal: c.abort.signal });
+  // Injected providers are not rebuilt from the real ones.
+  if (!ctx.providers) {
+    c.makeProviders ??= (env, signal = c.abort.signal) => createProviders({ env, version: VERSION, signal });
+  }
   c.providers ??= c.makeProviders(c.env);
   c.version ??= VERSION;
   c.io ??= terminalIO(c.stdin, c.stderr);

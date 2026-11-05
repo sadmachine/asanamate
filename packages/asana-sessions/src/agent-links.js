@@ -31,15 +31,20 @@ export async function asanamateAgents(c, args) {
     }
   }
   const histories = new Map(await Promise.all([...needed].map(async (name) => {
+    // Each provider stops on its own timeout without cancelling the others.
+    const own = new AbortController();
+    const provider = c.makeProviders
+      ? c.makeProviders(c.env, AbortSignal.any([c.abort.signal, own.signal]))[name]
+      : c.providers[name];
     let timer;
     try {
       const timeout = new Promise((_, reject) => {
         timer = setTimeout(() => {
           reject(new Error('conversation lookup timed out'));
-          c.abort.abort();
+          own.abort();
         }, 6000);
       });
-      const sessions = await Promise.race([c.providers[name].list(), timeout]);
+      const sessions = await Promise.race([provider.list(), timeout]);
       return [name, new Map(sessions.map((s) => [s.sessionId, ticketLink(s.name, s.tag)]))];
     } catch (err) {
       c.stderr.write(`asana-sessions: ${name}: ${display(err.message)}; using repo/branch fallback\n`);

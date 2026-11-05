@@ -45,6 +45,35 @@ test('agent decorator uses exact provider/session identity and preserves status 
   assert.deepEqual(providers.codex.calls, [['list', undefined]]);
 });
 
+test('agent decorator times out each provider without cancelling the others', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const signals = {};
+  const makeProviders = (env, signal) => ({
+    codex: fakeProvider('codex', [], {
+      list() {
+        signals.codex = signal;
+        setImmediate(() => t.mock.timers.tick(6000));
+        return new Promise((_, reject) => signal.addEventListener('abort', () => reject(new Error('stopped'))));
+      },
+    }),
+    claude: fakeProvider('claude', [session({ name: 'Other [asana:99]' })], {
+      async list() {
+        signals.claude = signal;
+        return [session({ name: 'Other [asana:99]' })];
+      },
+    }),
+  });
+  const stdout = sink();
+  const stderr = sink();
+  const rows = [agentRow('codex', ID), agentRow('claude', ID)].join('\n');
+  const code = await main(agentCommand(rows), { stdout, stderr, stdin: Readable.from(['']), env: {}, makeProviders, io: fakeIO() });
+  assert.equal(code, 0);
+  assert.equal(stdout.text, `${agentRow('codex', ID)}\n${agentRow('claude', ID, '99')}\n`);
+  assert.equal(signals.codex.aborted, true);
+  assert.equal(signals.claude.aborted, false);
+  assert.match(stderr.text, /codex: conversation lookup timed out/);
+});
+
 test('agent decorator preserves explicit source links and blocks conflicting metadata', async () => {
   const providers = { codex: fakeProvider('codex', [session({ name: 'Fix [asana:42]', tag: 'asana:99' })]) };
   const rows = [agentRow('codex', ID), agentRow('codex', ID, '77')].join('\n');

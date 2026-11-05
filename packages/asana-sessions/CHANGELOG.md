@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- In `asanamate agents --`, one provider's 6-second lookup timeout no longer
+  stops the other provider's lookup.
 - Codex's PostToolUse hook starts the helper only while a Codex link is
   pending. A pending Claude link or a leftover temporary file used to start
   Node on every Codex tool call. The hook's definition changed, so review and trust

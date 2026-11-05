@@ -66,6 +66,8 @@ var catalog = []Scope{
 		{Name: "group_by", Keys: []string{"b"}, Desc: "group by", Group: "View"},
 		{Name: "sort_by", Keys: []string{"B"}, Desc: "sort by", Group: "View"},
 		{Name: "fit_list", Keys: []string{"="}, Desc: "fit list", Group: "View"},
+		{Name: "toggle_fold", Keys: []string{"-"}, Desc: "fold / open section", Group: "View"},
+		{Name: "fold_others", Keys: []string{"+"}, Desc: "fold other sections / open all", Group: "View"},
 		{Name: "help", Keys: []string{"?"}, Desc: "this help", Hint: "keys", Group: "View"},
 		{Name: "quit", Keys: []string{"q"}, Desc: "quit", Group: "View"},
 	}},

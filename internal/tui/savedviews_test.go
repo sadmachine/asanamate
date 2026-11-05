@@ -20,18 +20,18 @@ func TestDefaultViewOnlyAppliesWithoutProjectState(t *testing.T) {
 	cfg.List.DefaultView = config.DefaultView{Filter: "is:done", GroupBy: "section", Sort: config.Sort{By: "due", Direction: "desc"}}
 	m, st := testModel(t, cfg)
 	want := state.View{Filter: "is:done", GroupBy: "section", Sort: cfg.List.DefaultView.Sort}
-	if got := m.currentView(); got != want {
+	if got := m.currentView(); !got.Equal(want) {
 		t.Fatalf("default view = %+v, want %+v", got, want)
 	}
 	m.viewProject = &asana.Ref{GID: "123", Name: "Work"}
 	m.restoreView()
-	if got := m.currentView(); got != want {
+	if got := m.currentView(); !got.Equal(want) {
 		t.Fatalf("project default = %+v, want %+v", got, want)
 	}
 	saved := state.View{Filter: "is:open", GroupBy: "assignee", Sort: config.Sort{By: "title", Direction: "asc"}}
 	st.SetView("123", saved)
 	m.restoreView()
-	if got := m.currentView(); got != saved {
+	if got := m.currentView(); !got.Equal(saved) {
 		t.Fatalf("saved project view = %+v, want %+v", got, saved)
 	}
 }
@@ -53,11 +53,11 @@ func TestSavedViewSaveAndRecall(t *testing.T) {
 			}
 			m.input.area.SetValue("  Finished work  ")
 			m.Update(key("ctrl+s"))
-			if m.input != nil || st.SavedViews["Finished work"] != want {
+			if m.input != nil || !st.SavedViews["Finished work"].Equal(want) {
 				t.Fatalf("input = %v, saved views = %v", m.input, st.SavedViews)
 			}
 			loaded, err := state.Load(st.Path())
-			if err != nil || loaded.SavedViews["Finished work"] != want {
+			if err != nil || !loaded.SavedViews["Finished work"].Equal(want) {
 				t.Fatalf("saved view did not persist: state = %v, err = %v", loaded, err)
 			}
 			m.deps.State = loaded
@@ -79,12 +79,12 @@ func TestSavedViewSaveAndRecall(t *testing.T) {
 			if len(m.visible) != 1 || m.visible[0].GID != doneTask.GID {
 				t.Fatalf("recalled filter shows %v", m.visible)
 			}
-			if v, ok := loaded.View("other"); !ok || v != want {
+			if v, ok := loaded.View("other"); !ok || !v.Equal(want) {
 				t.Fatalf("current project's last view = %v, exists = %v", v, ok)
 			}
 			m.filterInput.SetValue("is:open")
 			m.saveView()
-			if loaded.SavedViews["Finished work"] != want {
+			if !loaded.SavedViews["Finished work"].Equal(want) {
 				t.Fatal("editing current filter changed the saved snapshot")
 			}
 		})
@@ -100,11 +100,11 @@ func TestSavedViewReplaceAndDeleteConfirmation(t *testing.T) {
 	m.openSaveView()
 	m.input.area.SetValue("Work")
 	m.Update(key("ctrl+s"))
-	if st.SavedViews["Work"] != old || m.modal == nil {
+	if !st.SavedViews["Work"].Equal(old) || m.modal == nil {
 		t.Fatal("replacement did not wait for confirmation")
 	}
 	m.Update(key("enter")) // default is Cancel
-	if st.SavedViews["Work"] != old {
+	if !st.SavedViews["Work"].Equal(old) {
 		t.Fatal("cancel replaced the view")
 	}
 	m.openSaveView()
@@ -167,18 +167,18 @@ func TestSavedViewWriteFailureRollsBack(t *testing.T) {
 	wantRecent := slices.Clone(st.RecentSavedViews)
 	wantCurrent := maps.Clone(st.CurrentSavedViews)
 	m.storeSavedView("Work", &newView)
-	if st.SavedViews["Work"] != old || !strings.HasPrefix(m.status, "saving state:") {
+	if !st.SavedViews["Work"].Equal(old) || !strings.HasPrefix(m.status, "saving state:") {
 		t.Fatalf("failed replacement did not roll back: views = %v, status = %q", st.SavedViews, m.status)
 	}
 	m.storeSavedView("Work", nil)
-	if st.SavedViews["Work"] != old {
+	if !st.SavedViews["Work"].Equal(old) {
 		t.Fatal("failed deletion did not roll back")
 	}
 	m.storeSavedView("New", &newView)
 	if _, exists := st.SavedViews["New"]; exists {
 		t.Fatal("failed creation remained in memory")
 	}
-	if !slices.Equal(st.RecentSavedViews, wantRecent) || !maps.Equal(st.CurrentSavedViews, wantCurrent) || st.Views[""] != old || m.savedView != "Work" {
+	if !slices.Equal(st.RecentSavedViews, wantRecent) || !maps.Equal(st.CurrentSavedViews, wantCurrent) || !st.Views[""].Equal(old) || m.savedView != "Work" {
 		t.Fatalf("failed write changed metadata: %+v, name = %q", st, m.savedView)
 	}
 }
@@ -197,7 +197,7 @@ func TestSavedViewIdentityAndModifiedSettings(t *testing.T) {
 		func() { m.sortBy.Direction = "desc" },
 	} {
 		change()
-		if m.savedViewLabel() != "Daily work (modified)" || st.SavedViews["Daily work"] != want {
+		if m.savedViewLabel() != "Daily work (modified)" || !st.SavedViews["Daily work"].Equal(want) {
 			t.Fatalf("modified label = %q, snapshot = %+v", m.savedViewLabel(), st.SavedViews["Daily work"])
 		}
 		m.filterInput.SetValue(want.Filter)
@@ -259,12 +259,12 @@ func TestSavedViewSaveAssociatesNameAndDeletionClearsAllScopes(t *testing.T) {
 	v := m.currentView()
 	m.storeSavedView("Work", &v)
 	loaded, err := state.Load(st.Path())
-	if err != nil || m.savedViewLabel() != "Work" || loaded.CurrentSavedViews[""] != "Work" || loaded.Views[""] != v || !slices.Equal(loaded.RecentSavedViews, []string{"Work"}) {
+	if err != nil || m.savedViewLabel() != "Work" || loaded.CurrentSavedViews[""] != "Work" || !loaded.Views[""].Equal(v) || !slices.Equal(loaded.RecentSavedViews, []string{"Work"}) {
 		t.Fatalf("save did not associate settings: label = %q, state = %+v, err = %v", m.savedViewLabel(), loaded, err)
 	}
 	st.CurrentSavedViews["project"] = "Work"
 	m.storeSavedView("Work", nil)
-	if m.savedView != "" || len(st.CurrentSavedViews) != 0 || len(st.RecentSavedViews) != 0 || m.currentView() != v {
+	if m.savedView != "" || len(st.CurrentSavedViews) != 0 || len(st.RecentSavedViews) != 0 || !m.currentView().Equal(v) {
 		t.Fatalf("deletion lost settings or kept metadata: %+v", st)
 	}
 }

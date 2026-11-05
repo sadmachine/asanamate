@@ -71,7 +71,7 @@ func (m *Model) selectTicket(t asana.Task) tea.Cmd {
 		m.viewing = &t
 		m.applyFilter()
 	}
-	m.moveTo(slices.IndexFunc(m.visible, byGID))
+	m.reveal(slices.IndexFunc(m.visible, byGID))
 	return m.selectionChanged()
 }
 

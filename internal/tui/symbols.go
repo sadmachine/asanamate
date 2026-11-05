@@ -16,6 +16,7 @@ import (
 type symbolSet struct {
 	open, done string
 	cursor     string // left marker of the selected ticket
+	fold       string // leads a folded group's header label
 	robot      string // leads a list row's agent badge
 	barOn      string // a progress bar's done and to-do cells
 	barOff     string
@@ -56,9 +57,9 @@ var lineSpinner = []string{"|", "/", "-", "\\"}
 // Each set only sets what it changes: nerd falls back to unicode, unicode to
 // ascii, which defines everything.
 var (
-	asciiSymbols = symbolSet{connection: [4]string{"?", "+", "~", "x"}, open: "[ ]", done: "[x]", cursor: ">", robot: "@", barOn: "#", barOff: "-", codeWrap: ">", info: "(i)", statusInfo: "(i)", warning: "(!)", failure: "(x)", icons: map[string]string{iconNetwork: "(net)", iconClock: "(time)", iconProjectColor: "*"}, border: lipgloss.ASCIIBorder(), states: map[agents.State]string{
+	asciiSymbols = symbolSet{connection: [4]string{"?", "+", "~", "x"}, open: "[ ]", done: "[x]", cursor: ">", fold: "+", robot: "@", barOn: "#", barOff: "-", codeWrap: ">", info: "(i)", statusInfo: "(i)", warning: "(!)", failure: "(x)", icons: map[string]string{iconNetwork: "(net)", iconClock: "(time)", iconProjectColor: "*"}, border: lipgloss.ASCIIBorder(), states: map[agents.State]string{
 		agents.Waiting: "(!)", agents.Working: "(~)", agents.Completed: "(+)", agents.Idle: "(-)", agents.Unknown: "(?)"}}
-	unicodeSymbols = asciiSymbols.with(symbolSet{connection: [4]string{"?", "●", "◐", "○"}, open: "□", done: "✓", cursor: "▌", robot: "🤖", barOn: "▰", barOff: "▱", codeWrap: "↪", warning: "⚠", failure: "✖", emoji: true, spinner: lineSpinner, icons: map[string]string{iconNetwork: "⇄", iconClock: "◷", iconProjectColor: "●"}, border: lipgloss.RoundedBorder(), states: map[agents.State]string{
+	unicodeSymbols = asciiSymbols.with(symbolSet{connection: [4]string{"?", "●", "◐", "○"}, open: "□", done: "✓", cursor: "▌", fold: "▸", robot: "🤖", barOn: "▰", barOff: "▱", codeWrap: "↪", warning: "⚠", failure: "✖", emoji: true, spinner: lineSpinner, icons: map[string]string{iconNetwork: "⇄", iconClock: "◷", iconProjectColor: "●"}, border: lipgloss.RoundedBorder(), states: map[agents.State]string{
 		agents.Waiting: "⚠", agents.Working: "◐", agents.Completed: "●", agents.Idle: "○", agents.Unknown: "?"}})
 	// Nerd Font (Font Awesome) glyphs; needs a Nerd Font.
 	nerdSymbols = unicodeSymbols.with(symbolSet{open: "", done: "", robot: "󰚩", info: "\uf05a", statusInfo: "\U000f02fd", warning: "\uf071", failure: "\U000f05d6", states: map[agents.State]string{
@@ -76,6 +77,7 @@ var symbolSets = map[string]symbolSet{
 func (s symbolSet) with(o symbolSet) symbolSet {
 	s.open, s.done = cmp.Or(o.open, s.open), cmp.Or(o.done, s.done)
 	s.cursor, s.robot = cmp.Or(o.cursor, s.cursor), cmp.Or(o.robot, s.robot)
+	s.fold = cmp.Or(o.fold, s.fold)
 	s.barOn, s.barOff = cmp.Or(o.barOn, s.barOn), cmp.Or(o.barOff, s.barOff)
 	s.codeWrap = cmp.Or(o.codeWrap, s.codeWrap)
 	s.info = cmp.Or(o.info, s.info)

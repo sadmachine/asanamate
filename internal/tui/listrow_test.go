@@ -188,6 +188,60 @@ func TestListViewGroups(t *testing.T) {
 	}
 }
 
+func TestFoldGroups(t *testing.T) {
+	sec := func(gid, name, section string) asana.Task {
+		return asana.Task{GID: gid, Name: name, AssigneeSection: &asana.Ref{Name: section}}
+	}
+	tasks := []asana.Task{sec("1", "A", "Doing"), sec("2", "B", "Next"), sec("3", "C", "Doing"), sec("4", "D", "Later")}
+	m, st := testModel(t, config.Config{List: config.List{Layout: config.LayoutSingle, DefaultView: config.DefaultView{GroupBy: "section"}}})
+	m.Update(tasksMsg{tasks: tasks})
+	view := func(want ...string) {
+		t.Helper()
+		if got := listLines(m, 24, 10); !slices.Equal(got, want) {
+			t.Fatalf("list =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+		}
+	}
+
+	m.Update(key("-"))
+	view(" ▸ Doing (2)", " Next (1)", "□  B", " Later (1)", "□  D")
+	if _, ok := m.selected(); ok || m.cursor != 0 {
+		t.Fatalf("folding leaves the cursor on the header: cursor = %d, selected = %v", m.cursor, ok)
+	}
+	if got := ansi.Strip(m.reader.GetContent()); got != "Doing · 2 tickets folded · - to open" {
+		t.Fatalf("reader note = %q", got)
+	}
+	m.Update(key("j"))
+	if sel, _ := m.selected(); sel.Name != "B" {
+		t.Fatalf("down skips the folded tickets, selected %q", sel.Name)
+	}
+	m.Update(key("k"))
+	if !m.onFoldedHeader() {
+		t.Fatalf("up stops on the folded header, cursor = %d", m.cursor)
+	}
+
+	m.Update(key("+"))
+	view(" Doing (2)", "□  A", "□  C", " ▸ Next (1)", " ▸ Later (1)")
+	if v, _ := st.View(""); !slices.Equal(v.Folded, []string{"Later", "Next"}) {
+		t.Fatalf("saved folds = %q", v.Folded)
+	}
+	m.Update(key("+"))
+	view(" Doing (2)", "□  A", "□  C", " Next (1)", "□  B", " Later (1)", "□  D")
+
+	m.moveTo(2)
+	m.Update(key("-"))
+	m.moveTo(0)
+	m.selectTicket(tasks[1])
+	if sel, _ := m.selected(); sel.Name != "B" || len(m.foldedGroups) != 0 {
+		t.Fatalf("selecting a folded ticket opens its group: selected %q, folded %q", sel.Name, m.foldedGroups)
+	}
+
+	m.Update(key("-"))
+	m.pickedGroup("due")
+	if len(m.foldedGroups) != 0 {
+		t.Fatalf("a new grouping keeps folds %q", m.foldedGroups)
+	}
+}
+
 func TestSharedColumnValuesMoveToHeaders(t *testing.T) {
 	sec := func(name string) *asana.Ref { return &asana.Ref{Name: name} }
 	tasks := []asana.Task{

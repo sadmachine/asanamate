@@ -48,7 +48,7 @@ func TestSaveRoundTripAndPermissions(t *testing.T) {
 	if again.Repos["123"] != "/code/web" || again.RecentProjects[0] != "123" {
 		t.Fatalf("round trip lost data: %+v", again)
 	}
-	if again.SavedViews[`Today's "work"`] != s.SavedViews[`Today's "work"`] {
+	if !again.SavedViews[`Today's "work"`].Equal(s.SavedViews[`Today's "work"`]) {
 		t.Fatalf("round trip lost saved views: %+v", again.SavedViews)
 	}
 	if !slices.Equal(again.RecentSavedViews, s.RecentSavedViews) || again.CurrentSavedViews[""] != `Today's "work"` || again.CurrentSavedViews["123"] != `Today's "work"` {

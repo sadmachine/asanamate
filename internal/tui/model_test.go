@@ -302,6 +302,10 @@ func TestReaderViewSwitch(t *testing.T) {
 		}
 	}
 	m.Update(key("v"))
+	if s := ansi.Strip(m.reader.GetContent()); m.readerView != config.ViewStreamlined || strings.Contains(s, "Details") || !strings.Contains(s, "Looks good") {
+		t.Fatalf("view = %q, content:\n%s", m.readerView, s)
+	}
+	m.Update(key("v"))
 	if md := ansi.Strip(m.reader.GetContent()); m.readerView != config.ViewMarkdown || strings.Contains(md, "Details") || !strings.Contains(md, "Sam · 2026-09-20") {
 		t.Fatalf("view = %q, content:\n%s", m.readerView, md)
 	}

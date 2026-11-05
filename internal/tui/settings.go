@@ -41,6 +41,11 @@ func (m *Model) openSettings(cursor int) {
 			return m.selectionStyle
 		})},
 		{Label: "Dim unfocused panes", Hint: onOff(m.focusDim), Key: "d", Value: toggle(4, "layout.focus.dim", func() any { m.focusDim = !m.focusDim; return m.focusDim })},
+		{Label: "Since you looked", Hint: onOff(m.sinceShow), Key: "w", Value: toggle(5, "reader.since.show", func() any {
+			m.sinceShow = !m.sinceShow
+			m.renderDetail(true)
+			return m.sinceShow
+		})},
 		{Label: "Theme", Hint: cmp.Or(m.deps.Config.Theme.Name, config.ThemeAuto), Key: "t", Value: func() tea.Cmd {
 			m.modal = nil
 			return m.openThemes()

@@ -218,8 +218,17 @@ func TestSeenTasks(t *testing.T) {
 	if !s.Changed(a) {
 		t.Fatal("a newer modified_at counts as changed")
 	}
+	if at, ok := s.SeenAt("1"); !ok || at != "t1" || !s.Changed(a) {
+		t.Fatalf("SeenAt = %q, %v; it must read the old version without marking it seen", at, ok)
+	}
 	if !s.MarkSeen(a) || s.Changed(a) || s.MarkSeen(a) {
 		t.Fatalf("MarkSeen did not record a once: %v", s.SeenTasks)
+	}
+	if at, ok := s.SeenAt("1"); !ok || at != "t2" {
+		t.Fatalf("SeenAt after MarkSeen = %q, %v", at, ok)
+	}
+	if _, ok := s.SeenAt("2"); ok {
+		t.Fatal("SeenAt reports a task never seen")
 	}
 	if !s.SyncSeen([]asana.Task{b}) || !s.Changed(b) {
 		t.Fatalf("sync recorded the unseen task b: %v", s.SeenTasks)

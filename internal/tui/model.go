@@ -209,6 +209,7 @@ func New(d Deps) *Model {
 		readerState: readerState{
 			reader:     viewport.New(),
 			readerView: d.Config.Reader.View,
+			sinceShow:  d.Config.Reader.Since.Show,
 			renderers:  map[rendererKey]*markdownRenderer{},
 			details:    map[string]ticket.Ticket{},
 			images:     map[string]*inlineImage{},

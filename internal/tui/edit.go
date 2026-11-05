@@ -505,10 +505,18 @@ const otherAgentsKey = "other_agents"
 // it opens the agents modal.
 const agentsKey = "section:agents"
 
+// titleKey is the field key of the cards view's title; enter edits it.
+const titleKey = "title"
+
 // fieldTargets are the keys of the rows the cards view can tab to, in the
-// order they render: editable details rows, the Show empty fields row while
-// empty fields are hidden, then the Add comment row.
+// order they render: the title, then detailTargets.
 func (m *Model) fieldTargets(t ticket.Ticket) []string {
+	return append([]string{titleKey}, m.detailTargets(t)...)
+}
+
+// detailTargets are the editable details rows, the Show empty fields row
+// while empty fields are hidden, then the Add comment row.
+func (m *Model) detailTargets(t ticket.Ticket) []string {
 	var keys []string
 	rows := append(detailMeta(t), t.FieldValues()...)
 	if m.showEmpty {
@@ -602,6 +610,8 @@ func (m *Model) openField(key string) tea.Cmd {
 	m.edit, m.run = &pendingEdit{ticket: t}, nil
 	kind, gid, _ := strings.Cut(key, ":")
 	switch kind {
+	case titleKey:
+		return m.pickedEdit(editTitle)
 	case ticket.KeyAssignee:
 		return m.pickedEdit(editAssignee)
 	case ticket.KeyDue:

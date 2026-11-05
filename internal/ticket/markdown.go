@@ -150,16 +150,22 @@ func (t Ticket) MarkdownWith(extra string) string {
 	}
 	section(&b, "Attachments", strings.Join(attachments, "\n"))
 
+	section(&b, "Activity", ActivityMarkdown(t.Timeline()))
+	return b.String()
+}
+
+// ActivityMarkdown renders timeline entries as Markdown: each comment under
+// its author and time, each system change as a bullet.
+func ActivityMarkdown(entries []Entry) string {
 	var activity []string
-	for _, s := range t.Timeline() {
+	for _, s := range entries {
 		if s.Comment {
 			activity = append(activity, fmt.Sprintf("### %s · %s\n\n%s", Author(s.Story), Stamp(s.CreatedAt), HTMLToMarkdown(s.HTMLText)))
 		} else {
 			activity = append(activity, fmt.Sprintf("- %s · %s · %s", Author(s.Story), Stamp(s.CreatedAt), OneLine(s.Text)))
 		}
 	}
-	section(&b, "Activity", strings.Join(activity, "\n\n"))
-	return b.String()
+	return strings.Join(activity, "\n\n")
 }
 
 func section(b *strings.Builder, title, body string) {

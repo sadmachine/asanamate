@@ -476,13 +476,14 @@ func (m *Model) cyclePane(back bool) tea.Cmd {
 	return nil
 }
 
-// toggleReaderView switches the reader between the cards and markdown views.
+// readerViews are the reader's views in the order toggleReaderView steps
+// through them.
+var readerViews = []string{config.ViewCards, config.ViewStreamlined, config.ViewMarkdown}
+
+// toggleReaderView switches the reader to its next view, wrapping.
 func (m *Model) toggleReaderView() {
-	if m.readerView == config.ViewCards {
-		m.readerView = config.ViewMarkdown
-	} else {
-		m.readerView = config.ViewCards
-	}
+	i := slices.Index(readerViews, m.readerView)
+	m.readerView = readerViews[(i+1)%len(readerViews)]
 	m.fieldKey = ""
 	m.renderDetail(false)
 }

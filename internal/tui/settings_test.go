@@ -22,7 +22,7 @@ func TestSettingsMenusSeparateAndRebind(t *testing.T) {
 			otherKeys           []string
 		}{
 			{"settings", "s", "Visual settings", []string{"a", "o", "i", "n"}},
-			{"tools", ",", "Settings & tools", []string{"s", "h", "v", "l", "d", "t"}},
+			{"tools", ",", "Settings & tools", []string{"s", "h", "v", "l", "d", "w", "t"}},
 		} {
 			name := menu.binding
 			if rebound {
@@ -77,12 +77,16 @@ func TestSettingsTogglesPersist(t *testing.T) {
 	m.Update(key("s"))
 	m.Update(key("h"))
 	m.Update(key("d"))
+	m.Update(key("w"))
+	if m.modal == nil || m.modal.cursor != 5 || m.modal.items[5].Hint != "off" {
+		t.Fatalf("since toggle did not reopen settings on its updated row: %+v", m.modal)
+	}
 	m.Update(key("v"))
 	if m.modal == nil || m.modal.cursor != 2 {
 		t.Fatalf("toggle did not reopen settings on its row: %+v", m.modal)
 	}
 	m.Update(key("esc"))
-	if m.modal != nil || !m.separator || !m.spacing || m.focusDim || m.readerView != config.ViewMarkdown {
+	if m.modal != nil || !m.separator || !m.spacing || m.focusDim || m.sinceShow || m.readerView != config.ViewStreamlined {
 		t.Fatalf("separator = %v, spacing = %v, dim = %v, reader = %q", m.separator, m.spacing, m.focusDim, m.readerView)
 	}
 	loaded, err := state.Load(st.Path())
@@ -90,7 +94,7 @@ func TestSettingsTogglesPersist(t *testing.T) {
 		t.Fatal(err)
 	}
 	next := New(Deps{Config: reloadSettings(t, m), State: loaded})
-	if !next.separator || !next.spacing || next.focusDim || next.readerView != config.ViewMarkdown || next.refreshInterval != 30*time.Second {
+	if !next.separator || !next.spacing || next.focusDim || next.sinceShow || next.readerView != config.ViewStreamlined || next.refreshInterval != 30*time.Second {
 		t.Fatalf("next session: separator = %v, spacing = %v, dim = %v, reader = %q, interval = %s", next.separator, next.spacing, next.focusDim, next.readerView, next.refreshInterval)
 	}
 	if !m.deps.Config.Layout.Focus.Dim {
@@ -217,7 +221,7 @@ func TestReaderViewKeySavesSetting(t *testing.T) {
 	m.loading = false
 	m.width, m.height = 120, 40
 	m.Update(key("v"))
-	if m.readerView != config.ViewMarkdown || reloadSettings(t, m).Reader.View != config.ViewMarkdown {
+	if m.readerView != config.ViewStreamlined || reloadSettings(t, m).Reader.View != config.ViewStreamlined {
 		t.Fatal("reader_view did not save settings")
 	}
 	if _, err := os.Stat(st.Path()); !errors.Is(err, os.ErrNotExist) {

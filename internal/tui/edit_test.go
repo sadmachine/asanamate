@@ -379,7 +379,7 @@ func TestEditSkipsUnsupportedFields(t *testing.T) {
 func TestTabCyclesPanes(t *testing.T) {
 	m, _ := editModel(t)
 	press(m, "tab")
-	if !m.focusReader || m.fieldKey != "assignee" {
+	if !m.focusReader || m.fieldKey != titleKey {
 		t.Fatalf("tab from list: focusReader = %v, fieldKey = %q", m.focusReader, m.fieldKey)
 	}
 	press(m, "j", "tab")
@@ -406,7 +406,7 @@ func TestTabCyclesPanes(t *testing.T) {
 func cardLines(t *testing.T, m *Model, tk ticket.Ticket, width int) []string {
 	t.Helper()
 	lines := strings.Split(ansi.Strip(m.renderCards(tk, width)), "\n")
-	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", addProjectKey: "+ Add project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Add comment"}
+	labels := map[string]string{titleKey: "Fix", "assignee": "Assignee", "project:p1": "Project", addProjectKey: "+ Add project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Add comment"}
 	for _, key := range m.fieldTargets(tk) {
 		if l := lines[m.fieldLines[key]]; !strings.Contains(l, labels[key]) {
 			t.Errorf("%s line %d = %q", key, m.fieldLines[key], l)
@@ -565,18 +565,26 @@ func TestReaderFieldEdits(t *testing.T) {
 		do   func(m *Model)
 		want string
 	}{
+		{"title", func(m *Model) {
+			press(m, "2", "enter")
+			if got := m.input.area.Value(); got != "Fix" {
+				t.Errorf("prefill = %q", got)
+			}
+			m.input.area.SetValue("New title")
+			send(m, ctrlS)
+		}, `PUT /tasks/1 {"data":{"name":"New title"}}`},
 		{"assign", func(m *Model) {
-			press(m, "2", "enter", "down", "down", "enter")
+			press(m, "2", "j", "enter", "down", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee":"u2"}}`},
 		{"project section", func(m *Model) {
-			press(m, "2", "j", "enter", "down", "enter")
+			press(m, "2", "j", "j", "enter", "down", "enter")
 		}, `POST /sections/s2/addTask {"data":{"task":"1"}}`},
 		{"due date", func(m *Model) {
 			date := "2026-09-30"
 			tk := m.details["1"]
 			tk.DueOn = &date
 			m.details["1"] = tk
-			press(m, "2", "j", "enter")
+			press(m, "2", "j", "j", "enter")
 			if got := m.input.area.Value(); got != date {
 				t.Errorf("prefill = %q", got)
 			}
@@ -584,10 +592,10 @@ func TestReaderFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"due_on":"2026-10-01"}}`},
 		{"my tasks section", func(m *Model) {
-			press(m, "2", "j", "j", "j", "enter", "down", "enter")
+			press(m, "2", "j", "j", "j", "j", "enter", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee_section":"m2"}}`},
 		{"text field", func(m *Model) {
-			press(m, "2", "j", "j", "j", "j", "enter")
+			press(m, "2", "j", "j", "j", "j", "j", "enter")
 			if got := m.input.area.Value(); got != "old" {
 				t.Errorf("prefill = %q", got)
 			}
@@ -595,7 +603,7 @@ func TestReaderFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"custom_fields":{"f1":"feat/x"}}}`},
 		{"add project", func(m *Model) {
-			press(m, "2", "j", "j", "enter")
+			press(m, "2", "j", "j", "j", "enter")
 			if m.modal == nil || len(m.modal.items) != 1 || m.modal.items[0].Value.(asana.Ref).GID != "p2" {
 				t.Fatalf("add project choices = %v", m.modal)
 			}
@@ -612,14 +620,45 @@ func TestReaderFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `POST /tasks/1/stories {"data":{"text":"hello"}}`},
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			m, writes := editModel(t)
-			tc.do(m)
-			if len(*writes) != 1 || strings.TrimSpace((*writes)[0]) != tc.want {
-				t.Fatalf("writes = %q, want %q (status %q)", *writes, tc.want, m.status)
-			}
-		})
+	// Both card views share their targets, so the same keys make the same
+	// edits.
+	for _, view := range []string{config.ViewCards, config.ViewStreamlined} {
+		for _, tc := range cases {
+			t.Run(view+"/"+tc.name, func(t *testing.T) {
+				m, writes := editModel(t)
+				m.readerView = view
+				tc.do(m)
+				if len(*writes) != 1 || strings.TrimSpace((*writes)[0]) != tc.want {
+					t.Fatalf("writes = %q, want %q (status %q)", *writes, tc.want, m.status)
+				}
+			})
+		}
+	}
+}
+
+func TestStreamlinedFieldLinesMatchChips(t *testing.T) {
+	m, _ := editModel(t)
+	m.readerView = config.ViewStreamlined
+	tk := m.details["1"]
+	for _, width := range []int{120, 50} {
+		lines := cardLines(t, m, tk, width)
+		if text := strings.Join(lines, "\n"); strings.Contains(text, "Details") || !strings.Contains(text, "Fields") {
+			t.Fatalf("streamlined view at %d must put fields in chips, not a Details card:\n%s", width, text)
+		}
+		if line := lines[m.fieldLines[emptyFieldsKey]]; !strings.HasPrefix(line, "+ Show ") {
+			t.Fatalf("empty fields row = %q, want a row of its own", line)
+		}
+	}
+	m.fieldKey = emptyFieldsKey
+	m.showEmptyFields()
+	lines := cardLines(t, m, tk, 120)
+	if line := lines[m.fieldLines[ticket.FieldKey("f2")]]; !strings.Contains(line, "Due —") {
+		t.Fatalf("shown empty field line = %q", line)
+	}
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m.jumpTo(tk, detailsKey)
+	if m.fieldKey != "assignee" || m.flashLines[0] != m.fieldLines["assignee"] || m.flashLines[1] < m.fieldLines[ticket.FieldKey("f2")] {
+		t.Fatalf("jump to details: target %q, flash %v, want the chips from line %d", m.fieldKey, m.flashLines, m.fieldLines["assignee"])
 	}
 }
 

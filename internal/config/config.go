@@ -47,8 +47,9 @@ const (
 
 // Reading pane views.
 const (
-	ViewCards    = "cards"
-	ViewMarkdown = "markdown"
+	ViewCards       = "cards"
+	ViewStreamlined = "streamlined"
+	ViewMarkdown    = "markdown"
 )
 
 // ErrNotConfigured means the config file does not exist yet.
@@ -246,13 +247,25 @@ type Selection struct {
 }
 
 // Reader configures the reading pane. View is its starting view: cards
-// (sections and boxed comments) or markdown (the rendered ticket Markdown).
+// (a details card, sections, and boxed comments), streamlined (the cards
+// view's parts with the fields in compact rows under the title), or markdown
+// (the rendered ticket Markdown).
 // MaxTextWidth caps the wrap width of the cards view's description and
 // comment text, and of the comment editor; 0 wraps at the pane width. Comments shapes its comments.
+// Since shapes what a ticket gained since you last looked.
 type Reader struct {
 	View         string   `toml:"view"`
 	MaxTextWidth int      `toml:"max_text_width"`
 	Comments     Comments `toml:"comments"`
+	Since        Since    `toml:"since"`
+}
+
+// Since configures the reader's Since you looked section. Show lists the
+// comments and changes others made to a My Tasks ticket since you last
+// viewed it above its description, and leaves them out of the activity
+// below.
+type Since struct {
+	Show bool `toml:"show"`
 }
 
 // Comments configures the cards view's comments. Latest is how many of the
@@ -399,7 +412,7 @@ func Default() Config {
 			Layout:          LayoutSingle, Fields: []string{"section", "due"},
 			Header: Header{Style: StyleRule}, Selection: Selection{Style: StyleMarker},
 		},
-		Reader:   Reader{View: ViewCards, Comments: Comments{Latest: 3, PreviewLines: 2}},
+		Reader:   Reader{View: ViewCards, Comments: Comments{Latest: 3, PreviewLines: 2}, Since: Since{Show: true}},
 		Images:   Images{Mode: "auto"},
 		Activity: Activity{RefreshInterval: "2m"},
 		Feed:     Feed{Expand: ExpandAuto, Height: 12, RefreshInterval: "1m", Commands: []string{}},
@@ -553,7 +566,7 @@ func (c Config) validate() error {
 	for _, e := range []error{
 		oneOf("images.mode", c.Images.Mode, "auto", "kitty", "off"),
 		oneOf("list.layout", c.List.Layout, LayoutSingle, LayoutMulti),
-		oneOf("reader.view", c.Reader.View, ViewCards, ViewMarkdown),
+		oneOf("reader.view", c.Reader.View, ViewCards, ViewStreamlined, ViewMarkdown),
 		oneOf("list.header.style", c.List.Header.Style, StyleBar, StyleRule),
 		oneOf("list.selection.style", c.List.Selection.Style, StyleMarker, StyleBar),
 	} {

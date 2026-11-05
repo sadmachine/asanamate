@@ -13,6 +13,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
@@ -28,7 +29,8 @@ const sideBySideW = 90
 // columns wide. It records the line of each editable row in
 // m.fieldLines, and the last line of each multi-line one in m.fieldEnds.
 func (m *Model) renderCards(t ticket.Ticket, width int) string {
-	head := lipgloss.NewStyle().Width(width).Render(tagTitle(ticket.Clean(t.Name), titleStyle) + dimStyle.Render(" · "+t.GID))
+	m.fieldLines, m.fieldEnds, m.clipped = map[string]int{}, map[string]int{}, map[string]bool{}
+	head := m.titleHead(t, width)
 	if line := m.branchLine(t.Task, width); line != "" {
 		head += "\n" + line
 	}
@@ -39,7 +41,6 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		line := dimStyle.Render(m.sym.icon(iconClock)) + value
 		head += "\n" + ansi.Truncate(line, width, "…")
 	}
-	m.fieldLines, m.fieldEnds = map[string]int{}, map[string]int{}
 	fields := m.fieldTargets(t)
 	m.cardTargets = append(m.cardTargets[:0], fields[:len(fields)-1]...)
 	var agentLines []string
@@ -79,6 +80,13 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	// Rows start below the head, a blank line, and the card's top edge.
 	top := lipgloss.Height(head) + 2
 	var blocks []string
+	fresh, rest := m.splitActivity(t)
+	// addSince adds the Since you looked card, when anything is new.
+	addSince := func() {
+		if card := m.sinceCard(fresh, width, lipgloss.Height(strings.Join(blocks, "\n\n"))+1); card != "" {
+			blocks = append(blocks, card)
+		}
+	}
 	add := func(key, title, body string) {
 		if body != "" {
 			block := m.rule(title, width, m.fieldKey == key, m.focusReader) + "\n" + body
@@ -91,7 +99,40 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 			}
 		}
 	}
-	if width >= sideBySideW && (len(agentLines) > 0 || subtasks != "") {
+	if m.readerView == config.ViewStreamlined {
+		// The details go in rows of chips: built-in fields under the
+		// head, custom fields under a Fields rule.
+		chipTop := lipgloss.Height(head)
+		head += "\n" + strings.Join(m.chipRows(m.metaChips(t, width), width, chipTop), "\n")
+		blocks = []string{head}
+		if chips := m.fieldChips(t, width); len(chips) > 0 {
+			rows := m.chipRows(chips, width, lipgloss.Height(head)+2)
+			blocks = append(blocks, m.rule("Fields", width, false, m.focusReader)+"\n"+strings.Join(rows, "\n"))
+		}
+		if flash == detailsKey {
+			m.flashLines = [2]int{chipTop, lipgloss.Height(strings.Join(blocks, "\n\n")) - 1}
+		}
+		addSince()
+		if width >= sideBySideW && len(agentLines) > 0 && subtasks != "" {
+			top := lipgloss.Height(strings.Join(blocks, "\n\n")) + 1
+			leftW := (width - 1) / 2
+			rightW := width - leftW - 1
+			agents := m.card(m.sym.robot+"   Agents", cutLines(agentLines, leftW-4), leftW, m.fieldKey == agentsKey, flash == agentsKey)
+			m.fieldLines[agentsKey], m.fieldEnds[agentsKey] = top, top+lipgloss.Height(agents)-1
+			m.cardTargets = append(m.cardTargets, agentsKey)
+			markOthers(top + 1)
+			key := "section:subtasks"
+			list := m.card(subtaskTitle, wrap(subtasks, rightW-4), rightW, m.fieldKey == key, flash == key)
+			m.fieldLines[key], m.fieldEnds[key] = top, top+lipgloss.Height(list)-1
+			m.cardTargets = append(m.cardTargets, key)
+			blocks = append(blocks, lipgloss.JoinHorizontal(lipgloss.Top, agents, " ", list))
+		} else {
+			add(agentsKey, "Agents", cutLines(agentLines, width))
+			markOthers(m.fieldLines[agentsKey] + 1)
+			add("section:subtasks", subtaskTitle, wrap(subtasks, width))
+		}
+		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
+	} else if width >= sideBySideW && (len(agentLines) > 0 || subtasks != "") {
 		leftW := (width - 1) / 2
 		rightW := width - leftW - 1
 		var side []string
@@ -116,11 +157,13 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		}
 		details := m.card("Details", m.detailsBody(t, leftW-4, top), leftW, false, flash == detailsKey)
 		blocks = []string{head, lipgloss.JoinHorizontal(lipgloss.Top, details, " ", strings.Join(side, "\n"))}
+		addSince()
 		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 	} else {
 		blocks = []string{head, m.card("Details", m.detailsBody(t, width-4, top), width, false, flash == detailsKey)}
 		add(agentsKey, "Agents", cutLines(agentLines, width))
 		markOthers(m.fieldLines[agentsKey] + 1)
+		addSince()
 		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 		add("section:subtasks", subtaskTitle, wrap(subtasks, width))
 	}
@@ -137,78 +180,50 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	m.fieldLines[commentKey] = lipgloss.Height(strings.Join(blocks, "\n\n")) + 2
 	m.fieldLines[tabsKey] = m.fieldLines[commentKey] - 1
 	m.cardTargets = append(m.cardTargets, tabsKey, commentKey)
-	m.clipped = map[string]bool{}
-	var entries []ticket.Entry
-	if m.allActivity {
-		entries = t.Timeline()
-	} else {
-		for _, c := range t.Comments {
-			entries = append(entries, ticket.Entry{Story: c, Comment: true})
-		}
+	var items []string
+	if len(rest) == 0 && len(fresh) == 0 {
+		items = []string{dimStyle.Render("none")}
 	}
-	items := []string{dimStyle.Render("none")}
-	if len(entries) > 0 {
-		items = nil
+	if len(rest) > 0 {
 		line := m.fieldLines[commentKey] + 2
-		first := 0
 		opts := m.deps.Config.Reader.Comments
-		if latest := opts.Latest; !m.showComments && latest > 0 && len(entries) > latest {
-			first = len(entries) - latest
+		if latest := opts.Latest; !m.showComments && latest > 0 && len(rest) > latest {
 			m.fieldLines[allCommentsKey] = line
 			m.cardTargets = append(m.cardTargets, allCommentsKey)
 			style := dimStyle.Italic(true)
 			if m.fieldKey == allCommentsKey {
 				style = m.fieldStyle()
 			}
-			items = append(items, style.Render(fmt.Sprintf("+ Show all %d", len(entries))))
+			items = append(items, style.Render(fmt.Sprintf("+ Show all %d", len(rest))))
+			rest = rest[len(rest)-latest:]
 			line += 2
 		}
-		// i counts comments, keeping their keys the same in either tab;
-		// consecutive events share one block, a line each.
-		i, event := 0, false
-		for n, e := range entries {
-			if !e.Comment {
-				if n < first {
-					continue
-				}
-				row := dimStyle.Render(ansi.Truncate(ticket.Author(e.Story)+" · "+m.storyTime(e.CreatedAt)+" · "+ticket.OneLine(e.Text), width, "…"))
-				if event {
-					items[len(items)-1] += "\n" + row
-					line++
-				} else {
-					items = append(items, row)
-					line += 2
-				}
-				event = true
-				continue
-			}
-			c, last := e.Story, i == len(t.Comments)-1
-			key := commentTarget(c, i)
-			i++
-			if n < first {
-				continue
-			}
-			event = false
-			m.fieldLines[key] = line
-			m.cardTargets = append(m.cardTargets, key)
-			preview := 0
-			if !last && !m.openComments[key] {
-				preview = opts.PreviewLines
-			}
-			block, clipped := m.comment(c, width, m.fieldKey == key, preview)
-			m.clipped[key] = clipped
-			m.fieldEnds[key] = line + lipgloss.Height(block) - 1
-			line += lipgloss.Height(block) + 1
-			items = append(items, block)
-		}
+		items = append(items, m.entryBlocks(rest, width, line, opts.PreviewLines, lastCommentKey(t))...)
 	}
 	addComment := m.addRow(commentKey, "+ Add comment")
-	blocks = append(blocks, m.tabs(t, width)+"\n"+addComment+"\n\n"+strings.Join(items, "\n\n"))
+	activity := m.tabs(t, width) + "\n" + addComment
+	if len(items) > 0 {
+		activity += "\n\n" + strings.Join(items, "\n\n")
+	}
+	blocks = append(blocks, activity)
 	out := strings.Join(blocks, "\n\n")
 	if flash == commentKey {
 		m.flashLines = [2]int{m.fieldLines[tabsKey], lipgloss.Height(out) - 1}
 	}
 	return out
+}
+
+// titleHead is the ticket's name and dimmed GID, wrapped to width, marked
+// while the title is the selected target. It records the title's lines in
+// m.fieldLines and m.fieldEnds.
+func (m *Model) titleHead(t ticket.Ticket, width int) string {
+	name := tagTitle(ticket.Clean(t.Name), titleStyle)
+	if m.fieldKey == titleKey {
+		name = m.fieldStyle().Render(ticket.Clean(t.Name))
+	}
+	head := lipgloss.NewStyle().Width(width).Render(name + dimStyle.Render(" · "+t.GID))
+	m.fieldLines[titleKey], m.fieldEnds[titleKey] = 0, lipgloss.Height(head)-1
+	return head
 }
 
 // branchLine is the faint line under the ticket's name naming the branch its
@@ -436,47 +451,7 @@ func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
 				line += lipgloss.Height(out[i])
 				continue
 			}
-			value := f.Value
-			if value == "" {
-				value = dimStyle.Render("—")
-			}
-			switch {
-			case f.Label == "Status" && f.Key == "":
-				value = m.statusBadge(t.Completed)
-			case strings.HasPrefix(f.Key, ticket.KeyProject+":"):
-				gid := strings.TrimPrefix(f.Key, ticket.KeyProject+":")
-				for _, membership := range t.Memberships {
-					if membership.Project.GID == gid {
-						var section string
-						if membership.Section != nil {
-							section = " / " + ticket.Clean(membership.Section.Name)
-						}
-						// Cut the project name so its section stays on the row,
-						// unless that leaves too little of the name to read.
-						value = m.projectLabel(membership.Project, lipgloss.NewStyle())
-						if room := width - labelW - 2 - ansi.StringWidth(section); room >= 12 {
-							value = ansi.Truncate(value, room, "…")
-						}
-						value += section
-						break
-					}
-				}
-			case strings.HasPrefix(f.Key, ticket.KeyField+":"):
-				for _, field := range t.CustomFields {
-					if f.Key == ticket.FieldKey(field.GID) && m.deps.Config.BranchField != "" && asana.SameFieldName(field.Name, m.deps.Config.BranchField) {
-						value = branchStyle.Render(value)
-						break
-					}
-				}
-				if style, ok := fieldEnumStyle(t, f.Key); ok {
-					value = style.Render("● " + value)
-				}
-			case f.Key == ticket.KeyDue:
-				if due, _, ok := asana.DueDays(t.DueOn, m.now()); ok {
-					rel, style := dueLabel(t.DueOn, m.now())
-					value = style.Render(shortDate(due, m.now()) + " (" + rel + ")")
-				}
-			}
+			value := m.fieldValue(t, f, width-labelW-2)
 			labelStyle := dimStyle
 			if f.Key != "" {
 				m.fieldLines[f.Key] = line
@@ -502,13 +477,66 @@ func (m *Model) detailsBody(t ticket.Ticket, width, top int) string {
 		if m.fieldKey == emptyFieldsKey {
 			style = m.fieldStyle()
 		}
-		label := fmt.Sprintf("+ Show %d empty fields", len(empty))
-		if len(empty) == 1 {
-			label = "+ Show 1 empty field"
-		}
-		lines = append(lines, style.Render(label))
+		lines = append(lines, style.Render(emptyFieldsLabel(len(empty))))
 	}
 	return strings.Join(lines, "\n")
+}
+
+// fieldValue styles field f of t to show in room columns: the status as a
+// badge, a project's name cut so its section stays, an enum value with its
+// color, the branch field in the branch color, a due date with how far off
+// it is, and "—" for an empty value.
+func (m *Model) fieldValue(t ticket.Ticket, f ticket.Field, room int) string {
+	value := f.Value
+	if value == "" {
+		value = dimStyle.Render("—")
+	}
+	switch {
+	case f.Label == "Status" && f.Key == "":
+		value = m.statusBadge(t.Completed)
+	case strings.HasPrefix(f.Key, ticket.KeyProject+":"):
+		gid := strings.TrimPrefix(f.Key, ticket.KeyProject+":")
+		for _, membership := range t.Memberships {
+			if membership.Project.GID == gid {
+				var section string
+				if membership.Section != nil {
+					section = " / " + ticket.Clean(membership.Section.Name)
+				}
+				// Cut the project name so its section stays on the row,
+				// unless that leaves too little of the name to read.
+				value = m.projectLabel(membership.Project, lipgloss.NewStyle())
+				if room := room - ansi.StringWidth(section); room >= 12 {
+					value = ansi.Truncate(value, room, "…")
+				}
+				value += section
+				break
+			}
+		}
+	case strings.HasPrefix(f.Key, ticket.KeyField+":"):
+		for _, field := range t.CustomFields {
+			if f.Key == ticket.FieldKey(field.GID) && m.deps.Config.BranchField != "" && asana.SameFieldName(field.Name, m.deps.Config.BranchField) {
+				value = branchStyle.Render(value)
+				break
+			}
+		}
+		if style, ok := fieldEnumStyle(t, f.Key); ok {
+			value = style.Render("● " + value)
+		}
+	case f.Key == ticket.KeyDue:
+		if due, _, ok := asana.DueDays(t.DueOn, m.now()); ok {
+			rel, style := dueLabel(t.DueOn, m.now())
+			value = style.Render(shortDate(due, m.now()) + " (" + rel + ")")
+		}
+	}
+	return value
+}
+
+// emptyFieldsLabel is the Show empty fields row's label for n fields.
+func emptyFieldsLabel(n int) string {
+	if n == 1 {
+		return "+ Show 1 empty field"
+	}
+	return fmt.Sprintf("+ Show %d empty fields", n)
 }
 
 // fieldEnumStyle is the enum color style of t's custom field with key, and
@@ -593,14 +621,19 @@ func (m *Model) card(title, body string, width int, selected, flashed bool) stri
 	if flashed {
 		border = m.accentStyle.GetForeground()
 	}
-	box := lipgloss.NewStyle().Border(m.sym.border).BorderTop(false).BorderForeground(border).
-		Padding(0, 1).Width(width).Render(body)
-	edge := lipgloss.NewStyle().Foreground(border)
 	head := titleStyle
 	if selected {
 		head = m.fieldStyle()
 	}
-	return m.topEdge(head.Render(title), "", lipgloss.Width(box), edge) + "\n" + box
+	return m.box(head.Render(title), body, width, border)
+}
+
+// box draws body in a border of color border with the styled title set into
+// the top edge. body must already fit width-4 columns.
+func (m *Model) box(title, body string, width int, border color.Color) string {
+	box := lipgloss.NewStyle().Border(m.sym.border).BorderTop(false).BorderForeground(border).
+		Padding(0, 1).Width(width).Render(body)
+	return m.topEdge(title, "", lipgloss.Width(box), lipgloss.NewStyle().Foreground(border)) + "\n" + box
 }
 
 // panel boxes a pane's body, width by height cells in all, with title and

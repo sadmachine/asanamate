@@ -3,7 +3,7 @@
 import { spawn as nodeSpawn } from 'node:child_process';
 import { stat } from 'node:fs/promises';
 import { constants, homedir } from 'node:os';
-import { resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import { createClaude } from './claude.js';
 import { createCodex } from './codex.js';
 import { display } from './display.js';
@@ -99,7 +99,8 @@ function record(s, gid) {
     session_id: s.sessionId,
     task_gid: gid,
     title: s.title,
-    ...(s.cwd ? { cwd: s.cwd } : {}),
+    // asanamate rejects a whole response over one relative or NUL-holding cwd.
+    ...(s.cwd && isAbsolute(s.cwd) && !s.cwd.includes('\0') ? { cwd: s.cwd } : {}),
     ...(s.branch ? { branch: s.branch } : {}),
     ...(s.updatedAt ? { updated_at: s.updatedAt } : {}),
     archived: s.archived,

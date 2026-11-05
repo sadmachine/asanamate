@@ -59,12 +59,16 @@ another.
 
 ## Configurable edit and settings menu keys
 
-**Now:** `[keys]` covers every key handler except the item keys of the edit
-menu (`internal/tui/edit.go`) and the settings menu
-(`internal/tui/settings.go`), which are fixed.
+**Now:** `[keys]` covers most key handlers. These keys are fixed: the item
+keys of the edit menu (`internal/tui/edit.go`), the settings and tools menus
+(`internal/tui/settings.go`), and the connection status menu's `r`
+(`internal/tui/connection.go`); the comment composer footer's `tab`,
+`shift+tab`, and `enter` (`internal/tui/comment.go`); and the multi-select
+picker's `ctrl+r`, `ctrl+up`, and `ctrl+down` (`internal/tui/picker.go`);
+and the What's new screen's `d` (`internal/tui/whatsnew.go`).
 
 **Idea:** Add `[keys.edit_menu]` and `[keys.settings_menu]` scopes, one name
-per menu item.
+per menu item, and scopes or names for the other fixed keys.
 
 **Watch out for:** These are key-select pickers, so item keys win over
 `[keys.picker]` navigation. Validation must reject an item key that collides
@@ -132,19 +136,18 @@ before they can be bound there.
 
 ## Places panel layout
 
-**Now:** The Places panel shows whenever the reader sits beside the list in a
-terminal at least 160 columns wide (`showNav` in `internal/tui/nav.go`). It
-takes 26 columns from the reader, so `layout.list_width` leaves the reader
-less room at 160 columns and up than just below.
+**Now:** The Places panel shows in a terminal at least 160 columns wide
+(`showNav` in `internal/tui/nav.go`) unless `toggle_sidebar` (`Z`) hid it for
+the session. It takes 26 columns from the reader, so `layout.list_width`
+leaves the reader less room at 160 columns and up than just below.
 
 **Idea:** Add `layout.views` (bool, default `true`) to the `[layout]` table,
-and a session toggle key next to `toggle_reader`. With it off, the list and
-reader split the full width.
+so the panel can start hidden; `toggle_sidebar` would then flip the saved
+choice for the session.
 
-**Watch out for:** `readerShown` in `internal/tui/model.go` subtracts the
-panel's width itself to avoid calling `showNav`, which depends on it; a new
-setting must change both. Focus must leave the panel when it hides, as
-`layout()` already does on resize.
+**Watch out for:** `navHidden` is session state today; a setting must seed
+it at startup and, if the toggle should persist, belong in `settings.toml`
+(see `config.SettingKeys`).
 
 ## Recheck the reactions write
 
@@ -162,8 +165,8 @@ reactions write (a field on story update or a `/reactions` endpoint). If one
 exists, switch `SetReaction` to it. If reactions now fail with
 `ErrReactionIgnored`, find the new request shape or remove the feature.
 
-**Watch out for:** The `reaction_summary` reads in `Client.Comments` and
-`Client.Story` may change with it.
+**Watch out for:** The `reaction_summary` reads in `Client.Stories`
+(`internal/asana/activity.go`) and `Client.Story` may change with it.
 
 ## Drag the pane divider
 
@@ -185,10 +188,18 @@ the reader rerender at every new width, so redraw on release, not on each
 motion event. A press on a panel border starts no text drag today, so the
 divider drag can claim it.
 
-## Known issues found during the review
+## Model state and package-level styles
 
-These were already broken before the cleanup:
+**Now:** `tui.Model` has about 90 fields. The active palette's styles
+(`internal/tui/styles.go`) and the key bindings (`keys` and `typeFirst` in
+`internal/tui/hints.go`) are package variables that `New` sets, documented as
+safe because a process runs one `Model`; a few styles, such as
+`accentStyle`, live on `Model` instead. Tests that change the palette or keys
+therefore depend on order and cannot run in parallel.
 
-- `TestRunBackgroundStartsNewSession` in `internal/action` fails under
-  `go test -race`. It passes without `-race`. The race is between
-  `action.RunBackground` and the test.
+**Idea:** Move styles and bindings into one struct owned by `Model`, and
+group related `Model` fields (loading, edit flow, layout) into named structs.
+
+**Why deferred:** It touches nearly every file in `internal/tui` and changes
+no behavior, so it is a large diff with no user-visible gain. Revisit when a
+second `Model` per process is needed, or when parallel TUI tests are worth it.

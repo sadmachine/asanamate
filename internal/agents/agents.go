@@ -106,9 +106,9 @@ func classify(raw string, extra map[string][]string) State {
 // the repository they belong to, and a set branch is kept only when git finds
 // none.
 func List(ctx context.Context, command string) ([]Agent, error) {
-	out, err := exec.CommandContext(ctx, "/bin/sh", "-c", command).Output()
+	out, err := jsoncmd.RunShell(ctx, "agents command failed", command, jsoncmd.DefaultLimits)
 	if err != nil {
-		return nil, fmt.Errorf("agents command failed: %w", err)
+		return nil, err
 	}
 	return parseList(ctx, out)
 }

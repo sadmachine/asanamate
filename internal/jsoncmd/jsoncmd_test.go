@@ -83,14 +83,47 @@ func TestBoundedDoesNotHangOnInheritedPipes(t *testing.T) {
 	}
 }
 
-func TestBoundedErrorIsDisplaySafeAndLegacyRunUnchanged(t *testing.T) {
+func TestBoundedErrorIsDisplaySafe(t *testing.T) {
 	command := `printf '\033[31mbroken\033[0m\n' >&2; exit 3`
-	_, err := RunBounded(context.Background(), "fixture", command, nil, Limits{Stdout: 32, Stderr: 64})
-	if err == nil || strings.ContainsRune(err.Error(), '\x1b') || !strings.Contains(err.Error(), "broken") {
-		t.Fatalf("error = %v", err)
+	for name, run := range map[string]func() error{
+		"RunBounded": func() error {
+			_, err := RunBounded(context.Background(), "fixture", command, nil, Limits{Stdout: 32, Stderr: 64})
+			return err
+		},
+		"Run":      func() error { _, err := Run(context.Background(), "fixture", command, nil); return err },
+		"RunShell": func() error { _, err := RunShell(context.Background(), "fixture", command, DefaultLimits); return err },
+	} {
+		if err := run(); err == nil || strings.ContainsRune(err.Error(), '\x1b') || !strings.Contains(err.Error(), "fixture: broken") {
+			t.Fatalf("%s error = %v", name, err)
+		}
 	}
-	out, err := Run(context.Background(), "legacy", `cat; printf '%0100d' 0`, map[string]int{"version": 1})
+	out, err := Run(context.Background(), "run", `cat; printf '%0100d' 0`, map[string]int{"version": 1})
 	if err != nil || !strings.HasPrefix(string(out), `{"version":1}`) || len(out) != 113 {
-		t.Fatalf("legacy output length = %d, error = %v", len(out), err)
+		t.Fatalf("run output length = %d, error = %v", len(out), err)
+	}
+}
+
+func TestRunAndRunShellDoNotHangOnInheritedPipes(t *testing.T) {
+	for name, run := range map[string]func(context.Context) error{
+		"Run": func(ctx context.Context) error { _, err := Run(ctx, "fixture", `sleep 60 & cat`, nil); return err },
+		"RunShell": func(ctx context.Context) error {
+			_, err := RunShell(ctx, "fixture", `sleep 60 & cat`, DefaultLimits)
+			return err
+		},
+	} {
+		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		start := time.Now()
+		err := run(ctx)
+		cancel()
+		if err == nil || time.Since(start) > 5*time.Second {
+			t.Fatalf("%s: elapsed = %s, error = %v", name, time.Since(start), err)
+		}
+	}
+}
+
+func TestRunShellGivesNoStdin(t *testing.T) {
+	out, err := RunShell(context.Background(), "fixture", `cat; printf done`, DefaultLimits)
+	if err != nil || string(out) != "done" {
+		t.Fatalf("output = %q, error = %v", out, err)
 	}
 }

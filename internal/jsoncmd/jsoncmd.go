@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -20,47 +21,45 @@ import (
 
 // Run executes command with /bin/sh -c and returns its stdout. Data goes
 // through stdin, never into user-authored shell text. label prefixes errors,
-// such as "time provider".
+// such as "time provider". It is RunBounded with DefaultLimits.
 func Run(ctx context.Context, label, command string, req any) ([]byte, error) {
-	input, err := json.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
-	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", command)
-	cmd.Stdin = bytes.NewReader(input)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		if message := strings.TrimSpace(stderr.String()); message != "" {
-			return nil, fmt.Errorf("%s: %s: %w", label, message, err)
-		}
-		return nil, fmt.Errorf("%s: %w", label, err)
-	}
-	return out, nil
+	return RunBounded(ctx, label, command, req, DefaultLimits)
 }
 
 // Limits bounds the bytes captured from each output stream. Both must be positive.
 type Limits struct{ Stdout, Stderr int }
 
+// DefaultLimits bounds commands whose protocols set no limit of their own.
+var DefaultLimits = Limits{Stdout: 16 << 20, Stderr: 64 << 10}
+
 // ErrOutputLimit means the response is incomplete and must not be decoded.
 var ErrOutputLimit = errors.New("command output exceeds limit")
 
-// RunBounded is Run with bounded capture and process-group cleanup. Cancelling
-// ctx or overflowing either stream kills the shell and its discovery children.
-// Run retains its existing capture and process behavior for other protocols.
+// RunBounded runs command with bounded capture and process-group cleanup.
+// Cancelling ctx or overflowing either stream kills the shell and its
+// children. Errors carry stderr with escape sequences and controls removed.
 func RunBounded(ctx context.Context, label, command string, req any, limits Limits) ([]byte, error) {
-	if limits.Stdout <= 0 || limits.Stderr <= 0 {
-		return nil, fmt.Errorf("%s: output limits must be positive", label)
-	}
 	input, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	return runShell(ctx, label, command, bytes.NewReader(input), limits)
+}
+
+// RunShell runs command with /bin/sh -c, no stdin, and RunBounded's limits
+// and cleanup, for line-oriented sources that take no request.
+func RunShell(ctx context.Context, label, command string, limits Limits) ([]byte, error) {
+	return runShell(ctx, label, command, nil, limits)
+}
+
+func runShell(ctx context.Context, label, command string, stdin io.Reader, limits Limits) ([]byte, error) {
+	if limits.Stdout <= 0 || limits.Stderr <= 0 {
+		return nil, fmt.Errorf("%s: output limits must be positive", label)
+	}
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	cmd := exec.CommandContext(runCtx, "/bin/sh", "-c", command)
-	cmd.Stdin = bytes.NewReader(input)
+	cmd.Stdin = stdin
 	return runBounded(ctx, label, cmd, cancel, limits)
 }
 

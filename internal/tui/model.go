@@ -119,6 +119,7 @@ type Model struct {
 	waiting         string           // loading modal text while a picker's or form's choices load
 	refreshInterval time.Duration    // auto-update interval, from saved settings or config
 	refreshSeq      uint64           // invalidates timers from earlier session intervals
+	agentSeq        uint64           // the current agent poll chain; older chains stop
 
 	focusReader  bool
 	focusNav     bool   // the Places panel has focus; wide layout only
@@ -264,7 +265,7 @@ func (m *Model) Init() tea.Cmd {
 		cmd = tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks()), m.startSpinner(), m.scheduleRefresh(), m.startActivity(), m.startFeed())
 	}
 	if m.deps.Config.AgentsEnabled() {
-		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents))
+		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents, m.agentSeq))
 	}
 	return tea.Batch(cmd, checkForUpdate(m.deps.Version))
 }
@@ -345,7 +346,10 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 		m.frame++
 		return m, scheduleSpinner()
 	case agentTickMsg:
-		return m, loadAgents(m.deps.Config.Agents)
+		if msg.seq != m.agentSeq {
+			return m, nil
+		}
+		return m, loadAgents(m.deps.Config.Agents, msg.seq)
 	case projectFieldsMsg:
 		return m, m.gotProjectFields(msg)
 	case candidatesMsg:
@@ -591,7 +595,10 @@ func (m *Model) gotAgents(msg agentsMsg) tea.Cmd {
 			m.renderDetail(true)
 		}
 	}
-	return tea.Batch(scheduleAgents(), m.startSpinner())
+	if msg.seq != m.agentSeq {
+		return m.startSpinner()
+	}
+	return tea.Batch(scheduleAgents(msg.seq), m.startSpinner())
 }
 
 // gotProjectFields stores a project's custom fields for the column picker

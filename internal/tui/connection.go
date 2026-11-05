@@ -180,7 +180,9 @@ func (m *Model) openConnectionStatus() {
 			}
 			cmd := m.refresh()
 			if m.deps.Config.AgentsEnabled() {
-				cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents))
+				// A new poll chain replaces the running one.
+				m.agentSeq++
+				cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents, m.agentSeq))
 			}
 			return cmd
 		}

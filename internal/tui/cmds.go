@@ -42,12 +42,15 @@ type tasksMsg struct {
 	err              error
 }
 
+// agentsMsg and agentTickMsg carry the agent poll chain that started them;
+// only the current chain (Model.agentSeq) schedules the next scan.
 type agentsMsg struct {
 	list []agents.Agent
 	err  error
+	seq  uint64
 }
 
-type agentTickMsg struct{}
+type agentTickMsg struct{ seq uint64 }
 
 type projectFieldsMsg struct {
 	gid     string
@@ -181,7 +184,7 @@ func loadTasks(c *asana.Client, workspace string, project *asana.Ref, pins []str
 	})
 }
 
-func loadAgents(cfg config.Agents) tea.Cmd {
+func loadAgents(cfg config.Agents, seq uint64) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), agentRefresh*2)
 		defer cancel()
@@ -189,12 +192,12 @@ func loadAgents(cfg config.Agents) tea.Cmd {
 		if ctx.Err() != nil {
 			err = fmt.Errorf("agents command interrupted: %w", ctx.Err())
 		}
-		return agentsMsg{list: list, err: err}
+		return agentsMsg{list: list, err: err, seq: seq}
 	}
 }
 
-func scheduleAgents() tea.Cmd {
-	return tea.Tick(agentRefresh, func(time.Time) tea.Msg { return agentTickMsg{} })
+func scheduleAgents(seq uint64) tea.Cmd {
+	return tea.Tick(agentRefresh, func(time.Time) tea.Msg { return agentTickMsg{seq: seq} })
 }
 
 func loadProjectFields(c *asana.Client, gid string) tea.Cmd {

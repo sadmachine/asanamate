@@ -220,6 +220,24 @@ func TestAgentsRefreshAndReportErrors(t *testing.T) {
 	}
 }
 
+func TestAgentsOnlyCurrentPollChainContinues(t *testing.T) {
+	m, _ := testModel(t, config.Config{Agents: config.Agents{Command: "unused"}})
+	m.Update(agentsMsg{}) // the first scan schedules connection-status ticks
+	m.agentSeq = 1        // a retry started a new chain
+	if cmd := m.gotAgents(agentsMsg{seq: 0}); cmd != nil {
+		t.Fatal("a superseded chain must not schedule another scan")
+	}
+	if _, cmd := m.Update(agentTickMsg{seq: 0}); cmd != nil {
+		t.Fatal("a superseded chain's tick must not scan")
+	}
+	if _, cmd := m.Update(agentTickMsg{seq: 1}); cmd == nil {
+		t.Fatal("the current chain's tick must scan")
+	}
+	if cmd := m.gotAgents(agentsMsg{seq: 1}); cmd == nil {
+		t.Fatal("the current chain must schedule its next scan")
+	}
+}
+
 func TestSharedFieldNamesUseActiveProjectField(t *testing.T) {
 	m, _ := testModel(t, config.Config{BranchField: "Branch Name", Actions: []config.Action{goAction}})
 	tk := agentTask("from-fuse")

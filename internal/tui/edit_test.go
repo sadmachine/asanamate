@@ -1,9 +1,11 @@
 package tui
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -146,6 +148,19 @@ func drain(m *Model, cmd tea.Cmd) {
 	}
 }
 
+// sameWrite reports whether a recorded request, "METHOD /path body", is want:
+// the same method and path, and a body with the same JSON value however it
+// is encoded.
+func sameWrite(got, want string) bool {
+	gotLine, gotBody, _ := strings.Cut(strings.TrimSpace(got), " {")
+	wantLine, wantBody, _ := strings.Cut(want, " {")
+	var g, w any
+	if json.Unmarshal([]byte("{"+gotBody), &g) != nil || json.Unmarshal([]byte("{"+wantBody), &w) != nil {
+		return strings.TrimSpace(got) == want
+	}
+	return gotLine == wantLine && reflect.DeepEqual(g, w)
+}
+
 func press(m *Model, keys ...string) {
 	for _, k := range keys {
 		send(m, key(k))
@@ -176,7 +191,7 @@ func TestEditWrites(t *testing.T) {
 			}
 			m.input.area.SetValue("**After**")
 			send(m, ctrlS)
-		}, `PUT /tasks/1 {"data":{"html_notes":"\u003cbody\u003e\u003cstrong\u003eAfter\u003c/strong\u003e\u003c/body\u003e"}}`},
+		}, `PUT /tasks/1 {"data":{"html_notes":"<body><strong>After</strong></body>"}}`},
 		{"clear description", func(m *Model) {
 			tk := m.details["1"]
 			tk.HTMLNotes = "<body>Before</body>"
@@ -184,7 +199,7 @@ func TestEditWrites(t *testing.T) {
 			press(m, "e", "n")
 			m.input.area.SetValue("")
 			send(m, ctrlS)
-		}, `PUT /tasks/1 {"data":{"html_notes":"\u003cbody\u003e\u003c/body\u003e"}}`},
+		}, `PUT /tasks/1 {"data":{"html_notes":"<body></body>"}}`},
 		{"comment", func(m *Model) {
 			press(m, "e", "c")
 			m.input.area.SetValue(" hello ")
@@ -261,7 +276,7 @@ func TestEditWrites(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			m, writes := editModel(t)
 			tc.do(m)
-			if len(*writes) != 1 || strings.TrimSpace((*writes)[0]) != tc.want {
+			if len(*writes) != 1 || !sameWrite((*writes)[0], tc.want) {
 				t.Fatalf("writes = %q, want %q (status %q)", *writes, tc.want, m.status)
 			}
 			if !strings.HasSuffix(m.status, ": done") {
@@ -276,7 +291,7 @@ func TestCompleteKeyKeepsTicketInViewing(t *testing.T) {
 	m.filterInput.SetValue("is:open")
 	m.applyFilter()
 	press(m, "x")
-	if want := `PUT /tasks/1 {"data":{"completed":true}}`; len(*writes) != 1 || strings.TrimSpace((*writes)[0]) != want {
+	if want := `PUT /tasks/1 {"data":{"completed":true}}`; len(*writes) != 1 || !sameWrite((*writes)[0], want) {
 		t.Fatalf("writes = %q, want %q (status %q)", *writes, want, m.status)
 	}
 	if m.status != "Completed Fix" {
@@ -305,7 +320,7 @@ func TestCompleteTogglesByState(t *testing.T) {
 			t.Fatalf("completed = %v: edit menu = %+v, want %q on x", done, m.modal.items, label)
 		}
 		press(m, "x")
-		if len(*writes) != 1 || strings.TrimSpace((*writes)[0]) != want {
+		if len(*writes) != 1 || !sameWrite((*writes)[0], want) {
 			t.Fatalf("completed = %v: writes = %q, want %q", done, *writes, want)
 		}
 	}
@@ -628,7 +643,7 @@ func TestReaderFieldEdits(t *testing.T) {
 				m, writes := editModel(t)
 				m.readerView = view
 				tc.do(m)
-				if len(*writes) != 1 || strings.TrimSpace((*writes)[0]) != tc.want {
+				if len(*writes) != 1 || !sameWrite((*writes)[0], tc.want) {
 					t.Fatalf("writes = %q, want %q (status %q)", *writes, tc.want, m.status)
 				}
 			})

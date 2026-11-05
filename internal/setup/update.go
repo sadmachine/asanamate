@@ -319,11 +319,20 @@ func writeTable(b *strings.Builder, md toml.MetaData, path []string, v any) erro
 var tableArrayOrder = []string{"on", "when", "once", "run"}
 
 // writeTableArray appends tables as an array of tables named name, such as
-// [[hooks]], keeping their order.
+// [[hooks]], keeping their order. A value that is itself an array of tables,
+// such as a grouping's sections, follows as [[name.key]] tables.
 func writeTableArray(b *strings.Builder, name string, tables []map[string]any) error {
 	for i, t := range tables {
 		fmt.Fprintf(b, "\n[[%s]]\n", name)
+		var nested []string
 		keys := slices.Sorted(maps.Keys(t))
+		keys = slices.DeleteFunc(keys, func(k string) bool {
+			_, ok := t[k].([]map[string]any)
+			if ok {
+				nested = append(nested, k)
+			}
+			return ok
+		})
 		slices.SortStableFunc(keys, func(x, y string) int {
 			rank := func(k string) int {
 				if i := slices.Index(tableArrayOrder, k); i >= 0 {
@@ -339,6 +348,11 @@ func writeTableArray(b *strings.Builder, name string, tables []map[string]any) e
 				return fmt.Errorf("%s[%d].%s: %w", name, i+1, k, err)
 			}
 			fmt.Fprintf(b, "%s = %s\n", k, v)
+		}
+		for _, k := range nested {
+			if err := writeTableArray(b, name+"."+k, t[k].([]map[string]any)); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

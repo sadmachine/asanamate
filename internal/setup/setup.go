@@ -259,7 +259,7 @@ branch_field = ""
 # Secondary text: distant due dates, list fields, and tickets in the Later
 # and No due date groups.
 # muted = { faint = true }
-# Bar selection and the views panel cursor.
+# Bar selection and the Places panel cursor.
 # highlight = { reverse = true }
 # Status messages and due-date urgency (today: warn, overdue: error), also
 # on the Today and Overdue group headers.
@@ -351,6 +351,7 @@ fields = ["section", "due"]
 [list.default_view]
 # The view a project starts with, until you change its grouping (b), sort
 # (B), or filter (/) there; asanamate then remembers that project's own view.
+# group_by is a list field, a custom field, or a grouping such as "state".
 filter = "is:open"
 group_by = ""
 
@@ -400,7 +401,7 @@ type_first = false
 
 [activity]
 # Scan Activity (I) in the background at this interval (at least 1s), so it
-# opens ready and the views panel counts new related events. "0" turns
+# opens ready and the Places panel counts new related events. "0" turns
 # background scans off; Activity then scans when you open it.
 refresh_interval = "2m"
 
@@ -517,6 +518,30 @@ root = %s
 # [[hooks]]
 # on = "complete"
 # run = "log_time"
+
+# Optional rule groupings join the group picker (b) and list.default_view's
+# group_by. A ticket joins the first section with a match query it
+# satisfies (any list filter query; see README "Filtering"), and the rest go
+# to Other. A grouping named like a built-in one replaces it. The built-in
+# "state" grouping is:
+# [[groupings]]
+# name = "state"
+#
+# [[groupings.sections]]
+# label = "Needs me"
+# match = ["agent:waiting"]
+#
+# [[groupings.sections]]
+# label = "Active"
+# match = ["agent:working", "git:dirty", "git:unpushed"]
+#
+# [[groupings.sections]]
+# label = "Blocked"
+# match = ["blocked:any"]
+#
+# [[groupings.sections]]
+# label = "Ready"
+# match = ["is:open"]
 `
 
 // actionFiles are written to the actions directory by setup. The .example

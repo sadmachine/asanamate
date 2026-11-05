@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -85,7 +86,7 @@ func TestAgentTerms(t *testing.T) {
 	}
 	for q, want := range map[string]string{"agent:any": "a", "agent:none": "b", "agent:waiting": "a", "agent:idle": "", "-agent:any": "b"} {
 		got := ""
-		for _, task := range Parse(q).Apply([]asana.Task{open, done}, Env{AgentStates: states}) {
+		for _, task := range Parse(q).Apply([]asana.Task{open, done}, Env{Lookup: map[string]func(asana.Task) []string{KeyAgent: states}}) {
 			got += task.GID
 		}
 		if got != want {
@@ -114,7 +115,12 @@ func TestAssigneeAndBranchTerms(t *testing.T) {
 	theirs := asana.Task{GID: "t", Assignee: &asana.Ref{GID: "u2", Name: "Ann Lee"}}
 	nobody := asana.Task{GID: "n"}
 	tasks := []asana.Task{mine, theirs, nobody}
-	env := Env{Me: "u1", HasBranch: func(t asana.Task) bool { return t.GID == "t" }}
+	env := Env{Me: "u1", Lookup: map[string]func(asana.Task) []string{KeyBranch: func(t asana.Task) []string {
+		if t.GID == "t" {
+			return []string{"Feat/X"}
+		}
+		return nil
+	}}}
 	for q, want := range map[string]string{
 		"assignee:@me":                 "m",
 		"-assignee:@me":                "tn",
@@ -127,6 +133,7 @@ func TestAssigneeAndBranchTerms(t *testing.T) {
 		"branch:none":                  "mn",
 		"-branch:none":                 "t",
 		"branch:bogus":                 "",
+		"branch:feat/x":                "t",
 	} {
 		got := ""
 		for _, task := range Parse(q).Apply(tasks, env) {
@@ -144,5 +151,49 @@ func TestAssigneeAndBranchTerms(t *testing.T) {
 	}
 	if !Parse("is:open assignee:@me").UsesMe() || Parse("assignee:me").UsesMe() {
 		t.Error("UsesMe")
+	}
+}
+
+func TestBlockedAndGitTerms(t *testing.T) {
+	blocked := asana.Task{GID: "b", Dependencies: []asana.Ref{{GID: "x", Completed: true}, {GID: "y"}}}
+	cleared := asana.Task{GID: "c", Dependencies: []asana.Ref{{GID: "x", Completed: true}}}
+	free := asana.Task{GID: "f"}
+	git := func(t asana.Task) []string {
+		if t.GID == "b" {
+			return []string{"dirty", "unpushed"}
+		}
+		return nil
+	}
+	env := Env{Lookup: map[string]func(asana.Task) []string{KeyGit: git}}
+	for q, want := range map[string]string{
+		"blocked:any":  "b",
+		"blocked:none": "cf",
+		"git:dirty":    "b",
+		"git:unpushed": "b",
+		"git:any":      "b",
+		"git:none":     "cf",
+		"-git:dirty":   "cf",
+	} {
+		got := ""
+		for _, task := range Parse(q).Apply([]asana.Task{blocked, cleared, free}, env) {
+			got += task.GID
+		}
+		if got != want {
+			t.Errorf("%q matched %q, want %q", q, got, want)
+		}
+	}
+	if got := Parse("git:any").Apply([]asana.Task{blocked}, Env{}); len(got) != 0 {
+		t.Fatal("a key without a lookup has no values")
+	}
+}
+
+func TestValidate(t *testing.T) {
+	for _, q := range []string{"", "fix login", "agent:waiting -git:dirty", `section:"in review"`, "-blocked:any"} {
+		if err := Validate(q); err != nil {
+			t.Errorf("Validate(%q) = %v", q, err)
+		}
+	}
+	if err := Validate("is:open agnet:waiting"); err == nil || !strings.Contains(err.Error(), `"agnet"`) {
+		t.Fatalf("misspelled key: %v", err)
 	}
 }

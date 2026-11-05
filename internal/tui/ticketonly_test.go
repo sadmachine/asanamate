@@ -46,7 +46,7 @@ func TestTicketOnlyIgnoresListKeys(t *testing.T) {
 			t.Fatalf("%s: focusReader = %v, filtering = %v, activity = %v, modal = %v", k, m.focusReader, m.filtering, m.activityOpen, m.modal != nil)
 		}
 	}
-	if help := m.helpView(); strings.Contains(help, "filter") || strings.Contains(help, "views panel") {
+	if help := m.helpView(); strings.Contains(help, "filter") || strings.Contains(help, "Places panel") {
 		t.Fatalf("key help advertises list keys: %q", help)
 	}
 }

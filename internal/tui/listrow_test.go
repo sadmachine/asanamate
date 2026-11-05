@@ -308,7 +308,7 @@ func TestGroupPicker(t *testing.T) {
 	for _, it := range m.modal.items {
 		labels = append(labels, it.Label)
 	}
-	if want := []string{"None", "section", "due", "assignee", "project", "tags", "completed", "Status", "Priority"}; !slices.Equal(labels, want) {
+	if want := []string{"None", "section", "due", "assignee", "project", "tags", "completed", "state", "Status", "Priority"}; !slices.Equal(labels, want) {
 		t.Fatalf("options = %q, want %q", labels, want)
 	}
 	if it := m.modal.items[m.modal.matches[m.modal.cursor]]; it.Hint != "current" || it.Value != "section" {

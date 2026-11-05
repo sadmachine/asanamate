@@ -37,7 +37,7 @@ var helpGroups = []string{"Move", "Ticket", "View"}
 
 // keyBindings lists [keys.main] in key help order with their keys. New
 // stores the result in Model.bindings, since keys only change at startup.
-// Modals, the filter, and the views panel handle their own scopes first.
+// Modals, the filter, and the Places panel handle their own scopes first.
 func keyBindings() []binding {
 	h := handlers()
 	var out []binding
@@ -405,7 +405,7 @@ func (m *Model) focusList() {
 	}
 }
 
-// focusViews gives the views panel focus, when it shows.
+// focusViews gives the Places panel focus, when it shows.
 func (m *Model) focusViews() {
 	if m.showNav() {
 		m.focusList()
@@ -442,7 +442,7 @@ func (m *Model) toggleReader() tea.Cmd {
 	return nil
 }
 
-// toggleSidebar shows or hides the views panel independently of the reader.
+// toggleSidebar shows or hides the Places panel independently of the reader.
 func (m *Model) toggleSidebar() tea.Cmd {
 	m.navHidden = !m.navHidden
 	m.layout()
@@ -453,7 +453,7 @@ func (m *Model) toggleSidebar() tea.Cmd {
 	return nil
 }
 
-// cyclePane moves focus to the next pane: the views panel when it shows, the
+// cyclePane moves focus to the next pane: the Places panel when it shows, the
 // list, then the reader; back goes the other way.
 func (m *Model) cyclePane(back bool) tea.Cmd {
 	panes := []func(){m.focusList}

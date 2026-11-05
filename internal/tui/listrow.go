@@ -89,14 +89,21 @@ func otherAgents(n int) string {
 // agentStates lists the states of t's agents, for filter terms.
 // filterEnv is what filter terms need beyond each ticket.
 func (m *Model) filterEnv() filter.Env {
-	return filter.Env{Today: m.now(), Me: m.meGID, AgentStates: m.agentStates, HasBranch: m.hasBranch}
+	return filter.Env{Today: m.now(), Me: m.meGID, Lookup: map[string]func(asana.Task) []string{
+		filter.KeyAgent:  m.agentStates,
+		filter.KeyBranch: m.explicitBranch,
+		filter.KeyGit:    m.gitStates,
+	}}
 }
 
-// hasBranch reports whether t has a branch saved for it or set in its branch
-// field, rather than the ID field or title slug fallback.
-func (m *Model) hasBranch(t asana.Task) bool {
+// explicitBranch is t's branch saved for it or set in its branch field, as a
+// filter value; none for the ID field or title slug fallback.
+func (m *Model) explicitBranch(t asana.Task) []string {
 	preferred := m.projectFields[gidOf(m.viewProject)]
-	return action.ExplicitBranch(t, m.deps.State.TaskBranches[t.GID], m.deps.Config.BranchField, preferred) != ""
+	if b := action.ExplicitBranch(t, m.deps.State.TaskBranches[t.GID], m.deps.Config.BranchField, preferred); b != "" {
+		return []string{b}
+	}
+	return nil
 }
 
 func (m *Model) agentStates(t asana.Task) []string {

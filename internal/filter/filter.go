@@ -7,14 +7,21 @@
 // project:<name>[<section>] matches a section within that project only, by
 // exact name; project:<name>[<a>|<b>] matches any of the listed sections.
 // is:open and is:done match completion. due:overdue, due:today, due:week (the
-// next 7 days, today included), and due:none match the due date. agent:any,
-// agent:none, and agent:<state> match linked agents. branch:any matches a
-// branch saved for the ticket or set in its branch field, and branch:none
-// neither. A leading "-" negates a term, and double
-// quotes group words.
+// next 7 days, today included), and due:none match the due date.
+// blocked:any matches a ticket waiting on an open dependency, and
+// blocked:none one that is not.
+//
+// The other keys read values the caller supplies through Env.Lookup: agent
+// (the linked agents' states), branch (a branch saved for the ticket or set
+// in its branch field), and git (dirty or unpushed work on that branch).
+// <key>:any matches a ticket with a value, <key>:none one without, and
+// <key>:<value> one with that value.
+//
+// A leading "-" negates a term, and double quotes group words.
 package filter
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -23,7 +30,17 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 )
 
-var keys = []string{"section", "project", "assignee", "tag", "is", "due", "agent", "branch"}
+var keys = []string{"section", "project", "assignee", "tag", "is", "due", "blocked", "agent", "branch", "git"}
+
+// Keys whose values come from Env.Lookup.
+const (
+	KeyAgent  = "agent"
+	KeyBranch = "branch"
+	KeyGit    = "git"
+)
+
+// lookupKeys are the keys matched against Env.Lookup values.
+var lookupKeys = []string{KeyAgent, KeyBranch, KeyGit}
 
 // Keys returns the filter fields in display order.
 func Keys() []string { return slices.Clone(keys) }
@@ -101,24 +118,43 @@ func tokenize(query string) []string {
 }
 
 // Env is what terms need beyond the task. Today places due dates and Me is
-// the user's gid for assignee:@me. AgentStates returns the states of the
-// agents linked to a task and HasBranch whether it has an explicit branch;
-// nil lookups mean none.
+// the user's gid for assignee:@me. Lookup returns a task's values for a
+// lookup key, such as KeyAgent; a missing lookup means no values.
 type Env struct {
-	Today       time.Time
-	Me          string
-	AgentStates func(asana.Task) []string
-	HasBranch   func(asana.Task) bool
+	Today  time.Time
+	Me     string
+	Lookup map[string]func(asana.Task) []string
+}
+
+// values returns t's values for key, lowercased.
+func (env Env) values(key string, t asana.Task) []string {
+	lookup := env.Lookup[key]
+	if lookup == nil {
+		return nil
+	}
+	var values []string
+	for _, v := range lookup(t) {
+		values = append(values, strings.ToLower(v))
+	}
+	return values
+}
+
+// Validate reports the first term whose key is not a filter key, such as a
+// misspelled "agnet:waiting", which Parse would take as title words.
+func Validate(query string) error {
+	for _, tok := range tokenize(query) {
+		tok = strings.TrimPrefix(tok, "-")
+		if k, _, ok := strings.Cut(tok, ":"); ok && !slices.Contains(keys, strings.ToLower(k)) {
+			return fmt.Errorf("unknown filter key %q in %q", k, tok)
+		}
+	}
+	return nil
 }
 
 // Match reports whether t satisfies every term.
 func (f Filter) Match(t asana.Task, env Env) bool {
-	var states []string
-	if env.AgentStates != nil {
-		states = env.AgentStates(t)
-	}
 	for _, tm := range f.terms {
-		if tm.match(t, states, env) == tm.negate {
+		if tm.match(t, env) == tm.negate {
 			return false
 		}
 	}
@@ -141,19 +177,25 @@ func (f Filter) UsesMe() bool {
 	return slices.ContainsFunc(f.terms, func(tm term) bool { return tm.key == "assignee" && tm.value == "@me" })
 }
 
-func (tm term) match(t asana.Task, agentStates []string, env Env) bool {
-	switch tm.key {
-	case "agent":
+func (tm term) match(t asana.Task, env Env) bool {
+	if slices.Contains(lookupKeys, tm.key) {
+		values := env.values(tm.key, t)
 		switch tm.value {
 		case "any":
-			return len(agentStates) > 0
+			return len(values) > 0
 		case "none":
-			return len(agentStates) == 0
+			return len(values) == 0
 		}
-		for _, s := range agentStates {
-			if s == tm.value {
-				return true
-			}
+		return slices.Contains(values, tm.value)
+	}
+	switch tm.key {
+	case "blocked":
+		blocked := slices.ContainsFunc(t.Dependencies, func(d asana.Ref) bool { return !d.Completed })
+		switch tm.value {
+		case "any":
+			return blocked
+		case "none":
+			return !blocked
 		}
 		return false
 	case "":
@@ -187,15 +229,6 @@ func (tm term) match(t asana.Task, agentStates []string, env Env) bool {
 			return t.Assignee == nil || t.Assignee.GID == ""
 		}
 		return t.Assignee != nil && contains(t.Assignee.Name, tm.value)
-	case "branch":
-		has := env.HasBranch != nil && env.HasBranch(t)
-		switch tm.value {
-		case "any":
-			return has
-		case "none":
-			return !has
-		}
-		return false
 	case "tag":
 		for _, tag := range t.Tags {
 			if contains(tag.Name, tm.value) {

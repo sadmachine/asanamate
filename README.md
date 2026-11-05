@@ -555,7 +555,13 @@ Space-separated terms, all of which must match:
 - `agent:any`, `agent:none`, `agent:<state>` match linked [agents](#agents-optional)
 - `branch:any` matches a ticket with a branch saved for it (**Set branch**) or
   set in its `branch_field`; `branch:none` one whose branch falls back to its
-  ID field or title slug
+  ID field or title slug; `branch:<name>` that exact branch
+- `git:dirty` matches a ticket whose branch has uncommitted files and
+  `git:unpushed` one with commits not pushed (or no upstream), in the working
+  trees the [Feed panel](#feed-panel)'s git check finds; `git:any` either,
+  `git:none` neither. They update when that check runs
+- `blocked:any` matches a ticket waiting on a dependency that is still open,
+  `blocked:none` one that is not
 - `-term` negates a term; `"double quotes"` group words
 
 Example: `is:open section:"in progress" -tag:blocked`. Set the startup filter

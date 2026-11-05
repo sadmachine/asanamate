@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -25,14 +26,15 @@ import (
 // feedPanel is the Feed panel under the ticket list: what feed commands,
 // Asana activity, agents, and the git check report.
 type feedPanel struct {
-	expand   string        // feed.expand
-	height   int           // rows when expanded, borders included
-	interval time.Duration // feed and git refresh interval; 0 is off
-	feeds    []feedResult  // by index into feed.commands
-	feedSeq  uint64        // numbers feed runs, so an older run's answer loses
-	git      []feed.Item   // the last git check's items
-	unpushed int           // working trees the last git check found unpushed
-	gitSeq   uint64        // drops git checks older than the newest
+	expand   string              // feed.expand
+	height   int                 // rows when expanded, borders included
+	interval time.Duration       // feed and git refresh interval; 0 is off
+	feeds    []feedResult        // by index into feed.commands
+	feedSeq  uint64              // numbers feed runs, so an older run's answer loses
+	git      []feed.Item         // the last git check's items
+	unpushed int                 // working trees the last git check found unpushed
+	states   map[string][]string // the last git check's git filter values, by ticket gid
+	gitSeq   uint64              // drops git checks older than the newest
 	since    map[string]agentMark
 	polled   bool   // agents were polled before, so new marks are state changes
 	open     bool   // expanded
@@ -81,6 +83,7 @@ type (
 		seq      uint64
 		items    []feed.Item
 		unpushed int
+		states   map[string][]string // git filter values by ticket gid
 	}
 )
 
@@ -169,45 +172,64 @@ func (m *Model) checkGit() tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), feed.Timeout)
 		defer cancel()
-		items, unpushed := gitItems(ctx, targets)
-		return gitMsg{seq: seq, items: items, unpushed: unpushed}
+		items, unpushed, states := gitItems(ctx, targets)
+		return gitMsg{seq: seq, items: items, unpushed: unpushed, states: states}
 	}
 }
 
-// gitItems reports each target's pending work, once per working tree, and
-// how many working trees have commits not pushed.
-func gitItems(ctx context.Context, targets []gitTarget) (items []feed.Item, unpushed int) {
-	seen := map[string]bool{}
+// gitItems reports each target's pending work, once per working tree, how
+// many working trees have commits not pushed, and each ticket's git filter
+// values: dirty for uncommitted files, unpushed for commits not pushed.
+func gitItems(ctx context.Context, targets []gitTarget) (items []feed.Item, unpushed int, states map[string][]string) {
+	// found holds each working tree's git values, so tickets sharing one all
+	// get them while its items appear once.
+	found, states := map[string][]string{}, map[string][]string{}
 	for _, t := range targets {
 		for _, r := range t.repos {
 			wt := repo.Worktree(r, t.branch)
-			if wt == "" || seen[wt] {
+			if wt == "" {
 				continue
 			}
-			seen[wt] = true
-			p, err := repo.PendingWork(ctx, wt)
-			if err != nil {
-				continue
+			values, seen := found[wt]
+			if !seen {
+				values = nil
+				if p, err := repo.PendingWork(ctx, wt); err == nil {
+					item := feed.Item{TicketGID: t.gid, Tone: feed.ToneWarn}
+					if p.Uncommitted > 0 {
+						item.Time, item.Text = p.ChangedAt, plural(p.Uncommitted, "uncommitted file")
+						items = append(items, item)
+						values = append(values, gitDirty)
+					}
+					if p.Unpushed > 0 || p.NoUpstream {
+						item.Time, item.Text = p.CommitAt, "not pushed"
+						if p.Unpushed > 0 {
+							item.Text = plural(p.Unpushed, "unpushed commit")
+						}
+						items = append(items, item)
+						unpushed++
+						values = append(values, gitUnpushed)
+					}
+				}
+				found[wt] = values
 			}
-			item := feed.Item{TicketGID: t.gid, Tone: feed.ToneWarn}
-			if p.Uncommitted > 0 {
-				item.Time, item.Text = p.ChangedAt, plural(p.Uncommitted, "uncommitted file")
-				items = append(items, item)
+			for _, v := range values {
+				if !slices.Contains(states[t.gid], v) {
+					states[t.gid] = append(states[t.gid], v)
+				}
 			}
-			switch {
-			case p.Unpushed > 0:
-				item.Time, item.Text = p.CommitAt, plural(p.Unpushed, "unpushed commit")
-			case p.NoUpstream:
-				item.Time, item.Text = p.CommitAt, "not pushed"
-			default:
-				continue
-			}
-			items = append(items, item)
-			unpushed++
 		}
 	}
-	return items, unpushed
+	return items, unpushed, states
 }
+
+// Git filter values.
+const (
+	gitDirty    = "dirty"
+	gitUnpushed = "unpushed"
+)
+
+// gitStates is t's git filter values from the last git check.
+func (m *Model) gitStates(t asana.Task) []string { return m.feed.states[t.GID] }
 
 func plural(n int, noun string) string {
 	if n == 1 {
@@ -217,8 +239,14 @@ func plural(n int, noun string) string {
 }
 
 func (m *Model) gotGit(msg gitMsg) {
-	if msg.seq == m.feed.gitSeq {
-		m.feed.git, m.feed.unpushed = msg.items, msg.unpushed
+	if msg.seq != m.feed.gitSeq {
+		return
+	}
+	m.feed.git, m.feed.unpushed = msg.items, msg.unpushed
+	if !maps.EqualFunc(m.feed.states, msg.states, slices.Equal) {
+		// Filters and groupings can use git: terms.
+		m.feed.states = msg.states
+		m.applyFilter()
 	}
 }
 

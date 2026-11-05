@@ -28,7 +28,8 @@ const sideBySideW = 90
 // columns wide. It records the line of each editable row in
 // m.fieldLines, and the last line of each multi-line one in m.fieldEnds.
 func (m *Model) renderCards(t ticket.Ticket, width int) string {
-	head := lipgloss.NewStyle().Width(width).Render(tagTitle(ticket.Clean(t.Name), titleStyle) + dimStyle.Render(" · "+t.GID))
+	m.fieldLines, m.fieldEnds = map[string]int{}, map[string]int{}
+	head := m.titleHead(t, width)
 	if line := m.branchLine(t.Task, width); line != "" {
 		head += "\n" + line
 	}
@@ -39,7 +40,6 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		line := dimStyle.Render(m.sym.icon(iconClock)) + value
 		head += "\n" + ansi.Truncate(line, width, "…")
 	}
-	m.fieldLines, m.fieldEnds = map[string]int{}, map[string]int{}
 	fields := m.fieldTargets(t)
 	m.cardTargets = append(m.cardTargets[:0], fields[:len(fields)-1]...)
 	var agentLines []string
@@ -209,6 +209,19 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		m.flashLines = [2]int{m.fieldLines[tabsKey], lipgloss.Height(out) - 1}
 	}
 	return out
+}
+
+// titleHead is the ticket's name and dimmed GID, wrapped to width, marked
+// while the title is the selected target. It records the title's lines in
+// m.fieldLines and m.fieldEnds.
+func (m *Model) titleHead(t ticket.Ticket, width int) string {
+	name := tagTitle(ticket.Clean(t.Name), titleStyle)
+	if m.fieldKey == titleKey {
+		name = m.fieldStyle().Render(ticket.Clean(t.Name))
+	}
+	head := lipgloss.NewStyle().Width(width).Render(name + dimStyle.Render(" · "+t.GID))
+	m.fieldLines[titleKey], m.fieldEnds[titleKey] = 0, lipgloss.Height(head)-1
+	return head
 }
 
 // branchLine is the faint line under the ticket's name naming the branch its

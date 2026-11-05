@@ -44,7 +44,7 @@ func (m *Model) openJumpMenu() {
 		return
 	}
 	var items []pickItem
-	if len(m.fieldTargets(t)) > 1 {
+	if len(m.detailTargets(t)) > 1 {
 		items = append(items, pickItem{Label: "Details", Key: "t", Value: detailsKey})
 	}
 	for _, key := range m.cardTargets {
@@ -67,7 +67,7 @@ func (m *Model) openJumpMenu() {
 func (m *Model) jumpTo(t ticket.Ticket, section string) tea.Cmd {
 	key := section
 	if section == detailsKey {
-		key = m.fieldTargets(t)[0]
+		key = m.detailTargets(t)[0]
 	}
 	m.fieldKey = key
 	m.flashKey, m.flashGID = section, t.GID

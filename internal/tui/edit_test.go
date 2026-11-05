@@ -379,7 +379,7 @@ func TestEditSkipsUnsupportedFields(t *testing.T) {
 func TestTabCyclesPanes(t *testing.T) {
 	m, _ := editModel(t)
 	press(m, "tab")
-	if !m.focusReader || m.fieldKey != "assignee" {
+	if !m.focusReader || m.fieldKey != titleKey {
 		t.Fatalf("tab from list: focusReader = %v, fieldKey = %q", m.focusReader, m.fieldKey)
 	}
 	press(m, "j", "tab")
@@ -406,7 +406,7 @@ func TestTabCyclesPanes(t *testing.T) {
 func cardLines(t *testing.T, m *Model, tk ticket.Ticket, width int) []string {
 	t.Helper()
 	lines := strings.Split(ansi.Strip(m.renderCards(tk, width)), "\n")
-	labels := map[string]string{"assignee": "Assignee", "project:p1": "Project", addProjectKey: "+ Add project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Add comment"}
+	labels := map[string]string{titleKey: "Fix", "assignee": "Assignee", "project:p1": "Project", addProjectKey: "+ Add project", "my_tasks": "My Tasks", "field:f1": "Branch", commentKey: "Add comment"}
 	for _, key := range m.fieldTargets(tk) {
 		if l := lines[m.fieldLines[key]]; !strings.Contains(l, labels[key]) {
 			t.Errorf("%s line %d = %q", key, m.fieldLines[key], l)
@@ -565,18 +565,26 @@ func TestReaderFieldEdits(t *testing.T) {
 		do   func(m *Model)
 		want string
 	}{
+		{"title", func(m *Model) {
+			press(m, "2", "enter")
+			if got := m.input.area.Value(); got != "Fix" {
+				t.Errorf("prefill = %q", got)
+			}
+			m.input.area.SetValue("New title")
+			send(m, ctrlS)
+		}, `PUT /tasks/1 {"data":{"name":"New title"}}`},
 		{"assign", func(m *Model) {
-			press(m, "2", "enter", "down", "down", "enter")
+			press(m, "2", "j", "enter", "down", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee":"u2"}}`},
 		{"project section", func(m *Model) {
-			press(m, "2", "j", "enter", "down", "enter")
+			press(m, "2", "j", "j", "enter", "down", "enter")
 		}, `POST /sections/s2/addTask {"data":{"task":"1"}}`},
 		{"due date", func(m *Model) {
 			date := "2026-09-30"
 			tk := m.details["1"]
 			tk.DueOn = &date
 			m.details["1"] = tk
-			press(m, "2", "j", "enter")
+			press(m, "2", "j", "j", "enter")
 			if got := m.input.area.Value(); got != date {
 				t.Errorf("prefill = %q", got)
 			}
@@ -584,10 +592,10 @@ func TestReaderFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"due_on":"2026-10-01"}}`},
 		{"my tasks section", func(m *Model) {
-			press(m, "2", "j", "j", "j", "enter", "down", "enter")
+			press(m, "2", "j", "j", "j", "j", "enter", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee_section":"m2"}}`},
 		{"text field", func(m *Model) {
-			press(m, "2", "j", "j", "j", "j", "enter")
+			press(m, "2", "j", "j", "j", "j", "j", "enter")
 			if got := m.input.area.Value(); got != "old" {
 				t.Errorf("prefill = %q", got)
 			}
@@ -595,7 +603,7 @@ func TestReaderFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"custom_fields":{"f1":"feat/x"}}}`},
 		{"add project", func(m *Model) {
-			press(m, "2", "j", "j", "enter")
+			press(m, "2", "j", "j", "j", "enter")
 			if m.modal == nil || len(m.modal.items) != 1 || m.modal.items[0].Value.(asana.Ref).GID != "p2" {
 				t.Fatalf("add project choices = %v", m.modal)
 			}

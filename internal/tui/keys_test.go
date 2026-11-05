@@ -208,7 +208,7 @@ func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
 	}
 	m.details["1"] = tk
 	press(m, "2")
-	want := []string{"assignee", "project:p1", addProjectKey, "my_tasks", "field:f1", emptyFieldsKey, "section:description", tabsKey, commentKey, "comment:c1", "comment:c2"}
+	want := []string{titleKey, "assignee", "project:p1", addProjectKey, "my_tasks", "field:f1", emptyFieldsKey, "section:description", tabsKey, commentKey, "comment:c1", "comment:c2"}
 	for i, key := range want {
 		if m.fieldKey != key {
 			t.Fatalf("target %d = %q, want %q", i, m.fieldKey, key)
@@ -238,7 +238,7 @@ func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
 	}
 	m.modal = nil
 	press(m, "j")
-	if m.fieldKey != "assignee" || m.reader.YOffset() != 0 {
+	if m.fieldKey != titleKey || m.reader.YOffset() != 0 {
 		t.Fatalf("wrapped target = %q at offset %d, want the ticket's top", m.fieldKey, m.reader.YOffset())
 	}
 	press(m, "k")
@@ -255,7 +255,7 @@ func TestCardsNavigateFieldsSectionsAndComments(t *testing.T) {
 		t.Fatalf("G target = %q, at bottom %v", m.fieldKey, m.reader.AtBottom())
 	}
 	press(m, "g")
-	if m.fieldKey != "assignee" || m.reader.YOffset() != 0 {
+	if m.fieldKey != titleKey || m.reader.YOffset() != 0 {
 		t.Fatalf("g target = %q at offset %d", m.fieldKey, m.reader.YOffset())
 	}
 }

@@ -1994,7 +1994,9 @@ as `"Frontend, Backend"`; the list replaces the field's current value. `""`
 clears any field.
 
 Each command asks on the terminal before writing unless `--yes` is given,
-`ASANAMATE_CONFIRM_WRITES=0` is set, or `confirm_writes = false`. With no
+`ASANAMATE_CONFIRM_WRITES=0` (or `false`) is set, or `confirm_writes = false`.
+`ASANAMATE_CONFIRM_WRITES=1` (or `true`) asks even when the config says not
+to; any other non-empty value is an error. With no
 terminal available (for example, a background action), a write that needs
 confirmation is refused.
 

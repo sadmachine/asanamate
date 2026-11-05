@@ -98,3 +98,32 @@ func TestDoctorReportsSettingsAndNoLegacyHook(t *testing.T) {
 		}
 	}
 }
+
+func TestNewWriterResolvesConfirmation(t *testing.T) {
+	t.Setenv(config.TokenEnv, "test-token")
+	for _, tc := range []struct {
+		config, env string
+		yes, want   bool
+		fails       bool
+	}{
+		{config: "", env: "", want: true},
+		{config: "confirm_writes = false\n", env: "", want: false},
+		{config: "confirm_writes = false\n", env: "true", want: true},
+		{config: "", env: "0", want: false},
+		{config: "", env: "1", yes: true, want: false},
+		{config: "confirm_writes = false\n", env: "sometimes", fails: true},
+	} {
+		cliConfig(t, "workspace = \"1\"\n"+tc.config)
+		t.Setenv("ASANAMATE_CONFIRM_WRITES", tc.env)
+		svc, err := newWriter(tc.yes)
+		if tc.fails {
+			if err == nil {
+				t.Errorf("%+v: want an error", tc)
+			}
+			continue
+		}
+		if err != nil || (svc.Confirm != nil) != tc.want || svc.Workspace != "1" {
+			t.Errorf("%+v: confirm = %v, workspace = %q, err = %v", tc, svc.Confirm != nil, svc.Workspace, err)
+		}
+	}
+}

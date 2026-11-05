@@ -136,7 +136,7 @@ Cancelling any of those skips the run.
 | `ASANAMATE_CONVERSATION_JSON`, `ASANAMATE_CONVERSATION_PROVIDER`, `ASANAMATE_CONVERSATION_ID` | private selection snapshot, provider, and exact native session ID for a conversation opener; empty for unrelated actions |
 | `ASANAMATE_PARAM_<ID>` | selected action form value, with its field ID uppercased |
 | `ASANAMATE_FIELD_<NAME>` | custom field display values, e.g. `ASANAMATE_FIELD_BRANCH_NAME` |
-| `ASANAMATE_CONFIRM_WRITES` | `1`/`0`, read by the write-back subcommands |
+| `ASANAMATE_CONFIRM_WRITES` | `1`/`0`, read by the write-back subcommands, which also accept `true`/`false` |
 | `ASANAMATE_EVENT` | the [hook](../README.md#hooks) event that ran the action, such as `new_activity`; empty from the action menu |
 
 The variables above are set on every run, empty when they do not apply,

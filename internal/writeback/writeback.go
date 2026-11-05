@@ -32,18 +32,21 @@ var (
 type Confirmer func(prompt string) (bool, error)
 
 // NeedsConfirm resolves whether to confirm: --yes wins, then
-// ASANAMATE_CONFIRM_WRITES ("1"/"0"), then the config default.
-func NeedsConfirm(yes bool, envValue string, configDefault bool) bool {
+// ASANAMATE_CONFIRM_WRITES (a boolean, such as "1", "0", "true", or "false"),
+// then the config default. Any other non-empty value is an error rather than
+// silently falling back to the config.
+func NeedsConfirm(yes bool, envValue string, configDefault bool) (bool, error) {
 	if yes {
-		return false
+		return false, nil
 	}
-	switch envValue {
-	case "0":
-		return false
-	case "1":
-		return true
+	if envValue == "" {
+		return configDefault, nil
 	}
-	return configDefault
+	confirm, err := strconv.ParseBool(envValue)
+	if err != nil {
+		return false, fmt.Errorf("ASANAMATE_CONFIRM_WRITES must be 1, 0, true, or false, not %q", ticket.Clean(envValue))
+	}
+	return confirm, nil
 }
 
 // TTYConfirm asks on /dev/tty, so it works even when stdin is a pipe.

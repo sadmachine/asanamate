@@ -192,7 +192,11 @@ func newWriter(yes bool) (writeback.Service, error) {
 		return writeback.Service{}, err
 	}
 	svc := writeback.Service{Client: client, Workspace: cfg.Workspace}
-	if writeback.NeedsConfirm(yes, os.Getenv("ASANAMATE_CONFIRM_WRITES"), cfg.ConfirmWrites) {
+	confirm, err := writeback.NeedsConfirm(yes, os.Getenv("ASANAMATE_CONFIRM_WRITES"), cfg.ConfirmWrites)
+	if err != nil {
+		return writeback.Service{}, err
+	}
+	if confirm {
 		svc.Confirm = writeback.TTYConfirm
 	}
 	return svc, nil

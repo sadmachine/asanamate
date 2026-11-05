@@ -152,15 +152,21 @@ func TestNeedsConfirm(t *testing.T) {
 		def, out bool
 	}{
 		{true, "1", true, false},
+		{true, "maybe", true, false},
 		{false, "0", true, false},
 		{false, "1", false, true},
+		{false, "true", false, true},
+		{false, "false", true, false},
 		{false, "", true, true},
 		{false, "", false, false},
 	}
 	for _, c := range cases {
-		if got := NeedsConfirm(c.yes, c.env, c.def); got != c.out {
-			t.Errorf("NeedsConfirm(%v, %q, %v) = %v", c.yes, c.env, c.def, got)
+		if got, err := NeedsConfirm(c.yes, c.env, c.def); err != nil || got != c.out {
+			t.Errorf("NeedsConfirm(%v, %q, %v) = %v, %v", c.yes, c.env, c.def, got, err)
 		}
+	}
+	if _, err := NeedsConfirm(false, "yes please", false); err == nil {
+		t.Error("an unrecognized value must be an error, not the config default")
 	}
 }
 

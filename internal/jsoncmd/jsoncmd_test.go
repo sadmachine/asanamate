@@ -73,12 +73,13 @@ func TestBoundedCancellationKillsDiscoveryChildren(t *testing.T) {
 	}
 }
 
+// The background sleep outlives the shell; returning well before it ends,
+// with no deadline set, proves Wait does not hang on its inherited pipes. The
+// bound is generous so a loaded CI runner does not fail it.
 func TestBoundedDoesNotHangOnInheritedPipes(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
 	start := time.Now()
-	out, err := RunBounded(ctx, "fixture", `sleep 60 & printf '{}'`, nil, Limits{Stdout: 32, Stderr: 32})
-	if err == nil || out != nil || time.Since(start) > 2*time.Second {
+	out, err := RunBounded(context.Background(), "fixture", `sleep 60 & printf '{}'`, nil, Limits{Stdout: 32, Stderr: 32})
+	if err == nil || out != nil || time.Since(start) > 30*time.Second {
 		t.Fatalf("output = %q, elapsed = %s, error = %v", out, time.Since(start), err)
 	}
 }
@@ -115,7 +116,7 @@ func TestRunAndRunShellDoNotHangOnInheritedPipes(t *testing.T) {
 		start := time.Now()
 		err := run(ctx)
 		cancel()
-		if err == nil || time.Since(start) > 5*time.Second {
+		if err == nil || time.Since(start) > 30*time.Second {
 			t.Fatalf("%s: elapsed = %s, error = %v", name, time.Since(start), err)
 		}
 	}

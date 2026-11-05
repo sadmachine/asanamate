@@ -402,14 +402,13 @@ func TestAutoRefreshSkipsBusyUI(t *testing.T) {
 }
 
 func TestRefreshTimerWaitsForInterval(t *testing.T) {
-	cfg := config.Default()
-	cfg.List.RefreshInterval = "1s"
-	m, _ := testModel(t, cfg)
+	m, _ := testModel(t, config.Default())
+	m.refreshInterval = 50 * time.Millisecond // below the config minimum, to keep the test fast
 	started := time.Now()
 	cmd := m.scheduleRefresh()
 	m.refreshSeq++ // A queued timer keeps its original generation.
 	msg, ok := cmd().(refreshTickMsg)
-	if !ok || msg.seq != 0 || time.Since(started) < time.Second {
+	if !ok || msg.seq != 0 || time.Since(started) < m.refreshInterval {
 		t.Fatalf("timer fired early or carried wrong generation: %+v", msg)
 	}
 }

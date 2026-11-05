@@ -1,0 +1,28 @@
+docs/specs/23-whats-new-plan.md
+  s_3ac5f700c1c895::t_f0b14ebb8ab1dd 1-344
+docs/specs/23-whats-new.md
+  s_3ac5f700c1c895::t_97f36eb29b206a 166-167
+  s_3ac5f700c1c895::t_a48d99eb3d9427 117-122
+  s_3ac5f700c1c895::t_ff8640043f8a47 139
+  s_3ac5f700c1c895::t_3e8c9e6edfab2e 130-132
+  s_3ac5f700c1c895::t_7d14699bf8f024 1-116,133-138,140-165
+  s_3ac5f700c1c895::t_5a84a2f2738d26 123-129
+docs/specs/README.md
+  s_3ac5f700c1c895::t_9ae64396bc4a3e 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4f5bad9cfb61a53af4ed2bbe13aef29a9b39ac65",
+  "prompts": {},
+  "sessions": {
+    "s_3ac5f700c1c895": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2e81d0c5-6f82-4a36-a056-27188bdd1259",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

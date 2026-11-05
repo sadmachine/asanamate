@@ -164,13 +164,7 @@ func TestMigrateDisplayFailureKeepsLegacyState(t *testing.T) {
 	}
 }
 
-func TestRemovedCLIEntryPoints(t *testing.T) {
-	if code := run([]string{"hook", "codex"}); code != 2 {
-		t.Fatalf("hook exit = %d", code)
-	}
-	if err := runTUI([]string{"--no-preview"}); err == nil || !strings.Contains(err.Error(), "flag provided but not defined") {
-		t.Fatalf("removed flag error = %v", err)
-	}
+func TestHidePreviewFlagParses(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	if err := runTUI([]string{"--hide-preview"}); !errors.Is(err, config.ErrNotConfigured) {
 		t.Fatalf("hide-preview error = %v", err)

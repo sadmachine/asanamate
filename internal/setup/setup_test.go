@@ -383,7 +383,7 @@ func TestUpdateMigratesV010Config(t *testing.T) {
 	if err != nil || cfg.Colors.Accent.FG != "2" {
 		t.Fatalf("cfg = %+v, err = %v", cfg.Colors.Accent, err)
 	}
-	if leftovers, _ := filepath.Glob(filepath.Join(dir, ".config-*")); len(leftovers) != 0 {
+	if leftovers, _ := filepath.Glob(filepath.Join(dir, ".*.tmp-*")); len(leftovers) != 0 {
 		t.Fatalf("temporary check file left behind: %v", leftovers)
 	}
 }

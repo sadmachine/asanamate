@@ -19,6 +19,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/keymap"
 	"github.com/sadmachine/asanamate/internal/prompt"
 	"github.com/sadmachine/asanamate/internal/repo"
+	"github.com/sadmachine/asanamate/internal/safefile"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -65,7 +66,17 @@ func Run(ctx context.Context, o Options) error {
 	if err := os.MkdirAll(filepath.Dir(o.ConfigPath), 0o700); err != nil {
 		return err
 	}
-	if err := writePrivate(o.ConfigPath, []byte(Render(workspace, root))); err != nil {
+	// The user agreed to overwrite an existing config; keep it as a backup.
+	if old, err := os.ReadFile(o.ConfigPath); err == nil {
+		backup, err := safefile.Backup(o.ConfigPath, old)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(o.Out, "The previous config is saved as %s.\n", backup)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := safefile.Write(o.ConfigPath, []byte(Render(workspace, root)), 0o600); err != nil {
 		return err
 	}
 	if _, err := os.Stat(config.SettingsPath(o.ConfigPath)); errors.Is(err, os.ErrNotExist) {
@@ -158,18 +169,19 @@ func Warn(out io.Writer, heading, body string) {
 	lipgloss.Fprintln(out, "\n"+warning.Render(heading)+"\n"+body)
 }
 
-// WriteWithBackup writes data to path, readable only by you, after saving
-// old, the file's previous contents, to a timestamped backup (see
-// backupPath) when old is not nil. It returns the backup's path, else "".
+// WriteWithBackup atomically writes data to path, keeping the file's mode or
+// making a new one readable only by you, after saving old, the file's
+// previous contents, as a timestamped backup when old is not nil. It returns
+// the backup's path, else "".
 func WriteWithBackup(path string, old, data []byte) (string, error) {
 	backup := ""
 	if old != nil {
-		backup = backupPath(path)
-		if err := writePrivate(backup, old); err != nil {
+		var err error
+		if backup, err = safefile.Backup(path, old); err != nil {
 			return "", err
 		}
 	}
-	return backup, writePrivate(path, data)
+	return backup, safefile.Write(path, data, safefile.Mode(path, 0o600))
 }
 
 // Render returns the commented config file for a workspace and repo
@@ -625,7 +637,7 @@ func writeFiles(dir string, files []struct{ name, body string }) error {
 		if exists(path) || exists(strings.TrimSuffix(path, ".example")) {
 			continue
 		}
-		if err := writePrivate(path, []byte(f.body)); err != nil {
+		if err := safefile.Write(path, []byte(f.body), 0o600); err != nil {
 			return err
 		}
 	}

@@ -133,6 +133,38 @@ func TestRunKeepsExistingConfigWhenDeclined(t *testing.T) {
 	}
 }
 
+func TestRunBacksUpAnOverwrittenConfig(t *testing.T) {
+	o, out := options(t, "y\n1\n\n")
+	os.MkdirAll(filepath.Dir(o.ConfigPath), 0o700)
+	os.WriteFile(o.ConfigPath, []byte("previous"), 0o600)
+	if err := Run(context.Background(), o); err != nil {
+		t.Fatal(err)
+	}
+	backups, _ := filepath.Glob(o.ConfigPath + ".*.bak")
+	if len(backups) != 1 || !strings.Contains(out.String(), "saved as "+backups[0]) {
+		t.Fatalf("backups = %v, output:\n%s", backups, out)
+	}
+	if data, _ := os.ReadFile(backups[0]); string(data) != "previous" {
+		t.Fatalf("backup holds %q", data)
+	}
+}
+
+func TestWriteWithBackupKeepsModeAndEveryBackup(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "hooks.json")
+	os.WriteFile(path, []byte("one"), 0o644)
+	for _, next := range []string{"two", "three"} {
+		old, _ := os.ReadFile(path)
+		if _, err := WriteWithBackup(path, old, []byte(next)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	info, _ := os.Stat(path)
+	backups, _ := filepath.Glob(path + ".*.bak")
+	if data, _ := os.ReadFile(path); string(data) != "three" || info.Mode().Perm() != 0o644 || len(backups) != 2 {
+		t.Fatalf("data = %q, mode = %v, backups = %v", data, info.Mode().Perm(), backups)
+	}
+}
+
 func TestOutputStripsControlCharacters(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, `{"data":{"gid":"u","name":"Ann\u001b[2J","workspaces":[{"gid":"w1","name":"Evil\u001b]0;x\u0007"}]}}`)

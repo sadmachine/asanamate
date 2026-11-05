@@ -159,7 +159,8 @@ files stay until you delete them yourself: the config and actions in
    `~/.config/asanamate/config.toml` with every default explained, plus
    inactive pager and Claude example actions in
    `~/.config/asanamate/actions/`. Rename one to `.toml` to enable it (see
-   [Actions](#actions)).
+   [Actions](#actions)). Rerunning setup asks before replacing an existing
+   config and saves the old one as a timestamped `.bak` beside it.
 3. Run `asanamate`. `asanamate doctor` checks the setup if something fails.
 
 Discover optional integrations with `asanamate extensions` or **Settings & tools > Extensions**
@@ -1241,9 +1242,9 @@ task_id = "987654"
 Both keys are optional; missing file means empty defaults. Present values must
 be quoted positive numeric IDs. Unknown keys or malformed files fail with their
 path. No secrets belong here. Setup saves with private permissions and atomic
-replacement, backs up changed files as `harvest.toml.yyyy-mm-dd--hh-mm-ss.bak`,
-refuses concurrent edits and existing backup names, and writes nothing when
-values are unchanged. Cancellation or validation/network failure keeps settings.
+replacement, backs up changed files as `harvest.toml.yyyy-mm-dd--hh-mm-ss.bak`
+(adding `-2`, `-3`, ... when that name is taken, never overwriting a backup),
+refuses concurrent edits, and writes nothing when values are unchanged. Cancellation or validation/network failure keeps settings.
 
 `HARVEST_ACCOUNT_ID` overrides saved `account_id`. If any native credential
 input exists (either environment variable, even empty, or saved account ID),
@@ -1368,8 +1369,8 @@ Existing filenames stay fixed. Saved actions become available immediately.
 The builder rejects duplicate shortcuts within a context and files changed
 externally since opening. Saves from multiple builder sessions are serialized;
 retry if another session is saving. Edits rewrite TOML formatting and comments,
-but preserve the complete original in a unique `<filename>.*.bak` file beside
-it. Backups are ignored by action loading. Opening and accepting an unchanged
+but preserve the complete original in a timestamped `<filename>.<time>.bak`
+file beside it. Backups are ignored by action loading. Opening and accepting an unchanged
 command preserves its original text. Editing commands with tabs or control
 characters requires acknowledging the text editor's whitespace conversion.
 

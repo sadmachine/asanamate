@@ -4,6 +4,7 @@
 package state
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"maps"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/safefile"
 )
 
 // FileName is the state file's name inside the state directory.
@@ -205,19 +207,11 @@ func (s *State) Save() error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(dir, ".state-*.toml")
-	if err != nil {
+	var data bytes.Buffer
+	if err := toml.NewEncoder(&data).Encode(s); err != nil {
 		return err
 	}
-	defer os.Remove(tmp.Name())
-	if err := toml.NewEncoder(tmp).Encode(s); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), s.path)
+	return safefile.Write(s.path, data.Bytes(), 0o600)
 }
 
 // TouchProject moves gid to the front of the recent projects list.

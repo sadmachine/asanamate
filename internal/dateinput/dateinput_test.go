@@ -2,8 +2,9 @@ package dateinput
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
-	"time"
 )
 
 func TestResolveKeepsExactDatesWithoutDate(t *testing.T) {
@@ -27,12 +28,26 @@ func TestResolveRejectsInvalidDates(t *testing.T) {
 	}
 }
 
-func TestResolveRelativeDates(t *testing.T) {
-	if _, err := Resolve(context.Background(), "today"); err != nil {
-		t.Skipf("no GNU date: %v", err)
+// A stub gdate shows what Resolve passes and uses, on every platform.
+func TestResolvePassesRelativeDatesToGNUDate(t *testing.T) {
+	dir := t.TempDir()
+	script := "#!/bin/sh\n[ \"$1\" = -d ] && [ \"$2\" = \"next fri\" ] && [ \"$3\" = +%F ] && echo 2026-10-09\n"
+	if err := os.WriteFile(filepath.Join(dir, "gdate"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
 	}
-	want := time.Now().AddDate(0, 0, 1).Format(time.DateOnly)
-	if got, err := Resolve(context.Background(), "+1 day"); err != nil || got != want {
-		t.Fatalf("Resolve(+1 day) = %q, %v; want %q", got, err, want)
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if got, err := Resolve(context.Background(), "next fri"); err != nil || got != "2026-10-09" {
+		t.Fatalf("Resolve(next fri) = %q, %v", got, err)
+	}
+}
+
+// With GNU date installed, a relative date anchored to a fixed day resolves
+// without depending on today.
+func TestResolveRelativeDatesWithGNUDate(t *testing.T) {
+	if _, err := Resolve(context.Background(), "today"); err != nil {
+		t.Skipf("GNU date (date on Linux, gdate on macOS) is not installed: %v", err)
+	}
+	if got, err := Resolve(context.Background(), "2026-01-31 +1 day"); err != nil || got != "2026-02-01" {
+		t.Fatalf("Resolve(2026-01-31 +1 day) = %q, %v", got, err)
 	}
 }

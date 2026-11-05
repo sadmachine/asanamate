@@ -42,6 +42,10 @@ type harvestEntryRequest struct {
 	ExternalReference harvestExternalReference `json:"external_reference"`
 }
 
+// now is the clock for "today"; tests fix it so a run across midnight
+// cannot see two different days.
+var now = time.Now
+
 // harvestConfigPath is where hrvst 3.x keeps its login; it has no override.
 func harvestConfigPath() (string, error) {
 	home, err := os.UserHomeDir()
@@ -293,7 +297,7 @@ func (credentials harvestCredentials) call(ctx context.Context, method, endpoint
 }
 
 func harvestSummary(ctx context.Context, credentials harvestCredentials, endpoint, gid string) (timetracking.Summary, error) {
-	today := time.Now().Format(time.DateOnly)
+	today := now().Format(time.DateOnly)
 	base, err := url.Parse(endpoint)
 	if err != nil {
 		return timetracking.Summary{}, err
@@ -474,7 +478,7 @@ func harvestFeed(ctx context.Context, credentials func() (harvestCredentials, er
 // timers included as in the feed. Failure only costs the line, never the
 // form.
 func harvestToday(ctx context.Context, credentials harvestCredentials, endpoint string) string {
-	entries, err := harvestUserEntries(ctx, credentials, endpoint, time.Now().Format(time.DateOnly), "Harvest today")
+	entries, err := harvestUserEntries(ctx, credentials, endpoint, now().Format(time.DateOnly), "Harvest today")
 	if err != nil {
 		return "Today unavailable: " + err.Error()
 	}

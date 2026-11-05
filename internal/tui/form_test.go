@@ -178,9 +178,11 @@ func TestSharedFormAppliesDefaultsAndTogglesBool(t *testing.T) {
 
 func TestSharedFormDefaultsAndResolvesDates(t *testing.T) {
 	spec := form.Spec{Fields: []form.Field{{ID: "on", Label: "Date", Type: form.Date}}}
+	before := time.Now().Format(time.DateOnly)
 	f := newFormModal("Log", spec, nil, func(map[string]string) tea.Cmd { return nil })
-	if today := time.Now().Format(time.DateOnly); f.values["on"] != today {
-		t.Fatalf("date = %q, want today %q", f.values["on"], today)
+	// Either day is right if the test runs across midnight.
+	if after := time.Now().Format(time.DateOnly); f.values["on"] != before && f.values["on"] != after {
+		t.Fatalf("date = %q, want today %q", f.values["on"], after)
 	}
 	f.update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	f.input.SetValue("nonsense")

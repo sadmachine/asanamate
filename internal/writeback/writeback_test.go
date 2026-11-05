@@ -7,14 +7,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/sadmachine/asanamate/internal/asana"
-	"github.com/sadmachine/asanamate/internal/dateinput"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -474,10 +474,14 @@ func TestSetDueRejectsBadDates(t *testing.T) {
 }
 
 func TestDateWritesResolveRelativeDates(t *testing.T) {
-	if _, err := dateinput.Resolve(ctx, "today"); err != nil {
-		t.Skipf("no GNU date: %v", err)
+	// A stub gdate resolves every relative date to one fixed day, so this runs
+	// on every platform and never depends on today.
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "gdate"), []byte("#!/bin/sh\necho 2026-10-02\n"), 0o755); err != nil {
+		t.Fatal(err)
 	}
-	tomorrow := time.Now().AddDate(0, 0, 1).Format(time.DateOnly)
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	resolved := "2026-10-02"
 	c, writes := fake(t)
 	if err := (Service{Client: c}).SetDue(ctx, "1", "+1 day"); err != nil {
 		t.Fatal(err)
@@ -488,9 +492,9 @@ func TestDateWritesResolveRelativeDates(t *testing.T) {
 	if _, err := (Service{Client: c}).Create(ctx, NewTicket{Name: "New", Parent: "1", Due: "+1 day"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(*writes) != 3 || (*writes)[0].body["due_on"] != tomorrow || (*writes)[2].body["due_on"] != tomorrow ||
-		!reflect.DeepEqual((*writes)[1].body["custom_fields"], map[string]any{"f4": map[string]any{"date": tomorrow}}) {
-		t.Fatalf("writes = %+v, want %s", *writes, tomorrow)
+	if len(*writes) != 3 || (*writes)[0].body["due_on"] != resolved || (*writes)[2].body["due_on"] != resolved ||
+		!reflect.DeepEqual((*writes)[1].body["custom_fields"], map[string]any{"f4": map[string]any{"date": resolved}}) {
+		t.Fatalf("writes = %+v, want %s", *writes, resolved)
 	}
 }
 

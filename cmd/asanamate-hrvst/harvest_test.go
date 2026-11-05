@@ -45,6 +45,7 @@ func TestHarvestAssignmentOptions(t *testing.T) {
 }
 
 func TestHarvestAdapterUsesExternalReference(t *testing.T) {
+	fixNow(t)
 	dir := t.TempDir()
 	t.Setenv("PATH", dir)
 	request := `{"operation":"log","values":{"project_id":"123","task_id":"456","hours":"1.25","spent_date":"2026-10-05"},"asana":{"task_gid":"1","project_gid":"2","title":"Fix login","url":"https://app.asana.com/0/2/1"}}`
@@ -68,7 +69,7 @@ func TestHarvestAdapterUsesExternalReference(t *testing.T) {
 				}
 				fmt.Fprint(w, `{"id":555}`)
 			case "/":
-				if today := time.Now().Format(time.DateOnly); r.URL.Query().Get("from") != today || r.URL.Query().Get("to") != today {
+				if today := now().Format(time.DateOnly); r.URL.Query().Get("from") != today || r.URL.Query().Get("to") != today {
 					t.Errorf("today filter = %v", r.URL.Query())
 				}
 				fmt.Fprint(w, `{"time_entries":[
@@ -152,7 +153,8 @@ func TestHarvestRejectsCreatedEntryWithoutAsanaLink(t *testing.T) {
 }
 
 func TestHarvestSummaryFiltersTicketAndPaginates(t *testing.T) {
-	today := time.Now().Format(time.DateOnly)
+	fixNow(t)
+	today := now().Format(time.DateOnly)
 	credentials := filepath.Join(t.TempDir(), "config.json")
 	if err := os.WriteFile(credentials, []byte(`{"accessToken":"test-token","accountId":"789"}`), 0o600); err != nil {
 		t.Fatal(err)
@@ -340,4 +342,11 @@ func testCredentials(t *testing.T, configPath string) harvestCredentials {
 		t.Fatal(err)
 	}
 	return credentials
+}
+
+// fixNow stops the clock for "today" at the current time for one test.
+func fixNow(t *testing.T) {
+	fixed := time.Now()
+	now = func() time.Time { return fixed }
+	t.Cleanup(func() { now = time.Now })
 }

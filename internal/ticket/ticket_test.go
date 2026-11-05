@@ -30,7 +30,8 @@ func sample() Ticket {
 }
 
 // utc renders local times in UTC for the test, so expected times hold in
-// any time zone.
+// any time zone. It changes the process-wide time.Local, so no test in this
+// package may call t.Parallel.
 func utc(t *testing.T) {
 	local := time.Local
 	time.Local = time.UTC

@@ -19,12 +19,16 @@ requests once where a GitLab user would look for them.
 Agreed with the user on 2026-11-05:
 
 - **An extension protocol plus a bundled adapter.** Core never calls GitHub
-  or GitLab. A new JSON extension point, configured with
-  `pull_requests.command`, returns each ticket's pull requests. A bundled
-  adapter, `asanamate-pr`, implements it with the `gh` and `glab` CLIs and
-  ships in the release archives like `asanamate-hrvst` and `asanamate-ccmux`.
-  Anyone can replace it with their own command, for Bitbucket or Gitea for
-  example.
+  or GitLab. A new JSON extension point returns each ticket's pull requests.
+  A bundled adapter, `asanamate-pr`, implements it with the `gh` and `glab`
+  CLIs and ships in the release archives like `asanamate-hrvst` and
+  `asanamate-ccmux`.
+- **Any git host.** Nothing in the protocol is specific to GitHub or GitLab.
+  `pull_requests.commands` is a list, like `feed.commands`, so providers for
+  different hosts (Bitbucket, Gitea, Azure DevOps, Gerrit) run side by side
+  with `asanamate-pr`, each answering for the repos on its host. The request
+  carries each repo's remotes, so a provider picks its repos without running
+  git. Agreed with the user on 2026-11-06.
 - **Match by branch, then by link.** A pull request belongs to a ticket when
   its head (source) branch is the ticket's branch, or when its description
   links the Asana task. Branch matches come first.
@@ -91,8 +95,9 @@ Read these before you start:
 Add a `## Pull requests` section to `docs/extensions.md`, a row to its
 table, and a `pull-requests` contract to `extensions.Contracts()`.
 
-**When it runs.** Once per refresh, as a new process, with every loaded
-ticket that has a linked repo in one request:
+**When it runs.** Each command in `pull_requests.commands` runs once per
+refresh, as a new process, with every loaded ticket that has a linked repo
+in one request. Commands run concurrently and independently:
 
 - when a list loads (`gotTasks`), with the git check
 - every `feed.refresh_interval`, and on `r`, with the feeds
@@ -116,13 +121,27 @@ Each ticket has:
 | `gid` | the Asana task GID |
 | `url` | the task's `permalink_url` |
 | `branch` | the ticket's branch as `action.Branch` returns it, including the ID-field and title-slug fallbacks |
-| `repos` | the ticket's linked repo paths (`State.LinkedRepos`), absolute |
+| `repos` | the ticket's linked repos (`State.LinkedRepos`) |
+
+Each repo has:
+
+| Field | Value |
+|---|---|
+| `path` | the repo's absolute path |
+| `remotes` | its git remotes, `origin` first, then by name; each has `name` and `url` as `git remote -v` prints the fetch URL. Empty when the repo has none or git fails |
 
 ```json
 {"version":1,"operation":"lookup","tickets":[
-  {"gid":"1201","url":"https://app.asana.com/0/0/1201","branch":"feature/login","repos":["/code/web"]}
+  {"gid":"1201","url":"https://app.asana.com/0/0/1201","branch":"feature/login",
+   "repos":[{"path":"/code/web","remotes":[{"name":"origin","url":"git@github.com:acme/web.git"}]}]}
 ]}
 ```
+
+**Several providers.** Every command gets the same request. A provider
+answers for the repos on hosts it serves and silently skips the rest, so it
+does not fail or warn about repos another provider handles. asanamate merges
+the replies in `pull_requests.commands` order and drops a pull request whose
+`url` an earlier reply already gave.
 
 **Compatibility.** As for the other JSON protocols: providers ignore
 `version` and unknown fields if they like. The version changes only for a
@@ -158,9 +177,11 @@ link matches, without duplicates (same `url`). Return
 `state`, `checks`, or `review` value as empty, so providers can add values
 later.
 
-**Exit status.** Non-zero or invalid output fails the run. asanamate keeps
-the previous results and shows `pull requests failed` in the Feed panel's
-summary, as a failed feed does. `asanamate doctor` shows stderr.
+**Exit status.** Non-zero or invalid output fails that command's run.
+asanamate keeps that command's previous results, and the other commands'
+results are unaffected. The Feed panel's summary shows `pull requests
+failed`, as a failed feed does. `asanamate doctor` runs each command and
+shows its stderr.
 
 **Timeouts.** `feed.Timeout` (1 minute); the command is killed after that and
 the run fails. Output limits are `jsoncmd.DefaultLimits`.
@@ -176,7 +197,9 @@ answers by branch, used by the protocol tests and quoted in the docs.
 
 - `ProtocolVersion = 1`, request and reply types, and
   `Lookup(ctx, command, tickets) ([]PullRequest, error)` over
-  `jsoncmd.RunBounded`.
+  `jsoncmd.RunBounded`, for one command.
+- `Merge(replies [][]PullRequest) []PullRequest`: in command order, dropping
+  repeated URLs.
 - Validates each item. It drops items with an unknown `ticket_gid`, a
   non-http(s) `url`, an empty `title`, or an unknown `state`, and blanks
   unknown `checks` and `review` values. It passes `title`, `author`, and
@@ -186,18 +209,29 @@ answers by branch, used by the protocol tests and quoted in the docs.
 
 ### Config
 
-New table `[pull_requests]` with one key, `command` (default `""`, off). A
-table, not a top-level key: the concept will grow (for example, a separate
-refresh interval or a per-host setting). Follow every step of "Every key
-change touches" in `AGENTS.md`. `validate` rejects a blank-but-set command
-with `pull_requests.command must not be blank; remove it to turn pull
-requests off`, like `project_links.command`. It is not a TUI setting, so it
-stays out of `SettingKeys`.
+New table `[pull_requests]` with one key, `commands` (default `[]`, off). A
+list from the start: changing a released `command` key into a list later
+would be a breaking config change. A table, not a top-level key: the concept
+will grow (for example, a separate refresh interval). Follow every step of
+"Every key change touches" in `AGENTS.md`. `validate` rejects a blank entry
+with `pull_requests.commands must not hold a blank command`, like
+`feed.commands`. It is not a TUI setting, so it stays out of `SettingKeys`.
+
+### Remotes
+
+Add `repo.Remotes(ctx, path) ([]Remote, error)` (`Remote{Name, URL}`, fetch
+URLs, `origin` first, then by name), parsed from `git -C <path> remote -v`.
+`repo.Matching` already parses that output; make it use `Remotes` instead of
+its own parsing. Read each linked repo's remotes once per refresh, not once
+per ticket, inside the lookup command (off the UI goroutine).
 
 ### TUI
 
 - **Lookup.** Add `checkPullRequests()` beside `checkGit()`:
   - It uses the same targets, its own sequence number, and a message type.
+  - It runs every command concurrently and keeps results per command, so a
+    failed command keeps its previous results. The lookup values come from
+    `pullrequests.Merge` over them.
   - On reply, store results by ticket GID in a new field. Call
     `applyFilter` only when the results changed, and re-render the reader
     when its ticket's results changed.
@@ -250,12 +284,12 @@ Update the README and the config template examples of both groupings, and
 Add an entry `pull-requests` (name "Pull requests", benefit "Show each
 ticket's pull requests and their checks and reviews"):
 
-- **Capability:** contract `pull-requests`, key `pull_requests.command`,
+- **Capability:** contract `pull-requests`, key `pull_requests.commands`,
   executable `asanamate-pr`.
 - **Steps:** install the bundled adapter; install and authenticate `gh`
   (`gh auth login`) and/or `glab` (`glab auth login`); add
-  `[pull_requests] command = "asanamate-pr"`; link the project's repo with
-  `L`.
+  `[pull_requests] commands = ["asanamate-pr"]`, keeping any other
+  providers in the list; link the project's repo with `L`.
 - **Check:** `asanamate-pr check`.
 - **Example:** open a ticket whose branch has a pull request.
 - **Remove:** steps that match the other entries.
@@ -269,14 +303,15 @@ library and the CLIs it calls.
 
 - **Operations.** It reads one request on stdin and answers `lookup`. Any
   other operation exits 1 with `unknown operation` on stderr.
-- **Hosts.** Group the request's tickets by repo. For each repo, read its
-  remotes (`git -C <repo> remote get-url origin`, then other remotes) and
-  pick the CLI:
+- **Hosts.** Group the request's tickets by repo. Pick each repo's CLI from
+  the request's `remotes`, the first remote that matches; the adapter never
+  runs git:
   - `gh` for `github.com`, or for a host `gh auth status --hostname <host>`
     accepts.
   - `glab` for `gitlab.com`, or for a host `glab auth status --hostname <host>`
     accepts.
-  - Skip repos with neither, and note them on stderr.
+  - Skip repos with neither silently: another provider in
+    `pull_requests.commands` may serve them.
 - **One call per repo per run.** List recent pull requests once per repo
   and match locally. Never one call per ticket: refreshes run every minute
   by default, and GitHub rate-limits GraphQL.
@@ -307,7 +342,7 @@ library and the CLIs it calls.
     `/0/<project>/<task>`, `/0/<project>/<task>/f`, and
     `/1/<workspace>/project/<p>/task/<task>`.
   - Branch matches first, de-duplicated by URL.
-- **Commands.** Run `gh`, `glab`, and `git` with argument arrays, never
+- **Commands.** Run `gh` and `glab` with argument arrays, never
   through a shell, with a per-call timeout under the 1-minute budget. Never
   log tokens. A missing CLI or an expired login on one host fails only
   that host's repos: answer with what the other hosts found and explain on
@@ -317,9 +352,10 @@ library and the CLIs it calls.
   0 when at least one is.
 - **`-h` / `help`.** Usage text; the CI smoke test runs it.
 - **Tests.**
-  - Fake `gh`, `glab`, and `git` scripts on `PATH` in `testdata/` cover:
-    branch and link matching, the state, checks, and review mapping, one
-    list call per repo, partial host failure, and unknown operations.
+  - Fake `gh` and `glab` scripts on `PATH` in `testdata/` cover: branch and
+    link matching, the state, checks, and review mapping, one list call per
+    repo, silently skipped repos on other hosts, partial host failure, and
+    unknown operations.
   - No live network in tests.
 
 ## Docs
@@ -328,9 +364,11 @@ library and the CLIs it calls.
   - "What it does": a **Pull requests** (optional) bullet.
   - A **Pull requests (optional)** section: setup, what shows where, the
     filter terms, and that merge requests count.
-  - Config table rows for `pull_requests.command`.
+  - Config table row for `pull_requests.commands`.
+  - How to add a provider for another host next to `asanamate-pr`.
   - Filtering terms, and the updated grouping examples.
-- `docs/extensions.md` section and table row.
+- `docs/extensions.md` section and table row, including "Several
+  providers" and a fixture for a non-GitHub host.
 - Config template (`internal/setup/setup.go`): a commented
   `[pull_requests]` block.
 - What's new: `internal/whatsnew/unreleased/pull-requests.md` under
@@ -347,21 +385,25 @@ library and the CLIs it calls.
 - A disk cache. Results live in memory and refresh with the feeds.
 - The `asanamate list` CLI: `pr:`, `checks:`, and `review:` match nothing
   there, like `agent:`. Say so in the README.
-- Bitbucket, Gitea, and other hosts in the bundled adapter. The protocol
-  allows them through a custom command.
+- Bitbucket, Gitea, and other hosts in the bundled adapter. They work
+  through another provider in `pull_requests.commands`.
 
 ## Acceptance
 
-- `pull_requests.command = "asanamate-pr"` with an authenticated `gh` shows a
+- `pull_requests.commands = ["asanamate-pr"]` with an authenticated `gh` shows a
   ticket's open pull request in the reader in every layout, and `enter`
   opens it in the browser.
 - `/pr:open`, `/checks:failing`, and `/review:changes` filter the list, and
   a `[[groupings]]` section using them places tickets.
 - With the built-in groupings updated, `b` > `state` shows In review, and
   Now shows Review feedback.
-- A provider that exits non-zero keeps the previous results and marks the
-  Feed panel summary; `asanamate doctor` shows its stderr.
-- Without `pull_requests.command`, nothing runs and nothing changes.
+- With two commands, such as `asanamate-pr` and the fixture for another
+  host, tickets get pull requests from both, and a URL both return shows
+  once.
+- A command that exits non-zero keeps its previous results, leaves the other
+  commands' results alone, and marks the Feed panel summary; `asanamate
+  doctor` shows its stderr.
+- Without `pull_requests.commands`, nothing runs and nothing changes.
 - `asanamate extensions` lists the entry, and `asanamate extensions check
   pull-requests` runs `asanamate-pr check`.
 - Release archives contain `asanamate-pr`, and CI's archive and smoke checks

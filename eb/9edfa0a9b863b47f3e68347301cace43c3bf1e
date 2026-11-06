@@ -1,0 +1,81 @@
+internal/tui/keys.go
+  s_a29860173a8c8e::t_611093b7af254c 167
+internal/config/groupings.go
+  s_a29860173a8c8e::t_c637213ca0b8a6 21-22,24-26,32-35,38-52,76-86
+  s_a29860173a8c8e::t_e984e0194fc7da 87
+internal/config/groupings_test.go
+  s_a29860173a8c8e::t_c637213ca0b8a6 26,60-69
+  s_a29860173a8c8e::t_1b738e02c49823 70
+internal/tui/now_test.go
+  s_a29860173a8c8e::t_167a5fca38cd7d 53-54,116,120-123
+  s_a29860173a8c8e::t_c243dd91623d5e 1-52,55-115,117-119,124-152
+internal/tui/savedviews.go
+  s_a29860173a8c8e::t_e42d70c6c893ac 176
+internal/tui/seen.go
+  s_a29860173a8c8e::t_cc214cda52aa65 42,44
+internal/tui/feedpanel.go
+  s_a29860173a8c8e::t_e42d70c6c893ac 512,540
+internal/tui/pins.go
+  s_a29860173a8c8e::t_e42d70c6c893ac 13,23
+internal/filter/filter.go
+  s_a29860173a8c8e::t_5b600b97f2fb35 16-18,35,39-43,47
+internal/tui/model.go
+  s_a29860173a8c8e::t_cc214cda52aa65 888-893,1014-1015,1017,1021,1028-1030,1080-1085,1088,1102-1103,1105-1110,1113-1115,1118,1124,1126
+internal/filter/filter_test.go
+  s_a29860173a8c8e::t_ee2ea864f1d465 191
+internal/tui/filterhelp.go
+  s_a29860173a8c8e::t_5c94599aed8266 106-108
+  s_a29860173a8c8e::t_31e48a4e930640 83,88-90
+internal/tui/nav_test.go
+  s_a29860173a8c8e::t_d1eb72484b0516 69,72,78,143,147-148
+internal/tui/listrow_test.go
+  s_a29860173a8c8e::t_d1eb72484b0516 311
+internal/keymap/keymap_test.go
+  s_a29860173a8c8e::t_af2121c3102287 108-118
+internal/setup/setup_test.go
+  s_a29860173a8c8e::t_bf775e9fded2b8 568,575-576
+internal/tui/group.go
+  s_a29860173a8c8e::t_cc214cda52aa65 203,206
+internal/tui/activity.go
+  s_a29860173a8c8e::t_ad5a658b81bcab 252-254
+internal/tui/scopes_test.go
+  s_a29860173a8c8e::t_d1eb72484b0516 55-56
+internal/tui/listrow.go
+  s_a29860173a8c8e::t_cc214cda52aa65 92,94-98
+README.md
+  s_a29860173a8c8e::t_62e816bf97f27b 286,373,568-575,599,606-628,825,934-964,967
+internal/tui/nav.go
+  s_a29860173a8c8e::t_ad5a658b81bcab 29,39,44,60-61,65-73,231,268-273
+internal/keymap/keymap.go
+  s_a29860173a8c8e::t_80685d3f0bc115 107-108,110
+internal/tui/now.go
+  s_a29860173a8c8e::t_611093b7af254c 45-52
+  s_a29860173a8c8e::t_1453c013d4f39f 1-44,53-161
+internal/tui/statusline.go
+  s_a29860173a8c8e::t_cc214cda52aa65 170,175-176
+  s_a29860173a8c8e::t_6d0ce289010d80 177
+internal/setup/setup.go
+  s_a29860173a8c8e::t_62e816bf97f27b 525-527
+internal/tui/listview.go
+  s_a29860173a8c8e::t_1453c013d4f39f 29-30
+internal/keymap/catalog.go
+  s_a29860173a8c8e::t_611093b7af254c 29
+internal/whatsnew/unreleased/now-view.md
+  s_a29860173a8c8e::t_e842bc9600f140 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eb9edfa0a9b863b47f3e68347301cace43c3bf1e",
+  "prompts": {},
+  "sessions": {
+    "s_a29860173a8c8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28687d57-fb4d-4e2d-8355-acb12fff8b1f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

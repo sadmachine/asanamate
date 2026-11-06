@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { chmod, mkdir, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PassThrough, Readable } from 'node:stream';
@@ -148,27 +149,32 @@ test('Codex PostToolUse completes a pending link once Codex names the thread', a
   assert.equal(await takePending(env, 'codex', ID), '');
 });
 
-test('Codex PostToolUse command starts the helper only while a link is pending', async (t) => {
-  const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
-  const hooks = JSON.parse(await readFile(new URL('../plugins/codex/asana-sessions/hooks/hooks.json', import.meta.url), 'utf8'));
-  const bin = join(env.XDG_STATE_HOME, 'bin');
-  await mkdir(bin);
-  await writeFile(join(bin, 'asana-sessions'), '#!/bin/sh\ncat > "$XDG_STATE_HOME/ran"\n');
-  await chmod(join(bin, 'asana-sessions'), 0o755);
-  const input = 'x'.repeat(256 * 1024);
-  const ran = () => readFile(join(env.XDG_STATE_HOME, 'ran'), 'utf8').catch(() => null);
-  const runCommand = () => execFileSync('/bin/sh', ['-c', hooks.hooks.PostToolUse[0].hooks[0].command],
-    { input, env: { ...env, HOME: env.XDG_STATE_HOME, PATH: `${bin}:/usr/bin:/bin` } });
-  runCommand();
-  assert.equal(await ran(), null);
-  await savePending(env, 'claude', ID, '42');
-  await writeFile(join(env.XDG_STATE_HOME, 'asana-sessions/pending/codex-0.json.1.tmp'), '');
-  runCommand();
-  assert.equal(await ran(), null);
-  await savePending(env, 'codex', ID, '42');
-  runCommand();
-  assert.equal(await ran(), input);
-});
+// Codex runs hook commands through the user's shell, often zsh, which treats
+// an unmatched glob as an error; the command must work in every shell here.
+const shells = ['/bin/sh', '/bin/bash', '/bin/zsh', '/usr/bin/zsh'].filter((shell) => existsSync(shell));
+for (const shell of shells) {
+  test(`Codex PostToolUse command starts the helper only while a link is pending (${shell})`, async (t) => {
+    const { env } = await lockEnv(); t.after(() => rm(env.XDG_STATE_HOME, { recursive: true, force: true }));
+    const hooks = JSON.parse(await readFile(new URL('../plugins/codex/asana-sessions/hooks/hooks.json', import.meta.url), 'utf8'));
+    const bin = join(env.XDG_STATE_HOME, 'bin');
+    await mkdir(bin);
+    await writeFile(join(bin, 'asana-sessions'), '#!/bin/sh\ncat > "$XDG_STATE_HOME/ran"\n');
+    await chmod(join(bin, 'asana-sessions'), 0o755);
+    const input = 'x'.repeat(256 * 1024);
+    const ran = () => readFile(join(env.XDG_STATE_HOME, 'ran'), 'utf8').catch(() => null);
+    const runCommand = () => execFileSync(shell, ['-c', hooks.hooks.PostToolUse[0].hooks[0].command],
+      { input, env: { ...env, HOME: env.XDG_STATE_HOME, PATH: `${bin}:/usr/bin:/bin` } });
+    runCommand();
+    assert.equal(await ran(), null);
+    await savePending(env, 'claude', ID, '42');
+    await writeFile(join(env.XDG_STATE_HOME, 'asana-sessions/pending/codex-0.json.1.tmp'), '');
+    runCommand();
+    assert.equal(await ran(), null);
+    await savePending(env, 'codex', ID, '42');
+    runCommand();
+    assert.equal(await ran(), input);
+  });
+}
 
 for (const name of ['Stop', 'PostToolUse']) {
   test(`Codex ${name} without a pending link never reads or renames a thread`, async (t) => {

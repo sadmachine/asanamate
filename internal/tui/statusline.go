@@ -167,10 +167,13 @@ func (m *Model) listSegs() []string {
 	return segs
 }
 
-// viewName is the viewed project's name, or My Tasks.
+// viewName is the viewed project's name, Now, or My Tasks.
 func (m *Model) viewName() string {
 	if m.viewProject != nil {
 		return ticket.Clean(m.viewProject.Name)
+	}
+	if m.nowOpen {
+		return "Now"
 	}
 	return "My Tasks"
 }

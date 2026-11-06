@@ -173,7 +173,7 @@ func (m *Model) storeSavedView(name string, v *state.View) tea.Cmd {
 	old, existed := s.SavedViews[name]
 	recent := slices.Clone(s.RecentSavedViews)
 	current := maps.Clone(s.CurrentSavedViews)
-	gid := gidOf(m.viewProject)
+	gid := m.viewKey()
 	oldView, hadView := s.View(gid)
 	if v == nil {
 		delete(s.SavedViews, name)

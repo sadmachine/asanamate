@@ -26,7 +26,7 @@ const maxNavProjects = 8
 // maxNavSavedViews caps named views; V offers the full list.
 const maxNavSavedViews = 5
 
-// navItem is one row of the Places panel: a place to open (My Tasks,
+// navItem is one row of the Places panel: a place to open (Now, My Tasks,
 // Activity, a saved view, or a project), or, with none, a heading or note.
 type navItem struct {
 	label, right string
@@ -36,11 +36,12 @@ type navItem struct {
 	heading      bool
 	active       bool
 	activity     bool
+	now          bool
 	dim          bool // the row does not apply to the open view
 }
 
 func (it navItem) selectable() bool {
-	return it.isView || it.activity || it.savedView != ""
+	return it.isView || it.activity || it.now || it.savedView != ""
 }
 
 // showNav reports whether the layout has room for the Places panel.
@@ -56,14 +57,20 @@ func (m *Model) navWidth() int {
 	return 0
 }
 
-// navItems lists the places to go: My Tasks, Activity, saved views, and
-// recent projects. How the open place is grouped, sorted, or filtered lives
+// navItems lists the places to go: Now, My Tasks, Activity, saved views,
+// and recent projects. How the open place is grouped, sorted, or filtered lives
 // in the statusline and its own keys.
 func (m *Model) navItems() []navItem {
 	count := fmt.Sprint(len(m.visible))
-	items := []navItem{{label: "My Tasks", isView: true, active: m.viewProject == nil && !m.activityOpen}}
-	if m.viewProject == nil && !m.activityOpen {
-		items[0].right = count
+	list := !m.activityOpen && m.viewProject == nil
+	items := []navItem{
+		{label: "Now", now: true, active: list && m.nowOpen},
+		{label: "My Tasks", isView: true, active: list && !m.nowOpen},
+	}
+	for i := range items {
+		if items[i].active {
+			items[i].right = count
+		}
 	}
 	activityItem := navItem{label: "Activity", activity: true, active: m.activityOpen}
 	if n := m.activity.newActivity(); n > 0 && !m.activityOpen {
@@ -221,7 +228,7 @@ func (m *Model) focusNavPanel() {
 		if !it.selectable() {
 			continue
 		}
-		if (it.isView || it.activity) && it.active {
+		if (it.isView || it.activity || it.now) && it.active {
 			m.navCursor = n
 			return
 		}
@@ -257,6 +264,12 @@ func (m *Model) updateNav(name string) tea.Cmd {
 				return nil
 			}
 			return m.openActivity()
+		}
+		if it.now {
+			if it.active {
+				return nil
+			}
+			return m.openNow()
 		}
 		if m.activityOpen {
 			m.closeActivity()

@@ -509,7 +509,7 @@ func (m *Model) listHeight() int { return max(m.paneHeight()-m.feedHeight(), 1) 
 // It runs when the view loads or the terminal resizes, never on a background
 // refresh, so the list does not jump.
 func (m *Model) decideFeed() {
-	key := gidOf(m.viewProject) + "\x00" + m.savedView
+	key := m.viewKey() + "\x00" + m.savedView
 	if m.feed.manual && key == m.feed.viewKey {
 		return
 	}
@@ -537,7 +537,7 @@ func (m *Model) listLines(width int) int {
 // toggleFeed opens or collapses the panel until the view changes.
 func (m *Model) toggleFeed() {
 	m.feed.open, m.feed.manual = !m.feed.open, true
-	m.feed.viewKey = gidOf(m.viewProject) + "\x00" + m.savedView
+	m.feed.viewKey = m.viewKey() + "\x00" + m.savedView
 	if !m.feed.open && m.focusFeed {
 		m.focusList()
 	}

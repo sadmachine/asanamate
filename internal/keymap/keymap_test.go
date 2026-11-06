@@ -105,6 +105,17 @@ func TestSearchPreservesExistingSOverride(t *testing.T) {
 	}
 }
 
+func TestNewDefaultsYieldToExistingOverrides(t *testing.T) {
+	k, err := Resolve(map[string]map[string][]string{"main": {"copy_link": {"W"}, "help": {":"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k.Name("main", "W") != "copy_link" || len(k.Keys("main", "now")) != 0 ||
+		k.Name("main", ":") != "help" || len(k.Keys("main", "palette")) != 0 {
+		t.Fatal("new now or palette default claimed an existing override")
+	}
+}
+
 func TestToolsPreservesExistingCommaOverrides(t *testing.T) {
 	for _, binding := range []string{"settings", "quit"} {
 		t.Run(binding, func(t *testing.T) {

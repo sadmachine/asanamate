@@ -66,16 +66,16 @@ func TestPlacesPanelListsOnlyPlaces(t *testing.T) {
 func TestPlacesPanelOpensProjects(t *testing.T) {
 	m := wideModel(t, 200)
 	m.Update(key("0"))
-	if !m.focusNav || m.navCursor != 0 || !strings.HasPrefix(ansi.Strip(m.statusline()), " PLACES ") {
+	if !m.focusNav || m.navCursor != 1 || !strings.HasPrefix(ansi.Strip(m.statusline()), " PLACES ") {
 		t.Fatalf("focusNav = %v, navCursor = %d", m.focusNav, m.navCursor)
 	}
-	// My Tasks, Activity, Mobile, Web.
+	// Now, My Tasks, Activity, Mobile, Web; focus starts on My Tasks.
 	sendKeys(m, "j", "j", "enter")
 	if gidOf(m.viewProject) != "p2" {
 		t.Fatalf("viewProject = %+v", m.viewProject)
 	}
 	m.Update(key("0"))
-	if m.navCursor != 2 {
+	if m.navCursor != 3 {
 		t.Fatalf("focus starts on the viewed project, got %d", m.navCursor)
 	}
 	m.Update(key("esc"))
@@ -140,12 +140,12 @@ func TestViewsPanelAppliesAndResetsSavedViewWithoutSwitchingProject(t *testing.T
 	}
 	m.pickedProject(&asana.Ref{GID: "p1", Name: "Web"})
 	m.Update(tasksMsg{project: m.viewProject, tasks: []asana.Task{openTask, doneTask}})
-	sendKeys(m, "0", "g", "j", "j", "enter")
+	sendKeys(m, "0", "g", "j", "j", "j", "enter")
 	if m.viewProject == nil || m.viewProject.GID != "p1" || m.savedViewLabel() != "Work" {
 		t.Fatalf("sidebar recall switched project: %+v", m.viewProject)
 	}
-	sendKeys(m, "0", "g", "enter")
-	if m.viewProject != nil || m.savedViewLabel() != "Work" {
+	sendKeys(m, "0", "g", "j", "enter")
+	if m.viewProject != nil || m.nowOpen || m.savedViewLabel() != "Work" {
 		t.Fatalf("My Tasks did not restore its view: %q", m.savedViewLabel())
 	}
 }

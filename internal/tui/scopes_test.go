@@ -52,8 +52,8 @@ func TestEveryScopeBindingRuns(t *testing.T) {
 
 	checks := map[string]map[string]func(t *testing.T){
 		"views": {
-			"down": func(t *testing.T) { expect(t, views(t, "down").navCursor == 1, "cursor did not move down") },
-			"up":   func(t *testing.T) { expect(t, views(t, "down", "up").navCursor == 0, "cursor did not move up") },
+			"down": func(t *testing.T) { expect(t, views(t, "down").navCursor == 2, "cursor did not move down") },
+			"up":   func(t *testing.T) { expect(t, views(t, "down", "up").navCursor == 1, "cursor did not move up") },
 			"top": func(t *testing.T) {
 				expect(t, views(t, "down", "down", "top").navCursor == 0, "cursor did not go to the top")
 			},

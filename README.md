@@ -283,7 +283,7 @@ At 100 columns and wider, the ticket list and the reader sit side by side in
 bordered panels; the focused one has an accent-colored border. The list widens
 to fit full ticket titles, but leaves the reader at least 80 columns and cuts
 titles that no longer fit. At 160 columns
-and wider, a Places panel on the left lists where you can go: My Tasks,
+and wider, a Places panel on the left lists where you can go: [Now](#now), My Tasks,
 Activity, your recent saved views, and recent projects. Press `0`, move with
 `j`/`k`, and open one with `enter`. How the open place is grouped, sorted, or
 filtered shows in the bottom bar and changes with `b`, `B`, and `/`. Press `Z` to show or hide this panel independently of the reader.
@@ -370,6 +370,7 @@ key press.
 | `/` | edit the filter (available fields appear while editing; `ctrl+/` opens the filter guide; `enter` keeps the filter, `esc` restores the previous one) |
 | `S` | search the current ticket list: type words from a title or a ticket GID, use arrows or `ctrl+n`/`ctrl+p` to move, and `enter` to open the ticket in the reader. The original filter stays unchanged; `esc` clears the search, then `esc` closes. Remap with `keys.main.search`; an existing binding for `S` takes priority over this default |
 | `p` | switch project (recent first) |
+| `W` | open [Now](#now): your tickets that need you, by why; from Now, return to My Tasks. An existing binding for `W` takes priority over this default |
 | `I` | open Activity: your actions and changes directly related to you |
 | `H` | ticket history: the last 10 tickets focused in the reader, most recent first; picking one selects it (keeping it in the Viewing section when the view doesn't show it) and focuses the reader |
 | `i` | select the next ticket with a `NEW` badge, wrapping around |
@@ -564,6 +565,14 @@ Space-separated terms, all of which must match:
   `git:none` neither. They update when that check runs
 - `blocked:any` matches a ticket waiting on a dependency that is still open,
   `blocked:none` one that is not
+- `new:` matches what reached one of your tickets since you last opened it
+  in the reader: `new:ticket` (never opened), `new:change` (changed in any
+  way), `new:comment` (a comment from someone else), `new:mention` (one that
+  mentions you), `new:assigned` (someone assigned it to you)
+- `waiting:reply` matches one of your tickets whose newest comment is yours
+- `new:` and `waiting:` cover tickets assigned to you in My Tasks and
+  [Now](#now). Comments and assignments come from the [Activity](#activity)
+  cache, so they need its scans; `new:ticket` and `new:change` do not
 - `-term` negates a term; `"double quotes"` group words
 
 Example: `is:open section:"in progress" -tag:blocked`. Set the startup filter
@@ -587,12 +596,35 @@ The ticket list's title shows the current view name, or `Custom` when no saved
 view is associated with the current project. After edits it shows `(modified)`;
 the Places panel marks the name with `*`. Reverting those edits clears the mark.
 In narrow and list-only layouts, the name appears in the status bar instead.
-The view name and its settings are remembered separately for My Tasks and each
+The view name and its settings are remembered separately for Now, My Tasks, and each
 project, while recently used view names are shared across projects.
 
 Save under the same name to replace a view, with confirmation. The `V` picker
 also offers saving and deletion; deletion requires confirmation. These keys
 work in narrow terminals and list-only mode too.
+
+### Now
+
+Press `W`, or choose Now at the top of the wide Places panel, to see only the
+My Tasks tickets that need you, grouped by why:
+
+- **Needs reply**: someone commented, or mentioned you, since you last opened
+  the ticket
+- **Agent waiting**: a linked [agent](#agents-optional) waits for you
+- **New to you**: a ticket you have never opened, or one just assigned to you
+- **Updated**: anything else changed since you last opened it
+- **Waiting on others** (folded): your comment is the newest, or an open
+  dependency blocks the ticket
+
+Opening a ticket in the reader marks it seen, as it clears the `NEW` badge.
+The ticket keeps its section while you read it and leaves Now when you move
+on. The Places panel counts Now's tickets while it is open.
+
+Now is the built-in `now` [rule grouping](#rule-groupings): it lists the
+tickets that match any of its sections. Configure a grouping named `now` to
+change the sections and what Now lists. Now keeps its own filter, sort,
+folds, pins, and saved view, like a project; `b` can regroup it without
+changing what it lists.
 
 ### Activity
 
@@ -790,7 +822,7 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 | `symbols` | `unicode` on UTF-8, else `ascii` | `unicode`, `nerd`, or `ascii` for ticket markers and agent states |
 | `reduced_motion` | OS setting | `true` shows static agent symbols instead of the spinner |
 | `list.default_view.group_by` | `""` (ungrouped) | starting grouping, until the project has its own saved view: any `list.fields` name or [rule grouping](#rule-groupings); `b` picks another |
-| `groupings` | built-in `state` | [rule groupings](#rule-groupings): `name`, then `[[groupings.sections]]` with a `label` and `match` filter queries |
+| `groupings` | built-in `state` and `now` | [rule groupings](#rule-groupings): `name`, then `[[groupings.sections]]` with a `label`, `match` filter queries, and optional `folded` |
 | `list.default_view.sort.by` | `""` (Asana order) | starting sort, until the project has its own saved view: any list field or `title`; `B` picks a field and direction; applies within groups or across an ungrouped list |
 | `list.default_view.sort.direction` | `"asc"` | `asc` (earliest dates / A–Z) or `desc` (latest dates / Z–A); missing values always last |
 | `list.header.style` | `"rule"` | group headers: `rule` (`── Label (n) ───`) or `bar` (reversed bar) |
@@ -899,9 +931,40 @@ label = "Ready"
 match = ["is:open"]
 ```
 
+The built-in `now` grouping decides what [Now](#now) lists:
+
+```toml
+[[groupings]]
+name = "now"
+
+[[groupings.sections]]
+label = "Needs reply"
+match = ["new:mention", "new:comment"]
+
+[[groupings.sections]]
+label = "Agent waiting"
+match = ["agent:waiting"]
+
+[[groupings.sections]]
+label = "New to you"
+match = ["new:ticket", "new:assigned"]
+
+[[groupings.sections]]
+label = "Updated"
+match = ["new:change"]
+
+[[groupings.sections]]
+label = "Waiting on others"
+match = ["waiting:reply", "blocked:any"]
+folded = true
+```
+
+A section with `folded = true` starts folded until the list remembers its own
+folds; `-` opens it.
+
 Add your own `[[groupings]]` the same way; each joins the `b` picker and can
 be a `list.default_view.group_by` or a saved view's grouping. A grouping
-named like a built-in one replaces it, so copy `state` above to change it.
+named like a built-in one replaces it, so copy `state` or `now` above to change it.
 Names must be unique, each section needs a label (not `Other`) and at least
 one query, and a query with an unknown key, such as `agnet:waiting`, is an
 error rather than title words.

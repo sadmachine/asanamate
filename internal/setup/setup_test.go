@@ -565,14 +565,15 @@ func TestMergeReplacesPromptAfterWithHooks(t *testing.T) {
 }
 
 func TestMergeKeepsGroupings(t *testing.T) {
-	old := "workspace = \"1\"\n\n[[groupings]]\nname = \"review\"\n\n[[groupings.sections]]\nlabel = \"Waiting\"\nmatch = [\"agent:waiting\", \"git:dirty\"]\n\n[[groupings.sections]]\nlabel = \"Ready\"\nmatch = [\"is:open\"]\n"
+	old := "workspace = \"1\"\n\n[[groupings]]\nname = \"review\"\n\n[[groupings.sections]]\nlabel = \"Waiting\"\nmatch = [\"agent:waiting\", \"git:dirty\"]\n\n[[groupings.sections]]\nlabel = \"Ready\"\nmatch = [\"is:open\"]\nfolded = true\n"
 	updated, _, _, err := Merge(old)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cfg := loadString(t, updated)
 	if len(cfg.Groupings) != 1 || cfg.Groupings[0].Name != "review" || len(cfg.Groupings[0].Sections) != 2 ||
-		!slices.Equal(cfg.Groupings[0].Sections[0].Match, []string{"agent:waiting", "git:dirty"}) || cfg.Groupings[0].Sections[1].Label != "Ready" {
+		!slices.Equal(cfg.Groupings[0].Sections[0].Match, []string{"agent:waiting", "git:dirty"}) || cfg.Groupings[0].Sections[1].Label != "Ready" ||
+		cfg.Groupings[0].Sections[0].Folded || !cfg.Groupings[0].Sections[1].Folded {
 		t.Fatalf("groupings = %+v\n%s", cfg.Groupings, updated)
 	}
 }

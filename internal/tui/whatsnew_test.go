@@ -58,7 +58,7 @@ func TestWhatsNewOpensOnceAfterUpgrade(t *testing.T) {
 	if m.whatsNew == nil {
 		t.Fatal("modal did not open after an upgrade")
 	}
-	if md := m.whatsNew.markdown; !strings.Contains(md, "Five") || !strings.Contains(md, "Four-one") || strings.Contains(md, "**Four.**") {
+	if md := whatsnew.Markdown(m.whatsNew.sections); !strings.Contains(md, "Five") || !strings.Contains(md, "Four-one") || strings.Contains(md, "**Four.**") {
 		t.Fatalf("markdown = %q", md)
 	}
 	m.Update(key("esc"))
@@ -76,7 +76,7 @@ func TestWhatsNewOpensOnceAfterUpgrade(t *testing.T) {
 
 func TestWhatsNewExistingUserFirstRelease(t *testing.T) {
 	m, _ := whatsNewModel(t, "v0.5.0", "recent_projects = []\n", config.Default(), "")
-	if m.whatsNew == nil || !strings.Contains(m.whatsNew.markdown, "Five") || strings.Contains(m.whatsNew.markdown, "Four") {
+	if m.whatsNew == nil || !strings.Contains(whatsnew.Markdown(m.whatsNew.sections), "Five") || strings.Contains(whatsnew.Markdown(m.whatsNew.sections), "Four") {
 		t.Fatalf("modal = %+v", m.whatsNew)
 	}
 }
@@ -144,7 +144,7 @@ func TestWhatsNewToolsMenu(t *testing.T) {
 	m.loading = false
 	m.Update(key(","))
 	m.Update(key("e"))
-	if m.whatsNew == nil || !strings.Contains(m.whatsNew.markdown, "**Four.**") {
+	if m.whatsNew == nil || !strings.Contains(whatsnew.Markdown(m.whatsNew.sections), "**Four.**") {
 		t.Fatalf("modal = %+v", m.whatsNew)
 	}
 	m.Update(key("esc"))
@@ -183,5 +183,20 @@ func TestWhatsNewTinyPane(t *testing.T) {
 	m.Update(tea.WindowSizeMsg{Width: 20, Height: 6})
 	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "got it") {
 		t.Fatalf("view = %q", view)
+	}
+}
+
+func TestWhatsNewViewReflowsAndHidesMarkup(t *testing.T) {
+	m, _ := whatsNewModel(t, "v0.5.0", "last_seen_version = \"v0.4.0\"\n", config.Default(), "")
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m.openWhatsNew([]whatsnew.Section{{Version: "v0.5.0", Body: "### Changed\n\n- **Wrapped.** one two\n  three four\n- **Next.** five"}})
+	view := ansi.Strip(m.View().Content)
+	for _, want := range []string{"v0.5.0", "Changed", "Wrapped. one two three four"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("view lacks %q:\n%s", want, view)
+		}
+	}
+	if strings.Contains(view, "##") {
+		t.Fatalf("view shows heading markup:\n%s", view)
 	}
 }

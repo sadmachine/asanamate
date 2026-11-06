@@ -18,15 +18,18 @@ requests once where a GitLab user would look for them.
 
 Agreed with the user on 2026-11-05:
 
-- **An extension protocol plus a bundled adapter.** Core never calls GitHub
+- **An extension protocol plus bundled adapters.** Core never calls GitHub
   or GitLab. A new JSON extension point returns each ticket's pull requests.
-  A bundled adapter, `asanamate-pr`, implements it with the `gh` and `glab`
-  CLIs and ships in the release archives like `asanamate-hrvst` and
-  `asanamate-ccmux`.
+  Two bundled adapters implement it: `asanamate-github` with the `gh` CLI
+  and `asanamate-gitlab` with the `glab` CLI. They ship in the release
+  archives like `asanamate-hrvst` and `asanamate-ccmux`. One adapter per
+  host keeps setup separate (a GitHub user never needs `glab`) and matches
+  how a third-party provider, such as a future `asanamate-bitbucket`, plugs
+  in. Agreed with the user on 2026-11-06.
 - **Any git host.** Nothing in the protocol is specific to GitHub or GitLab.
   `pull_requests.commands` is a list, like `feed.commands`, so providers for
-  different hosts (Bitbucket, Gitea, Azure DevOps, Gerrit) run side by side
-  with `asanamate-pr`, each answering for the repos on its host. The request
+  different hosts (GitHub, GitLab, Bitbucket, Gitea, Azure DevOps, Gerrit)
+  run side by side, each answering for the repos on its host. The request
   carries each repo's remotes, so a provider picks its repos without running
   git. Agreed with the user on 2026-11-06.
 - **Match by branch, then by link.** A pull request belongs to a ticket when
@@ -37,10 +40,8 @@ Agreed with the user on 2026-11-05:
   never learns where values come from. The terms work in `/`, saved views,
   hooks' `when`, and `[[groupings]]`.
 
-Decided while writing this spec. **Confirm them with the user before you
-start**, since they change what users see:
+Also agreed with the user on 2026-11-06:
 
-- The adapter is named `asanamate-pr`.
 - The built-in `state` and `now` groupings gain pull request sections (see
   [Built-in groupings](#built-in-groupings)). Without a provider configured
   the new terms match nothing, so nothing changes for those users.
@@ -267,8 +268,7 @@ per ticket, inside the lookup command (off the UI goroutine).
 
 ### Built-in groupings
 
-Add these sections to `builtinGroupings`. Confirm with the user first (see
-Decisions):
+Add these sections to `builtinGroupings`:
 
 - `state`: **In review** (`pr:open`, `pr:draft`), right after Needs me. A
   ticket with an open pull request is in review even with local work, so the
@@ -281,41 +281,59 @@ Update the README and the config template examples of both groupings, and
 
 ### Extensions catalog
 
-Add an entry `pull-requests` (name "Pull requests", benefit "Show each
-ticket's pull requests and their checks and reviews"):
+Add two entries, one per adapter, since each has its own CLI, check, and
+setup (an entry has one `Check`):
 
-- **Capability:** contract `pull-requests`, key `pull_requests.commands`,
-  executable `asanamate-pr`.
-- **Steps:** install the bundled adapter; install and authenticate `gh`
-  (`gh auth login`) and/or `glab` (`glab auth login`); add
-  `[pull_requests] commands = ["asanamate-pr"]`, keeping any other
-  providers in the list; link the project's repo with `L`.
-- **Check:** `asanamate-pr check`.
-- **Example:** open a ticket whose branch has a pull request.
-- **Remove:** steps that match the other entries.
+- **`github`** (name "GitHub pull requests", benefit "Show each ticket's
+  GitHub pull requests with their checks and reviews"):
+  - **Capability:** contract `pull-requests`, key `pull_requests.commands`,
+    executable `asanamate-github`.
+  - **Steps:** install the bundled adapter; install `gh` and run
+    `gh auth login` (once per GitHub Enterprise host too); add
+    `asanamate-github` to `[pull_requests] commands`, keeping any other
+    providers in the list; link the project's repo with `L`.
+  - **Check:** `asanamate-github check`.
+- **`gitlab`** ("GitLab merge requests"): the same with `asanamate-gitlab`,
+  `glab`, and `glab auth login`.
+- Both: **Example** opens a ticket whose branch has a pull request;
+  **Remove** follows the other entries.
 
 `asanamate extensions` and `TestCatalog*` tests cover the shape.
 
-## Adapter: `asanamate-pr`
+## Adapters: `asanamate-github` and `asanamate-gitlab`
 
-`cmd/asanamate-pr/`, a Go binary with no dependencies beyond the standard
-library and the CLIs it calls.
+`cmd/asanamate-github/` and `cmd/asanamate-gitlab/`, Go binaries with no
+dependencies beyond the standard library and the CLI each calls. What they
+share lives in one internal package (`internal/prhost`, or a better name),
+so each binary holds only its host's CLI calls and mapping:
+
+- decoding the request and writing the reply, with the
+  `internal/pullrequests` types
+- grouping tickets by repo and picking each repo's host from the request's
+  `remotes`
+- branch and link matching, ordering, and de-duplication
+- running a CLI with an argument array and a timeout
+- the `lookup`, `check`, and `help` command layout and the failure rules
+  below
+
+Each adapter:
 
 - **Operations.** It reads one request on stdin and answers `lookup`. Any
   other operation exits 1 with `unknown operation` on stderr.
-- **Hosts.** Group the request's tickets by repo. Pick each repo's CLI from
-  the request's `remotes`, the first remote that matches; the adapter never
-  runs git:
-  - `gh` for `github.com`, or for a host `gh auth status --hostname <host>`
-    accepts.
-  - `glab` for `gitlab.com`, or for a host `glab auth status --hostname <host>`
-    accepts.
-  - Skip repos with neither silently: another provider in
-    `pull_requests.commands` may serve them.
+- **Hosts.** It serves a repo when one of the request's `remotes` is on its
+  host, the first matching remote wins, and it never runs git:
+  - `asanamate-github`: `github.com`, or a host
+    `gh auth status --hostname <host>` accepts (GitHub Enterprise).
+  - `asanamate-gitlab`: `gitlab.com`, or a host
+    `glab auth status --hostname <host>` accepts (self-managed GitLab).
+  - Ask each unknown host once per run. Skip repos on other hosts
+    silently: another provider in `pull_requests.commands` serves them.
+    When no repo is on its host, it answers `{"pull_requests":[]}` without
+    calling its CLI.
 - **One call per repo per run.** List recent pull requests once per repo
   and match locally. Never one call per ticket: refreshes run every minute
   by default, and GitHub rate-limits GraphQL.
-  - **GitHub:** `gh pr list --repo <owner/repo> --state all --limit 100
+  - **`asanamate-github`:** `gh pr list --repo <owner/repo> --state all --limit 100
     --json number,title,url,state,isDraft,headRefName,body,updatedAt,author,reviewDecision,statusCheckRollup`.
     Map:
     - `isDraft` to `draft`; `MERGED`, `CLOSED`, and `OPEN` to `merged`,
@@ -325,7 +343,7 @@ library and the CLIs it calls.
     - Roll `statusCheckRollup` up to `failing` if any check failed, else
       `pending` if any is running, else `passing`; empty when there are no
       checks.
-  - **GitLab:** `glab mr list --repo <group/project> --all --per-page 100
+  - **`asanamate-gitlab`:** `glab mr list --repo <group/project> --all --per-page 100
     --output json` (check the flags against the installed `glab`; older
     versions differ). Map:
     - `opened` (with `draft`) to `open`/`draft`; `merged` and `closed`
@@ -342,19 +360,23 @@ library and the CLIs it calls.
     `/0/<project>/<task>`, `/0/<project>/<task>/f`, and
     `/1/<workspace>/project/<p>/task/<task>`.
   - Branch matches first, de-duplicated by URL.
-- **Commands.** Run `gh` and `glab` with argument arrays, never
-  through a shell, with a per-call timeout under the 1-minute budget. Never
-  log tokens. A missing CLI or an expired login on one host fails only
-  that host's repos: answer with what the other hosts found and explain on
-  stderr. Exit non-zero only when every host failed.
-- **`check` subcommand.** Reports which of `gh` and `glab` are installed
-  and logged in (`gh auth status`, `glab auth status`), read-only. It exits
-  0 when at least one is.
+- **Commands.** Run the CLI with argument arrays, never through a shell,
+  with a per-call timeout under the 1-minute budget. Never log tokens. A
+  failure on one host (such as an expired GitHub Enterprise login) fails
+  only that host's repos: answer with what the other hosts found and
+  explain on stderr. Exit non-zero when the CLI is missing, or when every
+  host it tried failed.
+- **`check` subcommand.** Reports whether its CLI is installed and logged
+  in (`gh auth status` or `glab auth status`), read-only, and exits 0 when
+  it is.
 - **`-h` / `help`.** Usage text; the CI smoke test runs it.
 - **Tests.**
-  - Fake `gh` and `glab` scripts on `PATH` in `testdata/` cover: branch and
-    link matching, the state, checks, and review mapping, one list call per
-    repo, silently skipped repos on other hosts, partial host failure, and
+  - The shared package's tests cover matching, ordering, host selection,
+    and the failure rules.
+  - Each adapter's tests use a fake `gh` or `glab` script on `PATH` in its
+    `testdata/` and cover: the state, checks, and review mapping, one list
+    call per repo, no CLI call when no repo is on its host, silently
+    skipped repos on other hosts, partial host failure, a missing CLI, and
     unknown operations.
   - No live network in tests.
 
@@ -365,7 +387,8 @@ library and the CLIs it calls.
   - A **Pull requests (optional)** section: setup, what shows where, the
     filter terms, and that merge requests count.
   - Config table row for `pull_requests.commands`.
-  - How to add a provider for another host next to `asanamate-pr`.
+  - Using both adapters, and adding a provider for another host next to
+    them.
   - Filtering terms, and the updated grouping examples.
 - `docs/extensions.md` section and table row, including "Several
   providers" and a fixture for a non-GitHub host.
@@ -385,27 +408,28 @@ library and the CLIs it calls.
 - A disk cache. Results live in memory and refresh with the feeds.
 - The `asanamate list` CLI: `pr:`, `checks:`, and `review:` match nothing
   there, like `agent:`. Say so in the README.
-- Bitbucket, Gitea, and other hosts in the bundled adapter. They work
+- Bundled adapters for Bitbucket, Gitea, and other hosts. They work
   through another provider in `pull_requests.commands`.
 
 ## Acceptance
 
-- `pull_requests.commands = ["asanamate-pr"]` with an authenticated `gh` shows a
+- `pull_requests.commands = ["asanamate-github"]` with an authenticated `gh` shows a
   ticket's open pull request in the reader in every layout, and `enter`
   opens it in the browser.
 - `/pr:open`, `/checks:failing`, and `/review:changes` filter the list, and
   a `[[groupings]]` section using them places tickets.
 - With the built-in groupings updated, `b` > `state` shows In review, and
   Now shows Review feedback.
-- With two commands, such as `asanamate-pr` and the fixture for another
-  host, tickets get pull requests from both, and a URL both return shows
-  once.
+- With `pull_requests.commands = ["asanamate-github", "asanamate-gitlab"]`,
+  tickets whose repos are on GitHub and GitLab each get their pull requests
+  from the right adapter. With two commands that return the same URL, it
+  shows once.
 - A command that exits non-zero keeps its previous results, leaves the other
   commands' results alone, and marks the Feed panel summary; `asanamate
   doctor` shows its stderr.
 - Without `pull_requests.commands`, nothing runs and nothing changes.
-- `asanamate extensions` lists the entry, and `asanamate extensions check
-  pull-requests` runs `asanamate-pr check`.
-- Release archives contain `asanamate-pr`, and CI's archive and smoke checks
-  cover it.
+- `asanamate extensions` lists both entries, and `asanamate extensions check
+  github` runs `asanamate-github check` (`gitlab` likewise).
+- Release archives contain `asanamate-github` and `asanamate-gitlab`, and
+  CI's archive and smoke checks cover both.
 - `go vet ./...`, staticcheck, and `go test -race ./...` pass.

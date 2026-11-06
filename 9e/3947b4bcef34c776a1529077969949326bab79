@@ -1,0 +1,29 @@
+internal/repo/repo.go
+  s_ba5d61e9a44b8c::t_25917d049927d7 52,54
+  s_ba5d61e9a44b8c::t_5b7fbd08c80cd6 17
+internal/jsoncmd/jsoncmd_test.go
+  s_ba5d61e9a44b8c::t_61f663c163a6dc 108-112
+  s_ba5d61e9a44b8c::t_5949c46d95da6e 86,88-98,100,102-107,113-127
+internal/agents/agents.go
+  s_ba5d61e9a44b8c::t_25917d049927d7 109,111
+internal/jsoncmd/jsoncmd.go
+  s_ba5d61e9a44b8c::t_75b1a6ce719c6e 11,24,26,32-34,38-40,46-58,62
+docs/deferred-ideas.md
+  s_ba5d61e9a44b8c::t_f072655dc1f58e 30-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9e3947b4bcef34c776a1529077969949326bab79",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

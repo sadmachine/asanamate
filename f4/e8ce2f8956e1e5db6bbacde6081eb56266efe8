@@ -1,0 +1,34 @@
+packages/asana-sessions/plugins/codex/asana-sessions/hooks/hooks.json
+  s_ba5d61e9a44b8c::t_d2e4b3dc07069a 19
+packages/asana-sessions/test/hook.test.js
+  s_ba5d61e9a44b8c::t_648b85126074a0 164-167
+packages/asana-sessions/CHANGELOG.md
+  s_ba5d61e9a44b8c::t_ff3e0889ef423a 7-8
+  s_ba5d61e9a44b8c::t_3b8799b349d31b 5-6
+packages/asana-sessions/src/hook.js
+  s_ba5d61e9a44b8c::t_d83157bd7cb53c 69-70
+packages/asana-sessions/src/pending.js
+  s_ba5d61e9a44b8c::t_90e67719dd2a5d 6-7
+packages/asana-sessions/src/agent-links.js
+  s_ba5d61e9a44b8c::t_2487c2edc87d7a 34-38,44,47
+packages/asana-sessions/src/cli.js
+  s_ba5d61e9a44b8c::t_0f5a6fd54eed14 64-67
+packages/asana-sessions/test/cli.test.js
+  s_ba5d61e9a44b8c::t_505356f5ee9bb6 48-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f4e8ce2f8956e1e5db6bbacde6081eb56266efe8",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

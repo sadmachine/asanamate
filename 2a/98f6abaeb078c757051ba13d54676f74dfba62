@@ -1,0 +1,23 @@
+.github/scripts/require-ci.sh
+  s_ba5d61e9a44b8c::t_b5e6d7c7fc884b 1-17
+.github/workflows/release.yml
+  s_ba5d61e9a44b8c::t_469cef011770c1 7,11,13,16-21,42,44
+.github/workflows/asana-sessions-release.yml
+  s_ba5d61e9a44b8c::t_469cef011770c1 7,11,16-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2a98f6abaeb078c757051ba13d54676f74dfba62",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

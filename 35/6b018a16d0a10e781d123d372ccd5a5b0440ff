@@ -1,0 +1,37 @@
+internal/tui/edit_test.go
+  s_ba5d61e9a44b8c::t_7bc4c82547fdc1 287
+internal/tui/pins_test.go
+  s_ba5d61e9a44b8c::t_914de87e081611 168
+internal/tui/cmds.go
+  s_ba5d61e9a44b8c::t_6736aa2aac97ff 36,147,150
+internal/tui/nav_test.go
+  s_ba5d61e9a44b8c::t_7bc4c82547fdc1 22,142
+internal/tui/model_test.go
+  s_ba5d61e9a44b8c::t_7bc4c82547fdc1 87,99,107,120,124,129,137,179,184,210,234,265,285,295,393,445,449
+  s_ba5d61e9a44b8c::t_57321855ff088a 497-514
+internal/tui/model.go
+  s_ba5d61e9a44b8c::t_6736aa2aac97ff 123,266,443-445,890-891
+  s_ba5d61e9a44b8c::t_85bdc985382212 545-549,553-559
+internal/tui/connection_test.go
+  s_ba5d61e9a44b8c::t_7bc4c82547fdc1 49,59,63,79,112,147,152,157,159,179,206,212
+  s_ba5d61e9a44b8c::t_914de87e081611 258
+internal/tui/refresh_test.go
+  s_ba5d61e9a44b8c::t_7bc4c82547fdc1 23,48,143,149,157,177,190,223,244,271,297,324,343,355,413,425,436
+  s_ba5d61e9a44b8c::t_52389a0af8f375 451-464
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "356b018a16d0a10e781d123d372ccd5a5b0440ff",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

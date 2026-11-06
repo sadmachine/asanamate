@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.4
 
 - `asanamate list` reads generated Claude titles concurrently, backward from
   the end of each transcript, within the listing's 8-second deadline. A
@@ -13,8 +13,10 @@
   stops the other provider's lookup.
 - Codex's PostToolUse hook starts the helper only while a Codex link is
   pending. A pending Claude link or a leftover temporary file used to start
-  Node on every Codex tool call. The hook's definition changed, so review and trust
-  it again in Codex `/hooks` after upgrading.
+  Node on every Codex tool call. When Codex ran hooks through zsh, the old
+  guard also failed with `no matches found` on every tool call while nothing
+  was pending. The hook's definition changed, so review and trust it again in
+  Codex `/hooks` after upgrading.
 - `ASANA_SESSIONS_TASK` links its task once per conversation. An `unlink`
   or `link --replace` in that conversation is no longer undone or flagged as
   a conflict on every later prompt.

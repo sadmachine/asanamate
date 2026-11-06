@@ -413,3 +413,41 @@ directory is empty; through a login zsh it measured about 17 ms per tool call.
 Codex 0.165.0 names this event `postToolUse` in its hook list. Not yet observed
 live: that Codex fires PostToolUse for every tool type, and that its event
 carries `transcript_path`. The next live gate should cover both.
+
+## 0.1.4 live gate (2026-11-06)
+
+The user authorized the live gate for 0.1.4. Versions: Codex CLI 0.167.0,
+Claude Code 2.1.318, Node 24.18.0, and the pinned Claude Agent SDK 0.3.301.
+Provider executables ran through `caveman`. Codex used a disposable
+CODEX_HOME holding only a copied `auth.json`, a disposable XDG_STATE_HOME, and
+a disposable working directory. No personal history was copied. Disposable
+homes were removed after verification.
+
+- `scripts/live-reentrancy.sh both` passed all 24 checks. Eight parallel hooks
+  linked once per provider, the batches finished in 1 second, and no lock
+  remained.
+- Claude's plugin passed `claude plugin validate`.
+- A packed install and `asana-sessions setup --provider codex` registered the
+  plugin. Codex `hooks/list` showed exactly one prompt, one PostToolUse, and
+  one Stop hook from it, all untrusted; setup reported `untrusted` and did not
+  grant trust. The reviewed definitions were then trusted in the disposable
+  home, and a separate user-level hook logged every PostToolUse event.
+- Codex 0.167.0 ran hook commands as `/bin/zsh -c` (the user's SHELL), so the
+  live turns exercised the zsh guard. An unnamed `codex exec` thread with a
+  task URL deferred the link at the prompt hook. PostToolUse fired for `Bash`
+  and `apply_patch` tool calls, and every event carried `transcript_path`.
+  `exec` generates no title, so the real Stop hook linked the fallback
+  `Conversation [asana:<GID>]` and cleared the pending entry. Every owned hook
+  completed.
+- A separate `exec resume` turn with the same URL was silent. The marker
+  persisted. Its PostToolUse guard ran with an empty pending directory and
+  completed; run directly through `zsh -c`, the guard exited 0 in under
+  10 ms. No pending entry or lock remained.
+
+The first live turn exposed a harness issue, not a product defect. The `codex`
+shim's PATH dropped the install prefix, so the hooks could not find
+`asana-sessions`. The user's `.zshenv` also reset CODEX_HOME inside hooks; the
+helper derives the Codex home from `transcript_path`, as designed. Not repeated
+for this guard-only hook change: interactive title generation before
+PostToolUse, the explicit skill, disable/remove, and missing-helper cases.
+Earlier observations above remain the evidence for those.

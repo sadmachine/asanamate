@@ -1,0 +1,21 @@
+docs/specs/README.md
+  s_a29860173a8c8e::t_22bb90b6461fa2 39
+docs/specs/24-pull-requests.md
+  s_a29860173a8c8e::t_22bb90b6461fa2 22-31,98-100,124-131,135-136,140-145,180-184,200-202,212-226,232-234,287,291-292,306-308,313-314,345,355-358,367-368,370-371,388-389,393,400-406
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7919fd13a4639dba8817c74b4783bf59581f6c6f",
+  "prompts": {},
+  "sessions": {
+    "s_a29860173a8c8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28687d57-fb4d-4e2d-8355-acb12fff8b1f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+internal/setup/setup.go
+  s_ba5d61e9a44b8c::t_80fa09da2bcd2c 243-244,451
+  s_ba5d61e9a44b8c::t_f8df529d12e16d 450
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1c8a5fe73cd89f503a20d46cf3cbfb599e138c4e",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

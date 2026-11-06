@@ -18,14 +18,12 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unicode"
-
-	"github.com/charmbracelet/x/ansi"
 
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/conversations"
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -347,12 +345,7 @@ func RunBackground(cmd *exec.Cmd, logPath string) error {
 		if _, readErr := log.ReadAt(output, start); readErr != nil {
 			return err
 		}
-		text := strings.TrimSpace(strings.Map(func(r rune) rune {
-			if unicode.IsControl(r) || unicode.In(r, unicode.Cf) {
-				return ' '
-			}
-			return r
-		}, ansi.Strip(string(output))))
+		text := display.Line(string(output))
 		if text != "" {
 			if truncated {
 				text = "… " + text

@@ -50,13 +50,13 @@ func (m *Model) imageCellSizeChanged(cell kitty.CellSize) tea.Cmd {
 	m.imageCell = cell
 	// Reload placements sized with the old estimate. Late results from those
 	// requests are ignored, so all images use the same cell dimensions.
-	m.images = map[string]*inlineImage{}
+	drop := m.dropImages(nil)
 	if t, ok := m.selectedDetail(); ok {
 		cmd := m.loadInlineImages(t)
 		m.renderDetail(true)
-		return cmd
+		return tea.Batch(drop, cmd)
 	}
-	return nil
+	return drop
 }
 
 // inlineImagesOn reports whether inline images draw in place of their links.
@@ -70,10 +70,7 @@ func (m *Model) loadInlineImages(t ticket.Ticket) tea.Cmd {
 	if !m.inlineImagesOn() || m.deps.Client == nil {
 		return nil
 	}
-	gids := ticket.ImageGIDs(t.HTMLNotes)
-	for _, c := range t.Comments {
-		gids = append(gids, ticket.ImageGIDs(c.HTMLText)...)
-	}
+	gids := imageGIDs(t)
 	_, readerW, _ := m.paneWidths()
 	// Comments sit two columns in, behind their gutter.
 	cols, rows := m.textWidth(max(readerW-2, 20))-2, max(m.height/2, 4)
@@ -86,6 +83,34 @@ func (m *Model) loadInlineImages(t ticket.Ticket) tea.Cmd {
 		cmds = append(cmds, loadInlineImage(m.deps.Client, gid, m.nextImageID(), cols, rows, m.imageCell, m.deps.InTmux, m.imageEpoch))
 	}
 	return tea.Batch(cmds...)
+}
+
+// imageGIDs lists the attachment gids of t's inline images.
+func imageGIDs(t ticket.Ticket) []string {
+	gids := ticket.ImageGIDs(t.HTMLNotes)
+	for _, c := range t.Comments {
+		gids = append(gids, ticket.ImageGIDs(c.HTMLText)...)
+	}
+	return gids
+}
+
+// dropImages forgets the inline images keep rejects and frees the loaded ones
+// in the terminal, so neither grows for the whole session.
+func (m *Model) dropImages(keep func(gid string) bool) tea.Cmd {
+	var seq strings.Builder
+	for gid, img := range m.images {
+		if keep != nil && keep(gid) {
+			continue
+		}
+		if img.id != 0 {
+			seq.WriteString(kitty.Delete(img.id, m.deps.InTmux))
+		}
+		delete(m.images, gid)
+	}
+	if seq.Len() == 0 {
+		return nil
+	}
+	return tea.Raw(seq.String())
 }
 
 // nextImageID cycles through the inline image ids from a random start, so

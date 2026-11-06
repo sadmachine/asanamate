@@ -11,8 +11,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/sadmachine/asanamate/internal/writeback"
 	"golang.org/x/sys/unix"
+
+	"github.com/sadmachine/asanamate/internal/safefile"
+	"github.com/sadmachine/asanamate/internal/writeback"
 )
 
 // ErrConflict prevents a second session from replacing or deleting a draft
@@ -86,23 +88,7 @@ func (s *CommentStore) Save(draft Comment) error {
 		return err
 	}
 	return s.locked(func() error {
-		file, err := os.CreateTemp(filepath.Dir(s.path), ".comment-*.json")
-		if err != nil {
-			return err
-		}
-		defer os.Remove(file.Name())
-		if _, err := file.Write(data); err != nil {
-			file.Close()
-			return err
-		}
-		if err := file.Sync(); err != nil {
-			file.Close()
-			return err
-		}
-		if err := file.Close(); err != nil {
-			return err
-		}
-		if err := os.Rename(file.Name(), s.path); err != nil {
+		if err := safefile.Write(s.path, data, 0o600); err != nil {
 			return err
 		}
 		s.snapshot = data

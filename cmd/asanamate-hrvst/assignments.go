@@ -21,14 +21,6 @@ type harvestAssignment struct {
 }
 type assignments []harvestAssignment
 
-func harvestAssignments(ctx context.Context, configPath, endpoint string) (assignments, error) {
-	credentials, err := loadHarvestCredentials(configPath)
-	if err != nil {
-		return nil, err
-	}
-	return credentials.assignments(ctx, endpoint)
-}
-
 func (credentials harvestCredentials) assignments(ctx context.Context, endpoint string) (assignments, error) {
 	base, err := url.Parse(endpoint)
 	if err != nil {
@@ -99,7 +91,8 @@ type harvestUser struct {
 	LastName  string      `json:"last_name"`
 }
 
-func (credentials harvestCredentials) user(ctx context.Context, endpoint string) (harvestUser, error) {
+// me returns the authenticated Harvest user; only its ID is checked.
+func (credentials harvestCredentials) me(ctx context.Context, endpoint string) (harvestUser, error) {
 	base, err := url.Parse(endpoint)
 	if err != nil {
 		return harvestUser{}, errors.New("invalid Harvest endpoint")
@@ -109,8 +102,17 @@ func (credentials harvestCredentials) user(ctx context.Context, endpoint string)
 		return harvestUser{}, err
 	}
 	var user harvestUser
-	if json.Unmarshal(data, &user) != nil || !positiveID(user.ID.String()) || user.FirstName == "" {
+	if json.Unmarshal(data, &user) != nil || !positiveID(user.ID.String()) {
 		return user, errors.New("Harvest invalid API response: missing user identity")
 	}
 	return user, nil
+}
+
+// user is me, also requiring the name setup shows.
+func (credentials harvestCredentials) user(ctx context.Context, endpoint string) (harvestUser, error) {
+	user, err := credentials.me(ctx, endpoint)
+	if err == nil && user.FirstName == "" {
+		err = errors.New("Harvest invalid API response: missing user identity")
+	}
+	return user, err
 }

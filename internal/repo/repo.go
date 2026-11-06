@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/jsoncmd"
 )
 
 // ExpandHome replaces a leading "~" with the user's home directory.
@@ -48,9 +49,9 @@ func Candidates(ctx context.Context, src config.RepoSource) ([]string, error) {
 	if strings.TrimSpace(src.Command) == "" {
 		return List(src.Root)
 	}
-	out, err := exec.CommandContext(ctx, "/bin/sh", "-c", src.Command).Output()
+	out, err := jsoncmd.RunShell(ctx, "repo_source command failed", src.Command, jsoncmd.DefaultLimits)
 	if err != nil {
-		return nil, fmt.Errorf("repo_source command failed: %w", err)
+		return nil, err
 	}
 	seen := map[string]bool{}
 	var paths []string

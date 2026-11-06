@@ -160,8 +160,12 @@ func Inline(data []byte, id, maxCols, maxRows int, cell CellSize, inTmux bool) (
 	control := fmt.Sprintf("a=T,f=100,q=2,U=1,i=%d,c=%d,r=%d", id, cols, rows)
 	// Delete any earlier image with this id first: some terminals keep its old
 	// placements when it is retransmitted and size the new image to them.
-	del := wrap(fmt.Sprintf("\x1b_Ga=d,d=I,i=%d,q=2\x1b\\", id), inTmux)
-	return del + transmit(data, control, inTmux), cols, rows, nil
+	return Delete(id, inTmux) + transmit(data, control, inTmux), cols, rows, nil
+}
+
+// Delete frees image id and its placements in the terminal.
+func Delete(id int, inTmux bool) string {
+	return wrap(fmt.Sprintf("\x1b_Ga=d,d=I,i=%d,q=2\x1b\\", id), inTmux)
 }
 
 // maxDiacritic is the number of row and column diacritics placeholders can use.

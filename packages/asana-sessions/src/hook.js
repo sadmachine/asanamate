@@ -5,11 +5,13 @@
 // prompt deferred. It never blocks the prompt: every
 // outcome exits 0, and stdout carries only an optional nonblocking
 // {"systemMessage": ...} notice that both providers show to the user.
-import { isAbsolute } from 'node:path';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { isAbsolute, join } from 'node:path';
 import { display } from './display.js';
 import { ProviderError, UsageError } from './errors.js';
 import { completePending, linkFromPrompt } from './engine.js';
 import { readBounded } from './input.js';
+import { sessionKey, stateDir } from './lock.js';
 import { parseTask, taskGIDsInText } from './marker.js';
 import { sweepPending } from './pending.js';
 
@@ -64,12 +66,16 @@ async function handle(provider, c) {
     return linkNow(p, event.sessionId, null, lockOptions, { deferred: true });
   }
   if (event.name === 'PostToolUse') {
-    // Codex's hook command runs Node only while pending/ holds an entry, so
-    // expired entries must not linger there.
+    // Codex's hook command runs Node only while pending/ holds a Codex
+    // entry, so expired entries must not linger there.
     await sweepPending(c.env);
     return linkNow(p, event.sessionId, null, lockOptions, { deferred: true, whenNamed: true });
   }
-  const gids = launchTask(p, event.sessionId, c.env) ?? taskGIDsInText(event.prompt);
+  let launched = launchTask(p, event.sessionId, c.env);
+  if (launched && await launchApplied(c.env, p.name, event.sessionId) === launched) {
+    launched = null;
+  }
+  const gids = launched ? [launched] : taskGIDsInText(event.prompt);
   if (gids.length === 0) {
     return '';
   }
@@ -77,11 +83,37 @@ async function handle(provider, c) {
     return `the prompt links ${gids.length} Asana tasks (${gids.join(', ')}); not linking automatically. Ask to link one task explicitly.`;
   }
   await sweepPending(c.env);
-  return linkNow(p, event.sessionId, gids[0], lockOptions);
+  const message = await linkNow(p, event.sessionId, gids[0], lockOptions);
+  if (launched) {
+    await markLaunchApplied(c.env, p.name, event.sessionId, launched);
+  }
+  return message;
 }
 
-// launchTask returns the task a launcher named in ASANA_SESSIONS_TASK, or null
-// when unset. The hook must run inside that session: a shared Codex daemon's
+// The launcher's task applies once per session, so a later unlink or
+// explicit replacement sticks. Records older than LAUNCH_RETENTION_MS go.
+const LAUNCH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const launchDir = (env) => join(stateDir(env), 'launched');
+
+async function launchApplied(env, provider, sessionId) {
+  return readFile(join(launchDir(env), sessionKey(provider, sessionId)), 'utf8').catch(() => '');
+}
+
+async function markLaunchApplied(env, provider, sessionId, gid) {
+  const dir = launchDir(env);
+  await mkdir(dir, { recursive: true, mode: 0o700 });
+  await writeFile(join(dir, sessionKey(provider, sessionId)), gid, { mode: 0o600 });
+  const now = Date.now();
+  for (const name of await readdir(dir).catch(() => [])) {
+    const path = join(dir, name);
+    if (await stat(path).then((s) => now - s.mtimeMs > LAUNCH_RETENTION_MS, () => false)) {
+      await rm(path, { force: true });
+    }
+  }
+}
+
+// launchTask returns the task GID a launcher named in ASANA_SESSIONS_TASK, or
+// null when unset. The hook must run inside that session: a shared Codex daemon's
 // environment belongs to whichever process started it.
 function launchTask(p, sessionId, env) {
   const value = env.ASANA_SESSIONS_TASK;
@@ -89,7 +121,7 @@ function launchTask(p, sessionId, env) {
     return null;
   }
   try {
-    return [parseTask(value)];
+    return parseTask(value);
   } catch {
     throw new UsageError('ASANA_SESSIONS_TASK is not an Asana task URL or GID; skipped');
   }

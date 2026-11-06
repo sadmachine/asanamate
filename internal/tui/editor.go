@@ -3,11 +3,11 @@ package tui
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
 	tea "charm.land/bubbletea/v2"
+
+	"github.com/sadmachine/asanamate/internal/editor"
 )
 
 // editorDoneMsg applies the result on the UI goroutine, including nested editors.
@@ -32,15 +32,7 @@ func externalEditor(text string, apply func(string, error)) tea.Cmd {
 		os.RemoveAll(dir)
 		return func() tea.Msg { return done("", fmt.Errorf("write editor buffer: %w", err)) }
 	}
-	editor := strings.TrimSpace(os.Getenv("VISUAL"))
-	if editor == "" {
-		editor = strings.TrimSpace(os.Getenv("EDITOR"))
-	}
-	if editor == "" {
-		editor = "vim"
-	}
-	// Pass the buffer separately rather than interpolating a path into shell code.
-	cmd := exec.Command("/bin/sh", "-c", "exec "+editor+` "$1"`, "asanamate-editor", path)
+	cmd := editor.Command(editor.Name("vim"), path)
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		defer os.RemoveAll(dir)
 		if err != nil {

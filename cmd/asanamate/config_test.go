@@ -98,3 +98,46 @@ func TestDoctorReportsSettingsAndNoLegacyHook(t *testing.T) {
 		}
 	}
 }
+
+func TestNewWriterResolvesConfirmation(t *testing.T) {
+	t.Setenv(config.TokenEnv, "test-token")
+	for _, tc := range []struct {
+		config, env string
+		yes, want   bool
+		fails       bool
+	}{
+		{config: "", env: "", want: true},
+		{config: "confirm_writes = false\n", env: "", want: false},
+		{config: "confirm_writes = false\n", env: "true", want: true},
+		{config: "", env: "0", want: false},
+		{config: "", env: "1", yes: true, want: false},
+		{config: "confirm_writes = false\n", env: "sometimes", fails: true},
+	} {
+		cliConfig(t, "workspace = \"1\"\n"+tc.config)
+		t.Setenv("ASANAMATE_CONFIRM_WRITES", tc.env)
+		svc, err := newWriter(tc.yes)
+		if tc.fails {
+			if err == nil {
+				t.Errorf("%+v: want an error", tc)
+			}
+			continue
+		}
+		if err != nil || (svc.Confirm != nil) != tc.want || svc.Workspace != "1" {
+			t.Errorf("%+v: confirm = %v, workspace = %q, err = %v", tc, svc.Confirm != nil, svc.Workspace, err)
+		}
+	}
+}
+
+func TestConfigUpdateRewritesMovedKeys(t *testing.T) {
+	path := cliConfig(t, "workspace = \"1\"\naccent_color = \"2\"\n")
+	if err := runConfig([]string{"update", "--yes"}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(path)
+	if err != nil || cfg.Colors.Accent.FG != "2" {
+		t.Fatalf("accent = %+v, err = %v", cfg.Colors.Accent, err)
+	}
+	if err := runConfig([]string{"update", "extra"}); err == nil || !strings.Contains(err.Error(), "unexpected arguments") {
+		t.Fatalf("extra argument: %v", err)
+	}
+}

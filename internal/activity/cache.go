@@ -1,11 +1,14 @@
 package activity
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/sadmachine/asanamate/internal/safefile"
 )
 
 // CacheFile is the cache's name inside the cache directory.
@@ -56,19 +59,11 @@ func (c *Cache) Save() error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(dir, ".activity-*.json")
-	if err != nil {
+	var data bytes.Buffer
+	if err := json.NewEncoder(&data).Encode(c); err != nil {
 		return err
 	}
-	defer os.Remove(tmp.Name())
-	if err := json.NewEncoder(tmp).Encode(c); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), c.path)
+	return safefile.Write(c.path, data.Bytes(), 0o600)
 }
 
 // Stale reports whether the next scan must cover the whole window: no scan

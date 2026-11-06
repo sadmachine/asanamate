@@ -23,7 +23,8 @@ and coding agents can do what you can. macOS and Linux only.
   [Keys](#keys).
 - **Script** every edit and create from the CLI: `asanamate title`, `description`,
   `comment`, `edit-comment`, `delete-comment`, `move`,
-  `field`, `assign`, `due`, `project`, `complete`, `react`, and `create`. See
+  `field`, `assign`, `due`, `project`, `complete`, `react`, `create`, and
+  `batch` for several changes with one confirmation. See
   [Writing back to Asana](#writing-back-to-asana).
 - **Act** on a ticket: run your own commands with the ticket as context, such
   as starting a coding agent in its repo. See [Actions](#actions).
@@ -159,7 +160,8 @@ files stay until you delete them yourself: the config and actions in
    `~/.config/asanamate/config.toml` with every default explained, plus
    inactive pager and Claude example actions in
    `~/.config/asanamate/actions/`. Rename one to `.toml` to enable it (see
-   [Actions](#actions)).
+   [Actions](#actions)). Rerunning setup asks before replacing an existing
+   config and saves the old one as a timestamped `.bak` beside it.
 3. Run `asanamate`. `asanamate doctor` checks the setup if something fails.
 
 Discover optional integrations with `asanamate extensions` or **Settings & tools > Extensions**
@@ -816,6 +818,8 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 | `list.fields` | `["section", "due"]` | default values shown with the title, in aligned columns (`single` layout); `s`, then `c` overrides columns per project; projects whose columns were set in the TUI keep their own; due dates show relative to today and are colored by urgency; a column with one value in each group (such as the grouped field) leaves the rows and shows that value once in the group header, or after the count when the list is ungrouped |
 | `branch_field` | `""` | custom field holding the ticket's git branch (`$ASANAMATE_BRANCH`); empty uses the ticket's ID field, else the title slug |
 | `agents.command` | unset (off) | opt-in agent tracking, such as `"asanamate-ccmux"`; see [Agents](#agents-optional) |
+| `agents.states.<state>` | unset | extra raw statuses mapped onto a state (`working`, `waiting`, `completed`, `idle`), such as `working = ["busy"]`; a status equal to a state name already maps to it, and unmapped ones show as `unknown`. See [Agents](#agents-optional) |
+| `agents.symbols.<state>` | unset | the symbol for one state (`working`, `waiting`, `completed`, `idle`, `unknown`), such as `waiting = "!"`; overriding `working` turns its spinner off |
 | `agents.focus` | unset (off) | shell command that switches to one running agent from the `w` modal, reading `$ASANAMATE_AGENT_TARGET` and the other agent exports, such as `'ccmux switch "$ASANAMATE_AGENT_TARGET"'`; requires `agents.command` |
 | `conversations.command` | `""` (off) | saved-conversation lookup, such as `"asana-sessions asanamate list"`; requires `conversations.open`; see [Conversations](#conversations-optional) and the [extension contract](docs/extensions.md#conversation-history) |
 | `conversations.open` | `""` (off) | foreground opener reading a private selection snapshot, such as `"asana-sessions asanamate open"`; requires `conversations.command`. asana-sessions is not bundled |
@@ -836,7 +840,7 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 | `feed.commands` | `[]` | commands that answer the [feed protocol](docs/extensions.md#feeds), such as `["asanamate-hrvst"]` for today's Harvest time entries |
 | `mouse.enabled` | `true` | the wheel scrolls the pane under the pointer, clicks focus panes and select rows, a double click runs `enter`, statusline hints run their key, reader links open, and a drag copies text from one pane; `false` leaves the mouse to the terminal. See [Mouse](#mouse) |
 | `picker.type_first` | `false` | open pickers in search mode, so typing filters at once; `esc` leaves search for browse mode |
-| `keys.<scope>.<name>` | see the template | key bindings: a list of keys per binding, such as `[keys.main] quit = ["q", "ctrl+q"]`; `[]` unbinds. Yank uses `keys.main.yank` and `keys.main.copy_selection`; legacy `copy_link` and `copy_comment` have no default keys and run from the command palette (`:`). Scopes: `main`, `activity`, `views`, `filter`, `picker`, `form`, `form_field`, `input`, `builder`, `notice`. Keys are a character (`"j"`, `"?"`) or a key name with modifiers (`"ctrl+d"`, `"shift+tab"`, `"enter"`, `"space"`, `"pgdown"`); a letter with `ctrl` or `alt` is lower case, plus `shift` for the capital (`"ctrl+shift+q"`, not `"ctrl+Q"`); `ctrl+c` is reserved for quitting and protects unsent comments. `asanamate setup` and `asanamate config update` write every binding, commented, with its default |
+| `keys.<scope>.<name>` | see the template | key bindings: a list of keys per binding, such as `[keys.main] quit = ["q", "ctrl+q"]`; `[]` unbinds. Yank uses `keys.main.yank` and `keys.main.copy_selection`; legacy `copy_link` and `copy_comment` have no default keys and run from the command palette (`:`). Scopes: `main`, `activity`, `views`, `feed`, `filter`, `picker`, `form`, `form_field`, `input`, `builder`, `notice`. Keys are a character (`"j"`, `"?"`) or a key name with modifiers (`"ctrl+d"`, `"shift+tab"`, `"enter"`, `"space"`, `"pgdown"`); a letter with `ctrl` or `alt` is lower case, plus `shift` for the capital (`"ctrl+shift+q"`, not `"ctrl+Q"`); `ctrl+c` is reserved for quitting and protects unsent comments. `asanamate setup` and `asanamate config update` write every binding, commented, with its default |
 | `keys.input.save_draft` | `["ctrl+d"]` | save a comment draft and close; other text inputs keep their editing controls |
 | `reader.max_text_width` | `0` | cards view and comment editor: wrap description and comment text at this many columns (words are kept whole); `0` wraps at the pane width |
 | `reader.comments.latest` | `3` | cards view: list only this many of the newest comments, or activity entries in the All tab, under a Show all row; `0` lists them all |
@@ -1241,9 +1245,9 @@ task_id = "987654"
 Both keys are optional; missing file means empty defaults. Present values must
 be quoted positive numeric IDs. Unknown keys or malformed files fail with their
 path. No secrets belong here. Setup saves with private permissions and atomic
-replacement, backs up changed files as `harvest.toml.yyyy-mm-dd--hh-mm-ss.bak`,
-refuses concurrent edits and existing backup names, and writes nothing when
-values are unchanged. Cancellation or validation/network failure keeps settings.
+replacement, backs up changed files as `harvest.toml.yyyy-mm-dd--hh-mm-ss.bak`
+(adding `-2`, `-3`, ... when that name is taken, never overwriting a backup),
+refuses concurrent edits, and writes nothing when values are unchanged. Cancellation or validation/network failure keeps settings.
 
 `HARVEST_ACCOUNT_ID` overrides saved `account_id`. If any native credential
 input exists (either environment variable, even empty, or saved account ID),
@@ -1368,8 +1372,8 @@ Existing filenames stay fixed. Saved actions become available immediately.
 The builder rejects duplicate shortcuts within a context and files changed
 externally since opening. Saves from multiple builder sessions are serialized;
 retry if another session is saving. Edits rewrite TOML formatting and comments,
-but preserve the complete original in a unique `<filename>.*.bak` file beside
-it. Backups are ignored by action loading. Opening and accepting an unchanged
+but preserve the complete original in a timestamped `<filename>.<time>.bak`
+file beside it. Backups are ignored by action loading. Opening and accepting an unchanged
 command preserves its original text. Editing commands with tabs or control
 characters requires acknowledging the text editor's whitespace conversion.
 
@@ -1994,7 +1998,9 @@ as `"Frontend, Backend"`; the list replaces the field's current value. `""`
 clears any field.
 
 Each command asks on the terminal before writing unless `--yes` is given,
-`ASANAMATE_CONFIRM_WRITES=0` is set, or `confirm_writes = false`. With no
+`ASANAMATE_CONFIRM_WRITES=0` (or `false`) is set, or `confirm_writes = false`.
+`ASANAMATE_CONFIRM_WRITES=1` (or `true`) asks even when the config says not
+to; any other non-empty value is an error. With no
 terminal available (for example, a background action), a write that needs
 confirmation is refused.
 
@@ -2140,9 +2146,10 @@ is no need to copy them.
 ## Files
 
 - Config: `~/.config/asanamate/config.toml`
+- Settings changed from the TUI: `~/.config/asanamate/settings.toml`
 - Actions: `~/.config/asanamate/actions/*.toml`
 - Themes: `~/.config/asanamate/themes/*.toml`
-- State (repo links, saved branches, saved views, recent projects, the cached project list, ticket history, seen My Tasks tickets): `~/.local/state/asanamate/state.toml`
+- State (repo links, saved branches, saved views, recent projects, the cached project list, ticket history, seen My Tasks tickets, and the tickets each `once` hook has run for): `~/.local/state/asanamate/state.toml`
 - Ticket exports: `~/.local/state/asanamate/tickets/<gid>/`
 - Background action log: `~/.local/state/asanamate/actions.log`
 - Activity cache (the last 30 days of Activity events): `~/.cache/asanamate/activity.json`

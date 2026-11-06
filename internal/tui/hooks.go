@@ -80,8 +80,13 @@ func (m *Model) runHooks(events []hookEvent) tea.Cmd {
 // the selected ticket, its details have loaded, and nothing else is open.
 func (m *Model) canPrompt(gid string) bool {
 	t, ok := m.selectedDetail()
-	return ok && t.GID == gid && m.modal == nil && m.input == nil && m.form == nil &&
-		m.composer == nil && m.builder == nil && m.extension == nil && m.whatsNew == nil && m.waiting == "" &&
+	return ok && t.GID == gid && m.idle()
+}
+
+// idle reports that nothing is open over the list and reader.
+func (m *Model) idle() bool {
+	return m.modal == nil && m.input == nil && m.form == nil && m.composer == nil &&
+		m.builder == nil && m.extension == nil && m.whatsNew == nil && m.waiting == "" &&
 		len(m.notices) == 0 && !m.help
 }
 

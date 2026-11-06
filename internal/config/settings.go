@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/sadmachine/asanamate/internal/safefile"
 )
 
 // SettingKeys lists settings shared by the user and TUI, in file order.
@@ -126,18 +128,5 @@ func SaveSetting(configPath, key string, value any) error {
 
 // WriteSettings atomically replaces settings.toml with previously validated data.
 func WriteSettings(configPath string, data []byte) error {
-	path := SettingsPath(configPath)
-	f, err := os.CreateTemp(filepath.Dir(path), ".settings-*.toml")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(f.Name())
-	if _, err := f.Write(data); err != nil {
-		f.Close()
-		return err
-	}
-	if err := f.Close(); err != nil {
-		return err
-	}
-	return os.Rename(f.Name(), path)
+	return safefile.Write(SettingsPath(configPath), data, 0o600)
 }

@@ -342,3 +342,22 @@ func TestTaskGIDFromURL(t *testing.T) {
 		}
 	}
 }
+
+func TestUploadsGetTheirOwnTimeout(t *testing.T) {
+	c := New("tok")
+	if c.http.Timeout != 30*time.Second || c.upload.Timeout != uploadTimeout || uploadTimeout <= c.http.Timeout {
+		t.Fatalf("request timeout = %s, upload timeout = %s", c.http.Timeout, c.upload.Timeout)
+	}
+	var used *http.Client
+	c.upload = &http.Client{Transport: roundTrip(func(r *http.Request) (*http.Response, error) {
+		used = c.upload
+		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(`{"data":{"gid":"5"}}`))}, nil
+	})}
+	if a, err := c.UploadAttachment(context.Background(), "1", "a.png", []byte("x")); err != nil || a.GID != "5" || used == nil {
+		t.Fatalf("attachment = %+v, err = %v; want the upload client", a, err)
+	}
+}
+
+type roundTrip func(*http.Request) (*http.Response, error)
+
+func (f roundTrip) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }

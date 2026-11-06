@@ -22,6 +22,16 @@ test('lookup returns exact links from both providers, newest first', async () =>
   ]);
 });
 
+test('lookup omits a cwd asanamate would reject', async () => {
+  const result = await lookup({
+    codex: fakeProvider('codex', [
+      session({ name: 'A [asana:42]', cwd: 'relative/dir' }),
+      session({ sessionId: ID2, name: 'B [asana:42]', cwd: '/w\0x' }),
+    ]),
+  }, '42');
+  assert.deepEqual(result.conversations.map((c) => c.cwd), [undefined, undefined]);
+});
+
 test('lookup lists a fallback-titled link by its generated title without renaming', async () => {
   const titles = { [ID]: 'Rescheduling UI', [ID2]: null };
   const p = fakeProvider('claude', [

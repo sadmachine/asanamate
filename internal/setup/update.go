@@ -5,19 +5,18 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/BurntSushi/toml"
 
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/prompt"
+	"github.com/sadmachine/asanamate/internal/safefile"
 )
 
 var (
@@ -27,7 +26,8 @@ var (
 )
 
 // Update rewrites the config file from the current template, keeping every
-// value the user set. The previous file is saved next to it, see backupPath.
+// value the user set. The previous file is saved next to it as a timestamped
+// backup (see safefile.Backup).
 func Update(o Options, yes bool) error {
 	old, err := os.ReadFile(o.ConfigPath)
 	if errors.Is(err, os.ErrNotExist) {
@@ -84,15 +84,15 @@ func Update(o Options, yes bool) error {
 			return errors.New("update cancelled; config unchanged")
 		}
 	}
-	backup := backupPath(o.ConfigPath)
+	var backup string
 	if configChanged {
-		if err := backupPrivate(backup, old); err != nil {
+		if backup, err = safefile.Backup(o.ConfigPath, old); err != nil {
 			return err
 		}
 	}
 	if settingsChanged && !missing {
-		backup := backupPath(settingsPath)
-		if err := backupPrivate(backup, oldSettings); err != nil {
+		backup, err := safefile.Backup(settingsPath, oldSettings)
+		if err != nil {
 			return err
 		}
 		fmt.Fprintf(o.Out, "Previous settings saved as %s.\n", backup)
@@ -103,7 +103,7 @@ func Update(o Options, yes bool) error {
 		}
 	}
 	if configChanged {
-		if err := replacePrivate(o.ConfigPath, []byte(updated)); err != nil {
+		if err := safefile.Write(o.ConfigPath, []byte(updated), 0o600); err != nil {
 			var rollback error
 			if settingsChanged {
 				if missing {
@@ -136,31 +136,6 @@ func overlay(older, newer map[string]any) {
 			older[key] = value
 		}
 	}
-}
-
-func backupPrivate(path string, data []byte) error {
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		return err
-	}
-	_, writeErr := f.Write(data)
-	return errors.Join(writeErr, f.Close())
-}
-
-func replacePrivate(path string, data []byte) error {
-	f, err := os.CreateTemp(filepath.Dir(path), ".config-*.toml")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(f.Name())
-	if _, err := f.Write(data); err != nil {
-		f.Close()
-		return err
-	}
-	if err := f.Close(); err != nil {
-		return err
-	}
-	return os.Rename(f.Name(), path)
 }
 
 const updateSummary = `Updated %s; your values are kept.
@@ -255,19 +230,6 @@ func Merge(old string) (string, []string, map[string]any, error) {
 		return "", nil, nil, errors.New("updated config would change your values; config unchanged")
 	}
 	return result, added, moved, nil
-}
-
-// backupPath names a backup of path stamped with the current time, such as
-// config.toml.2026-10-06--14-30-05.bak, so backups don't overwrite each other.
-func backupPath(path string) string {
-	return path + "." + time.Now().Format("2006-01-02--15-04-05") + ".bak"
-}
-
-func writePrivate(path string, data []byte) error {
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		return err
-	}
-	return os.Chmod(path, 0o600)
 }
 
 // lookupOK returns the value at key and whether m sets it.

@@ -12,10 +12,10 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/charmbracelet/x/ansi"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sadmachine/asanamate/internal/asana"
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/jsoncmd"
 )
 
@@ -106,9 +106,9 @@ func classify(raw string, extra map[string][]string) State {
 // the repository they belong to, and a set branch is kept only when git finds
 // none.
 func List(ctx context.Context, command string) ([]Agent, error) {
-	out, err := exec.CommandContext(ctx, "/bin/sh", "-c", command).Output()
+	out, err := jsoncmd.RunShell(ctx, "agents command failed", command, jsoncmd.DefaultLimits)
 	if err != nil {
-		return nil, fmt.Errorf("agents command failed: %w", err)
+		return nil, err
 	}
 	return parseList(ctx, out)
 }
@@ -120,12 +120,7 @@ func FetchArgs(ctx context.Context, args []string, states map[string][]string) (
 	if err != nil {
 		return nil, fmt.Errorf("local agent check failed; run asanamate extensions for verification guidance")
 	}
-	out = []byte(strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) && r != '\n' && r != '\t' || unicode.In(r, unicode.Cf) {
-			return -1
-		}
-		return r
-	}, ansi.Strip(string(out))))
+	out = []byte(display.Clean(string(out)))
 	list, err := parseList(ctx, out)
 	if err != nil {
 		return nil, fmt.Errorf("local agent check returned invalid metadata; run asanamate extensions for verification guidance")

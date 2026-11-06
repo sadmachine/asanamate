@@ -20,7 +20,7 @@ func TestManualRefreshClearsImagesAndRetriesFailures(t *testing.T) {
 	m, _ := testModel(t, cfg)
 	m.deps.Images = true
 	m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	detail := ticket.Ticket{Task: openTask, Comments: []asana.Story{{
 		HTMLText: `<body><img data-asana-gid="10" alt="comment.png"></body>`,
 	}}}
@@ -45,7 +45,7 @@ func TestManualRefreshClearsImagesAndRetriesFailures(t *testing.T) {
 	if !m.focusReader || strings.Contains(m.reader.GetContent(), string(rune(0x10EEEE))) {
 		t.Fatal("refresh must retain reader focus and remove old image placeholders")
 	}
-	m.Update(tasksMsg{err: errors.New("offline")})
+	m.Update(tasksMsg{seq: m.taskSeq, err: errors.New("offline")})
 	if m.loading || len(m.images) != 2 || m.loadInlineImages(detail) != nil {
 		t.Fatal("task refresh failure must retain pending image downloads without duplicating them")
 	}
@@ -85,12 +85,19 @@ func TestManualRefreshRejectsStaleImageResults(t *testing.T) {
 func TestAutoRefreshKeepsImageCache(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.loading = false
+	shown := ticket.Ticket{Task: openTask, Comments: []asana.Story{{HTMLText: `<body><img data-asana-gid="10"></body>`}}}
+	shown.HTMLNotes = `<body><img data-asana-gid="9"></body>`
+	m.details[openTask.GID], m.shownGID = shown, openTask.GID
 	loaded, failed := &inlineImage{id: 20}, &inlineImage{}
 	m.images["9"], m.images["10"] = loaded, failed
+	m.images["elsewhere"] = &inlineImage{id: 21}
 	epoch := m.imageEpoch
 	_, cmd := m.Update(refreshTickMsg{seq: m.refreshSeq})
 	if cmd == nil || !m.loading || m.images["9"] != loaded || m.images["10"] != failed || m.imageEpoch != epoch {
-		t.Fatal("automatic refresh must reload tasks without invalidating images")
+		t.Fatal("automatic refresh must reload tasks without invalidating the shown ticket's images")
+	}
+	if _, ok := m.images["elsewhere"]; ok {
+		t.Fatal("automatic refresh must drop images of tickets no longer cached")
 	}
 }
 
@@ -140,13 +147,13 @@ func TestAutoRefreshPreservesViewAndRetriesAfterError(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.viewProject = &asana.Ref{GID: "project"}
 	m.filterInput.SetValue("is:open")
-	m.Update(tasksMsg{project: m.viewProject, tasks: []asana.Task{openTask, sideTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, project: m.viewProject, tasks: []asana.Task{openTask, sideTask}})
 	m.Update(key("j"))
 	_, cmd := m.Update(refreshTickMsg{seq: m.refreshSeq})
 	if cmd == nil || !m.loading || len(m.visible) != 2 || m.cursor != 1 {
 		t.Fatal("timer did not reload while retaining current list")
 	}
-	m.Update(tasksMsg{project: m.viewProject, err: errors.New("offline")})
+	m.Update(tasksMsg{seq: m.taskSeq, project: m.viewProject, err: errors.New("offline")})
 	if m.loading || len(m.visible) != 2 || !strings.Contains(m.status, "offline") {
 		t.Fatal("failed reload did not retain list and report error")
 	}
@@ -154,7 +161,7 @@ func TestAutoRefreshPreservesViewAndRetriesAfterError(t *testing.T) {
 	if !m.loading {
 		t.Fatal("next interval did not retry failed reload")
 	}
-	m.Update(tasksMsg{project: m.viewProject, tasks: []asana.Task{sideTask, doneTask, openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, project: m.viewProject, tasks: []asana.Task{sideTask, doneTask, openTask}})
 	selected, ok := m.selected()
 	if m.loading || !ok || selected.GID != sideTask.GID || len(m.visible) != 2 ||
 		m.filterInput.Value() != "is:open" || m.viewProject.GID != "project" {
@@ -174,7 +181,7 @@ func TestAutoRefreshPreservesReader(t *testing.T) {
 				cfg.Reader.View = view
 				m, _ := testModel(t, cfg)
 				m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
-				m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+				m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 				detail := ticket.Ticket{Task: openTask}
 				detail.HTMLNotes = "<body>" + strings.Repeat(strings.Repeat("Reading this ticket. ", 8)+"<br>", 100) + "</body>"
 				m.Update(detailMsg{gid: openTask.GID, ticket: detail})
@@ -187,7 +194,7 @@ func TestAutoRefreshPreservesReader(t *testing.T) {
 				if wider {
 					incoming.Name = strings.Repeat("New ticket ", 8)
 				}
-				_, cmd := m.Update(tasksMsg{tasks: []asana.Task{incoming, openTask}})
+				_, cmd := m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{incoming, openTask}})
 				selected, ok := m.selected()
 				if !ok || selected.GID != openTask.GID || len(m.visible) != 2 || m.loading || cmd == nil {
 					t.Fatal("refresh did not update the list while keeping the selected ticket")
@@ -220,7 +227,7 @@ func TestTicketRefreshPreservesState(t *testing.T) {
 				cfg.Reader.View = view
 				m, _ := testModel(t, cfg)
 				m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
-				m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+				m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 				detail := ticket.Ticket{Task: openTask}
 				detail.HTMLNotes = "<body>" + strings.Repeat("Reading this ticket.<br>", 100) + "</body>"
 				m.Update(detailMsg{gid: openTask.GID, ticket: detail})
@@ -241,7 +248,7 @@ func TestTicketRefreshPreservesState(t *testing.T) {
 				if m.reader.GetContent() != before || !m.background {
 					t.Fatal("refresh replaced the ticket or opened a loading modal")
 				}
-				_, cmd := m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+				_, cmd := m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 				if cmd == nil || m.reader.GetContent() != before {
 					t.Fatal("refresh must fetch fresh details while retaining old content")
 				}
@@ -268,7 +275,7 @@ func TestTicketRefreshPreservesState(t *testing.T) {
 func TestDetailRefreshAnchorsCommentAndHandlesRemoval(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	detail := ticket.Ticket{Task: openTask, Comments: []asana.Story{
 		{GID: "first", HTMLText: "<body>First comment</body>"},
 		{GID: "selected", HTMLText: "<body>Selected comment</body>"},
@@ -294,7 +301,7 @@ func TestDetailRefreshAnchorsCommentAndHandlesRemoval(t *testing.T) {
 func TestDetailRefreshRejectsOlderResponses(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	m.Update(detailMsg{gid: openTask.GID, ticket: ticket.Ticket{Task: openTask}})
 	m.loadDetail(openTask.GID)
 	older := m.detailSeq
@@ -321,7 +328,7 @@ func TestRefreshPreservesExpandedFieldAfterSave(t *testing.T) {
 	m.fieldKey = ticket.FieldKey("f2")
 	m.renderDetail(true)
 	m.Update(editDoneMsg{gid: "1", what: "custom field"})
-	m.Update(tasksMsg{tasks: m.tasks})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: m.tasks})
 	detail := m.details["1"]
 	value := "2026-10-05"
 	detail.CustomFields[1].DisplayValue = &value
@@ -340,7 +347,7 @@ func TestAutoRefreshUpdatesReaderWhenTicketRemoved(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			m, _ := testModel(t, config.Default())
 			m.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
-			m.Update(tasksMsg{tasks: []asana.Task{openTask, sideTask}})
+			m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, sideTask}})
 			detail := ticket.Ticket{Task: openTask}
 			detail.HTMLNotes = "<body>" + strings.Repeat("Reading this ticket.<br>", 100) + "</body>"
 			m.Update(detailMsg{gid: openTask.GID, ticket: detail})
@@ -352,7 +359,7 @@ func TestAutoRefreshUpdatesReaderWhenTicketRemoved(t *testing.T) {
 			if empty {
 				tasks = nil
 			}
-			m.Update(tasksMsg{tasks: tasks})
+			m.Update(tasksMsg{seq: m.taskSeq, tasks: tasks})
 			if !empty {
 				m.Update(detailMsg{gid: sideTask.GID, ticket: ticket.Ticket{Task: sideTask}})
 			}
@@ -395,14 +402,13 @@ func TestAutoRefreshSkipsBusyUI(t *testing.T) {
 }
 
 func TestRefreshTimerWaitsForInterval(t *testing.T) {
-	cfg := config.Default()
-	cfg.List.RefreshInterval = "1s"
-	m, _ := testModel(t, cfg)
+	m, _ := testModel(t, config.Default())
+	m.refreshInterval = 50 * time.Millisecond // below the config minimum, to keep the test fast
 	started := time.Now()
 	cmd := m.scheduleRefresh()
 	m.refreshSeq++ // A queued timer keeps its original generation.
 	msg, ok := cmd().(refreshTickMsg)
-	if !ok || msg.seq != 0 || time.Since(started) < time.Second {
+	if !ok || msg.seq != 0 || time.Since(started) < m.refreshInterval {
 		t.Fatalf("timer fired early or carried wrong generation: %+v", msg)
 	}
 }
@@ -410,7 +416,7 @@ func TestRefreshTimerWaitsForInterval(t *testing.T) {
 func TestAutoRefreshShowsNoModal(t *testing.T) {
 	m, _ := testModel(t, config.Default())
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 12})
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	if s := ansi.Strip(m.statusline()); !strings.Contains(s, "auto 30s") {
 		t.Fatalf("statusline lacks the interval: %q", s)
 	}
@@ -422,10 +428,43 @@ func TestAutoRefreshShowsNoModal(t *testing.T) {
 	if m.listHighlight() != warnStyle.GetForeground() {
 		t.Fatal("timer refresh did not highlight the list")
 	}
-	m.Update(key("r")) // keys wait for the refresh
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	m.Update(key("r"))
 	if strings.Contains(ansi.Strip(m.body()), "Loading tasks") || !m.background {
 		t.Fatal("a manual refresh must keep the view without a loading modal")
+	}
+}
+
+func TestBackgroundRefreshKeepsKeysAndClicks(t *testing.T) {
+	m, _ := testModel(t, config.Default())
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 12})
+	second := asana.Task{GID: "2", Name: "Second"}
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask, second}})
+	m.Update(refreshTickMsg{seq: m.refreshSeq})
+	if !m.loading || !m.background {
+		t.Fatal("timer refresh did not start")
+	}
+	m.Update(key("j"))
+	if got, _ := m.selected(); got.GID != second.GID {
+		t.Fatalf("selected %q during a background refresh, want %q", got.GID, second.GID)
+	}
+	m.reload()
+	m.Update(key("k"))
+	if got, _ := m.selected(); got.GID != second.GID {
+		t.Fatal("a foreground load must still hold keys")
+	}
+}
+
+func TestOlderTaskLoadCannotOverwriteNewer(t *testing.T) {
+	m, _ := testModel(t, config.Default())
+	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.refresh()
+	older := m.taskSeq
+	m.refresh()
+	edited := asana.Task{GID: openTask.GID, Name: "Fix login (edited)"}
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{edited}})
+	m.Update(tasksMsg{seq: older, tasks: []asana.Task{openTask}})
+	if got, _ := m.selected(); got.Name != edited.Name || m.loading {
+		t.Fatalf("selected %q, loading %v; the older load overwrote the newer", got.Name, m.loading)
 	}
 }

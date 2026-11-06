@@ -46,7 +46,7 @@ func TestConnectionFailureAndRecoveryStayOutOfNotifications(t *testing.T) {
 	now := time.Now()
 	m.now = func() time.Time { return now }
 	for range 3 {
-		m.Update(tasksMsg{err: connectionFailure()})
+		m.Update(tasksMsg{seq: m.taskSeq, err: connectionFailure()})
 	}
 	if len(m.notices) != 0 || len(m.statusHistory) != 0 || m.status != "" || m.toast != nil {
 		t.Fatal("background connection failures leaked into ordinary notifications")
@@ -56,11 +56,11 @@ func TestConnectionFailureAndRecoveryStayOutOfNotifications(t *testing.T) {
 		t.Fatalf("connection details = %s", text)
 	}
 	now = now.Add(time.Minute)
-	m.Update(tasksMsg{err: connectionFailure()})
+	m.Update(tasksMsg{seq: m.taskSeq, err: connectionFailure()})
 	if text := connectionMenuText(m); !strings.Contains(text, "Unavailable") || !strings.Contains(text, "4 failed attempts") {
 		t.Fatalf("persistent outage = %s", text)
 	}
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	if text := connectionMenuText(m); !strings.Contains(text, "Connected") || !strings.Contains(text, "Restored") || strings.Contains(text, "Asana: Unavailable") {
 		t.Fatalf("recovery details = %s", text)
 	}
@@ -76,7 +76,7 @@ func TestConnectionIndicatorAcrossSymbolSetsAndViews(t *testing.T) {
 			m.sym = symbols
 			now := testToday
 			m.now = func() time.Time { return now }
-			m.Update(tasksMsg{err: connectionFailure()})
+			m.Update(tasksMsg{seq: m.taskSeq, err: connectionFailure()})
 			for _, view := range []string{"list", "ticket", "activity"} {
 				m.deps.Ticket = ""
 				m.activityOpen = view == "activity"
@@ -109,7 +109,7 @@ func TestConnectionKeepsOtherFailuresVisible(t *testing.T) {
 		&url.Error{Op: "Get", URL: "https://app.asana.com", Err: errors.New("certificate is not trusted")},
 	} {
 		m := splitModel(t)
-		m.Update(tasksMsg{err: failure})
+		m.Update(tasksMsg{seq: m.taskSeq, err: failure})
 		if len(m.notices) != 1 || len(m.statusHistory) != 1 {
 			t.Fatalf("nonconnection error disappeared: %v", failure)
 		}
@@ -144,19 +144,19 @@ func TestConnectionGraceAndBoundedOutages(t *testing.T) {
 		delay = after
 		return func() tea.Msg { return msg }
 	}
-	m.Update(tasksMsg{err: connectionFailure()})
+	m.Update(tasksMsg{seq: m.taskSeq, err: connectionFailure()})
 	if delay != 30*time.Second {
 		t.Fatalf("grace redraw scheduled after %s", delay)
 	}
 	now = now.Add(10 * time.Second)
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	if len(m.asanaConnection.outages) != 0 {
 		t.Fatal("brief network switch left an outage in history")
 	}
 	for range 25 {
-		m.Update(tasksMsg{err: connectionFailure()})
+		m.Update(tasksMsg{seq: m.taskSeq, err: connectionFailure()})
 		now = now.Add(time.Minute)
-		m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+		m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 		now = now.Add(time.Minute)
 	}
 	if len(m.asanaConnection.outages) != 20 {
@@ -176,7 +176,7 @@ func TestConnectionRetryRunsWithoutClosingMenu(t *testing.T) {
 	m := splitModel(t)
 	m.deps.Client = asana.New("test")
 	m.deps.Client.BaseURL = server.URL
-	m.Update(tasksMsg{err: connectionFailure()})
+	m.Update(tasksMsg{seq: m.taskSeq, err: connectionFailure()})
 	openConnectionMenu(t, m)
 	p := m.modal
 	_, cmd := m.Update(key("r"))
@@ -203,13 +203,13 @@ func TestConnectionRetryRunsWithoutClosingMenu(t *testing.T) {
 
 func TestConnectionMenuAllowsAutomaticRecovery(t *testing.T) {
 	m := splitModel(t)
-	m.Update(tasksMsg{err: connectionFailure()})
+	m.Update(tasksMsg{seq: m.taskSeq, err: connectionFailure()})
 	openConnectionMenu(t, m)
 	m.Update(refreshTickMsg{seq: m.refreshSeq})
 	if !m.loading {
 		t.Fatal("connection menu paused automatic refresh")
 	}
-	m.Update(tasksMsg{tasks: []asana.Task{openTask}})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
 	if !strings.Contains(connectionMenuText(m), "Asana: Connected") {
 		t.Fatal("automatic recovery did not update the open menu")
 	}
@@ -255,7 +255,7 @@ func TestPinnedTaskConnectionErrorUsesConnectionStatus(t *testing.T) {
 	defer server.Close()
 	client := asana.New("test")
 	client.BaseURL = server.URL
-	msg := loadTasks(client, "1", nil, []string{"2"})().(tasksMsg)
+	msg := loadTasks(client, "1", nil, []string{"2"}, 0)().(tasksMsg)
 	if msg.err != nil || msg.warning != "" || msg.pinConnectionErr == nil {
 		t.Fatalf("pinned failure escaped connection handling: %+v", msg)
 	}

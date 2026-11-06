@@ -14,8 +14,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/feed"
 	"github.com/sadmachine/asanamate/internal/form"
 	"github.com/sadmachine/asanamate/internal/projectlinks"
@@ -40,6 +42,10 @@ type harvestEntryRequest struct {
 	ExternalReference harvestExternalReference `json:"external_reference"`
 }
 
+// now is the clock for "today"; tests fix it so a run across midnight
+// cannot see two different days.
+var now = time.Now
+
 // harvestConfigPath is where hrvst 3.x keeps its login; it has no override.
 func harvestConfigPath() (string, error) {
 	home, err := os.UserHomeDir()
@@ -56,6 +62,8 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 	if err != nil {
 		return err
 	}
+	// Each request loads the credentials at most once, when it needs them.
+	credentials := sync.OnceValues(func() (harvestCredentials, error) { return credentialsFrom(settings, configPath) })
 	if taskID == "" {
 		taskID = settings.TaskID
 	}
@@ -71,7 +79,7 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 	}
 	switch req.Operation {
 	case "feed":
-		reply, err := harvestFeed(ctx, configPath, endpoint, req.Date)
+		reply, err := harvestFeed(ctx, credentials, endpoint, req.Date)
 		if err != nil {
 			return err
 		}
@@ -80,7 +88,11 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 		if !digits(taskID) {
 			return errors.New("Harvest needs a default task; run asanamate-hrvst setup or pass --task-id")
 		}
-		assignments, err := harvestAssignments(ctx, configPath, endpoint)
+		c, err := credentials()
+		if err != nil {
+			return err
+		}
+		assignments, err := c.assignments(ctx, endpoint)
 		if err != nil {
 			return err
 		}
@@ -95,7 +107,7 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 				break
 			}
 		}
-		return json.NewEncoder(out).Encode(form.Spec{Info: []string{harvestToday(ctx, configPath, endpoint)}, Fields: []form.Field{
+		return json.NewEncoder(out).Encode(form.Spec{Info: []string{harvestToday(ctx, c, endpoint)}, Fields: []form.Field{
 			project,
 			{ID: "task_id", Label: "Harvest task", Type: form.Select, Options: []form.Option{task}, Remember: true},
 			{ID: "hours", Label: "Hours", Type: form.Hours},
@@ -105,7 +117,11 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 		if req.Asana == nil || !digits(req.Asana.TaskGID) {
 			return errors.New("hrvst summary needs a numeric Asana task GID")
 		}
-		summary, err := harvestSummary(ctx, configPath, endpoint, req.Asana.TaskGID)
+		c, err := credentials()
+		if err != nil {
+			return err
+		}
+		summary, err := harvestSummary(ctx, c, endpoint, req.Asana.TaskGID)
 		if err != nil {
 			return err
 		}
@@ -132,11 +148,11 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 		if _, err := time.Parse(time.DateOnly, spentDate); err != nil {
 			return errors.New("hrvst log needs spent_date as YYYY-MM-DD")
 		}
-		credentials, err := loadHarvestCredentials(configPath)
+		c, err := credentials()
 		if err != nil {
 			return err
 		}
-		assignments, err := credentials.assignments(ctx, endpoint)
+		assignments, err := c.assignments(ctx, endpoint)
 		if err != nil {
 			return err
 		}
@@ -153,7 +169,7 @@ func runHarvest(ctx context.Context, in io.Reader, out io.Writer, taskID, config
 		if !eligible {
 			return errors.New("Harvest project/task is inactive or unassigned; reopen the time form")
 		}
-		return credentials.createEntry(ctx, endpoint, projectID, selectedTask, spentDate, hours, *req.Asana)
+		return c.createEntry(ctx, endpoint, projectID, selectedTask, spentDate, hours, *req.Asana)
 	default:
 		return fmt.Errorf("unknown time provider operation %q", req.Operation)
 	}
@@ -216,6 +232,12 @@ func loadHarvestCredentials(configPath string) (harvestCredentials, error) {
 	if err != nil {
 		return harvestCredentials{}, err
 	}
+	return credentialsFrom(settings, configPath)
+}
+
+// credentialsFrom returns the native credentials settings select, else the
+// legacy login at configPath.
+func credentialsFrom(settings harvestSettings, configPath string) (harvestCredentials, error) {
 	if credentials, native, err := nativeCredentials(settings); native || err != nil {
 		return credentials, err
 	}
@@ -274,12 +296,8 @@ func (credentials harvestCredentials) call(ctx context.Context, method, endpoint
 	return result, nil
 }
 
-func harvestSummary(ctx context.Context, configPath, endpoint, gid string) (timetracking.Summary, error) {
-	today := time.Now().Format(time.DateOnly)
-	credentials, err := loadHarvestCredentials(configPath)
-	if err != nil {
-		return timetracking.Summary{}, err
-	}
+func harvestSummary(ctx context.Context, credentials harvestCredentials, endpoint, gid string) (timetracking.Summary, error) {
+	today := now().Format(time.DateOnly)
 	base, err := url.Parse(endpoint)
 	if err != nil {
 		return timetracking.Summary{}, err
@@ -382,24 +400,14 @@ type harvestEntry struct {
 
 // harvestUserEntries gets every entry the user spent on date, each with a
 // valid duration. label prefixes errors.
-func harvestUserEntries(ctx context.Context, configPath, endpoint, date, label string) ([]harvestEntry, error) {
-	credentials, err := loadHarvestCredentials(configPath)
-	if err != nil {
-		return nil, err
-	}
+func harvestUserEntries(ctx context.Context, credentials harvestCredentials, endpoint, date, label string) ([]harvestEntry, error) {
 	base, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
 	}
-	data, err := credentials.call(ctx, http.MethodGet, base.ResolveReference(&url.URL{Path: "users/me"}).String(), nil)
+	me, err := credentials.me(ctx, endpoint)
 	if err != nil {
-		return nil, err
-	}
-	var me struct {
-		ID json.Number `json:"id"`
-	}
-	if err := json.Unmarshal(data, &me); err != nil || !positiveID(me.ID.String()) {
-		return nil, fmt.Errorf("%s: missing user id", label)
+		return nil, fmt.Errorf("%s: %w", label, err)
 	}
 	var entries []harvestEntry
 	query := url.Values{"user_id": {me.ID.String()}, "from": {date}, "to": {date}}
@@ -426,11 +434,15 @@ func harvestUserEntries(ctx context.Context, configPath, endpoint, date, label s
 
 // harvestFeed answers a feed request: the user's time entries spent on date,
 // each linked to its Asana ticket, and the day's total as the summary.
-func harvestFeed(ctx context.Context, configPath, endpoint, date string) (feed.Reply, error) {
+func harvestFeed(ctx context.Context, credentials func() (harvestCredentials, error), endpoint, date string) (feed.Reply, error) {
 	if _, err := time.Parse(time.DateOnly, date); err != nil {
 		return feed.Reply{}, errors.New("hrvst feed needs date as YYYY-MM-DD")
 	}
-	entries, err := harvestUserEntries(ctx, configPath, endpoint, date, "Harvest feed")
+	c, err := credentials()
+	if err != nil {
+		return feed.Reply{}, err
+	}
+	entries, err := harvestUserEntries(ctx, c, endpoint, date, "Harvest feed")
 	if err != nil {
 		return feed.Reply{}, err
 	}
@@ -447,7 +459,7 @@ func harvestFeed(ctx context.Context, configPath, endpoint, date string) (feed.R
 		}
 		// A linked entry's notes are its ticket's title, kept for tickets
 		// the panel has not loaded.
-		if notes := feed.OneLine(entry.Notes); notes != "" {
+		if notes := display.Line(entry.Notes); notes != "" {
 			item.Text += " · " + notes
 		}
 		if ref := entry.Reference; ref != nil && digits(ref.ID) {
@@ -465,8 +477,8 @@ func harvestFeed(ctx context.Context, configPath, endpoint, date string) (feed.R
 // harvestToday is the form's info line: total hours logged today, running
 // timers included as in the feed. Failure only costs the line, never the
 // form.
-func harvestToday(ctx context.Context, configPath, endpoint string) string {
-	entries, err := harvestUserEntries(ctx, configPath, endpoint, time.Now().Format(time.DateOnly), "Harvest today")
+func harvestToday(ctx context.Context, credentials harvestCredentials, endpoint string) string {
+	entries, err := harvestUserEntries(ctx, credentials, endpoint, now().Format(time.DateOnly), "Harvest today")
 	if err != nil {
 		return "Today unavailable: " + err.Error()
 	}

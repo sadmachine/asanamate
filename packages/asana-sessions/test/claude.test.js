@@ -59,6 +59,37 @@ test('generatedTitle reads the latest generated title from the transcript', asyn
   assert.equal(await claude.generatedTitle('../../etc/passwd'), null);
 });
 
+test('generatedTitle finds a title far from the end of a long transcript', async () => {
+  const env = await home();
+  const claude = createClaude({ sdk: fakeSDK([]), env });
+  await mkdir(join(env.CLAUDE_CONFIG_DIR, 'projects', '-w'));
+  const filler = JSON.stringify({ type: 'user', message: 'é'.repeat(50 * 1024) });
+  const lines = [
+    JSON.stringify({ type: 'ai-title', aiTitle: 'Old', sessionId: ID }),
+    JSON.stringify({ type: 'ai-title', aiTitle: 'Titré', sessionId: ID }),
+    filler, filler, filler,
+  ];
+  await writeFile(join(env.CLAUDE_CONFIG_DIR, 'projects', '-w', `${ID}.jsonl`), `${lines.join('\n')}\n`);
+  assert.equal(await claude.generatedTitle(ID), 'Titré');
+});
+
+test('concurrent calls with different homes each see their own config directory', async () => {
+  const seen = [];
+  const sdk = {
+    getSessionInfo: async (id) => {
+      const dir = process.env.CLAUDE_CONFIG_DIR;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      seen.push([id, dir, process.env.CLAUDE_CONFIG_DIR]);
+      return undefined;
+    },
+  };
+  const [a, b] = [await home(), await home()];
+  const before = process.env.CLAUDE_CONFIG_DIR;
+  await Promise.all([createClaude({ sdk, env: a }).read(ID), createClaude({ sdk, env: b }).read(ID)]);
+  assert.deepEqual(seen.map(([, start, end]) => [start, end]), [[a.CLAUDE_CONFIG_DIR, a.CLAUDE_CONFIG_DIR], [b.CLAUDE_CONFIG_DIR, b.CLAUDE_CONFIG_DIR]]);
+  assert.equal(process.env.CLAUDE_CONFIG_DIR, before);
+});
+
 test('missing history is unavailable; resumption is refused by default', async () => {
   const claude = createClaude({ sdk: fakeSDK([]), env: { CLAUDE_CONFIG_DIR: '/nonexistent/claude-home' } });
   await assert.rejects(claude.list(), (err) => err.code === 'unavailable');

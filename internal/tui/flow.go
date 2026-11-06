@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -294,7 +295,7 @@ func (m *Model) runRepo(r *pendingRun) (tea.Cmd, bool) {
 	if r.project != nil {
 		projectGID = r.project.GID
 	}
-	return m.wait("Loading repos…", loadCandidates(m.deps.Config.RepoSource, nil, m.projectLinks(), projectGID)), true
+	return m.waitForCandidates(nil, projectGID), true
 }
 
 // isRepoRoot reports whether a saved link still names a repo. Links are saved
@@ -587,14 +588,24 @@ func (m *Model) launch(r *pendingRun) tea.Cmd {
 	case config.ModeForeground:
 		return tea.ExecProcess(cmd, func(err error) tea.Msg { return actionDoneMsg{name: name, err: err} })
 	case config.ModeBackground:
-		m.setProgress(name + ": running…")
-		logPath := filepath.Join(m.deps.StateDir, "actions.log")
-		return func() tea.Msg {
-			return actionDoneMsg{name: name, log: logPath, err: action.RunBackground(cmd, logPath)}
-		}
+		return m.runBackground(name, cmd, "")
 	default:
 		m.exitCmd = cmd
 		return tea.Quit
+	}
+}
+
+// runBackground runs cmd detached, logging to actions.log, and reports it
+// done as name. hint, when set, follows a failure.
+func (m *Model) runBackground(name string, cmd *exec.Cmd, hint string) tea.Cmd {
+	m.setProgress(name + ": running…")
+	logPath := filepath.Join(m.deps.StateDir, "actions.log")
+	return func() tea.Msg {
+		err := action.RunBackground(cmd, logPath)
+		if err != nil && hint != "" {
+			err = fmt.Errorf("%w; %s", err, hint)
+		}
+		return actionDoneMsg{name: name, log: logPath, err: err}
 	}
 }
 

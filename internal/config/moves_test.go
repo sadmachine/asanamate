@@ -97,25 +97,6 @@ func TestApplyMovesRejectsOldAndNew(t *testing.T) {
 	}
 }
 
-func TestLoadNamesMovedKeys(t *testing.T) {
-	for body, key := range map[string]string{
-		"accent_color = \"2\"\n":                   "accent_color moved to colors.accent",
-		"theme = \"dark\"\n":                       "theme moved to theme.name",
-		"[list.pinned]\ncolor = \"1\"\n":           "list.pinned.color moved to colors.pinned",
-		"[display]\nsymbols = \"nerd\"\n":          "display.symbols moved to symbols",
-		"[display]\nreduced_motion = false\n":      "display.reduced_motion moved to reduced_motion",
-		"[list]\nfilter = \"is:open\"\n":           "list.filter moved to default_filter",
-		"[repo]\nroot = \"~/projects\"\n":          "repo.root moved to repo_source.root",
-		"[repo]\ncommand = \"sesh list -z\"\n":     "repo.command moved to repo_source.command",
-		"[repo]\nbranch_field = \"Branch Name\"\n": "repo.branch_field moved to branch_field",
-	} {
-		_, err := Load(writeFile(t, "workspace = \"1\"\n"+body))
-		if err == nil || !strings.Contains(err.Error(), key) || !strings.Contains(err.Error(), "asanamate config update") {
-			t.Errorf("%q: err = %v", body, err)
-		}
-	}
-}
-
 func TestApplyCommandMovesKeepsFlags(t *testing.T) {
 	for old, want := range map[string]string{
 		"asanamate time-provider hrvst --task-id 456": "asanamate-hrvst --task-id 456",

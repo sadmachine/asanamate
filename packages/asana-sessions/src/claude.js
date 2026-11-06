@@ -1,12 +1,13 @@
 // Claude Code history through the official Agent SDK's local session functions.
 // No function here starts an agent or calls the model API.
 import { execFile } from 'node:child_process';
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { open, readFile, readdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { ProviderError, providerError } from './errors.js';
+import { UUID } from './ids.js';
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+let sdkQueue = Promise.resolve();
 
 export function createClaude({ sdk, env = process.env, starts = processStarts } = {}) {
   const load = async () => {
@@ -20,7 +21,14 @@ export function createClaude({ sdk, env = process.env, starts = processStarts } 
   const history = () => stat(join(home(), 'projects')).catch((err) => {
     throw providerError(err, 'Claude Code');
   });
-  const call = async (fn) => {
+  // SDK calls run one at a time across instances: each sets the process-wide
+  // CLAUDE_CONFIG_DIR, and overlapping calls would restore the wrong value.
+  const call = (fn) => {
+    const run = sdkQueue.then(() => callNow(fn));
+    sdkQueue = run.catch(() => {});
+    return run;
+  };
+  const callNow = async (fn) => {
     const previous = process.env.CLAUDE_CONFIG_DIR;
     try {
       // The SDK reads its config directory from the process environment only.
@@ -48,6 +56,10 @@ export function createClaude({ sdk, env = process.env, starts = processStarts } 
     validID: (id) => UUID.test(id),
     // The CLI exports the current conversation's ID to its tool commands.
     currentEnv: 'CLAUDE_CODE_SESSION_ID',
+    // The first prompt can precede the saved conversation, and even the
+    // projects directory; a prompt link waits until Stop finds it saved.
+    missingIsUnsaved: true,
+    deferLink: (saved) => !saved,
     // homeEnv names the config directory holding a hook event's transcript,
     // <home>/projects/<project>/<id>.jsonl, or returns null.
     homeEnv: (transcript, id) => {
@@ -89,9 +101,9 @@ export function createClaude({ sdk, env = process.env, starts = processStarts } 
       }
       const root = join(home(), 'projects');
       for (const project of await readdir(root).catch(() => [])) {
-        const text = await readFile(join(root, project, `${id}.jsonl`), 'utf8').catch(() => null);
-        if (text !== null) {
-          return lastAITitle(text);
+        const title = await lastAITitleInFile(join(root, project, `${id}.jsonl`));
+        if (title !== undefined) {
+          return title;
         }
       }
       return null;
@@ -173,6 +185,45 @@ function processStarts(pids) {
       return resolve(live);
     });
   });
+}
+
+// lastAITitleInFile reads a transcript backward in chunks until it finds the
+// latest generated title, so long transcripts are not read whole. It returns
+// undefined when the file cannot be opened.
+const CHUNK = 64 * 1024;
+async function lastAITitleInFile(path) {
+  const file = await open(path, 'r').catch(() => undefined);
+  if (!file) {
+    return undefined;
+  }
+  try {
+    let position = (await file.stat()).size;
+    let carry = Buffer.alloc(0);
+    while (position > 0) {
+      const size = Math.min(CHUNK, position);
+      position -= size;
+      const chunk = Buffer.alloc(size);
+      await file.read(chunk, 0, size, position);
+      const data = Buffer.concat([chunk, carry]);
+      // Before the file's start, bytes up to the first newline belong to a
+      // line that begins in an earlier chunk.
+      const start = position > 0 ? data.indexOf(0x0a) : -1;
+      if (position > 0 && start < 0) {
+        carry = data;
+        continue;
+      }
+      carry = data.subarray(0, start + 1);
+      const title = lastAITitle(data.subarray(start + 1).toString('utf8'));
+      if (title) {
+        return title;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    await file.close();
+  }
 }
 
 function lastAITitle(text) {

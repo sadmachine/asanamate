@@ -35,7 +35,8 @@ func (m *Model) openLinks() tea.Cmd {
 	}
 	if len(missing) > 0 {
 		m.setProgress("loading projects…")
-		return loadLinkNames(m.deps.Client, missing)
+		m.linkNamesSeq++
+		return loadLinkNames(m.deps.Client, missing, m.linkNamesSeq)
 	}
 	refs := make([]asana.Ref, 0, len(names))
 	for gid, name := range names {
@@ -85,7 +86,13 @@ func (m *Model) pickedLink(target linkTarget) tea.Cmd {
 	if target.ticket {
 		projectGID = ""
 	}
-	return m.wait("Loading repos…", loadCandidates(m.deps.Config.RepoSource, &target, m.projectLinks(), projectGID))
+	return m.waitForCandidates(&target, projectGID)
+}
+
+// waitForCandidates loads the repo picker's candidates behind a wait.
+func (m *Model) waitForCandidates(link *linkTarget, projectGID string) tea.Cmd {
+	m.candidatesSeq++
+	return m.wait("Loading repos…", loadCandidates(m.deps.Config.RepoSource, link, m.projectLinks(), projectGID, m.candidatesSeq))
 }
 
 // projectLinks returns the configured project links provider; it is off

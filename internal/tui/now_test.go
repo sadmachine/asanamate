@@ -55,7 +55,7 @@ func nowModel(t *testing.T) *Model {
 	for _, task := range tasks {
 		m.details[task.GID] = ticket.Ticket{Task: task}
 	}
-	m.Update(tasksMsg{tasks: tasks})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: tasks})
 	return m
 }
 
@@ -118,7 +118,7 @@ func TestNowListsTicketsByWhatNeedsYou(t *testing.T) {
 	if m.nowOpen || m.groupBy != "" {
 		t.Fatalf("W from Now must return to My Tasks, got now = %v, group = %q", m.nowOpen, m.groupBy)
 	}
-	m.Update(tasksMsg{tasks: tasks})
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: tasks})
 	if len(m.visible) != len(tasks) {
 		t.Fatalf("My Tasks lists %d tickets, want all %d", len(m.visible), len(tasks))
 	}

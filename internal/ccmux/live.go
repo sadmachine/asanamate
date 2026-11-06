@@ -14,6 +14,7 @@ import (
 
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/safefile"
 )
 
 // live is a state an agent reported itself, and when. It corrects ccmux,
@@ -76,19 +77,7 @@ func WriteHook(in io.Reader, dir, pane string) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(dir, ".tmp-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.WriteString(string(s) + "\n" + strings.TrimSpace(pane) + "\n"); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), path)
+	return safefile.Write(path, []byte(string(s)+"\n"+strings.TrimSpace(pane)+"\n"), 0o600)
 }
 
 // RunHook serves `hook codex`: it records the Codex hook event on in, with

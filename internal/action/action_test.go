@@ -114,7 +114,7 @@ func TestWriteFiles(t *testing.T) {
 	if err := files.WriteInput("uat\x1b[31m"); err != nil {
 		t.Fatal(err)
 	}
-	if data, _ := os.ReadFile(files.Input); filepath.Dir(files.Input) != filepath.Dir(files.Markdown) || string(data) != "uat[31m" {
+	if data, _ := os.ReadFile(files.Input); filepath.Dir(files.Input) != filepath.Dir(files.Markdown) || string(data) != "uat" {
 		t.Fatalf("input %s = %q", files.Input, data)
 	}
 	if _, err := WriteFiles(dir, ticket.Ticket{Task: asana.Task{GID: "../x"}}); err == nil {

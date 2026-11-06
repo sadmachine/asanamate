@@ -154,9 +154,6 @@ func TestSourceDiagnosticsAndDisplay(t *testing.T) {
 			t.Fatalf("unsafe or unbounded message = %q", message)
 		}
 	}
-	if got := DisplayText("\x1b]52;c;secret\a\x1b[31mTitle\x1b[0m\n\u202ehidden\tpath"); got != "Title hidden path" {
-		t.Fatalf("display = %q", got)
-	}
 }
 
 func TestSourceFailureAndCancellation(t *testing.T) {

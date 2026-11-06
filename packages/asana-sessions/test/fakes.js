@@ -51,6 +51,9 @@ export function fakeProvider(name, sessions = [], overrides = {}) {
     },
     resume: (id) => ({ command: name, args: ['resume', id], clearEnv: ['PARENT_SESSION'] }),
     unknownActivity: name === 'claude' ? 'refuse' : 'confirm',
+    // Mirror each real provider's link deferral.
+    missingIsUnsaved: name === 'claude',
+    deferLink: name === 'claude' ? (saved) => !saved : name === 'codex' ? (saved) => Boolean(saved && !saved.name) : undefined,
     ...overrides,
   };
 }

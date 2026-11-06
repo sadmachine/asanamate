@@ -60,7 +60,8 @@ are different things; the UI must distinguish them.
 
 ### Entry points
 
-- Add **Extensions** to Settings (`s`). It remains available when every extension is
+- Add **Extensions** to Settings (`s`). (Since then it lives under Settings &
+  tools, `,` then `o`.) It remains available when every extension is
   off. Use the existing picker, detail/help, search, and navigation patterns.
   Do not add a global shortcut.
 - Add these CLI forms and document them in usage:

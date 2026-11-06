@@ -3,7 +3,7 @@
 import { spawn as nodeSpawn } from 'node:child_process';
 import { stat } from 'node:fs/promises';
 import { constants, homedir } from 'node:os';
-import { resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import { createClaude } from './claude.js';
 import { createCodex } from './codex.js';
 import { display } from './display.js';
@@ -43,6 +43,7 @@ export async function lookup(providers, gid) {
   if (!validGID(gid)) {
     throw new UsageError('invalid task GID');
   }
+  const until = Date.now() + LIST_TIMEOUT_MS;
   const outcomes = await Promise.all(Object.values(providers).map(async (p) => {
     try {
       return { p, sessions: await deadline(p.list(gid), LIST_TIMEOUT_MS, p.name) };
@@ -50,7 +51,7 @@ export async function lookup(providers, gid) {
       return { p, err: providerError(err, p.name) };
     }
   }));
-  const conversations = [];
+  const linked = [];
   const diagnostics = [];
   for (const { p, sessions, err } of outcomes) {
     if (err) {
@@ -60,7 +61,7 @@ export async function lookup(providers, gid) {
     for (const s of sessions) {
       const link = ticketLink(s.name, s.tag);
       if (link.gid === gid) {
-        conversations.push({ ...record(s, gid), title: await shownTitle(p, s, gid) });
+        linked.push({ p, s });
       } else if (link.conflict.includes(gid)) {
         diagnostics.push({
           provider: p.name, code: 'metadata_conflict', severity: 'warning',
@@ -69,6 +70,11 @@ export async function lookup(providers, gid) {
       }
     }
   }
+  // Generated titles share the listing deadline; a late one keeps the saved title.
+  const conversations = await Promise.all(linked.map(async ({ p, s }) => ({
+    ...record(s, gid),
+    title: await deadline(shownTitle(p, s, gid), Math.max(0, until - Date.now()), p.name).catch(() => s.title),
+  })));
   conversations.sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''));
   const available = outcomes.some((o) => o.err?.code !== 'unavailable');
   const status = !available ? 'unavailable' : diagnostics.every((d) => d.severity === 'info') ? 'complete' : 'partial';
@@ -93,7 +99,8 @@ function record(s, gid) {
     session_id: s.sessionId,
     task_gid: gid,
     title: s.title,
-    ...(s.cwd ? { cwd: s.cwd } : {}),
+    // asanamate rejects a whole response over one relative or NUL-holding cwd.
+    ...(s.cwd && isAbsolute(s.cwd) && !s.cwd.includes('\0') ? { cwd: s.cwd } : {}),
     ...(s.branch ? { branch: s.branch } : {}),
     ...(s.updatedAt ? { updated_at: s.updatedAt } : {}),
     archived: s.archived,
@@ -150,9 +157,7 @@ export async function linkFromPrompt(providers, { provider, sessionId, gid }, lo
   return withLock(provider, sessionId, async () => {
     const saved = await readIfPersisted(p, sessionId);
     lockOptions?.signal?.throwIfAborted();
-    // Claude may not have persisted yet. Codex must stay unnamed until its
-    // first turn can generate a title; setting a name prevents generation.
-    if ((!saved && provider === 'claude') || (provider === 'codex' && saved && !saved.name)) {
+    if (p.deferLink?.(saved)) {
       const other = await savePending(lockOptions?.env, provider, sessionId, gid);
       return other ? { pendingTask: other } : null;
     }
@@ -193,13 +198,13 @@ async function retitle(p, sessionId, lockOptions) {
   await p.rename(sessionId, linkTitle(title, gids[0])).catch(() => {});
 }
 
-// Claude's first prompt can precede even the projects directory.
+// readIfPersisted returns null for a session not saved yet, including missing
+// history when the provider saves only after the first prompt.
 async function readIfPersisted(p, sessionId) {
   try {
     return await p.read(sessionId);
   } catch (err) {
-    if (p.name === 'claude' && err instanceof ProviderError && err.code === 'unavailable'
-      && err.message === 'Claude Code is not installed or has no history') {
+    if (p.missingIsUnsaved && err instanceof ProviderError && err.missing) {
       return null;
     }
     throw err;

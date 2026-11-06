@@ -139,3 +139,23 @@ func TestConversationFixtureGetsTerminalInput(t *testing.T) {
 		}
 	}
 }
+
+func TestConversationSnapshotFailureKeepsCallerRunDir(t *testing.T) {
+	dir := t.TempDir()
+	c := Context{Ticket: ticket.Ticket{Task: asana.Task{GID: "42", Name: "Selected ticket"}}}
+	var err error
+	if c.Files, err = WriteFiles(dir, c.Ticket); err != nil {
+		t.Fatal(err)
+	}
+	// A directory where the snapshot goes makes its write fail.
+	if err := os.Mkdir(filepath.Join(filepath.Dir(c.Files.JSON), "conversation.json"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	record := conversations.Record{Provider: "codex", SessionID: "id", TaskGID: "42", Activity: "unknown"}
+	if _, err := ConversationCommand(dir, "true", c, record); err == nil {
+		t.Fatal("want the snapshot write to fail")
+	}
+	if _, err := os.Stat(c.Files.JSON); err != nil {
+		t.Fatalf("the caller's run directory was removed: %v", err)
+	}
+}

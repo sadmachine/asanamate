@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/extensions"
 )
 
@@ -33,7 +34,7 @@ func runExtensions(args []string, out io.Writer) error {
 	saved := extensions.Load(path)
 	saved.Version = currentVersion()
 	if len(args) == 0 {
-		fmt.Fprintf(out, "%s\nConfig: %s\n", saved.Status(), extensions.Clean(path))
+		fmt.Fprintf(out, "%s\nConfig: %s\n", saved.Status(), display.Clean(path))
 		for _, entry := range extensions.Catalog() {
 			r := extensions.Inspect(entry, saved)
 			fmt.Fprintf(out, "\n%s (%s) — %s\n  %s\n  %s\n", entry.Name, entry.ID, entry.Benefit, r.Summary(), r.Check)

@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "test -n \"$(ls -A \"${XDG_STATE_HOME:-$HOME/.local/state}/asana-sessions/pending\" 2>/dev/null)\" || { cat >/dev/null; exit 0; }; asana-sessions hook codex",
+            "command": "d=${XDG_STATE_HOME:-}; case $d in /*) ;; *) d=$HOME/.local/state ;; esac; set -- \"$d\"/asana-sessions/pending/codex-*.json; test -e \"$1\" || { cat >/dev/null; exit 0; }; asana-sessions hook codex",
             "timeout": 15
           }
         ]

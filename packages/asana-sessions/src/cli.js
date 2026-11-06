@@ -1,11 +1,10 @@
 // Public command dispatch. Exit codes: 0 success or complete lookup, 1 failure
 // or partial/unavailable lookup, 2 usage error.
-import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
-import { parseArgs, promisify } from 'node:util';
+import { parseArgs } from 'node:util';
 import { asanamateList, asanamateOpen } from './asanamate.js';
 import { asanamateAgents } from './agent-links.js';
 import { display } from './display.js';
@@ -13,7 +12,7 @@ import { Cancelled, createProviders, link, lookup, open, unlink } from './engine
 import { ProviderError, UsageError } from './errors.js';
 import { hook } from './hook.js';
 import { parseTask } from './marker.js';
-import { helperOnPath, pluginStatus, refresh, remove, runtimeStatus, setup } from './setup.js';
+import { execNative, helperOnPath, pluginStatus, refresh, remove, runtimeStatus, setup } from './setup.js';
 
 const pkg = JSON.parse(await readFile(join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8'));
 
@@ -61,7 +60,10 @@ export async function main(argv, ctx = {}) {
     ...ctx,
   };
   c.abort ??= new AbortController();
-  c.makeProviders ??= (env) => createProviders({ env, version: VERSION, signal: c.abort.signal });
+  // Injected providers are not rebuilt from the real ones.
+  if (!ctx.providers) {
+    c.makeProviders ??= (env, signal = c.abort.signal) => createProviders({ env, version: VERSION, signal });
+  }
   c.providers ??= c.makeProviders(c.env);
   c.version ??= VERSION;
   c.io ??= terminalIO(c.stdin, c.stderr);
@@ -217,17 +219,16 @@ function printList({ conversations, diagnostics }, out) {
 // doctor checks runtimes, executables, histories, and metadata APIs without
 // starting a model turn. Missing providers are reported, not failures.
 async function doctor(c) {
-  const run = promisify(execFile);
   const runtime = await runtimeStatus(c);
   const lines = runtime.lines;
   let failed = !runtime.ok;
   for (const name of ['claude', 'codex']) {
-    try {
-      const { stdout } = await run(name, ['--version'], { env: c.env, timeout: 5000 });
-      lines.push(`ok: ${name} ${display(stdout)}`);
-    } catch (err) {
-      lines.push(err.code === 'ENOENT' ? `missing: ${name} is not on PATH` : `error: ${name} --version failed`);
-      failed ||= err.code !== 'ENOENT';
+    const version = await (c.exec ?? execNative)(name, ['--version'], c.env);
+    if (version.ok) {
+      lines.push(`ok: ${name} ${display(version.stdout)}`);
+    } else {
+      lines.push(version.missing ? `missing: ${name} is not on PATH` : `error: ${name} --version failed`);
+      failed ||= !version.missing;
     }
     try {
       await c.providers[name].probe();
@@ -237,7 +238,7 @@ async function doctor(c) {
       lines.push(`${e.code === 'unavailable' ? 'missing' : 'error'}: ${name}: ${display(e.message)}`);
       failed ||= e.code !== 'unavailable';
     }
-    const s = await pluginStatus(name, c);
+    const s = await pluginStatus(name, c, version);
     lines.push(`${s.state === 'error' ? 'error' : 'info'}: ${name} plugin: ${s.state}: ${s.detail}`);
     failed ||= s.state === 'error';
   }

@@ -7,14 +7,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/sadmachine/asanamate/internal/asana"
-	"github.com/sadmachine/asanamate/internal/dateinput"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -26,7 +26,8 @@ const taskJSON = `{"data":{"gid":"1","name":"Fix login",
   {"gid":"f3","name":"Stage","resource_subtype":"enum","enum_options":[{"gid":"o1","name":"Review"}]},
   {"gid":"f4","name":"When","resource_subtype":"date"},
   {"gid":"f5","name":"Areas","resource_subtype":"multi_enum","enum_options":[{"gid":"o2","name":"Frontend"},{"gid":"o3","name":"Backend"}]},
-  {"gid":"f6","name":"Reviewers","resource_subtype":"people"}]}}`
+  {"gid":"f6","name":"Reviewers","resource_subtype":"people"},
+  {"gid":"f7","name":"Total","resource_subtype":"number","is_formula_field":true}]}}`
 
 type write struct {
 	method, path string
@@ -151,15 +152,21 @@ func TestNeedsConfirm(t *testing.T) {
 		def, out bool
 	}{
 		{true, "1", true, false},
+		{true, "maybe", true, false},
 		{false, "0", true, false},
 		{false, "1", false, true},
+		{false, "true", false, true},
+		{false, "false", true, false},
 		{false, "", true, true},
 		{false, "", false, false},
 	}
 	for _, c := range cases {
-		if got := NeedsConfirm(c.yes, c.env, c.def); got != c.out {
-			t.Errorf("NeedsConfirm(%v, %q, %v) = %v", c.yes, c.env, c.def, got)
+		if got, err := NeedsConfirm(c.yes, c.env, c.def); err != nil || got != c.out {
+			t.Errorf("NeedsConfirm(%v, %q, %v) = %v, %v", c.yes, c.env, c.def, got, err)
 		}
+	}
+	if _, err := NeedsConfirm(false, "yes please", false); err == nil {
+		t.Error("an unrecognized value must be an error, not the config default")
 	}
 }
 
@@ -467,10 +474,14 @@ func TestSetDueRejectsBadDates(t *testing.T) {
 }
 
 func TestDateWritesResolveRelativeDates(t *testing.T) {
-	if _, err := dateinput.Resolve(ctx, "today"); err != nil {
-		t.Skipf("no GNU date: %v", err)
+	// A stub gdate resolves every relative date to one fixed day, so this runs
+	// on every platform and never depends on today.
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "gdate"), []byte("#!/bin/sh\necho 2026-10-02\n"), 0o755); err != nil {
+		t.Fatal(err)
 	}
-	tomorrow := time.Now().AddDate(0, 0, 1).Format(time.DateOnly)
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	resolved := "2026-10-02"
 	c, writes := fake(t)
 	if err := (Service{Client: c}).SetDue(ctx, "1", "+1 day"); err != nil {
 		t.Fatal(err)
@@ -481,9 +492,9 @@ func TestDateWritesResolveRelativeDates(t *testing.T) {
 	if _, err := (Service{Client: c}).Create(ctx, NewTicket{Name: "New", Parent: "1", Due: "+1 day"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(*writes) != 3 || (*writes)[0].body["due_on"] != tomorrow || (*writes)[2].body["due_on"] != tomorrow ||
-		!reflect.DeepEqual((*writes)[1].body["custom_fields"], map[string]any{"f4": map[string]any{"date": tomorrow}}) {
-		t.Fatalf("writes = %+v, want %s", *writes, tomorrow)
+	if len(*writes) != 3 || (*writes)[0].body["due_on"] != resolved || (*writes)[2].body["due_on"] != resolved ||
+		!reflect.DeepEqual((*writes)[1].body["custom_fields"], map[string]any{"f4": map[string]any{"date": resolved}}) {
+		t.Fatalf("writes = %+v, want %s", *writes, resolved)
 	}
 }
 
@@ -624,7 +635,7 @@ func TestSetFieldRejectsUnknownOrAmbiguousPeople(t *testing.T) {
 func TestSetFieldRejectsBadInput(t *testing.T) {
 	c, writes := fake(t)
 	svc := Service{Client: c}
-	for _, args := range [][2]string{{"Points", "many"}, {"Stage", "Shipped"}, {"When", "nonsense"}, {"Nope", "x"}} {
+	for _, args := range [][2]string{{"Points", "many"}, {"Points", "NaN"}, {"Points", "-Inf"}, {"Stage", "Shipped"}, {"When", "nonsense"}, {"Nope", "x"}, {"Total", "3"}} {
 		if err := svc.SetField(ctx, "1", args[0], args[1], ""); err == nil {
 			t.Errorf("SetField(%q, %q) succeeded", args[0], args[1])
 		}

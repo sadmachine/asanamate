@@ -17,6 +17,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/conversations"
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -126,11 +127,11 @@ func printConversations(w io.Writer, r conversations.Result, ok bool) {
 		fmt.Fprintln(tw, "PROVIDER\tSESSION\tUPDATED\tSTATE\tTITLE")
 		for _, c := range r.Conversations {
 			id := c.SessionID
-			if conversations.DisplayText(id) != id || strings.ContainsFunc(id, unicode.IsSpace) {
+			if display.Line(id) != id || strings.ContainsFunc(id, unicode.IsSpace) {
 				id = strconv.Quote(id)
 			}
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", conversations.DisplayText(c.Provider), id,
-				c.UpdatedLabel(), c.StateLabel(), conversations.DisplayText(c.Title))
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", display.Line(c.Provider), id,
+				c.UpdatedLabel(), c.StateLabel(), display.Line(c.Title))
 		}
 		tw.Flush()
 	}
@@ -142,7 +143,7 @@ func printConversations(w io.Writer, r conversations.Result, ok bool) {
 // diagnosticLine is one diagnostic with its recovery hint when it degrades
 // the lookup.
 func diagnosticLine(d conversations.Diagnostic) string {
-	line := fmt.Sprintf("%s: %s: %s: %s", d.Severity, conversations.DisplayText(d.Provider), d.Code, d.Message)
+	line := fmt.Sprintf("%s: %s: %s: %s", d.Severity, display.Line(d.Provider), d.Code, d.Message)
 	if hint := conversations.Guidance(d.Code); hint != "" && d.Severity != "info" {
 		line += " (" + hint + ")"
 	}

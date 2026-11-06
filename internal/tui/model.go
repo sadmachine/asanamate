@@ -119,6 +119,10 @@ type Model struct {
 	waiting         string           // loading modal text while a picker's or form's choices load
 	refreshInterval time.Duration    // auto-update interval, from saved settings or config
 	refreshSeq      uint64           // invalidates timers from earlier session intervals
+	agentSeq        uint64           // the current agent poll chain; older chains stop
+	taskSeq         uint64           // the latest task load; an older load's result is stale
+	candidatesSeq   uint64           // the latest repo candidates request
+	linkNamesSeq    uint64           // the latest linked-project names request
 
 	focusReader  bool
 	focusNav     bool   // the Places panel has focus; wide layout only
@@ -261,10 +265,10 @@ func (m *Model) Init() tea.Cmd {
 		m.setProgress("loading ticket…")
 		cmd = tea.Batch(m.loadDetail(m.deps.Ticket), m.startSpinner(), m.scheduleRefresh())
 	} else {
-		cmd = tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks()), m.startSpinner(), m.scheduleRefresh(), m.startActivity(), m.startFeed())
+		cmd = tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks(), m.taskSeq), m.startSpinner(), m.scheduleRefresh(), m.startActivity(), m.startFeed())
 	}
 	if m.deps.Config.AgentsEnabled() {
-		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents))
+		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents, m.agentSeq))
 	}
 	return tea.Batch(cmd, checkForUpdate(m.deps.Version))
 }
@@ -329,11 +333,19 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	case projectsMsg:
 		return m, m.gotProjects(msg)
 	case linkNamesMsg:
-		m.clearProgress()
 		if m.linkNames == nil {
 			m.linkNames = map[string]string{}
 		}
 		maps.Copy(m.linkNames, msg.names)
+		// The picker opens only for the latest request, and only if the user
+		// has not opened something else meanwhile.
+		if msg.seq != m.linkNamesSeq {
+			return m, nil
+		}
+		m.clearProgress()
+		if !m.idle() {
+			return m, nil
+		}
 		return m, m.openLinks()
 	case agentsMsg:
 		return m, m.gotAgents(msg)
@@ -345,11 +357,14 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 		m.frame++
 		return m, scheduleSpinner()
 	case agentTickMsg:
-		return m, loadAgents(m.deps.Config.Agents)
+		if msg.seq != m.agentSeq {
+			return m, nil
+		}
+		return m, loadAgents(m.deps.Config.Agents, msg.seq)
 	case projectFieldsMsg:
 		return m, m.gotProjectFields(msg)
 	case candidatesMsg:
-		if m.waiting != "" {
+		if m.waiting != "" && msg.seq == m.candidatesSeq {
 			m.waiting = ""
 			m.openRepoPicker(msg)
 		}
@@ -435,7 +450,9 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 
 // gotTasks applies a task list load for the viewed project.
 func (m *Model) gotTasks(msg tasksMsg) tea.Cmd {
-	if !sameProject(msg.project, m.viewProject) {
+	// A load that started before a newer one, such as an auto-refresh racing
+	// the reload after an edit, would show data from before the edit.
+	if !sameProject(msg.project, m.viewProject) || msg.seq < m.taskSeq {
 		return nil
 	}
 	refreshing := m.loading
@@ -535,13 +552,21 @@ func (m *Model) gotProjects(msg projectsMsg) tea.Cmd {
 	connectionError := m.observeAsana("loading projects", msg.err)
 	if msg.err != nil {
 		message := "loading projects: " + msg.err.Error()
-		if m.composer != nil && m.afterProjects != nil {
+		// Whatever waited for the projects is abandoned, so a later load
+		// cannot open its picker for a ticket the user has left.
+		waiting := m.afterProjects != nil
+		m.afterProjects = nil
+		if m.composer != nil && waiting {
 			m.setInlineError(message)
-			m.afterProjects = nil
 			m.composer.setError(m.status)
 			m.returnToDraft()
-		} else if !connectionError {
-			m.setBackgroundError("projects", message)
+		} else {
+			if waiting {
+				m.edit = nil // an add-project edit waiting for its picker
+			}
+			if !connectionError {
+				m.setBackgroundError("projects", message)
+			}
 		}
 		m.clearProgress()
 		return nil
@@ -591,7 +616,10 @@ func (m *Model) gotAgents(msg agentsMsg) tea.Cmd {
 			m.renderDetail(true)
 		}
 	}
-	return tea.Batch(scheduleAgents(), m.startSpinner())
+	if msg.seq != m.agentSeq {
+		return m.startSpinner()
+	}
+	return tea.Batch(scheduleAgents(msg.seq), m.startSpinner())
 }
 
 // gotProjectFields stores a project's custom fields for the column picker
@@ -741,7 +769,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		m.help = false
 		return nil
 	}
-	if m.loading {
+	if m.blockingLoad() {
 		if keys.Name("main", k) == "quit" {
 			return tea.Quit
 		}
@@ -851,19 +879,34 @@ func (m *Model) finishFilter() {
 }
 
 // reload refetches the tasks, keeping the current view until they land.
+// blockingLoad reports a task load the user started, which holds input until
+// it finishes; timer refreshes load behind the current view.
+func (m *Model) blockingLoad() bool {
+	return m.loading && !m.background
+}
+
 func (m *Model) reload() tea.Cmd {
 	// Retain the displayed ticket until its replacement arrives. Other cached
-	// tickets must be fetched again when selected after a reload.
+	// tickets must be fetched again when selected after a reload, and so must
+	// their inline images.
 	for gid := range m.details {
 		if gid != m.shownGID {
 			delete(m.details, gid)
 		}
 	}
+	shown := map[string]bool{}
+	if t, ok := m.details[m.shownGID]; ok {
+		for _, gid := range imageGIDs(t) {
+			shown[gid] = true
+		}
+	}
+	drop := m.dropImages(func(gid string) bool { return shown[gid] })
 	if m.ticketOnly() {
-		return m.loadDetail(m.deps.Ticket)
+		return tea.Batch(drop, m.loadDetail(m.deps.Ticket))
 	}
 	m.loading, m.background = true, false
-	return tea.Batch(loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks()), m.startSpinner())
+	m.taskSeq++
+	return tea.Batch(drop, loadTasks(m.deps.Client, m.deps.Config.Workspace, m.viewProject, m.pinnedTasks(), m.taskSeq), m.startSpinner())
 }
 
 // applyFilter recomputes the visible tasks and their groups, keeping the
@@ -1315,7 +1358,7 @@ func (m *Model) body() string {
 			content = m.helpView()
 		}
 		style = style.Padding(0, 2)
-	case m.waiting != "" || (m.loading && m.tasks != nil && !m.background):
+	case m.waiting != "" || (m.blockingLoad() && m.tasks != nil):
 		content = cmp.Or(m.waiting, "Loading tasks…")
 		if m.sym.spinner != nil {
 			content = m.sym.spinner[m.frame%len(m.sym.spinner)] + " " + content

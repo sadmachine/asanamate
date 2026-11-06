@@ -3,7 +3,7 @@ project_name: asanamate
 
 before:
   hooks:
-    - go mod tidy
+    - go mod tidy -diff
     - go test ./...
 
 # Each archive holds all three binaries.

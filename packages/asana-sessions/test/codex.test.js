@@ -98,6 +98,15 @@ test('a silent server times out and is stopped', async () => {
   assert.equal(server.children[0].killed, 'SIGTERM');
 });
 
+test('an oversize reply line fails before the line ends', async () => {
+  // The first request answers with an unterminated line past the limit.
+  const server = fakeServer(() => {
+    server.children[0].stdout.write('x'.repeat(5 * 1024 * 1024));
+    return undefined;
+  });
+  await assert.rejects(createCodex({ spawn: server.spawn, env }).list('42'), /malformed/);
+});
+
 test('malformed replies, unknown methods, and bad threads fail clearly', async () => {
   const malformed = fakeServer(() => 'not json');
   await assert.rejects(createCodex({ spawn: malformed.spawn, env }).list('42'), (err) => err.code === 'provider_error' && !err.message.includes('not json'));

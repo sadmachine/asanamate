@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+- `asanamate list` reads generated Claude titles concurrently, backward from
+  the end of each transcript, within the listing's 8-second deadline. A
+  title that is not found in time leaves the saved title in the listing.
+- Lookups omit a `cwd` that is relative or contains NUL, which asanamate
+  rejects along with the whole response.
+- Codex reply lines and the asanamate snapshot are limited as they are read,
+  so an oversize reply or snapshot no longer has to fit in memory first.
+- In `asanamate agents --`, one provider's 6-second lookup timeout no longer
+  stops the other provider's lookup.
+- Codex's PostToolUse hook starts the helper only while a Codex link is
+  pending. A pending Claude link or a leftover temporary file used to start
+  Node on every Codex tool call. The hook's definition changed, so review and trust
+  it again in Codex `/hooks` after upgrading.
+- `ASANA_SESSIONS_TASK` links its task once per conversation. An `unlink`
+  or `link --replace` in that conversation is no longer undone or flagged as
+  a conflict on every later prompt.
+- A hook that hits its deadline no longer blocks other writes to the same
+  conversation for 30 seconds: locks record their owner process and free at
+  once when it exits, and a slow holder no longer releases another's lock.
+- A relative `XDG_STATE_HOME` is ignored, as the XDG spec requires, instead
+  of writing state into the project directory.
+- The installer removes install directories older than the previous one once
+  plugins refresh. Each upgrade used to leave its whole directory behind.
+- Update the shipped `body-parser` (2.4.0) and `fast-uri` (3.1.9)
+  dependencies to fix published vulnerabilities.
+
 ## 0.1.3
 
 - The installer refreshes registered plugins after each install with the new

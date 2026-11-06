@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFile, execFileSync, spawnSync } from 'node:child_process';
-import { chmod, mkdir, mkdtemp, readFile, readdir, readlink, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, readdir, readlink, realpath, rm, symlink, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, join } from 'node:path';
+import { basename, delimiter, dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -59,6 +59,27 @@ test('installer handles spaces and upgrades without removing running installatio
   assert.notEqual(await realpath(command), old);
   assert.equal(execFileSync(process.execPath, [command], { encoding: 'utf8' }), '0.0.2\n');
   assert.equal(execFileSync(process.execPath, [old], { encoding: 'utf8' }), '0.0.1\n');
+});
+
+test('installer keeps only the current, previous, and recent installations', async (t) => {
+  const { root, prefix, command, library } = await fixture(t);
+  const installDir = async () => dirname(dirname(await realpath(command)));
+  const old = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const installed = [];
+  for (const version of ['0.0.1', '0.0.2', '0.0.3']) {
+    const result = install(await archive(root, version), prefix);
+    assert.equal(result.status, 0, result.stderr);
+    installed.push(await installDir());
+    await utimes(installed.at(-1), old, old);
+  }
+  const unrelated = join(library, 'keep-me');
+  await mkdir(unrelated);
+  await utimes(unrelated, old, old);
+  const result = install(await archive(root, '0.0.4'), prefix);
+  assert.equal(result.status, 0, result.stderr);
+  const current = await installDir();
+  const names = (await readdir(library)).sort();
+  assert.deepEqual(names, [basename(current), basename(installed[2]), 'keep-me'].sort());
 });
 
 test('failed dependency installation preserves command and cleans staging files', async (t) => {

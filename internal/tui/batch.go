@@ -89,6 +89,31 @@ func (m *Model) beginDraftEdit(op editOp) tea.Cmd {
 	return m.pickedEdit(op)
 }
 
+// abandonEdit ends the edit with warning, back in the comment composer when
+// one is open.
+func (m *Model) abandonEdit(warning string) {
+	m.edit = nil
+	m.setStatus(statusWarning, warning)
+	if m.composer != nil {
+		m.returnToDraft()
+	}
+}
+
+// failEdit ends the edit after what failed with err. The composer shows the
+// error inline; otherwise the status line does, except for a connection
+// failure, which the connection indicator reports.
+func (m *Model) failEdit(what string, err error) {
+	m.edit = nil
+	if m.composer != nil {
+		m.setInlineError(what + ": " + err.Error())
+		m.composer.setError(m.status)
+		m.returnToDraft()
+	} else if !connectionFailureError(err) {
+		m.setStatus(statusError, what+": "+err.Error())
+	}
+	m.clearProgress()
+}
+
 func (m *Model) returnToDraft() {
 	m.input, m.modal, m.edit = nil, nil, nil
 	if m.composer.reading {

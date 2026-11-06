@@ -30,7 +30,8 @@ func sample() Ticket {
 }
 
 // utc renders local times in UTC for the test, so expected times hold in
-// any time zone.
+// any time zone. It changes the process-wide time.Local, so no test in this
+// package may call t.Parallel.
 func utc(t *testing.T) {
 	local := time.Local
 	time.Local = time.UTC
@@ -81,7 +82,7 @@ func TestMarkdownStripsControlCharacters(t *testing.T) {
 	if strings.ContainsAny(md, "\x1b\u009b") {
 		t.Fatalf("control characters leaked: %q", md)
 	}
-	if !strings.HasPrefix(md, "# Fix [31mlogin\n") {
+	if !strings.HasPrefix(md, "# Fix login\n") {
 		t.Fatalf("title line = %q", strings.SplitN(md, "\n", 2)[0])
 	}
 }

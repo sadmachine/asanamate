@@ -10,6 +10,8 @@ import (
 	"syscall"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/sadmachine/asanamate/internal/safefile"
 )
 
 // ActionFile retains the original bytes so editing cannot silently overwrite
@@ -110,39 +112,14 @@ func SaveActionFile(dir string, file ActionFile) ([]Action, error) {
 		if !bytes.Equal(current, file.Original) {
 			return nil, errors.New("action file changed outside builder; reopen it before saving")
 		}
-		backup, err := os.CreateTemp(dir, file.Name+".*.bak")
-		if err != nil {
+		if _, err := safefile.Backup(path, current); err != nil {
 			return nil, err
 		}
-		_, writeErr := backup.Write(current)
-		if writeErr == nil {
-			writeErr = backup.Sync()
-		}
-		closeErr := backup.Close()
-		if err := errors.Join(writeErr, closeErr); err != nil {
-			os.Remove(backup.Name())
-			return nil, err
-		}
-	}
-	tmp, err := os.CreateTemp(dir, ".action-*")
-	if err != nil {
-		return nil, err
-	}
-	defer os.Remove(tmp.Name())
-	writeErr := tmp.Chmod(mode)
-	if writeErr == nil {
-		_, writeErr = tmp.Write(data.Bytes())
-	}
-	if writeErr == nil {
-		writeErr = tmp.Sync()
-	}
-	if err := errors.Join(writeErr, tmp.Close()); err != nil {
-		return nil, err
 	}
 	if file.Original == nil {
-		err = os.Link(tmp.Name(), path)
+		err = safefile.Create(path, data.Bytes(), mode)
 	} else {
-		err = os.Rename(tmp.Name(), path)
+		err = safefile.Write(path, data.Bytes(), mode)
 	}
 	if err != nil {
 		return nil, err

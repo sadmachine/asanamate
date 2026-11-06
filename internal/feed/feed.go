@@ -7,10 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
-	"unicode"
 
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/jsoncmd"
 )
 
@@ -82,14 +81,14 @@ func Fetch(ctx context.Context, command string, day time.Time) (Reply, error) {
 	if err := json.Unmarshal(out, &r); err != nil {
 		return Reply{}, fmt.Errorf("feed: %w", err)
 	}
-	source := OneLine(r.Source)
+	source := display.Line(r.Source)
 	if source == "" || len([]rune(source)) > MaxSource {
 		return Reply{}, fmt.Errorf("feed: source must be 1 to %d characters, got %q", MaxSource, r.Source)
 	}
 	if r.Items == nil {
 		return Reply{}, errors.New("feed: missing items")
 	}
-	reply := Reply{Source: source, Summary: cut(OneLine(r.Summary), MaxSummary), Icon: OneLine(r.Icon), Items: *r.Items}
+	reply := Reply{Source: source, Summary: cut(display.Line(r.Summary), MaxSummary), Icon: display.Line(r.Icon), Items: *r.Items}
 	for i, it := range reply.Items {
 		if it.Time.IsZero() {
 			return Reply{}, fmt.Errorf("feed %s: item %d needs a time", source, i+1)
@@ -99,23 +98,12 @@ func Fetch(ctx context.Context, command string, day time.Time) (Reply, error) {
 		default:
 			return Reply{}, fmt.Errorf("feed %s: item %d has unknown tone %q", source, i+1, it.Tone)
 		}
-		reply.Items[i].Text = cut(OneLine(it.Text), maxText)
+		reply.Items[i].Text = cut(display.Line(it.Text), maxText)
 		if reply.Items[i].Text == "" {
 			return Reply{}, fmt.Errorf("feed %s: item %d needs text", source, i+1)
 		}
 	}
 	return reply, nil
-}
-
-// OneLine turns control characters into spaces and collapses runs of spaces.
-func OneLine(s string) string {
-	s = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) {
-			return ' '
-		}
-		return r
-	}, s)
-	return strings.Join(strings.Fields(s), " ")
 }
 
 // cut shortens s to n characters, ending in "…" when it cuts.

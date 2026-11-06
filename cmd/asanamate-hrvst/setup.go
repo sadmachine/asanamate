@@ -11,10 +11,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
-	"time"
 
 	"github.com/BurntSushi/toml"
+
 	"github.com/sadmachine/asanamate/internal/prompt"
+	"github.com/sadmachine/asanamate/internal/safefile"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -37,7 +38,7 @@ func checkHarvest(ctx context.Context, out io.Writer, online bool, endpoint stri
 	if err != nil {
 		return err
 	}
-	credentials, err := loadHarvestCredentials(path)
+	credentials, err := credentialsFrom(settings, path)
 	if err != nil {
 		return err
 	}
@@ -337,40 +338,16 @@ func saveHarvestSettings(path string, before harvestSnapshot, settings harvestSe
 	if err := toml.NewEncoder(&encoded).Encode(values); err != nil {
 		return "", false, err
 	}
-	staged, err := os.CreateTemp(filepath.Dir(path), ".harvest-*.toml")
-	if err != nil {
-		return "", false, err
-	}
-	defer os.Remove(staged.Name())
-	if _, err := staged.Write(encoded.Bytes()); err != nil {
-		staged.Close()
-		return "", false, err
-	}
-	if err := staged.Sync(); err != nil {
-		staged.Close()
-		return "", false, err
-	}
-	if err := staged.Close(); err != nil {
-		return "", false, err
-	}
 	backup := ""
 	if before.file != nil {
-		backup = path + time.Now().Format(".2006-01-02--15-04-05.bak")
-		file, err := os.OpenFile(backup, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
-		if err != nil {
+		if backup, err = safefile.Backup(path, before.data); err != nil {
 			return "", false, err
-		}
-		_, writeErr := file.Write(before.data)
-		syncErr := file.Sync()
-		closeErr := file.Close()
-		if err := errors.Join(writeErr, syncErr, closeErr); err != nil {
-			return backup, false, err
 		}
 	}
 	if !unchanged() {
 		return backup, false, errors.New("provider settings changed during setup; settings kept")
 	}
-	if err := os.Rename(staged.Name(), path); err != nil {
+	if err := safefile.Write(path, encoded.Bytes(), 0o600); err != nil {
 		return backup, false, err
 	}
 	return backup, true, nil

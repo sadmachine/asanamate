@@ -3,7 +3,8 @@
 // PostToolUse after the title, completes them.
 // Entries hold only provider, session ID, task GID, and creation time, never
 // the prompt. Codex's PostToolUse hook command skips Node while this
-// directory is empty, so its location is part of that hook definition.
+// directory holds no codex-*.json entry, so its location and file names are
+// part of that hook definition.
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -71,7 +72,7 @@ export async function sweepPending(env, { provider, now = Date.now() } = {}) {
   let names;
   try {
     names = (await readdir(dir(env), { withFileTypes: true }))
-      .filter((e) => e.isFile() && /^(claude|codex)-[a-f0-9]{32}\.json(?:\..*\.tmp)?$/.test(e.name))
+      .filter((e) => e.isFile() && /^[a-z]+-[a-f0-9]{32}\.json(?:\..*\.tmp)?$/.test(e.name))
       .map((e) => e.name);
   } catch {
     return;

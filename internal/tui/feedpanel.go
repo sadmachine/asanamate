@@ -18,6 +18,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/feed"
 	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/ticket"
@@ -141,7 +142,7 @@ func (m *Model) gotFeed(msg feedMsg) {
 	}
 	r.seq = msg.seq
 	if msg.err != nil {
-		r.err, r.failedAt = strings.TrimPrefix(feed.OneLine(msg.err.Error()), "feed: "), m.now()
+		r.err, r.failedAt = strings.TrimPrefix(display.Line(msg.err.Error()), "feed: "), m.now()
 		return
 	}
 	*r = feedResult{reply: msg.reply, at: m.now(), seq: msg.seq}
@@ -713,7 +714,7 @@ func (m *Model) feedLine(it feedRow, selected bool, width, timeWidth int) string
 	text := style.Render(it.Text)
 	// Compare using the feed's whitespace normalization, as Harvest's notes do.
 	if it.task != nil {
-		if title := ticket.OneLine(it.task.Name); !strings.HasSuffix(it.Text, " · "+feed.OneLine(title)) {
+		if title := ticket.OneLine(it.task.Name); !strings.HasSuffix(it.Text, " · "+display.Line(title)) {
 			text += dimStyle.Render(" · ") + tagTitle(title, lipgloss.NewStyle())
 		}
 	}

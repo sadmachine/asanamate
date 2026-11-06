@@ -24,11 +24,13 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/charmbracelet/x/term"
+
 	"github.com/sadmachine/asanamate/internal/action"
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/browser"
 	"github.com/sadmachine/asanamate/internal/config"
+	"github.com/sadmachine/asanamate/internal/editor"
 	"github.com/sadmachine/asanamate/internal/extensions"
 	"github.com/sadmachine/asanamate/internal/feed"
 	"github.com/sadmachine/asanamate/internal/filter"
@@ -192,7 +194,11 @@ func newWriter(yes bool) (writeback.Service, error) {
 		return writeback.Service{}, err
 	}
 	svc := writeback.Service{Client: client, Workspace: cfg.Workspace}
-	if writeback.NeedsConfirm(yes, os.Getenv("ASANAMATE_CONFIRM_WRITES"), cfg.ConfirmWrites) {
+	confirm, err := writeback.NeedsConfirm(yes, os.Getenv("ASANAMATE_CONFIRM_WRITES"), cfg.ConfirmWrites)
+	if err != nil {
+		return writeback.Service{}, err
+	}
+	if confirm {
 		svc.Confirm = writeback.TTYConfirm
 	}
 	return svc, nil
@@ -412,21 +418,15 @@ func runConfig(args []string) error {
 	if _, err := os.Stat(path); err != nil {
 		return fmt.Errorf("%w (run asanamate setup first)", err)
 	}
-	// The value may carry arguments ("code --wait"), so the shell splits it.
-	editor := editorCommand()
-	cmd := exec.Command("sh", "-c", editor+` "$1"`, "sh", path)
+	// Like git: $VISUAL, then $EDITOR, then vi.
+	name := editor.Name("vi")
+	cmd := editor.Command(name, path)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("editor %q: %w", editor, err)
+		return fmt.Errorf("editor %q: %w", name, err)
 	}
 	_, err = config.Load(path)
 	return err
-}
-
-// editorCommand is the editor `asanamate config` runs, like git: $VISUAL,
-// then $EDITOR, then vi.
-func editorCommand() string {
-	return cmp.Or(os.Getenv("VISUAL"), os.Getenv("EDITOR"), "vi")
 }
 
 func runConfigUpdate(args []string) error {
@@ -652,8 +652,9 @@ var errDoctorBlocking = errors.New("doctor found problems that block browsing (m
 
 // runDoctor reports whether asanamate is ready to browse and which optional
 // features can work, then, for a ticket, why agents link to it or not. Only
-// core failures (config, token, workspace) make it fail. It runs no actions
-// and writes nothing.
+// core failures (config, token, workspace) make it fail. It runs the read-only
+// sources it checks (feed commands, agents.command, and, with a ticket,
+// conversations.command), but no actions, and writes nothing.
 func runDoctor(args []string) error {
 	if len(args) > 1 || (len(args) == 1 && !asana.ValidGID(args[0])) {
 		return fmt.Errorf("doctor takes at most one numeric task gid\n%s", usage)
@@ -790,7 +791,8 @@ func checkAsana(ctx context.Context, w io.Writer, workspace string) *asana.Clien
 }
 
 // checkFeatures reports the tools optional features need. Missing ones only
-// warn: browsing works without them. Custom commands are not run.
+// warn: browsing works without them. It runs no custom command: repo_source,
+// time_tracking, and project_links commands are reported but not run.
 func checkFeatures(w io.Writer, cfg config.Config) {
 	tool := func(label, name, need string) {
 		if p, err := exec.LookPath(name); err == nil {
@@ -815,9 +817,8 @@ func checkFeatures(w io.Writer, cfg config.Config) {
 	if slices.ContainsFunc(cfg.Actions, func(a config.Action) bool { return strings.Contains(a.Command, "PAGER") }) {
 		tool("pager", setup.Pager(), "pager actions need it; install less or set $PAGER")
 	}
-	editor := strings.Fields(editorCommand())
-	if len(editor) > 0 {
-		tool("editor", editor[0], "asanamate config needs it; set $EDITOR or edit the config file directly")
+	if fields := strings.Fields(editor.Name("vi")); len(fields) > 0 {
+		tool("editor", fields[0], "asanamate config needs it; set $EDITOR or edit the config file directly")
 	}
 	tool("browser", browser.Opener(), "opening tickets in a browser needs it; on Linux, install xdg-utils and a desktop browser")
 	if cfg.TimeTracking.Command == "" {

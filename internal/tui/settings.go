@@ -21,38 +21,41 @@ func onOff(on bool) string {
 // Picking a toggle flips it and reopens the menu on that row, so several can
 // change in a row.
 func (m *Model) openSettings(cursor int) {
-	toggle := func(row int, key string, change func() any) func() tea.Cmd {
+	var items []pickItem
+	// toggle builds the next row's action, so it reopens on that row.
+	toggle := func(key string, change func() any) func() tea.Cmd {
+		row := len(items)
 		return func() tea.Cmd {
 			m.saveSetting(key, change())
 			m.openSettings(row)
 			return nil
 		}
 	}
-	items := []pickItem{
-		{Label: "Separators", Hint: onOff(m.separator), Key: "s", Value: toggle(0, "list.separator", func() any { m.separator = !m.separator; return m.separator })},
-		{Label: "Header spacing", Hint: onOff(m.spacing), Key: "h", Value: toggle(1, "list.header.spacing", func() any { m.spacing = !m.spacing; return m.spacing })},
-		{Label: "Reader view", Hint: m.readerView, Key: "v", Value: toggle(2, "reader.view", func() any { m.toggleReaderView(); return m.readerView })},
-		{Label: "Selection style", Hint: m.selectionStyle, Key: "l", Value: toggle(3, "list.selection.style", func() any {
-			if m.selectionStyle == config.StyleBar {
-				m.selectionStyle = config.StyleMarker
-			} else {
-				m.selectionStyle = config.StyleBar
-			}
-			m.fitList()
-			return m.selectionStyle
-		})},
-		{Label: "Dim unfocused panes", Hint: onOff(m.focusDim), Key: "d", Value: toggle(4, "layout.focus.dim", func() any { m.focusDim = !m.focusDim; return m.focusDim })},
-		{Label: "Since you looked", Hint: onOff(m.sinceShow), Key: "w", Value: toggle(5, "reader.since.show", func() any {
-			m.sinceShow = !m.sinceShow
-			m.renderDetail(true)
-			return m.sinceShow
-		})},
-		{Label: "Theme", Hint: cmp.Or(m.deps.Config.Theme.Name, config.ThemeAuto), Key: "t", Value: func() tea.Cmd {
+	items = append(items, pickItem{Label: "Separators", Hint: onOff(m.separator), Key: "s", Value: toggle("list.separator", func() any { m.separator = !m.separator; return m.separator })})
+	items = append(items, pickItem{Label: "Header spacing", Hint: onOff(m.spacing), Key: "h", Value: toggle("list.header.spacing", func() any { m.spacing = !m.spacing; return m.spacing })})
+	items = append(items, pickItem{Label: "Reader view", Hint: m.readerView, Key: "v", Value: toggle("reader.view", func() any { m.toggleReaderView(); return m.readerView })})
+	items = append(items, pickItem{Label: "Selection style", Hint: m.selectionStyle, Key: "l", Value: toggle("list.selection.style", func() any {
+		if m.selectionStyle == config.StyleBar {
+			m.selectionStyle = config.StyleMarker
+		} else {
+			m.selectionStyle = config.StyleBar
+		}
+		m.fitList()
+		return m.selectionStyle
+	})})
+	items = append(items, pickItem{Label: "Dim unfocused panes", Hint: onOff(m.focusDim), Key: "d", Value: toggle("layout.focus.dim", func() any { m.focusDim = !m.focusDim; return m.focusDim })})
+	items = append(items, pickItem{Label: "Since you looked", Hint: onOff(m.sinceShow), Key: "w", Value: toggle("reader.since.show", func() any {
+		m.sinceShow = !m.sinceShow
+		m.renderDetail(true)
+		return m.sinceShow
+	})})
+	items = append(items,
+		pickItem{Label: "Theme", Hint: cmp.Or(m.deps.Config.Theme.Name, config.ThemeAuto), Key: "t", Value: func() tea.Cmd {
 			m.modal = nil
 			return m.openThemes()
 		}},
-		{Label: "List columns for this project", Key: "c", Value: m.openColumns},
-	}
+		pickItem{Label: "List columns for this project", Key: "c", Value: m.openColumns},
+	)
 	p := newPicker(pickValue(func(open func() tea.Cmd) tea.Cmd { return open() }), "Visual settings", items)
 	p.keySelect = true
 	p.cursor = cursor

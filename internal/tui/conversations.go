@@ -13,6 +13,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/conversations"
+	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -210,18 +211,18 @@ func sameConversationRow(a, b any) bool {
 // conversationItem shows a record's display-safe title, without the ticket
 // marker the ticket already implies; the exact identity stays in Value.
 func conversationItem(c conversations.Record) pickItem {
-	title := conversations.DisplayText(c.Title)
+	title := display.Line(c.Title)
 	title = strings.TrimSpace(strings.TrimSuffix(title, "[asana:"+c.TaskGID+"]"))
 	if title == "" {
 		title = "(untitled)"
 	}
-	provider := conversations.DisplayText(c.Provider)
-	help := []string{provider + " " + conversations.DisplayText(c.SessionID)}
+	provider := display.Line(c.Provider)
+	help := []string{provider + " " + display.Line(c.SessionID)}
 	if c.CWD != "" {
-		help = append(help, conversations.DisplayText(c.CWD))
+		help = append(help, display.Line(c.CWD))
 	}
 	if c.Branch != "" {
-		help = append(help, "branch "+conversations.DisplayText(c.Branch))
+		help = append(help, "branch "+display.Line(c.Branch))
 	}
 	return pickItem{
 		Label:  title,
@@ -245,7 +246,7 @@ func failureNotice(d conversations.Diagnostic) string {
 }
 
 func diagnosticNotice(d conversations.Diagnostic) string {
-	line := conversations.DisplayText(d.Provider) + ": " + d.Message
+	line := display.Line(d.Provider) + ": " + d.Message
 	if d.Severity != "info" {
 		line += " (" + conversations.Guidance(d.Code) + ")"
 	}
@@ -362,15 +363,7 @@ func (m *Model) focusConversation(t ticket.Ticket, selected conversations.Record
 		m.setStatus(statusError, "Focus agent failed: "+err.Error())
 		return nil
 	}
-	logPath := filepath.Join(m.deps.StateDir, "actions.log")
-	m.setProgress("Focus agent: running…")
-	return func() tea.Msg {
-		err := action.RunBackground(cmd, logPath)
-		if err != nil {
-			err = fmt.Errorf("%w; refresh conversations before retrying", err)
-		}
-		return actionDoneMsg{name: "Focus agent", log: logPath, err: err}
-	}
+	return m.runBackground("Focus agent", cmd, "refresh conversations before retrying")
 }
 
 // focusAgent runs agents.focus in the background for a, with the exports an

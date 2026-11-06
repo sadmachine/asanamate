@@ -224,7 +224,7 @@ func TestSaveHarvestSettingsGuardsAndBackups(t *testing.T) {
 				attempt = harvestSnapshot{}
 			}
 			backup, changed, err := saveHarvestSettings(path, attempt, harvestSettings{AccountID: "789", TaskID: "456"})
-			if scenario == "success" {
+			if scenario == "success" || scenario == "backup collision" {
 				if err != nil || !changed || backup == "" {
 					t.Fatalf("save: %s %v %v", backup, changed, err)
 				}
@@ -232,6 +232,13 @@ func TestSaveHarvestSettingsGuardsAndBackups(t *testing.T) {
 				info, _ := os.Stat(backup)
 				if string(data) != string(original) || info.Mode().Perm() != 0o600 {
 					t.Fatal("backup bytes/permissions wrong")
+				}
+				// A taken backup name gets a suffix instead of failing the save.
+				backups, _ := filepath.Glob(path + ".*.bak")
+				for _, name := range backups {
+					if data, _ := os.ReadFile(name); name != backup && string(data) != "existing backup" {
+						t.Fatal("backup overwritten")
+					}
 				}
 			} else {
 				if err == nil || changed {
@@ -244,15 +251,6 @@ func TestSaveHarvestSettingsGuardsAndBackups(t *testing.T) {
 					}
 				} else if string(data) != expected {
 					t.Fatalf("file overwritten: %s", data)
-				}
-				if scenario == "backup collision" {
-					backups, _ := filepath.Glob(path + ".*.bak")
-					for _, name := range backups {
-						data, _ := os.ReadFile(name)
-						if string(data) != "existing backup" {
-							t.Fatal("backup overwritten")
-						}
-					}
 				}
 			}
 		})

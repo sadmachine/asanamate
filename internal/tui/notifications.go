@@ -189,7 +189,7 @@ func (m *Model) renderStatus(level statusLevel, text string) string {
 
 func (m *Model) toastVisible() bool {
 	return m.toast != nil && len(m.notices) == 0 && !m.statusObscured() && m.width >= 12 && m.bodyHeight() >= 4 &&
-		m.waiting == "" && !(m.loading && m.tasks != nil && !m.background)
+		m.waiting == "" && !(m.blockingLoad() && m.tasks != nil)
 }
 
 // overlayToast covers the statusline without changing pane geometry or input.

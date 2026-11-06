@@ -45,6 +45,7 @@ func TestHarvestAssignmentOptions(t *testing.T) {
 }
 
 func TestHarvestAdapterUsesExternalReference(t *testing.T) {
+	fixNow(t)
 	dir := t.TempDir()
 	t.Setenv("PATH", dir)
 	request := `{"operation":"log","values":{"project_id":"123","task_id":"456","hours":"1.25","spent_date":"2026-10-05"},"asana":{"task_gid":"1","project_gid":"2","title":"Fix login","url":"https://app.asana.com/0/2/1"}}`
@@ -68,7 +69,7 @@ func TestHarvestAdapterUsesExternalReference(t *testing.T) {
 				}
 				fmt.Fprint(w, `{"id":555}`)
 			case "/":
-				if today := time.Now().Format(time.DateOnly); r.URL.Query().Get("from") != today || r.URL.Query().Get("to") != today {
+				if today := now().Format(time.DateOnly); r.URL.Query().Get("from") != today || r.URL.Query().Get("to") != today {
 					t.Errorf("today filter = %v", r.URL.Query())
 				}
 				fmt.Fprint(w, `{"time_entries":[
@@ -152,7 +153,8 @@ func TestHarvestRejectsCreatedEntryWithoutAsanaLink(t *testing.T) {
 }
 
 func TestHarvestSummaryFiltersTicketAndPaginates(t *testing.T) {
-	today := time.Now().Format(time.DateOnly)
+	fixNow(t)
+	today := now().Format(time.DateOnly)
 	credentials := filepath.Join(t.TempDir(), "config.json")
 	if err := os.WriteFile(credentials, []byte(`{"accessToken":"test-token","accountId":"789"}`), 0o600); err != nil {
 		t.Fatal(err)
@@ -205,7 +207,7 @@ func TestHarvestSummaryRejectsPartialOrInvalidData(t *testing.T) {
 		t.Run(response, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, response) }))
 			defer server.Close()
-			if _, err := harvestSummary(context.Background(), credentials, server.URL, "42"); err == nil {
+			if _, err := harvestSummary(context.Background(), testCredentials(t, credentials), server.URL, "42"); err == nil {
 				t.Fatal("invalid response accepted")
 			}
 		})
@@ -218,7 +220,7 @@ func TestHarvestSummaryRejectsPartialOrInvalidData(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	if _, err := harvestSummary(context.Background(), credentials, server.URL, "42"); err == nil || !strings.Contains(err.Error(), "403") {
+	if _, err := harvestSummary(context.Background(), testCredentials(t, credentials), server.URL, "42"); err == nil || !strings.Contains(err.Error(), "403") {
 		t.Fatalf("partial result returned: %v", err)
 	}
 }
@@ -236,7 +238,7 @@ func TestHarvestSummaryZeroAndUnitConversion(t *testing.T) {
 		{`{"time_entries":[{"hours":0.0002777778,"spent_date":"2000-01-01","is_running":false,"external_reference":{"id":"42"}}],"next_page":null}`, 1},
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, tc.response) }))
-		summary, err := harvestSummary(context.Background(), credentials, server.URL, "42")
+		summary, err := harvestSummary(context.Background(), testCredentials(t, credentials), server.URL, "42")
 		server.Close()
 		if err != nil || summary.TotalSeconds != tc.seconds || summary.TodaySeconds == nil || *summary.TodaySeconds != 0 {
 			t.Fatalf("summary = %+v, err = %v; want %d seconds", summary, err, tc.seconds)
@@ -261,7 +263,7 @@ func TestHarvestSummaryTodayAcrossPagesAndDates(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	summary, err := harvestSummary(context.Background(), credentials, server.URL, "42")
+	summary, err := harvestSummary(context.Background(), testCredentials(t, credentials), server.URL, "42")
 	if err != nil || summary.TotalSeconds != 21601 || summary.TodaySeconds == nil || *summary.TodaySeconds != 3601 {
 		t.Fatalf("summary = %+v, err = %v", summary, err)
 	}
@@ -302,7 +304,7 @@ func TestHarvestFeedListsTheDaysEntries(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	reply, err := harvestFeed(context.Background(), credentials, server.URL, "2026-10-12")
+	reply, err := harvestFeed(context.Background(), func() (harvestCredentials, error) { return loadHarvestCredentials(credentials) }, server.URL, "2026-10-12")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +321,7 @@ func TestHarvestFeedListsTheDaysEntries(t *testing.T) {
 	if running.Text != "running · 0.92h · Fuse" || running.Tone != feed.ToneWarn {
 		t.Errorf("running = %+v", running)
 	}
-	if _, err := harvestFeed(context.Background(), credentials, server.URL, "today"); err == nil {
+	if _, err := harvestFeed(context.Background(), func() (harvestCredentials, error) { return loadHarvestCredentials(credentials) }, server.URL, "today"); err == nil {
 		t.Error("bad date accepted")
 	}
 }
@@ -330,4 +332,21 @@ func TestDurationLabel(t *testing.T) {
 			t.Errorf("durationLabel(%v) = %q, want %q", hours, got, want)
 		}
 	}
+}
+
+// testCredentials loads the credentials the test environment selects.
+func testCredentials(t *testing.T, configPath string) harvestCredentials {
+	t.Helper()
+	credentials, err := loadHarvestCredentials(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return credentials
+}
+
+// fixNow stops the clock for "today" at the current time for one test.
+func fixNow(t *testing.T) {
+	fixed := time.Now()
+	now = func() time.Time { return fixed }
+	t.Cleanup(func() { now = time.Now })
 }

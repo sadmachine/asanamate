@@ -99,6 +99,7 @@ Add a "Feeds" section to `docs/extensions.md` and a row to its table.
 
   - `source`: required, 1 to 8 characters; the panel's right column.
   - `summary`: optional, cut to 24 characters, joined into the top edge.
+  - `icon`: optional, added after this spec; see `docs/extensions.md#feeds`.
   - `items`: required, may be empty. Each needs `time` (RFC 3339) and
     `text` (one line: control characters become spaces, cut to fit). A `time`
     after now is an upcoming item. `tone` is `ok`, `warn`, `error`, `muted`,

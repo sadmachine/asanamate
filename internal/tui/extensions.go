@@ -14,6 +14,8 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/sadmachine/asanamate/internal/display"
+	"github.com/sadmachine/asanamate/internal/editor"
 	"github.com/sadmachine/asanamate/internal/extensions"
 )
 
@@ -127,7 +129,7 @@ func (m *Model) extensionActions() {
 			m.modal = nil
 			return openURL(extensions.DocumentURL(a.saved.Version, "docs/extensions.md", "implementing-an-extension"))
 		}},
-		{Label: "Edit config", Hint: extensions.Clean(a.saved.Path), Value: m.editExtensionConfig},
+		{Label: "Edit config", Hint: display.Clean(a.saved.Path), Value: m.editExtensionConfig},
 	}
 	for _, contract := range a.entry.Contracts() {
 		url := extensions.DocumentURL(a.saved.Version, "docs/extensions.md", contract.Anchor)
@@ -186,7 +188,7 @@ func (m *Model) confirmExtensionCommand(title string, args []string) {
 			}}
 		})
 	}), title, []pickItem{{Label: "Run " + strings.Join(args, " "), Value: true}, {Label: "Cancel", Value: false}})
-	p.notice = "Executable: " + extensions.Clean(path) + ". Provider prompts control their own writes. Core config is not changed by this screen."
+	p.notice = "Executable: " + display.Clean(path) + ". Provider prompts control their own writes. Core config is not changed by this screen."
 	m.modal = p
 }
 
@@ -201,8 +203,7 @@ func (m *Model) editExtensionConfig() tea.Cmd {
 		a.notice = "Core setup required: run asanamate setup first. Guide and example remain available."
 		return nil
 	}
-	editor := cmp.Or(os.Getenv("VISUAL"), os.Getenv("EDITOR"), "vi")
-	cmd := exec.Command("/bin/sh", "-c", editor+` "$1"`, "asanamate-config", a.saved.Path)
+	cmd := editor.Command(editor.Name("vi"), a.saved.Path)
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return editorDoneMsg{err: err, apply: func(_ string, err error) {
 			if m.extension != a {
@@ -212,7 +213,7 @@ func (m *Model) editExtensionConfig() tea.Cmd {
 			a.report = extensions.Inspect(a.entry, a.saved)
 			a.notice = "Saved config checked. Restart asanamate to activate hand edits."
 			if err != nil {
-				a.notice = fmt.Sprintf("Config editor failed: %s. Edit %s yourself.", extensions.Clean(err.Error()), extensions.Clean(a.saved.Path))
+				a.notice = fmt.Sprintf("Config editor failed: %s. Edit %s yourself.", display.Clean(err.Error()), display.Clean(a.saved.Path))
 			}
 		}}
 	})

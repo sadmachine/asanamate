@@ -33,6 +33,7 @@ type inlineImageMsg struct {
 	id, cols, rows int
 	cell           kitty.CellSize
 	err            error
+	renderErr      error // local decoding/encoding failures do not affect connection health
 }
 
 func (m *Model) requestImageCellSize() tea.Cmd {
@@ -103,7 +104,7 @@ func loadInlineImage(c *asana.Client, gid string, id, cols, rows int, cell kitty
 			return inlineImageMsg{gid: gid, generation: generation, cell: cell, err: err}
 		}
 		seq, cols, rows, err := kitty.Inline(data, id, cols, rows, cell, inTmux)
-		return inlineImageMsg{gid: gid, generation: generation, seq: seq, id: id, cols: cols, rows: rows, cell: cell, err: err}
+		return inlineImageMsg{gid: gid, generation: generation, seq: seq, id: id, cols: cols, rows: rows, cell: cell, renderErr: err}
 	})
 }
 
@@ -126,8 +127,15 @@ func (m *Model) inlineImageLoaded(msg inlineImageMsg) tea.Cmd {
 	if img == nil || msg.generation != m.imageEpoch || msg.cell != m.imageCell {
 		return nil
 	}
-	if msg.err != nil {
-		m.setStatus(statusError, "inline image: "+msg.err.Error())
+	connectionError := m.observeAsana("loading inline image", msg.err)
+	err := msg.err
+	if err == nil {
+		err = msg.renderErr
+	}
+	if err != nil {
+		if !connectionError {
+			m.setStatus(statusError, "inline image: "+err.Error())
+		}
 		return nil
 	}
 	*img = inlineImage{id: msg.id, cols: msg.cols, rows: msg.rows}

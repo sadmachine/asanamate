@@ -200,10 +200,10 @@ func (m *Model) openGroupPicker() {
 }
 
 // pickedGroup groups the list by the named field, keeping the selected
-// ticket. A new grouping starts with every group open.
+// ticket. A new grouping starts with only its folded sections folded.
 func (m *Model) pickedGroup(by string) tea.Cmd {
 	if !strings.EqualFold(by, m.groupBy) {
-		m.foldedGroups = nil
+		m.foldedGroups = m.defaultFolds(by)
 	}
 	m.groupBy = by
 	return m.listViewChanged()

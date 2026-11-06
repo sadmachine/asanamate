@@ -522,8 +522,9 @@ root = %s
 # Optional rule groupings join the group picker (b) and list.default_view's
 # group_by. A ticket joins the first section with a match query it
 # satisfies (any list filter query; see README "Filtering"), and the rest go
-# to Other. A grouping named like a built-in one replaces it. The built-in
-# "state" grouping is:
+# to Other. A section with folded = true starts folded. A grouping named
+# like a built-in one replaces it; the built-in "now" grouping decides what
+# the Now place lists (see README "Now"). The built-in "state" grouping is:
 # [[groupings]]
 # name = "state"
 #

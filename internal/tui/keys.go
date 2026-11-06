@@ -164,6 +164,7 @@ func handlers() map[string]handler {
 		"projects": {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd {
 			return m.requestProjects(func() tea.Cmd { m.openProjectPicker(); return nil })
 		}},
+		"now":           {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.toggleNow() }},
 		"activity":      {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.openActivity() }},
 		"history":       {splitOnly: true, listOnly: true, run: do((*Model).openHistory)},
 		"next_new":      {listOnly: true, run: func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.nextNew() }},

@@ -885,7 +885,12 @@ func (m *Model) applyFilter() {
 			}
 		}
 	}
-	visible := filter.Parse(m.filterInput.Value()).Apply(m.tasks, m.filterEnv())
+	env := m.filterEnv()
+	source := m.tasks
+	if m.nowOpen {
+		source = m.nowTasks(source, env)
+	}
+	visible := filter.Parse(m.filterInput.Value()).Apply(source, env)
 	visible = slices.DeleteFunc(visible, func(t asana.Task) bool { return slices.Contains(pins, t.GID) })
 	fresh, rest := m.splitNew(visible)
 	m.visible, m.groups = m.groupList(rest)
@@ -1006,18 +1011,22 @@ func (m *Model) selectionChanged() tea.Cmd {
 	t, ok := m.selected()
 	leftViewing := m.viewing != nil && (!ok || t.GID != m.viewing.GID)
 	leftNew := m.newHeld != "" && (!ok || t.GID != m.newHeld)
-	if leftViewing || leftNew {
+	leftNow := m.nowHeld != "" && (!ok || t.GID != m.nowHeld)
+	if leftViewing || leftNew || leftNow {
 		// Moving off the viewed ticket drops it unless the view still lists
-		// it, and moving off a read New ticket lets it leave New.
+		// it, and moving off a read New or Now ticket lets it leave.
 		if leftViewing {
 			m.viewing = nil
 		}
-		m.newHeld = ""
+		m.newHeld, m.nowHeld = "", ""
 		m.applyFilter()
 		t, ok = m.selected()
 	}
 	if label, _ := m.retainedSection(m.cursor); ok && label == newLabel {
 		m.newHeld = t.GID
+	}
+	if ok && m.nowOpen {
+		m.nowHeld = t.GID
 	}
 	if !ok {
 		m.shownGID = ""
@@ -1068,9 +1077,15 @@ func (m *Model) openProjectPicker() {
 }
 
 func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {
+	return m.openList(ref, false)
+}
+
+// openList opens a project's list, My Tasks when ref is nil, or Now when now
+// is set, and loads it.
+func (m *Model) openList(ref *asana.Ref, now bool) tea.Cmd {
 	m.modal = nil
 	m.closeActivity()
-	m.viewProject, m.linked, m.viewing = ref, nil, nil
+	m.viewProject, m.linked, m.viewing, m.nowOpen, m.nowHeld = ref, nil, nil, now, ""
 	m.restoreView()
 	// The previous rows remain visible while loading the new project. Their
 	// widths must already match the new project's column choices.
@@ -1084,24 +1099,31 @@ func (m *Model) pickedProject(ref *asana.Ref) tea.Cmd {
 	return m.reload()
 }
 
-// restoreView applies the viewed project's last used grouping, sort, and filter, else
-// the configured list.default_view.
+// restoreView applies the open list's last used grouping, sort, and filter,
+// else the configured list.default_view, or for Now the now grouping.
 func (m *Model) restoreView() {
-	v, ok := m.deps.State.View(gidOf(m.viewProject))
-	if !ok {
+	v, ok := m.deps.State.View(m.viewKey())
+	switch {
+	case ok:
+	case m.nowOpen:
+		v = state.View{GroupBy: config.NowGrouping}
+	default:
 		v = state.View{GroupBy: strings.TrimSpace(m.deps.Config.List.DefaultView.GroupBy), Sort: m.deps.Config.List.DefaultView.Sort, Filter: m.deps.Config.List.DefaultView.Filter}
+	}
+	if !ok {
+		v.Folded = m.defaultFolds(v.GroupBy)
 	}
 	m.groupBy, m.sortBy, m.foldedGroups = v.GroupBy, v.Sort, slices.Clone(v.Folded)
 	m.filterInput.SetValue(v.Filter)
-	m.savedView = m.deps.State.CurrentSavedViews[gidOf(m.viewProject)]
+	m.savedView = m.deps.State.CurrentSavedViews[m.viewKey()]
 	if _, exists := m.deps.State.SavedViews[m.savedView]; !exists {
 		m.savedView = ""
 	}
 }
 
-// saveView remembers the viewed project's grouping, sort, and filter.
+// saveView remembers the open list's grouping, sort, and filter.
 func (m *Model) saveView() {
-	gid := gidOf(m.viewProject)
+	gid := m.viewKey()
 	m.deps.State.SetView(gid, m.currentView())
 	if m.savedView == "" {
 		delete(m.deps.State.CurrentSavedViews, gid)

@@ -10,7 +10,7 @@ import (
 
 // pinnedTasks returns the explicit pins for the current project or My Tasks.
 func (m *Model) pinnedTasks() []string {
-	return m.deps.State.PinnedTasks[gidOf(m.viewProject)]
+	return m.deps.State.PinnedTasks[m.viewKey()]
 }
 
 // togglePin saves the explicit pin before changing the list. Unpinning keeps
@@ -20,7 +20,7 @@ func (m *Model) togglePin(_ tea.KeyPressMsg) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	key := gidOf(m.viewProject)
+	key := m.viewKey()
 	previous := m.pinnedTasks()
 	pins := slices.Clone(previous)
 	unpin := slices.Contains(pins, t.GID)

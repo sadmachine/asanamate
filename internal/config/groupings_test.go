@@ -23,7 +23,7 @@ func TestGroupingsOverrideBuiltinsByName(t *testing.T) {
 		{Name: "review", Sections: []GroupingSection{{Label: "Waiting", Match: []string{"agent:waiting"}}}},
 	}
 	all := c.AllGroupings()
-	if len(all) != 2 || all[0].Sections[0].Label != "Mine" || all[1].Name != "review" {
+	if len(all) != 3 || all[2].Name != NowGrouping || all[0].Sections[0].Label != "Mine" || all[1].Name != "review" {
 		t.Fatalf("a configured grouping must replace the built-in one of its name: %+v", all)
 	}
 }
@@ -55,5 +55,16 @@ func TestGroupingsValidation(t *testing.T) {
 		if tc.want == "" && err != nil || tc.want != "" && (err == nil || !strings.Contains(err.Error(), tc.want)) {
 			t.Errorf("groupings %+v: error = %v, want %q", tc.groupings, err, tc.want)
 		}
+	}
+}
+
+func TestGroupingFoldedSections(t *testing.T) {
+	var c Config
+	now, ok := c.Grouping(NowGrouping)
+	if !ok {
+		t.Fatal("no built-in now grouping")
+	}
+	if got := now.FoldedSections(); len(got) != 1 || got[0] != "Waiting on others" {
+		t.Fatalf("now folds %v", got)
 	}
 }

@@ -89,10 +89,13 @@ func otherAgents(n int) string {
 // agentStates lists the states of t's agents, for filter terms.
 // filterEnv is what filter terms need beyond each ticket.
 func (m *Model) filterEnv() filter.Env {
+	newValues, waitingValues := m.attentionLookups()
 	return filter.Env{Today: m.now(), Me: m.meGID, Lookup: map[string]func(asana.Task) []string{
-		filter.KeyAgent:  m.agentStates,
-		filter.KeyBranch: m.explicitBranch,
-		filter.KeyGit:    m.gitStates,
+		filter.KeyAgent:   m.agentStates,
+		filter.KeyBranch:  m.explicitBranch,
+		filter.KeyGit:     m.gitStates,
+		filter.KeyNew:     newValues,
+		filter.KeyWaiting: waitingValues,
 	}}
 }
 

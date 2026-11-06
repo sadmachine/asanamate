@@ -26,6 +26,8 @@ type listState struct {
 	viewingRow  bool        // visible[pinnedCount] is the temporary ticket, under Viewing
 	newCount    int         // rows after Pinned and Viewing in the New section
 	newHeld     string      // the New ticket being read, kept there until the cursor leaves
+	nowOpen     bool        // the Now place: My Tasks narrowed to the now grouping's sections
+	nowHeld     string      // the Now ticket being read, kept in its section until the cursor leaves
 	sortBy      config.Sort // ordering within groups; empty By keeps Asana order
 	groupBy     string      // list field the list is grouped by; "" for none
 	listW       int         // fitted list pane width; 0 for the default split

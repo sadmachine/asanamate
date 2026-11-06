@@ -18,23 +18,38 @@ type Grouping struct {
 }
 
 // GroupingSection is one group of a Grouping. Match lists list filter
-// queries; a ticket matching any of them belongs here.
+// queries; a ticket matching any of them belongs here. Folded sections start
+// folded until the list remembers its own folds.
 type GroupingSection struct {
-	Label string   `toml:"label"`
-	Match []string `toml:"match"`
+	Label  string   `toml:"label"`
+	Match  []string `toml:"match"`
+	Folded bool     `toml:"folded,omitempty"`
 }
 
 // OtherSection labels the tickets no section of a grouping matches.
 const OtherSection = "Other"
 
+// NowGrouping names the grouping whose sections decide what the Now place
+// lists and how it groups them.
+const NowGrouping = "now"
+
 // builtinGroupings are always available unless a configured grouping takes
 // the same name.
-var builtinGroupings = []Grouping{{Name: "state", Sections: []GroupingSection{
-	{Label: "Needs me", Match: []string{"agent:waiting"}},
-	{Label: "Active", Match: []string{"agent:working", "git:dirty", "git:unpushed"}},
-	{Label: "Blocked", Match: []string{"blocked:any"}},
-	{Label: "Ready", Match: []string{"is:open"}},
-}}}
+var builtinGroupings = []Grouping{
+	{Name: "state", Sections: []GroupingSection{
+		{Label: "Needs me", Match: []string{"agent:waiting"}},
+		{Label: "Active", Match: []string{"agent:working", "git:dirty", "git:unpushed"}},
+		{Label: "Blocked", Match: []string{"blocked:any"}},
+		{Label: "Ready", Match: []string{"is:open"}},
+	}},
+	{Name: NowGrouping, Sections: []GroupingSection{
+		{Label: "Needs reply", Match: []string{"new:mention", "new:comment"}},
+		{Label: "Agent waiting", Match: []string{"agent:waiting"}},
+		{Label: "New to you", Match: []string{"new:ticket", "new:assigned"}},
+		{Label: "Updated", Match: []string{"new:change"}},
+		{Label: "Waiting on others", Match: []string{"waiting:reply", "blocked:any"}, Folded: true},
+	}},
+}
 
 // AllGroupings returns the configured groupings, then the built-in ones whose
 // names they do not take.
@@ -56,6 +71,18 @@ func (c Config) Grouping(name string) (Grouping, bool) {
 		return Grouping{}, false
 	}
 	return all[i], true
+}
+
+// FoldedSections lists the labels of g's sections that start folded.
+func (g Grouping) FoldedSections() []string {
+	var labels []string
+	for _, s := range g.Sections {
+		if s.Folded {
+			labels = append(labels, s.Label)
+		}
+	}
+	slices.Sort(labels)
+	return labels
 }
 
 // validate checks a grouping; errors start with the key they name.

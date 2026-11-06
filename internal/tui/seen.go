@@ -39,9 +39,9 @@ func (m *Model) markSeen(t asana.Task) {
 
 // splitNew separates the tickets the New section lists from the rest, in
 // order: with list.new.section on in My Tasks, the changed tickets not being
-// read, and the held one being read.
+// read, and the held one being read. Now has its own sections for those.
 func (m *Model) splitNew(tasks []asana.Task) (fresh, rest []asana.Task) {
-	if !m.deps.Config.List.New.Section || m.changed == nil {
+	if !m.deps.Config.List.New.Section || m.changed == nil || m.nowOpen {
 		return nil, tasks
 	}
 	for _, t := range tasks {

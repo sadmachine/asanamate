@@ -249,6 +249,9 @@ func (m *Model) gotActivity(msg activityMsg) tea.Cmd {
 	}
 	if !msg.partial {
 		m.saveActivity()
+		// Filters and groupings, such as Now's, can use new: and waiting:
+		// terms, which read the cached stories.
+		m.applyFilter()
 	}
 	m.filterActivity()
 	return tea.Batch(next, m.runHooks(newActivityEvents(a.cache.Entries, known)))

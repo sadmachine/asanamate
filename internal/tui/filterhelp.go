@@ -80,17 +80,17 @@ func (m *Model) filterHelpView() string {
 	if m.width < 72 {
 		return key("Filters") + "\n\n" +
 			key("words") + " search titles\n" +
-			key("section:  project:") + "\n" +
+			key("section:  project:  is:open  is:done") + "\n" +
 			key("assignee:  tag:") + " match names\n" +
-			key("is:open  is:done") + "\n" +
 			key("due:") + " overdue today week none\n" +
 			key("agent:any  agent:none  agent:<state>") + "\n" +
 			dimStyle.Render("waiting working completed idle unknown") + "\n" +
-			key("branch:  git:  blocked:") + " any none\n\n" +
+			key("branch:  git:  blocked:") + " any none\n" +
+			key("new:") + " ticket change comment\n" +
+			"  mention assigned  " + key("waiting:reply") + "\n\n" +
 			"Spaces combine terms. " + key("-term") + " excludes.\n" +
 			key(`"two words"`) + " groups words.\n\n" +
 			dimStyle.Render(`is:open section:"in progress"`) + "\n" +
-			dimStyle.Render(`-tag:blocked project:web[backlog]`) + "\n" +
 			dimStyle.Render("any key closes")
 	}
 	return key("Filters") + "\n\n" +
@@ -103,7 +103,9 @@ func (m *Model) filterHelpView() string {
 		dimStyle.Render("States: waiting, working, completed, idle, unknown") + "\n" +
 		key("branch:any  branch:none  branch:<name>") + " filter saved branches\n" +
 		key("git:dirty  git:unpushed  git:any  git:none") + " filter work on the branch\n" +
-		key("blocked:any  blocked:none") + " filter open dependencies\n\n" +
+		key("blocked:any  blocked:none") + " filter open dependencies\n" +
+		key("new:ticket  new:change  new:comment  new:mention  new:assigned") + " since you looked\n" +
+		key("waiting:reply") + " your comment is the newest\n\n" +
 		"Spaces combine terms. " + key("-term") + " excludes. " + key(`"two words"`) + " groups words.\n\n" +
 		dimStyle.Render(`is:open section:"in progress" -tag:blocked`) + "\n\n" +
 		dimStyle.Render("any key closes · return to filter")

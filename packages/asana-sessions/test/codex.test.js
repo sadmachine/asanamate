@@ -99,11 +99,12 @@ test('a silent server times out and is stopped', async () => {
 });
 
 test('an oversize reply line fails before the line ends', async () => {
-  const server = fakeServer(() => undefined);
-  const listing = createCodex({ spawn: server.spawn, env }).list('42');
-  await new Promise(setImmediate);
-  server.children[0].stdout.write('x'.repeat(5 * 1024 * 1024));
-  await assert.rejects(listing, /malformed/);
+  // The first request answers with an unterminated line past the limit.
+  const server = fakeServer(() => {
+    server.children[0].stdout.write('x'.repeat(5 * 1024 * 1024));
+    return undefined;
+  });
+  await assert.rejects(createCodex({ spawn: server.spawn, env }).list('42'), /malformed/);
 });
 
 test('malformed replies, unknown methods, and bad threads fail clearly', async () => {

@@ -5,6 +5,46 @@ section and, only when needed, a `### Changed` section; see AGENTS.md.
 Unreleased highlights wait in `unreleased/`, one file per change, until a
 release moves them here.
 
+## v0.4.5
+
+### New
+
+- **Command palette.** Find and run any command without remembering its
+  key: type a few words, see the command's key, and press `enter`. It also
+  lists your actions and commands that have no key. Try it: press `:` and
+  type `due`.
+- **Now: what needs you.** A new place lists only your tickets that need
+  you, grouped by why: Needs reply, Agent waiting, New to you, Updated, and
+  a folded Waiting on others. Opening a ticket marks it seen, and it leaves
+  Now when you move on. Try it: press `W`, or pick Now at the top of the
+  Places panel.
+- **Filter by what is new.** New terms `new:comment`, `new:mention`,
+  `new:assigned`, `new:change`, `new:ticket`, and `waiting:reply` work in
+  My Tasks and Now. Try it: press `/` and type `new:mention`.
+- **Sections that start folded.** A rule grouping section with
+  `folded = true` starts folded. Try it: see
+  [Rule groupings](https://github.com/sadmachine/asanamate#rule-groupings).
+- **Group by where work stands.** The `state` grouping sorts tickets into
+  Needs me, Active, Blocked, and Ready, from agent state, uncommitted or
+  unpushed work on the ticket's branch, and open dependencies. Try it:
+  press `b` and pick `state`.
+- **Your own groupings.** Define `[[groupings]]` in `config.toml`: sections
+  with filter queries, where each ticket joins the first section it
+  matches. Try it: copy the `state` example from
+  [Rule groupings](https://github.com/sadmachine/asanamate#rule-groupings)
+  and change its sections.
+- **Filter by git and blockers.** New terms `git:dirty`, `git:unpushed`,
+  `blocked:any`, and `branch:<name>`. Try it: press `/` and type
+  `git:dirty`.
+
+### Changed
+
+- **The Places panel lists only places.** The wide-screen sidebar, renamed
+  from Views to Places, lists My Tasks, Activity, saved views, and projects.
+  Grouping, sorting, the Activity filter, and agent counts moved out of it;
+  they already show in the bottom bar. Try it: press `b` to group, `B` to
+  sort, and `[`/`]` in Activity.
+
 ## v0.4.4
 
 ### New

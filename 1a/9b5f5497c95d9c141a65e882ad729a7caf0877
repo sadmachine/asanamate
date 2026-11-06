@@ -1,0 +1,21 @@
+packages/asana-sessions/plugins/codex/asana-sessions/hooks/hooks.json
+  s_ba5d61e9a44b8c::t_9c806e8bc51892 19
+packages/asana-sessions/test/hook.test.js
+  s_ba5d61e9a44b8c::t_90c81c138529ea 3,152-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a9b5f5497c95d9c141a65e882ad729a7caf0877",
+  "prompts": {},
+  "sessions": {
+    "s_ba5d61e9a44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "271d0972-e603-4488-aeb4-86796c16759a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

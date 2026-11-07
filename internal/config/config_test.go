@@ -753,6 +753,20 @@ func TestFeedConfig(t *testing.T) {
 	}
 }
 
+func TestPullRequestsConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n"))
+	if err != nil || cfg.PullRequests.Commands == nil || len(cfg.PullRequests.Commands) != 0 {
+		t.Fatalf("default pull requests = %+v, err = %v", cfg.PullRequests, err)
+	}
+	cfg, err = Load(writeFile(t, "workspace = \"1\"\n[pull_requests]\ncommands = [\"asanamate-github\", \"asanamate-gitlab\"]\n"))
+	if err != nil || !slices.Equal(cfg.PullRequests.Commands, []string{"asanamate-github", "asanamate-gitlab"}) {
+		t.Fatalf("pull requests = %+v, err = %v", cfg.PullRequests, err)
+	}
+	if _, err := Load(writeFile(t, "workspace = \"1\"\n[pull_requests]\ncommands = [\" \"]\n")); err == nil || !strings.Contains(err.Error(), "pull_requests.commands") {
+		t.Fatalf("blank command error = %v", err)
+	}
+}
+
 const hookTimeTracking = "[time_tracking]\nid = \"hrvst\"\ncommand = \"p\"\n"
 
 func TestHooksLoad(t *testing.T) {

@@ -86,7 +86,9 @@ type Config struct {
 	Picker    Picker     `toml:"picker"`
 	Activity  Activity   `toml:"activity"`
 	Feed      Feed       `toml:"feed"`
-	Mouse     Mouse      `toml:"mouse"`
+	// PullRequests is off until a command is listed.
+	PullRequests PullRequests `toml:"pull_requests"`
+	Mouse        Mouse        `toml:"mouse"`
 	// WhatsNew controls the what's-new modal shown after an upgrade.
 	WhatsNew WhatsNew `toml:"whats_new"`
 	// Keys overrides key bindings: scope, then binding name, then keys. See
@@ -333,6 +335,14 @@ type Feed struct {
 	Commands        []string `toml:"commands"`
 }
 
+// PullRequests configures the commands that return each ticket's pull
+// requests (merge requests on GitLab), with the pull requests protocol
+// (docs/extensions.md). Every command gets the same request and answers for
+// the repos on its host; they run with the Feed panel's refresh.
+type PullRequests struct {
+	Commands []string `toml:"commands"`
+}
+
 // Feed.Expand values.
 const (
 	ExpandAuto      = "auto"
@@ -423,13 +433,14 @@ func Default() Config {
 			Layout:          LayoutSingle, Fields: []string{"section", "due"},
 			Header: Header{Style: StyleRule}, Selection: Selection{Style: StyleMarker},
 		},
-		Reader:   Reader{View: ViewCards, Comments: Comments{Latest: 3, PreviewLines: 2}, Since: Since{Show: true}},
-		Images:   Images{Mode: "auto"},
-		Activity: Activity{RefreshInterval: "2m"},
-		Feed:     Feed{Expand: ExpandAuto, Height: 12, RefreshInterval: "1m", Commands: []string{}},
-		Mouse:    Mouse{Enabled: true},
-		WhatsNew: WhatsNew{OnStartup: true},
-		Keymap:   keymap.Default(),
+		Reader:       Reader{View: ViewCards, Comments: Comments{Latest: 3, PreviewLines: 2}, Since: Since{Show: true}},
+		Images:       Images{Mode: "auto"},
+		Activity:     Activity{RefreshInterval: "2m"},
+		Feed:         Feed{Expand: ExpandAuto, Height: 12, RefreshInterval: "1m", Commands: []string{}},
+		PullRequests: PullRequests{Commands: []string{}},
+		Mouse:        Mouse{Enabled: true},
+		WhatsNew:     WhatsNew{OnStartup: true},
+		Keymap:       keymap.Default(),
 	}
 }
 
@@ -631,6 +642,11 @@ func (c Config) validate() error {
 	for _, f := range c.Feed.Commands {
 		if strings.TrimSpace(f) == "" {
 			return errors.New("feed.commands must not hold a blank command")
+		}
+	}
+	for _, command := range c.PullRequests.Commands {
+		if strings.TrimSpace(command) == "" {
+			return errors.New("pull_requests.commands must not hold a blank command")
 		}
 	}
 	for _, f := range c.List.Fields {

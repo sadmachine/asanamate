@@ -38,6 +38,7 @@ const NowGrouping = "now"
 var builtinGroupings = []Grouping{
 	{Name: "state", Sections: []GroupingSection{
 		{Label: "Needs me", Match: []string{"agent:waiting"}},
+		{Label: "In review", Match: []string{"pr:open", "pr:draft"}},
 		{Label: "Active", Match: []string{"agent:working", "git:dirty", "git:unpushed"}},
 		{Label: "Blocked", Match: []string{"blocked:any"}},
 		{Label: "Ready", Match: []string{"is:open"}},
@@ -45,9 +46,10 @@ var builtinGroupings = []Grouping{
 	{Name: NowGrouping, Sections: []GroupingSection{
 		{Label: "Needs reply", Match: []string{"new:mention", "new:comment"}},
 		{Label: "Agent waiting", Match: []string{"agent:waiting"}},
+		{Label: "Review feedback", Match: []string{"review:changes", "checks:failing"}},
 		{Label: "New to you", Match: []string{"new:ticket", "new:assigned"}},
 		{Label: "Updated", Match: []string{"new:change"}},
-		{Label: "Waiting on others", Match: []string{"waiting:reply", "blocked:any"}, Folded: true},
+		{Label: "Waiting on others", Match: []string{"waiting:reply", "review:pending", "blocked:any"}, Folded: true},
 	}},
 }
 

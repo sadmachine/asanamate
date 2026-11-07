@@ -87,11 +87,12 @@ func (m *Model) filterHelpView() string {
 			dimStyle.Render("waiting working completed idle unknown") + "\n" +
 			key("branch:  git:  blocked:") + " any none\n" +
 			key("new:") + " ticket change comment\n" +
-			"  mention assigned  " + key("waiting:reply") + "\n\n" +
-			"Spaces combine terms. " + key("-term") + " excludes.\n" +
-			key(`"two words"`) + " groups words.\n\n" +
-			dimStyle.Render(`is:open section:"in progress"`) + "\n" +
-			dimStyle.Render("any key closes")
+			"  mention assigned  " + key("waiting:reply") + "\n" +
+			key("pr:") + " open draft merged closed\n" +
+			key("checks:") + " passing failing pending\n" +
+			key("review:") + " approved changes pending\n\n" +
+			"Spaces combine; " + key("-term") + " excludes;\n" +
+			key(`"two words"`) + " groups. " + dimStyle.Render("any key closes")
 	}
 	return key("Filters") + "\n\n" +
 		key("words") + " search titles\n" +
@@ -105,7 +106,10 @@ func (m *Model) filterHelpView() string {
 		key("git:dirty  git:unpushed  git:any  git:none") + " filter work on the branch\n" +
 		key("blocked:any  blocked:none") + " filter open dependencies\n" +
 		key("new:ticket  new:change  new:comment  new:mention  new:assigned") + " since you looked\n" +
-		key("waiting:reply") + " your comment is the newest\n\n" +
+		key("waiting:reply") + " your comment is the newest\n" +
+		key("pr:open  pr:draft  pr:merged  pr:closed") + " filter pull requests\n" +
+		key("checks:passing  checks:failing  checks:pending") + " checks of open pull requests\n" +
+		key("review:approved  review:changes  review:pending") + " reviews of open pull requests\n\n" +
 		"Spaces combine terms. " + key("-term") + " excludes. " + key(`"two words"`) + " groups words.\n\n" +
 		dimStyle.Render(`is:open section:"in progress" -tag:blocked`) + "\n\n" +
 		dimStyle.Render("any key closes · return to filter")

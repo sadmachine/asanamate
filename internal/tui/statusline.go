@@ -55,6 +55,8 @@ func (m *Model) mode() (name string, pill lipgloss.Style, hints [][2]string) {
 				hints = append(hints, [2]string{open, "switch tab"})
 			} else if m.fieldKey == allCommentsKey {
 				hints = append(hints, [2]string{open, "show all"})
+			} else if strings.HasPrefix(m.fieldKey, prKeyPrefix) {
+				hints = append(hints, [2]string{open, "open pull request"})
 			} else if t, ok := m.selectedDetail(); ok && m.selectedComment(t) != nil {
 				hint := "comment menu"
 				if m.clipped[m.fieldKey] {

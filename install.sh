@@ -82,6 +82,10 @@ want asanamate-hrvst harvest "$(go_installed ./cmd/asanamate-hrvst)" &&
     packages="$packages ./cmd/asanamate-hrvst"
 want asanamate-ccmux ccmux "$(go_installed ./cmd/asanamate-ccmux)" &&
     packages="$packages ./cmd/asanamate-ccmux"
+want asanamate-github github "$(go_installed ./cmd/asanamate-github)" &&
+    packages="$packages ./cmd/asanamate-github"
+want asanamate-gitlab gitlab "$(go_installed ./cmd/asanamate-gitlab)" &&
+    packages="$packages ./cmd/asanamate-gitlab"
 managed=$(sessions_managed)
 other=$(command -v asana-sessions || true)
 if ! $managed && [ -n "$other" ]; then

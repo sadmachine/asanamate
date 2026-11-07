@@ -8,6 +8,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/conversations"
 	"github.com/sadmachine/asanamate/internal/feed"
 	"github.com/sadmachine/asanamate/internal/projectlinks"
+	"github.com/sadmachine/asanamate/internal/pullrequests"
 	"github.com/sadmachine/asanamate/internal/timetracking"
 )
 
@@ -29,6 +30,7 @@ func Contracts() []Contract {
 		{ID: "time-tracking", Name: "Time tracking", Version: timetracking.ProtocolVersion, Transport: "JSON request on stdin; form/summary JSON on stdout; log exit status", Configuration: "time_tracking.id, time_tracking.command", Operations: "required: form, log; optional: summary and its today_seconds daily total", Anchor: "time-tracking"},
 		{ID: "project-links", Name: "Project links", Version: projectlinks.ProtocolVersion, Transport: "JSON request on stdin; JSON reply on stdout", Configuration: "project_links.command", Operations: "required: links; provider-specific link types pass through unchanged", Anchor: "project-links"},
 		{ID: "feeds", Name: "Feeds", Version: feed.ProtocolVersion, Transport: "JSON request on stdin; JSON reply on stdout", Configuration: "feed.commands", Operations: "required: feed (read-only)", Anchor: "feeds"},
+		{ID: "pull-requests", Name: "Pull requests", Version: pullrequests.ProtocolVersion, Transport: "JSON request on stdin; JSON reply on stdout", Configuration: "pull_requests.commands", Operations: "required: lookup (read-only); answer only for repos on your host", Anchor: "pull-requests"},
 		{ID: "conversation-discovery", Name: "Conversation discovery", Version: conversations.ProtocolVersion, Transport: "JSON request on stdin; records and diagnostics on stdout", Configuration: "conversations.command (requires conversations.open too)", Operations: "required: list; partial results retain diagnostics; native IDs are opaque", Anchor: "discovery"},
 		{ID: "conversation-open", Name: "Conversation open", Version: conversations.ProtocolVersion, Transport: "private selected-record snapshot via ASANAMATE_CONVERSATION_JSON; terminal stdin/stdout/stderr", Configuration: "conversations.open (requires conversations.command too)", Operations: "required: open; revalidate selected identity and ticket link before terminal resume", Anchor: "foreground-opening"},
 	}

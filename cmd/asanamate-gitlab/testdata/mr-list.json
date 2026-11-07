@@ -1,0 +1,14 @@
+[
+  {"iid":12,"title":"Fix login redirect","web_url":"https://gitlab.example.com/acme/web/-/merge_requests/12","state":"opened","draft":false,
+   "source_branch":"feature/login","description":"","updated_at":"2026-11-05T09:05:00.000-05:00","author":{"username":"zed"},
+   "detailed_merge_status":"not_approved"},
+  {"iid":13,"title":"Draft: redirect tests","web_url":"https://gitlab.example.com/acme/web/-/merge_requests/13","state":"opened","draft":true,
+   "source_branch":"tests","description":"Unrelated","updated_at":"2026-11-05T10:00:00.000-05:00","author":{"username":"amy"},
+   "detailed_merge_status":"draft_status"},
+  {"iid":10,"title":"Old login fix","web_url":"https://gitlab.example.com/acme/web/-/merge_requests/10","state":"merged","draft":false,
+   "source_branch":"other","description":"Closes https://app.asana.com/0/7/1201","updated_at":"2026-11-01T09:00:00.000Z","author":{"username":"zed"},
+   "detailed_merge_status":"not_open"},
+  {"iid":9,"title":"Abandoned","web_url":"https://gitlab.example.com/acme/web/-/merge_requests/9","state":"closed","draft":false,
+   "source_branch":"feature/other","description":"","updated_at":"2026-10-30T09:00:00.000Z","author":{"username":"zed"},
+   "detailed_merge_status":"not_open"}
+]

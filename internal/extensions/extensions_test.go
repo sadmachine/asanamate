@@ -23,7 +23,7 @@ func TestDiscoveryDoesNotExecuteCommands(t *testing.T) {
 	t.Setenv("PATH", dir)
 	marker := filepath.Join(dir, "executed")
 	t.Setenv("ADDON_MARKER", marker)
-	for _, name := range []string{"asanamate-hrvst", "hrvst", "node", "npm", "asanamate-ccmux", "ccmux", "tmux", "asanamate-hub", "asana-sessions"} {
+	for _, name := range []string{"asanamate-hrvst", "hrvst", "node", "npm", "asanamate-ccmux", "ccmux", "tmux", "asanamate-hub", "asana-sessions", "asanamate-github", "gh", "asanamate-gitlab", "glab"} {
 		tool(t, dir, name, `printf ran > "$ADDON_MARKER"; exit 1`)
 	}
 	cfg := config.Default()
@@ -172,5 +172,32 @@ test -n "$HUB_CLIENT_ID" && test -n "$HUB_CLIENT_SECRET"`)
 	r = Check(context.Background(), e, saved)
 	if !r.Failed || !strings.Contains(r.Next, "HUB_CLIENT_SECRET") || strings.Contains(r.Check, "dummy-id") {
 		t.Fatalf("%+v", r)
+	}
+}
+
+// Each pull request adapter is its own entry, configured by its own name in
+// the shared pull_requests.commands list, and checked with its own CLI.
+func TestPullRequestAdaptersShareTheCommandList(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("PATH", dir)
+	cfg := config.Default()
+	cfg.PullRequests.Commands = []string{"asanamate-github", "custom-gitea"}
+	github, _ := Find("github")
+	gitlab, _ := Find("gitlab")
+	if r := Inspect(github, Saved{Config: cfg}); !r.Capabilities[0].Configured {
+		t.Fatalf("github: %+v", r.Capabilities)
+	}
+	if r := Inspect(gitlab, Saved{Config: cfg}); r.Capabilities[0].Configured {
+		t.Fatalf("gitlab: %+v", r.Capabilities)
+	}
+	if _, known := KnownCommand("pull_requests.commands", "asanamate-gitlab"); !known {
+		t.Fatal("asanamate-gitlab is a known provider")
+	}
+	for _, e := range []Entry{github, gitlab} {
+		tool(t, dir, e.Check[0], `test "$#" = 1 && test "$1" = check`)
+		tool(t, dir, e.Dependencies[0], "exit 0")
+		if r := Check(context.Background(), e, Saved{Config: cfg}); r.Failed || !strings.Contains(r.Check, "local check passed: "+e.Check[0]+" check") {
+			t.Fatalf("%s: %+v", e.ID, r)
+		}
 	}
 }

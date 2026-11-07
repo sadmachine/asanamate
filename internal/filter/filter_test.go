@@ -188,7 +188,7 @@ func TestBlockedAndGitTerms(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-	for _, q := range []string{"", "fix login", "agent:waiting -git:dirty", `section:"in review"`, "-blocked:any", "new:mention waiting:reply"} {
+	for _, q := range []string{"", "fix login", "agent:waiting -git:dirty", `section:"in review"`, "-blocked:any", "new:mention waiting:reply", "pr:open checks:failing review:changes"} {
 		if err := Validate(q); err != nil {
 			t.Errorf("Validate(%q) = %v", q, err)
 		}

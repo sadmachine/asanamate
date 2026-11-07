@@ -12,7 +12,7 @@ func TestExtensionsWithoutCoreSetupOrToken(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("ASANA_ACCESS_TOKEN", "")
 	t.Setenv("PATH", t.TempDir())
-	for _, args := range [][]string{nil, {"harvest"}, {"ccmux"}, {"hub"}, {"asana-sessions"}, {"actions"}} {
+	for _, args := range [][]string{nil, {"harvest"}, {"ccmux"}, {"github"}, {"gitlab"}, {"hub"}, {"asana-sessions"}, {"actions"}} {
 		var out strings.Builder
 		if err := runExtensions(args, &out); err != nil {
 			t.Fatalf("%v: %v", args, err)
@@ -21,7 +21,7 @@ func TestExtensionsWithoutCoreSetupOrToken(t *testing.T) {
 			t.Fatal(out.String())
 		}
 		if len(args) == 0 {
-			for _, name := range []string{"Harvest", "ccmux", "imarc Hub", "Conversation history", "Actions and custom commands"} {
+			for _, name := range []string{"Harvest", "ccmux", "GitHub pull requests", "GitLab merge requests", "imarc Hub", "Conversation history", "Actions and custom commands"} {
 				if !strings.Contains(out.String(), name) {
 					t.Errorf("missing %s: %s", name, out.String())
 				}
@@ -33,7 +33,7 @@ func TestExtensionsWithoutCoreSetupOrToken(t *testing.T) {
 		err := runExtensions(args, &out)
 		if err == nil {
 			t.Errorf("accepted %v", args)
-		} else if args[len(args)-1] == "unknown" && !strings.Contains(err.Error(), "available IDs: harvest, ccmux, hub, asana-sessions, actions") {
+		} else if args[len(args)-1] == "unknown" && !strings.Contains(err.Error(), "available IDs: harvest, ccmux, github, gitlab, hub, asana-sessions, actions") {
 			t.Fatal(err)
 		}
 	}

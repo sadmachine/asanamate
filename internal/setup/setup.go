@@ -432,6 +432,14 @@ refresh_interval = "1m"
 # entries, add "asanamate-hrvst".
 commands = []
 
+# Optional: show each ticket's pull requests (merge requests on GitLab) in the
+# reader, and filter and group by them with pr:, checks:, and review:. Each
+# command answers for the repos on its host; they run with the feeds. Use
+# "asanamate-github" (needs gh) and "asanamate-gitlab" (needs glab), or your
+# own provider (docs/extensions.md#pull-requests).
+[pull_requests]
+# commands = ["asanamate-github", "asanamate-gitlab"]
+
 [mouse]
 # The wheel scrolls the pane under the pointer; a click focuses a pane and
 # selects a row; a double click runs enter; clicking a statusline hint runs
@@ -544,6 +552,10 @@ root = %s
 # [[groupings.sections]]
 # label = "Needs me"
 # match = ["agent:waiting"]
+#
+# [[groupings.sections]]
+# label = "In review"
+# match = ["pr:open", "pr:draft"]
 #
 # [[groupings.sections]]
 # label = "Active"

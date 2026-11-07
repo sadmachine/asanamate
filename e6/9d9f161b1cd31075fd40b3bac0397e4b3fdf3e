@@ -1,0 +1,143 @@
+cmd/asanamate/pullrequests_test.go
+  s_bb489362de7baa::t_6e1324ee8845b2 1-33
+internal/tui/statusline.go
+  s_bb489362de7baa::t_074f4323ccd4dd 58-59
+docs/deferred-ideas.md
+  s_bb489362de7baa::t_7c845b83614947 206-221
+internal/filter/filter.go
+  s_bb489362de7baa::t_321d6700dbd498 17-19,36,45-47,51
+cmd/asanamate/extensions_test.go
+  s_bb489362de7baa::t_7e981756a168fd 15,24,36
+docs/specs/README.md
+  s_bb489362de7baa::t_7c845b83614947 39
+internal/tui/filterhelp.go
+  s_bb489362de7baa::t_fdd4ac0388ca4c 90-95,109-112
+internal/filter/filter_test.go
+  s_bb489362de7baa::t_059e0acea0b78a 191
+internal/prhost/prhost.go
+  s_bb489362de7baa::t_8b74bed20a40a1 1-307
+internal/extensions/contracts_test.go
+  s_bb489362de7baa::t_afc69d9819b621 34
+cmd/asanamate/main.go
+  s_bb489362de7baa::t_a57f01d9863fed 658-659
+  s_bb489362de7baa::t_ee120c52cf9f14 39,703-707,761,890-917
+  s_bb489362de7baa::t_c83a3f6a7d6e0a 98
+  s_bb489362de7baa::t_d91cd7c6b8ef58 918-919
+README.md
+  s_bb489362de7baa::t_c83a3f6a7d6e0a 787-788
+  s_bb489362de7baa::t_38776326069de2 1427-1428
+  s_bb489362de7baa::t_73555e9c29f9ab 47-49,55,61-63,92-93,98-101,120-121,138-139,156,211,243-245,587-595,599-600,639-640,643-644,877,952-955,983-986,997,1389-1426,1429-1449
+  s_bb489362de7baa::t_d8eaeaf409987e 1450
+internal/config/config.go
+  s_bb489362de7baa::t_9e2cef3b3edfd3 647-648
+  s_bb489362de7baa::t_c25ed08e6e8d6d 89-91,338-345,436-443,649
+  s_bb489362de7baa::t_937dcb18b0fdcf 650-651
+internal/extensions/catalog.go
+  s_bb489362de7baa::t_afc69d9819b621 99-134,195
+internal/pullrequests/testdata/provider.sh
+  s_bb489362de7baa::t_11ab039eefc5d9 1-26
+internal/tui/feedpanel.go
+  s_bb489362de7baa::t_387a433a8cf8cd 23,42,120-123,160,165-167,170-175,177,180,182,184-190,493-495
+  s_bb489362de7baa::t_1341c98dfcff61 31-41
+internal/tui/listrow.go
+  s_bb489362de7baa::t_387a433a8cf8cd 100-102
+  s_bb489362de7baa::t_1341c98dfcff61 15
+internal/pullrequests/pullrequests_test.go
+  s_bb489362de7baa::t_11ab039eefc5d9 1-96,98-117
+  s_bb489362de7baa::t_c25ed08e6e8d6d 97
+cmd/asanamate-github/main.go
+  s_bb489362de7baa::t_fd39803187e7c4 1-120
+internal/pullrequests/main_test.go
+  s_bb489362de7baa::t_11ab039eefc5d9 1-13
+internal/pullrequests/pullrequests.go
+  s_bb489362de7baa::t_2df3815a6c6b2d 1-213
+cmd/asanamate-gitlab/main.go
+  s_bb489362de7baa::t_b14a6ea6740093 94
+  s_bb489362de7baa::t_a4a133694c39a0 1-93,95-132
+internal/extensions/extensions_test.go
+  s_bb489362de7baa::t_fe025d885d8b09 26,177-202
+  s_bb489362de7baa::t_58e69e754663f1 203
+cmd/asanamate-gitlab/testdata/mr-list.json
+  s_bb489362de7baa::t_4dc39e5fa2cf5f 1-14
+internal/tui/pullrequests_test.go
+  s_bb489362de7baa::t_3237e6a119b8d5 32-34,88
+  s_bb489362de7baa::t_c41189f0b24201 144-145
+  s_bb489362de7baa::t_fc5f7213815a92 135
+  s_bb489362de7baa::t_cf91be4eb79e64 1-31,35-87,89-129,131-134,136-143,146-176
+  s_bb489362de7baa::t_a6f197d622632f 130
+internal/config/groupings.go
+  s_bb489362de7baa::t_059e0acea0b78a 41,49,52
+internal/extensions/contracts.go
+  s_bb489362de7baa::t_afc69d9819b621 11,33
+cmd/asanamate-gitlab/main_test.go
+  s_bb489362de7baa::t_4dc39e5fa2cf5f 1-133
+internal/tui/reader.go
+  s_bb489362de7baa::t_074f4323ccd4dd 106
+internal/tui/extensions_test.go
+  s_bb489362de7baa::t_780237d3e80152 29-31
+internal/tui/jumpmenu.go
+  s_bb489362de7baa::t_074f4323ccd4dd 19
+cmd/asanamate-gitlab/testdata/glab
+  s_bb489362de7baa::t_4dc39e5fa2cf5f 1-15
+internal/config/config_test.go
+  s_bb489362de7baa::t_ff5cd7122ecd1e 756-769
+internal/tui/pullrequests.go
+  s_bb489362de7baa::t_e430c1f8e27f44 1-232,235-237
+  s_bb489362de7baa::t_387a433a8cf8cd 233-234
+cmd/asanamate-gitlab/testdata/mr-12.json
+  s_bb489362de7baa::t_4dc39e5fa2cf5f 1-3
+internal/setup/setup_test.go
+  s_bb489362de7baa::t_ff5cd7122ecd1e 232-233,375-386
+  s_bb489362de7baa::t_0a5850e5c24b17 387-388
+internal/whatsnew/unreleased/pull-requests.md
+  s_bb489362de7baa::t_7c845b83614947 1-10
+internal/jsoncmd/jsoncmd.go
+  s_bb489362de7baa::t_7260e9638c774d 58-59,62,64
+  s_bb489362de7baa::t_a62898910221ff 40-47,50,80-81,84,108,111,113,116,118,120
+internal/setup/setup.go
+  s_bb489362de7baa::t_6d808aa9ce0574 435-439,441-442
+  s_bb489362de7baa::t_4378cd3a82a6a6 440
+  s_bb489362de7baa::t_fc300063c2c63a 557-558
+  s_bb489362de7baa::t_8a43deb43430b2 559-560
+internal/jsoncmd/jsoncmd_test.go
+  s_bb489362de7baa::t_41bff79dc2343e 131-137
+internal/tui/model.go
+  s_bb489362de7baa::t_387a433a8cf8cd 308-311,498
+internal/tui/cards.go
+  s_bb489362de7baa::t_074f4323ccd4dd 102-116,149,177,184
+internal/prhost/prhost_test.go
+  s_bb489362de7baa::t_d7d922a0232a70 1-215
+cmd/asanamate-github/testdata/pr-list.json
+  s_bb489362de7baa::t_35fe8b473aaaed 1-16
+docs/extensions.md
+  s_bb489362de7baa::t_32dc339996139c 20,1003-1143
+cmd/asanamate-github/testdata/gh
+  s_bb489362de7baa::t_35fe8b473aaaed 1-12
+internal/tui/keys.go
+  s_bb489362de7baa::t_dfa52bded02588 252-253
+  s_bb489362de7baa::t_074f4323ccd4dd 283-284
+cmd/asanamate-github/main_test.go
+  s_bb489362de7baa::t_35fe8b473aaaed 1-121
+.github/workflows/ci.yml
+  s_bb489362de7baa::t_9c65f58200396c 61-62,99,109-110
+.goreleaser.yaml
+  s_bb489362de7baa::t_d245d423eccff7 9,39-57,91,97
+install.sh
+  s_bb489362de7baa::t_69ad3dc29f289a 85-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e69d9f161b1cd31075fd40b3bac0397e4b3fdf3e",
+  "prompts": {},
+  "sessions": {
+    "s_bb489362de7baa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2530a683-699a-4127-802b-c113d59ffe17",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

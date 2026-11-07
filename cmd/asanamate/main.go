@@ -36,6 +36,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/filter"
 	"github.com/sadmachine/asanamate/internal/kitty"
 	"github.com/sadmachine/asanamate/internal/listing"
+	"github.com/sadmachine/asanamate/internal/pullrequests"
 	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/setup"
 	"github.com/sadmachine/asanamate/internal/state"
@@ -94,7 +95,7 @@ const usage = `usage:
                                                    to a task (needs [conversations]; no Asana token)
   asanamate conversation open <gid | url> --provider <name> --session <id>
                                                    resume one exact linked conversation in this terminal
-  asanamate doctor [<gid>]                         check setup and optional tools; for a ticket, why agents link (or not)
+  asanamate doctor [<gid>]                         check setup and optional tools; for a ticket, why agents link (or not) and its pull requests
   asanamate whats-new                              print release highlights up to this version
   asanamate version
 `
@@ -654,7 +655,8 @@ var errDoctorBlocking = errors.New("doctor found problems that block browsing (m
 // features can work, then, for a ticket, why agents link to it or not. Only
 // core failures (config, token, workspace) make it fail. It runs the read-only
 // sources it checks (feed commands, agents.command, and, with a ticket,
-// conversations.command), but no actions, and writes nothing.
+// conversations.command and pull_requests.commands), but no actions, and
+// writes nothing.
 func runDoctor(args []string) error {
 	if len(args) > 1 || (len(args) == 1 && !asana.ValidGID(args[0])) {
 		return fmt.Errorf("doctor takes at most one numeric task gid\n%s", usage)
@@ -698,6 +700,11 @@ func runDoctor(args []string) error {
 		row(w, "branch_field", strconv.Quote(cfg.BranchField))
 	}
 	checkFeeds(ctx, w, cfg.Feed.Commands)
+	if len(cfg.PullRequests.Commands) == 0 {
+		row(w, "pull_requests", "off: set pull_requests.commands")
+	} else {
+		row(w, "pull_requests", fmt.Sprintf("%d command(s); asanamate doctor <task-gid> looks up a ticket's pull requests", len(cfg.PullRequests.Commands)))
+	}
 	var list []agents.Agent
 	if !cfg.AgentsEnabled() {
 		row(w, "agents", "off: set agents.command")
@@ -751,6 +758,7 @@ func runDoctor(args []string) error {
 			fmt.Fprintf(w, "  %s  worktree %s\n", r, orNone(repo.Worktree(r, branch)))
 		}
 	}
+	checkPullRequests(ctx, w, cfg.PullRequests.Commands, pullrequests.Ticket{GID: t.GID, URL: t.PermalinkURL, Branch: branch}, repos)
 	if !cfg.AgentsEnabled() {
 		return nil
 	}
@@ -876,6 +884,36 @@ func checkFeeds(ctx context.Context, w io.Writer, feeds []string) {
 			items = "1 item"
 		}
 		row(w, "feed", fmt.Sprintf("ok: %s: %s, %s today%s", source, reply.Source, items, strings.TrimSuffix(", "+reply.Summary, ", ")))
+	}
+}
+
+// checkPullRequests runs each pull request command once for ticket, linked
+// to repos, and reports what it found and its stderr.
+func checkPullRequests(ctx context.Context, w io.Writer, commands []string, ticket pullrequests.Ticket, repos []string) {
+	if len(commands) == 0 {
+		return
+	}
+	if len(repos) == 0 {
+		fmt.Fprintln(w, "prs     none looked up: link a repo first")
+		return
+	}
+	for _, r := range repos {
+		ticket.Repos = append(ticket.Repos, pullrequests.Repo{Path: r})
+	}
+	tickets := pullrequests.WithRemotes(ctx, []pullrequests.Ticket{ticket})
+	for _, command := range commands {
+		prs, stderr, err := pullrequests.Lookup(ctx, command, tickets)
+		if err != nil {
+			fmt.Fprintf(w, "prs     warning: command %q failed: %v\n", command, err)
+			continue
+		}
+		fmt.Fprintf(w, "prs     command %q: %d found\n", command, len(prs))
+		if stderr != "" {
+			fmt.Fprintf(w, "  stderr: %s\n", stderr)
+		}
+		for _, p := range prs {
+			fmt.Fprintf(w, "  %s %s %s  %s\n", orNone(p.Label()), p.State, p.Title, p.URL)
+		}
 	}
 }
 

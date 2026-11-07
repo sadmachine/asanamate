@@ -58,6 +58,8 @@ jobs:
               grep -qx asanamate files.txt
               grep -qx asanamate-hrvst files.txt
               grep -qx asanamate-ccmux files.txt
+              grep -qx asanamate-github files.txt
+              grep -qx asanamate-gitlab files.txt
               grep -qx README.md files.txt
               grep -qx docs/extensions.md files.txt
               grep -qx install-themes.sh files.txt
@@ -94,7 +96,7 @@ jobs:
       # start, and doctor must fail only because nothing is configured.
       - name: Run the binary on a bare system
         run: |
-          tar -xzf "${{ matrix.archive }}" asanamate asanamate-hrvst asanamate-ccmux themes install-themes.sh
+          tar -xzf "${{ matrix.archive }}" asanamate asanamate-hrvst asanamate-ccmux asanamate-github asanamate-gitlab themes install-themes.sh
           export HOME="$(mktemp -d)" PATH=/usr/bin:/bin
           unset XDG_CONFIG_HOME XDG_STATE_HOME ASANA_ACCESS_TOKEN
           sh ./install-themes.sh
@@ -104,6 +106,8 @@ jobs:
           ./asanamate help > /dev/null
           ./asanamate-hrvst -h > /dev/null
           ./asanamate-ccmux help > /dev/null
+          ./asanamate-github help > /dev/null
+          ./asanamate-gitlab help > /dev/null
           if ./asanamate doctor 2> err.txt; then echo "doctor passed without config"; exit 1; fi
           grep -q "run \`asanamate setup\`" err.txt
       # With a config but a bad token and no tools on PATH, doctor must report

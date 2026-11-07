@@ -187,6 +187,43 @@ func TestRemoteKeyNormalizesForms(t *testing.T) {
 	}
 }
 
+func TestHostPathKeepsPathCase(t *testing.T) {
+	for _, tc := range []struct{ url, host, path string }{
+		{"git@GitHub.com:Acme/Site.git", "github.com", "Acme/Site"},
+		{"ssh://git@ghe.example.com:2222/org/web.git", "ghe.example.com", "org/web"},
+		{"https://gitlab.example.com/group/sub/site/", "gitlab.example.com", "group/sub/site"},
+		{"/srv/git/site.git", "", ""},
+	} {
+		if host, path := HostPath(tc.url); host != tc.host || path != tc.path {
+			t.Errorf("HostPath(%q) = %q, %q, want %q, %q", tc.url, host, path, tc.host, tc.path)
+		}
+	}
+}
+
+// Remotes lists fetch URLs, origin first, then by name.
+func TestRemotesOrder(t *testing.T) {
+	dir := t.TempDir()
+	for _, args := range [][]string{
+		{"init", "-q", dir},
+		{"-C", dir, "remote", "add", "zeta", "https://example.com/z.git"},
+		{"-C", dir, "remote", "add", "alpha", "git@example.com:a.git"},
+		{"-C", dir, "remote", "add", "origin", "https://github.com/acme/web.git"},
+		{"-C", dir, "remote", "set-url", "--push", "origin", "git@github.com:acme/push.git"},
+	} {
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	got, err := Remotes(context.Background(), dir)
+	want := []Remote{{"origin", "https://github.com/acme/web.git"}, {"alpha", "git@example.com:a.git"}, {"zeta", "https://example.com/z.git"}}
+	if err != nil || !slices.Equal(got, want) {
+		t.Fatalf("Remotes = %v, %v, want %v", got, err, want)
+	}
+	if _, err := Remotes(context.Background(), filepath.Join(dir, "missing")); err == nil {
+		t.Fatal("missing repo: want an error")
+	}
+}
+
 // Matching finds repos by any remote, in either URL form, listing clones
 // before worktrees that share their remotes.
 func TestMatchingPrefersClones(t *testing.T) {

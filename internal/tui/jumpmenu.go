@@ -16,6 +16,7 @@ var jumpSections = map[string]struct{ key, label string }{
 	"section:agents":      {"a", "Agents"},
 	"section:description": {"d", "Description"},
 	"section:subtasks":    {"s", "Subtasks"},
+	prSectionKey:          {"p", "Pull requests"},
 	"section:blocked-by":  {"b", "Blocked by"},
 	"section:blocking":    {"B", "Blocking"},
 	"section:attachments": {"f", "Attachments"},

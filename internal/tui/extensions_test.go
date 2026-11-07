@@ -26,9 +26,9 @@ func TestDisabledExtensionsDiscoverableFromTools(t *testing.T) {
 		}
 	}
 	m.Update(key("/"))
-	m.Update(key("h"))
-	m.Update(key("u"))
-	m.Update(key("b"))
+	for _, k := range strings.Split("imarc", "") {
+		m.Update(key(k))
+	}
 	if len(m.modal.matches) != 1 || !strings.Contains(m.modal.items[m.modal.matches[0]].Label, "imarc Hub") {
 		t.Fatalf("extension search failed: %+v", m.modal.matches)
 	}

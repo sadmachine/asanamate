@@ -203,3 +203,19 @@ group related `Model` fields (loading, edit flow, layout) into named structs.
 **Why deferred:** It touches nearly every file in `internal/tui` and changes
 no behavior, so it is a large diff with no user-visible gain. Revisit when a
 second `Model` per process is needed, or when parallel TUI tests are worth it.
+
+## Pull requests in the Feed panel, list rows, and statusline
+
+**Now:** Pull request providers (`pull_requests.commands`) feed the reader's
+Pull requests section and the `pr:`, `checks:`, and `review:` filter terms.
+The Feed panel shows only `pull requests failed` in its summary when a
+provider fails.
+
+**Idea:** Three small follow-ups on the same data: a pull request source in
+the Feed panel (such as checks failing or changes requested on a loaded
+ticket), a badge on list rows with an open pull request, and a statusline
+count of pull requests that need you.
+
+**Why deferred:** Spec 24 kept to the protocol, the adapters, filtering, and
+the reader. Each follow-up is small once the data exists, and needs its own
+choice of what is worth showing.

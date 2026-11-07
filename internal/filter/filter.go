@@ -14,8 +14,9 @@
 // The other keys read values the caller supplies through Env.Lookup: agent
 // (the linked agents' states), branch (a branch saved for the ticket or set
 // in its branch field), git (dirty or unpushed work on that branch), new
-// (what arrived since you last looked at the ticket), and waiting (what the
-// ticket waits on).
+// (what arrived since you last looked at the ticket), waiting (what the
+// ticket waits on), pr (its pull requests' states), and checks and review
+// (its open and draft pull requests' checks and reviews).
 // <key>:any matches a ticket with a value, <key>:none one without, and
 // <key>:<value> one with that value.
 //
@@ -32,7 +33,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/asana"
 )
 
-var keys = []string{"section", "project", "assignee", "tag", "is", "due", "blocked", "agent", "branch", "git", "new", "waiting"}
+var keys = []string{"section", "project", "assignee", "tag", "is", "due", "blocked", "agent", "branch", "git", "new", "waiting", "pr", "checks", "review"}
 
 // Keys whose values come from Env.Lookup.
 const (
@@ -41,10 +42,13 @@ const (
 	KeyGit     = "git"
 	KeyNew     = "new"
 	KeyWaiting = "waiting"
+	KeyPR      = "pr"
+	KeyChecks  = "checks"
+	KeyReview  = "review"
 )
 
 // lookupKeys are the keys matched against Env.Lookup values.
-var lookupKeys = []string{KeyAgent, KeyBranch, KeyGit, KeyNew, KeyWaiting}
+var lookupKeys = []string{KeyAgent, KeyBranch, KeyGit, KeyNew, KeyWaiting, KeyPR, KeyChecks, KeyReview}
 
 // Keys returns the filter fields in display order.
 func Keys() []string { return slices.Clone(keys) }

@@ -249,7 +249,8 @@ func handlers() map[string]handler {
 // open focuses the reader from the list. In the reader, it edits the
 // targeted row, shows the targeted comment in full or opens its menu, switches
 // the comment tabs, shows the empty fields, older comments, or agents on
-// other branches, or opens the agents modal from the Agents section.
+// other branches, opens the agents modal from the Agents section, or opens a
+// pull request in the browser.
 func (m *Model) open(tea.KeyPressMsg) tea.Cmd {
 	if !m.focusReader {
 		if m.onFoldedHeader() {
@@ -279,6 +280,8 @@ func (m *Model) open(tea.KeyPressMsg) tea.Cmd {
 		m.showOtherAgents()
 	case m.fieldKey == agentsKey:
 		return m.openAgents()
+	case strings.HasPrefix(m.fieldKey, prKeyPrefix):
+		return openURL(strings.TrimPrefix(m.fieldKey, prKeyPrefix))
 	case m.fieldKey != "" && m.editableTarget():
 		return m.openField(m.fieldKey)
 	}

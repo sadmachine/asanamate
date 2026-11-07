@@ -12,6 +12,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/agents"
 	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/filter"
+	"github.com/sadmachine/asanamate/internal/pullrequests"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
 
@@ -96,6 +97,9 @@ func (m *Model) filterEnv() filter.Env {
 		filter.KeyGit:     m.gitStates,
 		filter.KeyNew:     newValues,
 		filter.KeyWaiting: waitingValues,
+		filter.KeyPR:      m.prValues(false, func(p pullrequests.PullRequest) string { return p.State }),
+		filter.KeyChecks:  m.prValues(true, func(p pullrequests.PullRequest) string { return p.Checks }),
+		filter.KeyReview:  m.prValues(true, func(p pullrequests.PullRequest) string { return p.Review }),
 	}}
 }
 

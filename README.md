@@ -44,19 +44,23 @@ and coding agents can do what you can. macOS and Linux only.
 - **Suggest links** (optional): preselect each project's repo and Harvest
   project from a command you configure, such as imarc's Hub. See
   [Project links](#project-links-optional).
+- **Track pull requests** (optional): see each ticket's GitHub pull requests
+  or GitLab merge requests, with their checks and reviews, in the reader, and
+  filter and group by them. See [Pull requests](#pull-requests-optional).
 - **Follow a feed** at a glance: a panel under the list shows today's related
   Asana activity, agent state changes, unpushed git work on ticket branches,
   and lines from any feed command, such as Harvest time entries. See
   [Feed panel](#feed-panel).
 
-**Extending asanamate.** External commands plug in at seven points:
+**Extending asanamate.** External commands plug in at eight points:
 [actions](docs/extensions.md#actions),
 [agent sources](docs/extensions.md#agent-sources),
 [conversation history](docs/extensions.md#conversation-history),
 [time tracking providers](docs/extensions.md#time-tracking),
 [repo sources](docs/extensions.md#repo-sources),
-[project links](docs/extensions.md#project-links), and
-[feeds](docs/extensions.md#feeds).
+[project links](docs/extensions.md#project-links),
+[feeds](docs/extensions.md#feeds), and
+[pull requests](docs/extensions.md#pull-requests).
 [docs/extensions.md](docs/extensions.md) documents each protocol.
 
 **Left to Asana.** asanamate does not delete tickets, set tags,
@@ -85,15 +89,16 @@ archive=asanamate_${os}_${arch}.tar.gz
 base=https://github.com/sadmachine/asanamate/releases/download/$version
 curl -fL -O "$base/$archive" -O "$base/checksums.txt"
 grep " $archive\$" checksums.txt | sha256sum -c   # macOS: shasum -a 256 -c
-tar -xzf "$archive" asanamate asanamate-hrvst asanamate-ccmux themes install-themes.sh
-mkdir -p ~/.local/bin && mv asanamate asanamate-hrvst asanamate-ccmux ~/.local/bin/
+tar -xzf "$archive" asanamate asanamate-hrvst asanamate-ccmux asanamate-github asanamate-gitlab themes install-themes.sh
+mkdir -p ~/.local/bin && mv asanamate asanamate-hrvst asanamate-ccmux asanamate-github asanamate-gitlab ~/.local/bin/
 sh ./install-themes.sh
 asanamate version
 ```
 
-Normal installation includes two adapter binaries: `asanamate-hrvst`, the Harvest
-provider for [Time tracking](#time-tracking-optional), and `asanamate-ccmux`,
-the ccmux adapter for [Agents](#agents-optional). Installing adapters does not
+Normal installation includes four adapter binaries: `asanamate-hrvst`, the Harvest
+provider for [Time tracking](#time-tracking-optional), `asanamate-ccmux`,
+the ccmux adapter for [Agents](#agents-optional), and `asanamate-github` and
+`asanamate-gitlab`, the providers for [Pull requests](#pull-requests-optional). Installing adapters does not
 enable integrations, authenticate them, or install external dependencies.
 Run `asanamate extensions` or open **Settings & tools > Extensions** for guided setup.
 
@@ -112,6 +117,8 @@ quarantine flag once:
 xattr -d com.apple.quarantine ~/.local/bin/asanamate
 xattr -d com.apple.quarantine ~/.local/bin/asanamate-hrvst
 xattr -d com.apple.quarantine ~/.local/bin/asanamate-ccmux
+xattr -d com.apple.quarantine ~/.local/bin/asanamate-github
+xattr -d com.apple.quarantine ~/.local/bin/asanamate-gitlab
 ```
 
 ### From source
@@ -128,7 +135,8 @@ sh ./install.sh
 This installs `asanamate` and the standard themes to `$(go env GOBIN)`, else
 `$(go env GOPATH)/bin` (usually `~/go/bin`); add that directory to your `PATH`
 as above. It updates extensions that are already installed (`asanamate-hrvst`,
-`asanamate-ccmux`, and an `asana-sessions` installed into `~/.local`) and lists
+`asanamate-ccmux`, `asanamate-github`, `asanamate-gitlab`, and an
+`asana-sessions` installed into `~/.local`) and lists
 the others with the `asanamate extensions <id>` guide for each. Run
 `sh ./install.sh --interactive` to choose which extensions to install;
 `asana-sessions` needs Node 22 or later and npm, and choosing it also runs
@@ -145,7 +153,7 @@ never touch your config, actions, or state. See [Upgrading](#upgrading) for each
 release's steps.
 
 To uninstall, delete the binaries (`asanamate`, `asanamate-hrvst`,
-and `asanamate-ccmux`). Your
+`asanamate-ccmux`, `asanamate-github`, and `asanamate-gitlab`). Your
 files stay until you delete them yourself: the config and actions in
 `~/.config/asanamate`, the state, ticket exports, and logs in
 `~/.local/state/asanamate`, and the Codex hook, if you added it, in
@@ -200,6 +208,7 @@ shows; see [Troubleshooting](#troubleshooting) for what its results prove.
 | Agent status | an agents command, such as `asanamate-ccmux` for ccmux; see [Agents](#agents-optional) | `agents.command` | remove `[agents]` keys | `agents` | off |
 | Conversations | the [asana-sessions](packages/asana-sessions/README.md) package (Node 22+); see [Conversations](#conversations-optional) | `[conversations]` | remove `[conversations]` keys | `conversations` (shown only when on) | the `w` modal lists running agents only |
 | Time tracking | `asanamate-hrvst` and a Harvest personal access token, or your own provider; see [Time tracking](#time-tracking-optional) | `[time_tracking]` | remove `[time_tracking]` keys | `time_tracking`, `extension harvest` (local check) | off |
+| Pull requests | `asanamate-github` with [gh](https://cli.github.com), `asanamate-gitlab` with [glab](https://gitlab.com/gitlab-org/cli), or your own provider; see [Pull requests](#pull-requests-optional) | `pull_requests.commands` | remove its command from `pull_requests.commands` | `pull_requests`, `extension github`, `extension gitlab` (local check) | no pull requests; `pr:`, `checks:`, and `review:` match nothing |
 | Project link suggestions | a project links command, such as imarc's `asanamate-hub`; see [Project links](#project-links-optional) | `project_links.command` | remove `project_links.command` | `project_links`, `extension hub` (local check) | no suggestions |
 | Relative dates (`tomorrow`, `+1 day`) | GNU `date`; on macOS, `gdate` from `brew install coreutils` | install it | not needed | not checked | type dates as `YYYY-MM-DD` |
 | Inline images | a kitty-graphics terminal ([kitty](https://sw.kovidgoyal.net/kitty/), [Ghostty](https://ghostty.org)); in tmux, `set -g allow-passthrough on` | `images.mode = "auto"` (default) | `images.mode = "off"` | not checked | links shown instead |
@@ -231,6 +240,9 @@ or open **Settings & tools > Extensions** (`,`, then `o`). Both use the same cat
 - `asanamate extensions harvest`: [Harvest time tracking](#time-tracking-optional)
   and [today's feed](#feed-panel), configured independently.
 - `asanamate extensions ccmux`: [coding agent status](#agents-optional).
+- `asanamate extensions github` and `asanamate extensions gitlab`:
+  [pull requests](#pull-requests-optional) from GitHub (`gh`) and GitLab
+  (`glab`), configured together in `pull_requests.commands`.
 - `asanamate extensions hub`: [imarc project links](#project-links-optional).
   Hub is private and requires imarc access.
 - `asanamate extensions asana-sessions`: [conversation history](#conversations-optional).
@@ -572,9 +584,20 @@ Space-separated terms, all of which must match:
   way), `new:comment` (a comment from someone else), `new:mention` (one that
   mentions you), `new:assigned` (someone assigned it to you)
 - `waiting:reply` matches one of your tickets whose newest comment is yours
+- `pr:open`, `pr:draft`, `pr:merged`, and `pr:closed` match a ticket with a
+  [pull request](#pull-requests-optional) in that state; `pr:any` one with
+  any, `pr:none` one with none
+- `checks:passing`, `checks:failing`, and `checks:pending` match a ticket's
+  open and draft pull requests' checks, and `review:approved`,
+  `review:changes` (changes requested), and `review:pending` (a review is
+  required and none is given) their reviews; `:any` and `:none` work too.
+  Merged and closed pull requests do not count, so a merged one's old failing
+  checks do not match. These terms update when the lookup runs
 - `new:` and `waiting:` cover tickets assigned to you in My Tasks and
   [Now](#now). Comments and assignments come from the [Activity](#activity)
   cache, so they need its scans; `new:ticket` and `new:change` do not
+- `asanamate list` has no agents or pull requests to look at: `agent:`,
+  `git:`, `pr:`, `checks:`, and `review:` match nothing there
 - `-term` negates a term; `"double quotes"` group words
 
 Example: `is:open section:"in progress" -tag:blocked`. Set the startup filter
@@ -613,10 +636,12 @@ My Tasks tickets that need you, grouped by why:
 - **Needs reply**: someone commented, or mentioned you, since you last opened
   the ticket
 - **Agent waiting**: a linked [agent](#agents-optional) waits for you
+- **Review feedback**: a [pull request](#pull-requests-optional) has changes
+  requested or failing checks
 - **New to you**: a ticket you have never opened, or one just assigned to you
 - **Updated**: anything else changed since you last opened it
-- **Waiting on others** (folded): your comment is the newest, or an open
-  dependency blocks the ticket
+- **Waiting on others** (folded): your comment is the newest, a pull request
+  waits for a required review, or an open dependency blocks the ticket
 
 Opening a ticket in the reader marks it seen, as it clears the `NEW` badge.
 The ticket keeps its section while you read it and leaves Now when you move
@@ -759,7 +784,8 @@ commands = ["asanamate-hrvst"]
   [Conversations](#conversations-optional).
 - `asanamate doctor [<gid>]` checks that asanamate is ready to browse and
   which optional features can work, and, for a ticket, why agents link to it
-  or not. See [Troubleshooting](#troubleshooting).
+  or not and what each pull request provider finds for it. See
+  [Troubleshooting](#troubleshooting).
 
 Pick a ticket with fzf:
 
@@ -848,6 +874,7 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 | `repo_source.root` | your setup directory, or empty | directory whose direct children with a `.git` entry (clones and worktrees) fill the repo picker; absolute or starting with `~`; empty: type a path |
 | `repo_source.command` | unset | prints one repo path per line; replaces `repo_source.root` when set; see [Repo sources](docs/extensions.md#repo-sources) |
 | `time_tracking.id` / `time_tracking.command` | unset (off) | provider ID for saved choices and command implementing the [time tracking JSON protocol](docs/extensions.md#time-tracking) |
+| `pull_requests.commands` | `[]` (off) | commands implementing the [pull requests JSON protocol](docs/extensions.md#pull-requests), such as `["asanamate-github", "asanamate-gitlab"]`; each answers for the repos on its host. See [Pull requests](#pull-requests-optional) |
 | `project_links.command` | unset (off) | command implementing the [project links JSON protocol](docs/extensions.md#project-links); its links preselect the repo picker and time form |
 | `hooks[].on` | required | the event: `ticket_open`, `assign`, `complete`, or `new_activity`. See [Hooks](#hooks) |
 | `hooks[].when` | `""` (every ticket) | a [filter](#filtering) query the event's ticket must match |
@@ -923,6 +950,10 @@ label = "Needs me"
 match = ["agent:waiting"]
 
 [[groupings.sections]]
+label = "In review"
+match = ["pr:open", "pr:draft"]
+
+[[groupings.sections]]
 label = "Active"
 match = ["agent:working", "git:dirty", "git:unpushed"]
 
@@ -950,6 +981,10 @@ label = "Agent waiting"
 match = ["agent:waiting"]
 
 [[groupings.sections]]
+label = "Review feedback"
+match = ["review:changes", "checks:failing"]
+
+[[groupings.sections]]
 label = "New to you"
 match = ["new:ticket", "new:assigned"]
 
@@ -959,7 +994,7 @@ match = ["new:change"]
 
 [[groupings.sections]]
 label = "Waiting on others"
-match = ["waiting:reply", "blocked:any"]
+match = ["waiting:reply", "review:pending", "blocked:any"]
 folded = true
 ```
 
@@ -1350,6 +1385,68 @@ whose README covers installing and linking it.
 Other systems can implement the same protocol: the command reads one JSON
 request on stdin and prints the project's links. See
 [Project links](docs/extensions.md#project-links) for the formats.
+
+### Pull requests (optional)
+
+asanamate can show which pull requests belong to each ticket and where they
+stand: open, draft, merged, or closed; checks passing, failing, or pending;
+approved, changes requested, or waiting on a required review. GitLab merge
+requests count as pull requests everywhere below. asanamate only reads them;
+it never creates, merges, approves, or comments on one.
+
+A pull request belongs to a ticket when its head (source) branch is the
+ticket's branch (`$ASANAMATE_BRANCH`), or when its description links the
+ticket's Asana task. Only tickets with a [linked repo](#keys) (`L`) are
+looked up, since the repo's remotes say which host to ask.
+
+Setup:
+
+1. Install the bundled providers from the release archive (see
+   [Install](#install)): `asanamate-github` for GitHub and GitHub
+   Enterprise, `asanamate-gitlab` for GitLab.com and self-managed GitLab.
+2. Install and log in to the host's CLI: [gh](https://cli.github.com) with
+   `gh auth login`, or [glab](https://gitlab.com/gitlab-org/cli) with
+   `glab auth login`. Log in once per GitHub Enterprise or self-managed
+   GitLab host with `--hostname <host>`. The CLI keeps the token;
+   asanamate never sees it.
+3. List the providers you use:
+
+   ```toml
+   [pull_requests]
+   commands = ["asanamate-github", "asanamate-gitlab"]
+   ```
+
+4. Link each project's repo with `L`, then restart asanamate.
+   `asanamate extensions check github` (or `gitlab`) checks the CLI's login.
+
+Each provider answers only for the repos on its host and skips the rest, so
+list both when your repos live on both. A provider for another host, such as
+Bitbucket or Gitea, goes in the same list next to them; see
+[Pull requests](docs/extensions.md#pull-requests) for the protocol. When two
+providers return the same pull request for a ticket, it shows once.
+GitLab reports changes requested and missing approvals but not approval, so
+`review:approved` matches GitHub pull requests only.
+
+What shows where:
+
+- **Reader:** a **Pull requests** section, after the details and before the
+  description, lists each one as
+  `#42 open · checks failing · changes requested  Fix login redirect`
+  (GitLab: `!42`). Tab to one and press `enter` to open it in the browser;
+  the jump menu (`'`) reaches the section with `p`. The markdown view lists
+  them as links.
+- **Filters:** `pr:`, `checks:`, and `review:` (see [Filtering](#filtering)),
+  in `/`, saved views, hooks' `when`, and groupings.
+- **Groupings:** the built-in `state` grouping puts a ticket with an open or
+  draft pull request under **In review**, and [Now](#now) lists one with
+  changes requested or failing checks under **Review feedback**.
+
+The lookup runs with the [Feed panel](#feed-panel)'s refresh: when a list
+loads, every `feed.refresh_interval`, and on reload (`r`). Each provider
+lists a repo's recent pull requests once per run, not once per ticket. A
+provider that fails keeps its previous results, and the Feed panel's summary
+shows `pull requests failed`; `asanamate doctor <task-gid>` runs each provider
+for that ticket and shows its errors.
 
 ## Actions
 

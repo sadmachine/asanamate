@@ -1,0 +1,15 @@
+#!/bin/sh
+# Fake glab for the adapter tests: logs its arguments to $FAKE_LOG and
+# answers from the JSON beside it. expired.example.com fails like an expired
+# login.
+printf '%s\n' "$*" >> "$FAKE_LOG"
+dir=$(dirname "$0")
+case "$*" in
+'auth status') exit 0 ;;
+'auth status --hostname gitlab.example.com' | 'auth status --hostname expired.example.com') exit 0 ;;
+'auth status --hostname '*) echo "not logged in" >&2; exit 1 ;;
+'mr list --repo https://expired.example.com/'*) echo "401 Unauthorized" >&2; exit 1 ;;
+'mr list --repo '*) cat "$dir/mr-list.json" ;;
+'api --hostname gitlab.example.com projects/acme%2Fweb/merge_requests/12') cat "$dir/mr-12.json" ;;
+*) echo "unexpected: $*" >&2; exit 2 ;;
+esac

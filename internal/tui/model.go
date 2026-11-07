@@ -305,6 +305,10 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 		m.gotFeed(msg)
 	case gitMsg:
 		m.gotGit(msg)
+	case prTicketsMsg:
+		return m, m.lookUpPullRequests(msg)
+	case prMsg:
+		m.gotPullRequests(msg)
 	case tea.BackgroundColorMsg:
 		m.lightBackground = !msg.IsDark()
 	case tea.WindowSizeMsg:
@@ -491,7 +495,7 @@ func (m *Model) gotTasks(msg tasksMsg) tea.Cmd {
 	cmd := m.selectionChanged()
 	if !m.background {
 		m.decideFeed()
-		cmd = tea.Batch(cmd, m.checkGit())
+		cmd = tea.Batch(cmd, m.checkGit(), m.checkPullRequests())
 	}
 	if t, ok := m.selected(); refreshing && ok && t.GID == m.shownGID {
 		return tea.Batch(cmd, m.loadDetail(t.GID))

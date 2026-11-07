@@ -17,6 +17,7 @@ commands, one section per extension point:
 | [Time tracking](#time-tracking) | `time_tracking.command` | one JSON request on stdin | one JSON reply |
 | [Project links](#project-links) | `project_links.command` | one JSON request on stdin | one JSON reply |
 | [Feeds](#feeds) | `feed.commands` | one JSON request on stdin | one JSON reply |
+| [Pull requests](#pull-requests) | `pull_requests.commands` | one JSON request on stdin | one JSON reply |
 
 Each format is covered by a test that runs a small fixture script through the
 real code path (`internal/*/testdata/`), so a format change cannot slip in
@@ -998,4 +999,145 @@ esac
 ```toml
 [feed]
 commands = ["asanamate-hrvst", "~/bin/ci-feed.sh"]
+```
+
+## Pull requests
+
+Add commands to `pull_requests.commands` to show each ticket's pull requests
+(GitLab calls them merge requests) and where they stand: open or merged,
+checks passing or failing, approved or waiting on changes. The reader lists
+them, and the filter terms `pr:`, `checks:`, and `review:` use them, so
+groupings and Now can too. A provider only reports; asanamate never sends it
+anything to write. asanamate ships two providers, `asanamate-github` (with
+the `gh` CLI) and `asanamate-gitlab` (with the `glab` CLI); a provider for
+any other git host plugs in the same way.
+
+**When it runs.** Each command runs as a new process, once per lookup, with
+every loaded ticket that has a linked repo in one request. Loaded tickets are
+the list's, the pinned ones, and the Viewing ticket. Commands run
+concurrently and independently:
+
+- when a list loads, with the git check
+- every `feed.refresh_interval`, and on reload (`r`), with the feeds
+- `asanamate doctor <task-gid>` runs each once for that ticket and shows its
+  stderr
+
+asanamate skips the lookup when no loaded ticket has a linked repo.
+
+**Input.** One JSON object on stdin, then end of input:
+
+| Field | Value |
+|---|---|
+| `version` | protocol version, `1` |
+| `operation` | `lookup` |
+| `tickets` | the tickets to look up |
+
+Each ticket has:
+
+| Field | Value |
+|---|---|
+| `gid` | the Asana task GID |
+| `url` | the task's Asana URL |
+| `branch` | the ticket's branch, as actions get it in `ASANAMATE_BRANCH` |
+| `repos` | the ticket's linked repos |
+
+Each repo has:
+
+| Field | Value |
+|---|---|
+| `path` | the repo's absolute path |
+| `remotes` | its git remotes, `origin` first, then by name, each with `name` and `url` (the fetch URL, as `git remote -v` prints it); empty when it has none or git fails |
+
+```json
+{"version":1,"operation":"lookup","tickets":[
+  {"gid":"1201","url":"https://app.asana.com/0/0/1201","branch":"feature/login",
+   "repos":[{"path":"/code/web","remotes":[{"name":"origin","url":"git@github.com:acme/web.git"}]}]}
+]}
+```
+
+**Several providers.** Every command gets the same request. Answer for the
+repos on hosts you serve, picked from their `remotes`, and skip the rest
+silently: another provider in `pull_requests.commands` serves them, so do not
+fail or warn about them. asanamate merges the replies in
+`pull_requests.commands` order and drops a pull request an earlier reply
+already gave for the same ticket (the same `url`).
+
+**Compatibility.** As for [time tracking](#time-tracking): ignore `version`
+and unknown fields if you like; the version changes only for a change
+existing providers could not ignore.
+
+**Output.** One JSON object on stdout, `{"pull_requests":[...]}`; return
+`{"pull_requests":[]}` when nothing matches. Each pull request has:
+
+| Field | Value |
+|---|---|
+| `ticket_gid` | required: a `gid` from the request; asanamate drops items for any other ticket |
+| `url` | required: an `http` or `https` URL; `enter` opens it |
+| `title` | required, one line; control characters become spaces |
+| `state` | required: `open`, `draft`, `merged`, or `closed` |
+| `number` | optional: shown as `#42` |
+| `ref` | optional: the display reference, such as `!42` for a GitLab merge request; overrides `number` |
+| `checks` | optional: `passing`, `failing`, `pending`, or empty for none or unknown |
+| `review` | optional: `approved`, `changes` (changes requested), `pending` (a review is required and none is given), or empty |
+| `author`, `updated_at` | optional: the author's login, and an RFC 3339 time |
+| `repo`, `branch` | optional: the repo path and branch where you found it |
+
+A pull request belongs to a ticket when its head (source) branch is the
+ticket's `branch`, or when its description links the ticket's Asana task.
+List a ticket's branch matches first, then its link matches, without
+duplicates. asanamate drops an item with an unknown `state`, and treats an
+unknown `checks` or `review` value as empty, so providers can add values
+later. `checks:` and `review:` read only open and draft pull requests, so a
+merged one's old failing checks do not count.
+
+```json
+{"pull_requests":[
+  {"ticket_gid":"1201","url":"https://github.com/acme/web/pull/42","number":42,
+   "title":"Fix login redirect","state":"open","checks":"failing",
+   "review":"changes","author":"zed","updated_at":"2026-11-05T14:05:00Z",
+   "repo":"/code/web","branch":"feature/login"}
+]}
+```
+
+**Exit status.** Non-zero or invalid output fails that command's run:
+asanamate keeps the command's previous results, and the Feed panel's summary
+shows `pull requests failed`. Other commands' results are unaffected. stderr
+is not shown in the panel; `asanamate doctor <task-gid>` shows it. When some
+of your hosts fail, answer with what the others found, exit zero, and
+explain on stderr.
+
+**Timeouts.** 1 minute per run; the command is killed after that, and the run
+counts as failed. Look up each repo once per run, not once per ticket:
+lookups run every minute by default, and hosts rate-limit their APIs.
+
+**Example.** `internal/pullrequests/testdata/provider.sh`, without its
+request log: a provider for a Gitea host, `git.example.com`, that answers by
+branch. A real provider parses the JSON; this one matches text to stay short.
+
+```sh
+#!/bin/sh
+request=$(cat)
+case $request in
+*'"operation":"lookup"'*) ;;
+*)
+	echo "unknown operation" >&2
+	exit 1
+	;;
+esac
+case $request in
+*'"branch":"feature/login","repos":[{"path":"/code/web","remotes":[{"name":"origin","url":"https://git.example.com/acme/web.git"}'*)
+	printf '%s\n' '{"pull_requests":[
+	  {"ticket_gid":"1201","url":"https://git.example.com/acme/web/pulls/42","number":42,
+	   "title":"Fix login redirect","state":"open","checks":"failing","review":"changes",
+	   "author":"zed","updated_at":"2026-11-05T14:05:00Z","repo":"/code/web","branch":"feature/login"}]}'
+	;;
+*)
+	printf '%s\n' '{"pull_requests":[]}'
+	;;
+esac
+```
+
+```toml
+[pull_requests]
+commands = ["asanamate-github", "asanamate-gitlab", "~/bin/gitea-prs.sh"]
 ```

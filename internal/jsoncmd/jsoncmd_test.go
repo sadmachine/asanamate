@@ -128,3 +128,10 @@ func TestRunShellGivesNoStdin(t *testing.T) {
 		t.Fatalf("output = %q, error = %v", out, err)
 	}
 }
+
+func TestBoundedStderrOnSuccess(t *testing.T) {
+	out, stderr, err := RunBoundedStderr(context.Background(), "fixture", `printf ok; printf 'one host\033[31m failed\n' >&2`, nil, DefaultLimits)
+	if err != nil || string(out) != "ok" || stderr != "one host failed" {
+		t.Fatalf("out = %q, stderr = %q, err = %v", out, stderr, err)
+	}
+}

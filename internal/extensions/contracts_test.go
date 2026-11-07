@@ -31,7 +31,7 @@ func TestContractReferencesAndVersions(t *testing.T) {
 			t.Errorf("invented version for %s", c.ID)
 		}
 	}
-	if len(seen) != 8 || !anchors["implementing-an-extension"] {
+	if len(seen) != 9 || !anchors["implementing-an-extension"] {
 		t.Fatal("custom extension guide must cover every supported contract")
 	}
 	for _, e := range Catalog() {

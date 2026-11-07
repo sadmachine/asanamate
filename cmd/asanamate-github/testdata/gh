@@ -1,0 +1,12 @@
+#!/bin/sh
+# Fake gh for the adapter tests: logs its arguments to $FAKE_LOG and answers
+# from the JSON beside it. expired.example.com fails like an expired login.
+printf '%s\n' "$*" >> "$FAKE_LOG"
+case "$*" in
+'auth status') exit 0 ;;
+'auth status --hostname ghe.example.com' | 'auth status --hostname expired.example.com') exit 0 ;;
+'auth status --hostname '*) echo "not logged in" >&2; exit 1 ;;
+'pr list --repo expired.example.com/'*) echo "HTTP 401: Bad credentials (https://expired.example.com/api/graphql)" >&2; exit 1 ;;
+'pr list --repo '*) cat "$(dirname "$0")/pr-list.json" ;;
+*) echo "unexpected: $*" >&2; exit 2 ;;
+esac

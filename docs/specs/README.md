@@ -36,7 +36,7 @@ can run in parallel, each on its own branch.
 | [21-native-harvest](21-native-harvest.md) (implemented, native live gate pending) | Direct Harvest API, independent credentials, task selection, and compatible legacy setup | existing protocols; independent of 20 | no |
 | [22-hooks](22-hooks.md) (done) | `[[hooks]]` run a prompt or action on ticket open, assign, complete, or new activity; replaces `time_tracking.prompt_after` | none | yes |
 | [23-whats-new](23-whats-new.md) | Curated "what's new" modal on the first launch after an upgrade; `[whats_new] on_startup` turns it off | none | no |
-| [24-pull-requests](24-pull-requests.md) | Pull request extension protocol for any git host (several providers at once), bundled `asanamate-github` (`gh`) and `asanamate-gitlab` (`glab`) adapters, `pr:`/`checks:`/`review:` filter terms, and a reader section | none (builds on rule groupings and Now) | no |
+| [24-pull-requests](24-pull-requests.md) (done) | Pull request extension protocol for any git host (several providers at once), bundled `asanamate-github` (`gh`) and `asanamate-gitlab` (`glab`) adapters, `pr:`/`checks:`/`review:` filter terms, and a reader section | none (builds on rule groupings and Now) | no |
 
 Specs 12 to 15 are complete and shipped together in v0.3.0.
 

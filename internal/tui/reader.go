@@ -103,7 +103,7 @@ func (m *Model) renderDetail(keepScroll bool) {
 		}
 		// New entries move from the activity to their own section.
 		fresh, _ := m.splitActivity(t)
-		extra += sinceMarkdown(fresh)
+		extra += sinceMarkdown(fresh) + prMarkdown(m.feed.prs[t.GID])
 		isNew := func(s asana.Story) bool { return m.isNew(t.GID, s) }
 		t.Comments = slices.DeleteFunc(t.Comments, isNew)
 		t.Events = slices.DeleteFunc(slices.Clone(t.Events), isNew)

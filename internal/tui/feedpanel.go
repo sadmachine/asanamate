@@ -20,6 +20,7 @@ import (
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/display"
 	"github.com/sadmachine/asanamate/internal/feed"
+	"github.com/sadmachine/asanamate/internal/pullrequests"
 	"github.com/sadmachine/asanamate/internal/repo"
 	"github.com/sadmachine/asanamate/internal/ticket"
 )
@@ -27,15 +28,18 @@ import (
 // feedPanel is the Feed panel under the ticket list: what feed commands,
 // Asana activity, agents, and the git check report.
 type feedPanel struct {
-	expand   string              // feed.expand
-	height   int                 // rows when expanded, borders included
-	interval time.Duration       // feed and git refresh interval; 0 is off
-	feeds    []feedResult        // by index into feed.commands
-	feedSeq  uint64              // numbers feed runs, so an older run's answer loses
-	git      []feed.Item         // the last git check's items
-	unpushed int                 // working trees the last git check found unpushed
-	states   map[string][]string // the last git check's git filter values, by ticket gid
-	gitSeq   uint64              // drops git checks older than the newest
+	expand   string                                // feed.expand
+	height   int                                   // rows when expanded, borders included
+	interval time.Duration                         // feed and git refresh interval; 0 is off
+	feeds    []feedResult                          // by index into feed.commands
+	feedSeq  uint64                                // numbers feed runs, so an older run's answer loses
+	git      []feed.Item                           // the last git check's items
+	unpushed int                                   // working trees the last git check found unpushed
+	states   map[string][]string                   // the last git check's git filter values, by ticket gid
+	gitSeq   uint64                                // drops git checks older than the newest
+	prRuns   []prRun                               // by index into pull_requests.commands
+	prSeq    uint64                                // numbers pull request lookups, so an older one's answer loses
+	prs      map[string][]pullrequests.PullRequest // merged pull requests, by ticket gid
 	since    map[string]agentMark
 	polled   bool   // agents were polled before, so new marks are state changes
 	open     bool   // expanded
@@ -113,8 +117,10 @@ func (m *Model) scheduleFeed() tea.Cmd {
 	return tea.Tick(m.feed.interval, func(time.Time) tea.Msg { return feedTickMsg{} })
 }
 
-// refreshFeed reruns the feeds and the git check.
-func (m *Model) refreshFeed() tea.Cmd { return tea.Batch(m.runFeeds(), m.checkGit()) }
+// refreshFeed reruns the feeds, the git check, and the pull request lookup.
+func (m *Model) refreshFeed() tea.Cmd {
+	return tea.Batch(m.runFeeds(), m.checkGit(), m.checkPullRequests())
+}
 
 func (m *Model) runFeeds() tea.Cmd {
 	var cmds []tea.Cmd
@@ -151,23 +157,37 @@ func (m *Model) gotFeed(msg feedMsg) {
 // gitTarget is a loaded ticket's branch and the repos to look for it in.
 type gitTarget struct {
 	gid    string
+	url    string
 	branch string
 	repos  []string
+}
+
+// gitTargets are the loaded tickets with linked repos: the list's, the
+// pinned ones it lacks, and the Viewing ticket.
+func (m *Model) gitTargets() []gitTarget {
+	var targets []gitTarget
+	preferred := m.projectFields[gidOf(m.viewProject)]
+	loaded := slices.Concat(m.tasks, m.pinExtras)
+	if m.viewing != nil {
+		loaded = append(loaded, *m.viewing)
+	}
+	seen := map[string]bool{}
+	for _, t := range loaded {
+		repos := m.deps.State.LinkedRepos(t)
+		if len(repos) == 0 || seen[t.GID] {
+			continue
+		}
+		seen[t.GID] = true
+		branch := action.Branch(t, m.deps.State.TaskBranches[t.GID], m.deps.Config.BranchField, preferred)
+		targets = append(targets, gitTarget{gid: t.GID, url: t.PermalinkURL, branch: branch, repos: repos})
+	}
+	return targets
 }
 
 // checkGit looks for uncommitted files and unpushed commits in the working
 // trees checked out on the loaded tickets' branches.
 func (m *Model) checkGit() tea.Cmd {
-	var targets []gitTarget
-	preferred := m.projectFields[gidOf(m.viewProject)]
-	for _, t := range m.tasks {
-		repos := m.deps.State.LinkedRepos(t)
-		if len(repos) == 0 {
-			continue
-		}
-		branch := action.Branch(t, m.deps.State.TaskBranches[t.GID], m.deps.Config.BranchField, preferred)
-		targets = append(targets, gitTarget{gid: t.GID, branch: branch, repos: repos})
-	}
+	targets := m.gitTargets()
 	m.feed.gitSeq++
 	seq := m.feed.gitSeq
 	return func() tea.Msg {
@@ -469,6 +489,9 @@ func (m *Model) feedSummary() string {
 	}
 	if m.feed.unpushed > 0 {
 		parts = append(parts, m.sym.icon(iconBranch)+fmt.Sprintf("%d unpushed", m.feed.unpushed))
+	}
+	if m.prsFailed() {
+		parts = append(parts, m.sym.icon(iconWarning)+"pull requests failed")
 	}
 	return strings.Join(parts, " · ")
 }

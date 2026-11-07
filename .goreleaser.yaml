@@ -6,7 +6,7 @@ before:
     - go mod tidy -diff
     - go test ./...
 
-# Each archive holds all three binaries.
+# Each archive holds asanamate and its bundled adapters.
 builds:
   - id: asanamate
     main: ./cmd/asanamate
@@ -30,6 +30,25 @@ builds:
   - id: asanamate-ccmux
     main: ./cmd/asanamate-ccmux
     binary: asanamate-ccmux
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+  # The pull request adapters for GitHub (gh) and GitLab (glab).
+  - id: asanamate-github
+    main: ./cmd/asanamate-github
+    binary: asanamate-github
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+  - id: asanamate-gitlab
+    main: ./cmd/asanamate-gitlab
+    binary: asanamate-gitlab
     env:
       - CGO_ENABLED=0
     goos: [darwin, linux]
@@ -69,11 +88,11 @@ homebrew_casks:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: https://github.com/sadmachine/asanamate
     description: Terminal UI for Asana tickets with scriptable actions
-    binaries: [asanamate, asanamate-hrvst, asanamate-ccmux]
+    binaries: [asanamate, asanamate-hrvst, asanamate-ccmux, asanamate-github, asanamate-gitlab]
     hooks:
       post:
         install: |
           system_command "/bin/sh", args: ["#{staged_path}/install-themes.sh"]
           if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/asanamate", "#{staged_path}/asanamate-hrvst", "#{staged_path}/asanamate-ccmux"]
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/asanamate", "#{staged_path}/asanamate-hrvst", "#{staged_path}/asanamate-ccmux", "#{staged_path}/asanamate-github", "#{staged_path}/asanamate-gitlab"]
           end

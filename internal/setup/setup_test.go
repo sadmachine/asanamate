@@ -229,7 +229,8 @@ func TestTemplateOptionsStayTopLevel(t *testing.T) {
 	if cfg.Symbols != "unicode" || cfg.ReducedMotion == nil || cfg.Agents.Command != "asanamate-ccmux" ||
 		cfg.Agents.Focus != `ccmux switch "$ASANAMATE_AGENT_TARGET"` ||
 		!slices.Contains(cfg.Agents.States["working"], "running") || cfg.Agents.Symbols["waiting"] == "" ||
-		len(cfg.Hooks) != 3 || cfg.Hooks[0].Run != "edit:branch" || cfg.Hooks[2].On != config.HookComplete {
+		len(cfg.Hooks) != 3 || cfg.Hooks[0].Run != "edit:branch" || cfg.Hooks[2].On != config.HookComplete ||
+		!slices.Equal(cfg.PullRequests.Commands, []string{"asanamate-github", "asanamate-gitlab"}) {
 		t.Fatalf("cfg = %+v", cfg)
 	}
 }
@@ -368,6 +369,20 @@ func TestMergeConversationsConfig(t *testing.T) {
 	updated, _, _, err = Merge("workspace = \"1\"\n")
 	if err != nil || loadString(t, updated).ConversationsEnabled() || !strings.Contains(updated, "[conversations]") {
 		t.Fatalf("old config upgrade = %s, error = %v", updated, err)
+	}
+}
+
+func TestMergePullRequestsConfig(t *testing.T) {
+	updated, _, _, err := Merge("workspace = \"1\"\n[pull_requests]\ncommands = [\"asanamate-github\", \"custom-gitea\"]\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg := loadString(t, updated); !slices.Equal(cfg.PullRequests.Commands, []string{"asanamate-github", "custom-gitea"}) {
+		t.Fatalf("commands not preserved: %+v", cfg.PullRequests)
+	}
+	again, _, _, err := Merge(updated)
+	if err != nil || again != updated {
+		t.Fatalf("merge not idempotent: %v", err)
 	}
 }
 

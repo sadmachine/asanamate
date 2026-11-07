@@ -1,0 +1,16 @@
+[
+  {"number":42,"title":"Fix login redirect","url":"https://github.com/acme/web/pull/42","state":"OPEN","isDraft":false,
+   "headRefName":"feature/login","body":"","updatedAt":"2026-11-05T14:05:00Z","author":{"login":"zed"},
+   "reviewDecision":"CHANGES_REQUESTED",
+   "statusCheckRollup":[{"__typename":"CheckRun","status":"COMPLETED","conclusion":"SUCCESS"},{"__typename":"CheckRun","status":"COMPLETED","conclusion":"FAILURE"}]},
+  {"number":43,"title":"Draft redirect tests","url":"https://github.com/acme/web/pull/43","state":"OPEN","isDraft":true,
+   "headRefName":"tests","body":"Part of https://app.asana.com/0/7/1201/f","updatedAt":"2026-11-05T15:00:00Z","author":{"login":"amy"},
+   "reviewDecision":"REVIEW_REQUIRED",
+   "statusCheckRollup":[{"__typename":"CheckRun","status":"IN_PROGRESS","conclusion":""},{"__typename":"StatusContext","state":"SUCCESS"}]},
+  {"number":40,"title":"Old login fix","url":"https://github.com/acme/web/pull/40","state":"MERGED","isDraft":false,
+   "headRefName":"feature/login","body":"","updatedAt":"2026-11-01T09:00:00Z","author":{"login":"zed"},
+   "reviewDecision":"APPROVED","statusCheckRollup":[{"__typename":"StatusContext","state":"SUCCESS"}]},
+  {"number":41,"title":"Abandoned","url":"https://github.com/acme/web/pull/41","state":"CLOSED","isDraft":false,
+   "headRefName":"feature/other","body":"","updatedAt":"2026-11-02T09:00:00Z","author":{"login":"zed"},
+   "reviewDecision":"","statusCheckRollup":[]}
+]

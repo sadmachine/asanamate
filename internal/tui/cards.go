@@ -99,6 +99,21 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 			}
 		}
 	}
+	// addPRs adds the Pull requests section, a target per pull request
+	// under its heading, when the ticket has any.
+	addPRs := func() {
+		prs := m.feed.prs[t.GID]
+		lines := make([]string, len(prs))
+		for i, p := range prs {
+			lines[i] = m.prLine(p, width)
+		}
+		add(prSectionKey, "Pull requests", strings.Join(lines, "\n"))
+		for i, p := range prs {
+			key := prKeyPrefix + p.URL
+			m.fieldLines[key] = m.fieldLines[prSectionKey] + 1 + i
+			m.cardTargets = append(m.cardTargets, key)
+		}
+	}
 	if m.readerView == config.ViewStreamlined {
 		// The details go in rows of chips: built-in fields under the
 		// head, custom fields under a Fields rule.
@@ -131,6 +146,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 			markOthers(m.fieldLines[agentsKey] + 1)
 			add("section:subtasks", subtaskTitle, wrap(subtasks, width))
 		}
+		addPRs()
 		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 	} else if width >= sideBySideW && (len(agentLines) > 0 || subtasks != "") {
 		leftW := (width - 1) / 2
@@ -158,12 +174,14 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 		details := m.card("Details", m.detailsBody(t, leftW-4, top), leftW, false, flash == detailsKey)
 		blocks = []string{head, lipgloss.JoinHorizontal(lipgloss.Top, details, " ", strings.Join(side, "\n"))}
 		addSince()
+		addPRs()
 		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 	} else {
 		blocks = []string{head, m.card("Details", m.detailsBody(t, width-4, top), width, false, flash == detailsKey)}
 		add(agentsKey, "Agents", cutLines(agentLines, width))
 		markOthers(m.fieldLines[agentsKey] + 1)
 		addSince()
+		addPRs()
 		add("section:description", "Description", m.renderRich(t.HTMLNotes, width))
 		add("section:subtasks", subtaskTitle, wrap(subtasks, width))
 	}

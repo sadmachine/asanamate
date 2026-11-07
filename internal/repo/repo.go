@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -193,6 +194,38 @@ func PendingWork(ctx context.Context, path string) (Pending, error) {
 	return p, nil
 }
 
+// Remote is a git remote and its fetch URL.
+type Remote struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+// Remotes returns the remotes of the repository at path with their fetch
+// URLs, origin first, then by name.
+func Remotes(ctx context.Context, path string) ([]Remote, error) {
+	out, err := exec.CommandContext(ctx, "git", "-C", path, "remote", "-v").Output()
+	if err != nil {
+		return nil, fmt.Errorf("git remote in %s: %w", path, err)
+	}
+	var remotes []Remote
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 3 && fields[2] == "(fetch)" {
+			remotes = append(remotes, Remote{Name: fields[0], URL: fields[1]})
+		}
+	}
+	slices.SortStableFunc(remotes, func(a, b Remote) int {
+		if (a.Name == "origin") != (b.Name == "origin") {
+			if a.Name == "origin" {
+				return -1
+			}
+			return 1
+		}
+		return strings.Compare(a.Name, b.Name)
+	})
+	return remotes, nil
+}
+
 // Matching returns the paths with a git remote equal to one of urls, ignoring
 // the scheme, user, port, and a trailing ".git", so ssh and https forms match.
 // Clones come before worktrees, which share their remotes.
@@ -208,18 +241,15 @@ func Matching(ctx context.Context, paths, urls []string) []string {
 	}
 	var clones, worktrees []string
 	for _, p := range paths {
-		out, err := exec.CommandContext(ctx, "git", "-C", p, "remote", "-v").Output()
+		remotes, err := Remotes(ctx, p)
 		if err != nil {
 			continue
 		}
-		for _, line := range strings.Split(string(out), "\n") {
-			if fields := strings.Fields(line); len(fields) >= 2 && want[remoteKey(fields[1])] {
-				if info, err := os.Stat(filepath.Join(p, ".git")); err == nil && !info.IsDir() {
-					worktrees = append(worktrees, p)
-				} else {
-					clones = append(clones, p)
-				}
-				break
+		if slices.ContainsFunc(remotes, func(r Remote) bool { return want[remoteKey(r.URL)] }) {
+			if info, err := os.Stat(filepath.Join(p, ".git")); err == nil && !info.IsDir() {
+				worktrees = append(worktrees, p)
+			} else {
+				clones = append(clones, p)
 			}
 		}
 	}
@@ -227,23 +257,35 @@ func Matching(ctx context.Context, paths, urls []string) []string {
 }
 
 // remoteKey reduces a git remote URL to lowercase "host/path", or "" when it
-// names no host and path. It accepts URLs with a scheme and scp-like
-// "user@host:path" remotes.
+// names no host and path.
 func remoteKey(u string) string {
+	host, path := HostPath(u)
+	if host == "" {
+		return ""
+	}
+	return strings.ToLower(host + "/" + path)
+}
+
+// HostPath splits a git remote URL into its lowercase host and its path,
+// such as "github.com" and "acme/web", dropping the scheme, user, port, and
+// a trailing ".git". It accepts URLs with a scheme and scp-like
+// "user@host:path" remotes, and returns two empty strings when u names no
+// host and path.
+func HostPath(u string) (host, path string) {
 	u = strings.TrimSpace(u)
 	if _, rest, ok := strings.Cut(u, "://"); ok {
 		u = rest
 	} else if host, path, ok := strings.Cut(u, ":"); ok && !strings.Contains(host, "/") {
 		u = host + "/" + path
 	}
-	host, path, _ := strings.Cut(u, "/")
+	host, path, _ = strings.Cut(u, "/")
 	if _, h, ok := strings.Cut(host, "@"); ok {
 		host = h
 	}
 	host, _, _ = strings.Cut(host, ":")
 	path = strings.TrimSuffix(strings.Trim(path, "/"), ".git")
 	if host == "" || path == "" {
-		return ""
+		return "", ""
 	}
-	return strings.ToLower(host + "/" + path)
+	return strings.ToLower(host), path
 }

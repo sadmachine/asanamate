@@ -1,0 +1,21 @@
+internal/extensions/extensions_test.go
+  s_bb489362de7baa::t_e0618cb464bd25 196-207
+internal/extensions/status.go
+  s_bb489362de7baa::t_e0618cb464bd25 86-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ddb1234e7b9c028f140302c895765855bab6845",
+  "prompts": {},
+  "sessions": {
+    "s_bb489362de7baa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2530a683-699a-4127-802b-c113d59ffe17",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

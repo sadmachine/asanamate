@@ -311,8 +311,11 @@ fills the screen and `enter` opens the reader in its place.
 
 The streamlined view shows the same ticket with less chrome: the built-in
 fields sit in rows of short chips under the title, each led by its label (or
-its icon with `symbols = "nerd"`), and custom fields keep their labels in
-rows under a Fields rule, with a long value on a row of its own. Agents and
+its icon with `symbols = "nerd"`) and set apart by dots, and custom fields
+keep their labels in rows under a Fields rule, with a long value on a row of
+its own. While you select a built-in field, they stack one to a row, each
+led by its icon and its full label, with their values lined up, and fold
+back into chips when you move on. Agents and
 subtasks sit side by side when the reader is wide enough for both. Every row
 you can select in the cards view is there in the same order and edits the
 same way, so `j`/`k`, `enter`, and the jump menu work alike in both, and

@@ -58,15 +58,15 @@ func (t Ticket) Meta() []Field {
 	if t.DueOn != nil {
 		add("Due", *t.DueOn, KeyDue)
 	}
+	if t.AssigneeSection != nil {
+		add("My Tasks section", t.AssigneeSection.Name, KeyMyTasks)
+	}
 	for _, m := range t.Memberships {
 		value := m.Project.Name
 		if m.Section != nil {
 			value += " / " + m.Section.Name
 		}
 		add("Project", value, ProjectKey(m.Project.GID))
-	}
-	if t.AssigneeSection != nil {
-		add("My Tasks section", t.AssigneeSection.Name, KeyMyTasks)
 	}
 	add("Tags", strings.Join(asana.Names(t.Tags), ", "), "")
 	if t.Parent != nil {

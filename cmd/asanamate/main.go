@@ -63,7 +63,9 @@ const usage = `usage:
   asanamate config                                 edit the config file in $VISUAL or $EDITOR
   asanamate config update [--yes]                  refresh the config's comments and new defaults,
                                                    keeping your values (old file saved as .<time>.bak)
-  asanamate comment [--yes] <gid> <text | ->       comment on a task ("-" reads stdin)
+  asanamate comment [--yes] [--file <path>]... <gid> <text | ->
+                                                   comment on a task ("-" reads stdin; each --file
+                                                   is attached to the task after the comment)
   asanamate title [--yes] <gid> <title>           replace a task's single-line title
   asanamate description [--yes] <gid> <markdown | ->
                                                    replace a description ("-" reads stdin; "" clears it)
@@ -230,6 +232,13 @@ func runWrite(name string, args []string, stdin io.Reader, writer func(bool) (wr
 	if name == "complete" {
 		reopen = fs.Bool("reopen", false, "reopen a completed task instead")
 	}
+	var files []string
+	if name == "comment" {
+		fs.Func("file", "attach a local file after the comment posts; repeat for more", func(path string) error {
+			files = append(files, path)
+			return nil
+		})
+	}
 	remove := new(bool)
 	if name == "react" {
 		remove = fs.Bool("remove", false, "remove your reaction instead")
@@ -316,7 +325,7 @@ func runWrite(name string, args []string, stdin io.Reader, writer func(bool) (wr
 		if name == "description" {
 			return svc.SetDescription(ctx, gid, text)
 		}
-		return svc.Comment(ctx, gid, text)
+		return svc.Comment(ctx, gid, text, files...)
 	case "move":
 		return svc.Move(ctx, gid, rest[1], *project)
 	case "assign":

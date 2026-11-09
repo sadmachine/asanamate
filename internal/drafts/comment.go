@@ -23,9 +23,11 @@ var ErrConflict = errors.New("draft changed in another session; keep this text a
 
 // Comment is one ticket's unfinished comment. Images holds snapshots of local
 // Markdown images, keyed by their original paths, so temporary files can vanish.
+// Files are the paths of local files to attach after the comment posts.
 type Comment struct {
 	Text      string            `json:"text"`
 	Images    map[string][]byte `json:"images,omitempty"`
+	Files     []string          `json:"files,omitempty"`
 	UpdatedAt time.Time         `json:"updated_at"`
 	// Uncertain is saved before posting. A restart during a write cannot
 	// distinguish a delivered comment from one that never reached Asana.

@@ -8,6 +8,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -142,6 +145,43 @@ func TestEditCommentCLI(t *testing.T) {
 				t.Fatalf("err = %v, writes = %d", err, writes)
 			}
 		})
+	}
+}
+
+func TestCommentCLIAttachesFiles(t *testing.T) {
+	dir := t.TempDir()
+	a, b := filepath.Join(dir, "a.txt"), filepath.Join(dir, "b.pdf")
+	for _, p := range []string{a, b} {
+		if err := os.WriteFile(p, []byte("data"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var paths []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if path == "/attachments" {
+			_, h, err := r.FormFile("file")
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			path += ":" + h.Filename
+		}
+		paths = append(paths, path)
+		io.WriteString(w, `{"data":{"gid":"1"}}`)
+	}))
+	t.Cleanup(srv.Close)
+	client := asana.New("tok")
+	client.BaseURL = srv.URL
+	writer := func(bool) (writeback.Service, error) { return writeback.Service{Client: client}, nil }
+	if err := runWrite("comment", []string{"--file", a, "--file", b, "1", "hi"}, strings.NewReader(""), writer); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"/tasks/1/stories", "/attachments:a.txt", "/attachments:b.pdf"}; !slices.Equal(paths, want) {
+		t.Fatalf("requests = %v, want %v", paths, want)
+	}
+	if err := runWrite("edit-comment", []string{"--file", a, "9", "hi"}, strings.NewReader(""), writer); err == nil {
+		t.Fatal("edit-comment accepted --file")
 	}
 }
 

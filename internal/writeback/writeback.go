@@ -109,15 +109,24 @@ func (s Service) confirm(question string) error {
 
 // Comment posts Markdown as a rich-text comment on the task. Each @Name matching a
 // workspace user becomes a mention that notifies them. Each local image,
-// ![alt](path), is attached to the task and shown inline.
-func (s Service) Comment(ctx context.Context, gid, text string) error {
-	return s.writeComment(ctx, gid, "", text)
+// ![alt](path), is attached to the task and shown inline. Each of files is
+// attached to the task after the comment posts, as Asana's API cannot attach
+// a file to a comment itself.
+func (s Service) Comment(ctx context.Context, gid, text string, files ...string) error {
+	return s.writeComment(ctx, gid, "", text, files)
 }
+
+// WrittenError is a failure after a comment was posted or updated, so
+// writing it again would duplicate it.
+type WrittenError struct{ Err error }
+
+func (e WrittenError) Error() string { return e.Err.Error() }
+func (e WrittenError) Unwrap() error { return e.Err }
 
 // EditComment replaces an editable comment's Markdown, keeping its identity
 // and reactions. Asana's current edit permission is checked before any write.
 func (s Service) EditComment(ctx context.Context, storyGID, text string) error {
-	return s.writeComment(ctx, "", storyGID, text)
+	return s.writeComment(ctx, "", storyGID, text, nil)
 }
 
 // DeleteComment deletes a comment the authenticated user can edit. Asana's
@@ -136,7 +145,7 @@ func (s Service) DeleteComment(ctx context.Context, storyGID string) error {
 	return s.Client.DeleteStory(ctx, storyGID)
 }
 
-func (s Service) writeComment(ctx context.Context, gid, storyGID, text string) error {
+func (s Service) writeComment(ctx context.Context, gid, storyGID, text string, files []string) error {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		return errors.New("comment text is empty")
@@ -163,7 +172,7 @@ func (s Service) writeComment(ctx context.Context, gid, storyGID, text string) e
 	if len(paths) > 0 && gid == "" {
 		return errors.New("comment's task is unavailable; cannot attach images")
 	}
-	files := make([][]byte, len(paths))
+	images := make([][]byte, len(paths))
 	for i, p := range paths {
 		data, saved := s.Images[p]
 		var err error
@@ -175,7 +184,15 @@ func (s Service) writeComment(ctx context.Context, gid, storyGID, text string) e
 		if err != nil {
 			return fmt.Errorf("comment image %s: %w", p, err)
 		}
-		files[i] = data
+		images[i] = data
+	}
+	attachments := make([][]byte, len(files))
+	for i, p := range files {
+		data, err := ReadFile(p)
+		if err != nil {
+			return fmt.Errorf("comment file %s: %w", p, err)
+		}
+		attachments[i] = data
 	}
 	html, mentioned := CommentHTML(text, users, nil)
 	if s.Confirm != nil {
@@ -199,6 +216,9 @@ func (s Service) writeComment(ctx context.Context, gid, storyGID, text string) e
 		if len(paths) > 0 {
 			question += "Uploads: " + strings.Join(paths, ", ") + "\n"
 		}
+		if len(files) > 0 {
+			question += "Files: " + strings.Join(files, ", ") + "\n"
+		}
 		if err := s.confirm(question); err != nil {
 			return err
 		}
@@ -213,21 +233,24 @@ func (s Service) writeComment(ctx context.Context, gid, storyGID, text string) e
 		return s.Client.AddCommentHTML(ctx, gid, html)
 	}
 	if len(paths) == 0 {
-		return write(html)
+		if err := write(html); err != nil {
+			return err
+		}
+		return s.attachFiles(ctx, gid, files, attachments)
 	}
 	// Margin for clock skew between this machine and Asana.
 	since := time.Now().Add(-time.Minute)
-	images := make(map[string]string, len(paths))
+	uploaded := make(map[string]string, len(paths))
 	names := make([]string, len(paths))
 	for i, p := range paths {
 		names[i] = filepath.Base(p)
-		a, err := s.Client.UploadAttachment(ctx, gid, names[i], files[i])
+		a, err := s.Client.UploadAttachment(ctx, gid, names[i], images[i])
 		if err != nil {
 			return fmt.Errorf("uploading %s: %w", p, err)
 		}
-		images[p] = a.GID
+		uploaded[p] = a.GID
 	}
-	html, _ = CommentHTML(text, users, images)
+	html, _ = CommentHTML(text, users, uploaded)
 	if err := write(html); err != nil {
 		return err
 	}
@@ -236,7 +259,18 @@ func (s Service) writeComment(ctx context.Context, gid, storyGID, text string) e
 		if storyGID != "" {
 			verb = "updated"
 		}
-		return fmt.Errorf("comment %s, but removing its separate image entries failed: %w", verb, err)
+		return WrittenError{fmt.Errorf("comment %s, but removing its separate image entries failed: %w", verb, err)}
+	}
+	return s.attachFiles(ctx, gid, files, attachments)
+}
+
+// attachFiles uploads each of files, with its data, to the task after its
+// comment posted. Asana adds an "attached" entry for each, after the comment.
+func (s Service) attachFiles(ctx context.Context, gid string, files []string, data [][]byte) error {
+	for i, p := range files {
+		if _, err := s.Client.UploadAttachment(ctx, gid, filepath.Base(p), data[i]); err != nil {
+			return WrittenError{fmt.Errorf("comment posted, but attaching %s failed: %w", p, err)}
+		}
 	}
 	return nil
 }
@@ -315,28 +349,47 @@ func snippet(text string) string {
 	return string(runes[:39]) + "…"
 }
 
-// maxImageSize is Asana's attachment size limit.
-const maxImageSize = 100 << 20
+// maxUploadSize is Asana's attachment size limit.
+const maxUploadSize = 100 << 20
 
-// ReadImage reads a comment image path; a leading ~/ is the home directory.
-// Only regular files whose content is an image qualify, so a comment cannot
-// upload other local files.
-func ReadImage(path string) ([]byte, error) {
+// LocalFile resolves a path to upload, a leading ~/ being the home
+// directory, and checks that it is a regular file within Asana's size limit.
+func LocalFile(path string) (string, error) {
 	if rest, ok := strings.CutPrefix(path, "~/"); ok {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		path = filepath.Join(home, rest)
 	}
 	info, err := os.Stat(path)
 	if err != nil {
+		return "", err
+	}
+	if !info.Mode().IsRegular() || info.Size() > maxUploadSize {
+		return "", errors.New("not a regular file of at most 100 MB")
+	}
+	return path, nil
+}
+
+// ReadFile reads a file to attach, resolved as LocalFile does.
+func ReadFile(path string) ([]byte, error) {
+	path, err := LocalFile(path)
+	if err != nil {
 		return nil, err
 	}
-	if !info.Mode().IsRegular() || info.Size() > maxImageSize {
-		return nil, errors.New("not a regular file of at most 100 MB")
-	}
 	data, err := os.ReadFile(path)
+	if err == nil && len(data) > maxUploadSize {
+		err = errors.New("file exceeds 100 MB")
+	}
+	return data, err
+}
+
+// ReadImage reads a comment image path, resolved as LocalFile does. Only
+// files whose content is an image qualify, so comment text cannot upload
+// other local files.
+func ReadImage(path string) ([]byte, error) {
+	data, err := ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +397,7 @@ func ReadImage(path string) ([]byte, error) {
 }
 
 func validateImage(data []byte) error {
-	if len(data) > maxImageSize {
+	if len(data) > maxUploadSize {
 		return errors.New("image exceeds 100 MB")
 	}
 	if !strings.HasPrefix(http.DetectContentType(data), "image/") {

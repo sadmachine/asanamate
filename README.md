@@ -393,7 +393,7 @@ key press.
 | `A` | create or edit action files (also available in Settings & tools) |
 | `P` | pin / unpin the selected ticket; pins persist locally per project or My Tasks, above filtered tickets |
 | `e` | edit the selected ticket: change its title or description, add a comment, move it to a section (of a project, or of My Tasks when it is yours), add or remove a project, set a custom field (text, number, date, single- or multi-select, people), assign it, mark it complete or reopen it, or set its branch (saved locally, overrides `branch_field`; empty removes it) |
-| `c` | add a comment to the selected ticket, from the list or the reader; in the comment box, `alt+v` pastes a clipboard image (see [Writing back to Asana](#writing-back-to-asana)) |
+| `c` | add a comment to the selected ticket, from the list or the reader; in the comment box, `alt+v` pastes a clipboard image and `tab` then `enter` on **Files** attaches files (see [Writing back to Asana](#writing-back-to-asana)) |
 | `d` / `m` / `@` | set the due date / move to a section / assign, skipping the `e` menu |
 | `x` | mark the selected ticket complete, or reopen it when it is complete; a ticket the filter now hides stays in Viewing until you move away, so `x` again undoes it |
 | `n` | create a ticket from a title: in the viewed project (in the selected ticket's section when the list is grouped by section), or in My Tasks assigned to you; then select it in the reader (under Viewing when the filter hides it). Set other fields with the edit keys |
@@ -484,6 +484,17 @@ then `enter` to edit it. These changes are optional; `ctrl+s` submits the commen
 and staged details together. A comment is optional when details have changed.
 Save draft and Discard apply to the entire draft, including staged details.
 
+The **Files** row, above the task details, attaches files to a new comment.
+Press `tab` to select it and `enter` to type a path or drop a file on the
+terminal; once the comment has files, `enter` offers **Add file…** or removes
+the one you pick. Files upload to the task after the comment posts, each up to
+100 MB, and Asana shows an "attached" entry for each right after the comment.
+Asana's API cannot attach a file to the comment itself, as its web composer
+does. A comment needs text to carry files. If an upload fails after the comment
+posts, the editor closes with a warning instead of keeping a draft that would
+post the comment twice; attach the rest from Asana. Edited comments cannot gain
+files.
+
 Task edits are validated before writing and sent before the comment. Asana
 receives separate requests, so a submission can partially succeed. On failure,
 the draft keeps the remaining edits and comment; retry skips successful edits.
@@ -492,7 +503,8 @@ same recovery warning described below.
 
 Drafts live in `~/.local/state/asanamate/drafts/comments/` (or under
 `XDG_STATE_HOME/asanamate`), with owner-only permissions. Each JSON snapshot holds
-the text and local image data, so pasted images survive temporary-file cleanup.
+the text, local image data, and the paths of files to attach, so pasted images
+survive temporary-file cleanup.
 Saving and posting happen in the background; the editor stays open if either
 fails. A successful post or Discard removes the draft. Concurrent sessions cannot
 overwrite or discard a draft changed since they opened it.
@@ -1998,6 +2010,7 @@ What to expect:
 
 ```sh
 asanamate comment [--yes] <gid> "Opened PR https://..."   # "-" reads stdin
+asanamate comment [--yes] --file report.pdf <gid> "Report" # repeat --file for more
 asanamate title [--yes] <gid> "New title"
 asanamate description [--yes] <gid> "**Updated details**" # "-" reads stdin; "" clears
 asanamate batch [--yes] <gid> '[{"kind":"assign","value":"Ann Lee"},{"kind":"due","value":"2026-10-01"}]'

@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -17,7 +18,7 @@ import (
 )
 
 func (c *commentComposer) hasChanges() bool {
-	return strings.TrimSpace(c.box.area.Value()) != "" || len(c.changes) > 0 || c.branch != nil
+	return strings.TrimSpace(c.box.area.Value()) != "" || len(c.files) > 0 || len(c.changes) > 0 || c.branch != nil
 }
 
 // unsaved reports whether closing would lose work: changes, other than an
@@ -466,22 +467,40 @@ func (c *commentComposer) body(width, height int, look modalLook, cancel string)
 	if c.branch != nil {
 		pending++
 	}
+	files := dimStyle.Render("add file…")
+	if len(c.files) > 0 {
+		names := make([]string, len(c.files))
+		for i, f := range c.files {
+			names[i] = ticket.OneLine(filepath.Base(f))
+		}
+		files = warnStyle.Render(strings.Join(names, ", ") + " ●")
+	}
 	w := max(width-2, 1)
+	row := func(footer int, label, value string) string {
+		marker, style := "  ", dimStyle
+		if c.footer == footer {
+			marker, style = accent.Render("▌ "), accent.Bold(true)
+		}
+		return ansi.Truncate(marker+style.Render(fmt.Sprintf("%-10s", label))+value, w, "…")
+	}
 	head := dimStyle.Render("── ") + accent.Render("Task updates") + " "
 	if pending > 0 {
 		head += dimStyle.Render(fmt.Sprintf("%d pending ", pending))
 	}
-	lines := []string{ansi.Truncate(head+dimStyle.Render(strings.Repeat("─", max(w-ansi.StringWidth(head), 0))), w, "…")}
-	for i, field := range [][2]string{{"Assignee", assignee}, {"Section", section}, {"More", dimStyle.Render("all task details…")}} {
-		marker, label := "  ", dimStyle.Render(fmt.Sprintf("%-10s", field[0]))
-		if c.footer == i {
-			marker, label = accent.Render("▌ "), accent.Bold(true).Render(fmt.Sprintf("%-10s", field[0]))
-		}
-		lines = append(lines, ansi.Truncate(marker+label+field[1], w, "…"))
+	lines := []string{
+		row(footerFiles, look.sym.file()+"Files", files),
+		ansi.Truncate(head+dimStyle.Render(strings.Repeat("─", max(w-ansi.StringWidth(head), 0))), w, "…"),
+		row(footerAssignee, "Assignee", assignee),
+		row(footerSection, "Section", section),
+		row(footerMore, "More", dimStyle.Render("all task details…")),
 	}
 	hints := [][2]string{{keyLabel("input", "submit"), "submit"}, {keyLabel("input", "paste_image"), "image"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "external_editor"), "editor"}, {"tab", "fields"}, {keyLabel("input", "cancel"), cancel}}
 	if c.footer >= 0 {
-		hints = [][2]string{{"enter", "change"}, {keyLabel("picker", "down", "up"), "move"}, {"tab", "next"}, {keyLabel("input", "submit"), "submit"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "cancel"), cancel}}
+		enter := "change"
+		if c.footer == footerFiles {
+			enter = "attach"
+		}
+		hints = [][2]string{{"enter", enter}, {keyLabel("picker", "down", "up"), "move"}, {"tab", "next"}, {keyLabel("input", "submit"), "submit"}, {keyLabel("input", "save_draft"), "draft"}, {keyLabel("input", "cancel"), cancel}}
 	}
 	return c.box.body(width, height, look, strings.Join(lines, "\n"), hints...)
 }

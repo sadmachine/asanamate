@@ -29,6 +29,7 @@ type commentComposer struct {
 	box       *inputBox
 	store     *drafts.CommentStore
 	images    map[string][]byte
+	files     []string // local files to attach after the comment posts
 	uncertain bool
 	busy      bool
 	confirm   *picker
@@ -59,6 +60,7 @@ type commentDoneMsg struct {
 	saved    bool
 	err      error
 	cleanup  error // a successful post whose draft could not be removed
+	warning  error // a step that failed after the comment was written
 	events   []hookEvent
 }
 
@@ -89,9 +91,9 @@ func (m *Model) openCommentInput(gid, storyGID, title, initial string) {
 	if err != nil {
 		b.err = "loading draft: " + err.Error()
 	} else {
-		c.store, c.images, c.uncertain = store, draft.Images, draft.Uncertain
+		c.store, c.images, c.files, c.uncertain = store, draft.Images, draft.Files, draft.Uncertain
 		c.changes, c.labels, c.branch = draft.Changes, draft.ChangeLabels, draft.Branch
-		if draft.Text != "" || len(draft.Changes) > 0 || draft.Branch != nil {
+		if draft.Text != "" || len(draft.Files) > 0 || len(draft.Changes) > 0 || draft.Branch != nil {
 			b.area.SetValue(draft.Text)
 			b.title += " (draft)"
 		}
@@ -278,9 +280,9 @@ func (m *Model) updateComment(msg tea.Msg) tea.Cmd {
 		case "tab", "shift+tab":
 			step := 1
 			if key.String() == "shift+tab" {
-				step = 3
+				step = footerRows
 			}
-			c.footer = (c.footer+1+step)%4 - 1
+			c.footer = (c.footer+1+step)%(footerRows+1) - 1
 			if c.footer == -1 {
 				c.box.area.Focus()
 				return nil
@@ -289,11 +291,14 @@ func (m *Model) updateComment(msg tea.Msg) tea.Cmd {
 			return nil
 		case "enter":
 			switch c.footer {
-			case 0:
+			case footerFiles:
+				m.editComposerFiles()
+				return nil
+			case footerAssignee:
 				return m.beginDraftEdit(editAssignee)
-			case 1:
+			case footerSection:
 				return m.beginDraftEdit(editSection)
-			case 2:
+			case footerMore:
 				m.openBatchReview()
 				return nil
 			}
@@ -303,7 +308,7 @@ func (m *Model) updateComment(msg tea.Msg) tea.Cmd {
 			// still cycles back to the comment.
 			switch bound("picker", key, false) {
 			case "down":
-				c.footer = min(c.footer+1, 2)
+				c.footer = min(c.footer+1, footerRows-1)
 				return nil
 			case "up":
 				c.footer = max(c.footer-1, 0)
@@ -387,6 +392,10 @@ func (m *Model) postComment() tea.Cmd {
 			c.box.err = "comment text is empty"
 			return nil
 		}
+		if len(c.files) > 0 {
+			c.setError("files attach with a comment; add comment text or remove the files")
+			return nil
+		}
 		if !c.hasChanges() {
 			return m.leaveComment(false)
 		}
@@ -454,7 +463,7 @@ func (m *Model) runComment(op commentOperation) tea.Cmd {
 	if c.review != nil && m.modal == c.review {
 		c.review.err, c.review.progress = "", c.box.progress
 	}
-	draft := drafts.Comment{Text: c.box.area.Value(), Images: maps.Clone(c.images), Uncertain: c.uncertain,
+	draft := drafts.Comment{Text: c.box.area.Value(), Images: maps.Clone(c.images), Files: slices.Clone(c.files), Uncertain: c.uncertain,
 		Changes: slices.Clone(c.changes), ChangeLabels: maps.Clone(c.labels), Branch: c.branch}
 	svc, gid := m.writer(), c.gid
 	var base asana.Task
@@ -518,7 +527,11 @@ func (m *Model) runComment(op commentOperation) tea.Cmd {
 		if c.storyGID != "" {
 			msg.err = svc.EditComment(ctx, c.storyGID, draft.Text)
 		} else {
-			msg.err = svc.Comment(ctx, gid, draft.Text)
+			msg.err = svc.Comment(ctx, gid, draft.Text, draft.Files...)
+		}
+		if errors.As(msg.err, &writeback.WrittenError{}) {
+			// The comment is in Asana; keeping the draft would post it twice.
+			msg.warning, msg.err = msg.err, nil
 		}
 		if msg.err != nil {
 			draft.Uncertain = commentDeliveryUncertain(msg.err)
@@ -556,7 +569,7 @@ func (m *Model) commentDone(msg commentDoneMsg) tea.Cmd {
 			applied = len(c.changes) - len(msg.draft.Changes)
 			m.applyDraftChanges(c.changes[:applied])
 		}
-		c.images, c.uncertain = msg.draft.Images, msg.draft.Uncertain
+		c.images, c.files, c.uncertain = msg.draft.Images, msg.draft.Files, msg.draft.Uncertain
 		c.changes, c.labels, c.branch = msg.draft.Changes, msg.draft.ChangeLabels, msg.draft.Branch
 	}
 	c.events = append(c.events, msg.events...)
@@ -606,6 +619,9 @@ func (m *Model) commentDone(msg commentDoneMsg) tea.Cmd {
 				message = "comment updated"
 			}
 			m.setStatus(statusWarning, message+"; removing draft failed: "+msg.cleanup.Error())
+		}
+		if msg.warning != nil {
+			m.setStatus(statusWarning, msg.warning.Error())
 		}
 		return cmd
 	}

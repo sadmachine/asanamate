@@ -1,0 +1,27 @@
+internal/tui/streamlined.go
+  s_5cc7cdd44bd069::t_d81c2ccee90460 65-86,89-90,94,99,110,113,124-125,135-137
+internal/whatsnew/unreleased/stacked-custom-fields.md
+  s_5cc7cdd44bd069::t_e32583ce25018c 1-7
+README.md
+  s_5cc7cdd44bd069::t_e32583ce25018c 319-320
+internal/tui/edit_test.go
+  s_5cc7cdd44bd069::t_66d8b947560aa5 700-701,710-736,739-740
+  s_5cc7cdd44bd069::t_e7b352f514b54f 737-738
+  s_5cc7cdd44bd069::t_b0e6100023a172 741-742
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0ac9e2dc9914a97da6633d59bdf3c8163ce81b49",
+  "prompts": {},
+  "sessions": {
+    "s_5cc7cdd44bd069": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d5a1d2a2-7302-4dbe-a110-b4d6216a06ce",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

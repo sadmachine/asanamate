@@ -5,6 +5,33 @@ section and, only when needed, a `### Changed` section; see AGENTS.md.
 Unreleased highlights wait in `unreleased/`, one file per change, until a
 release moves them here.
 
+## v0.4.9
+
+### New
+
+- **Find files to attach.** The comment's **Files** menu searches the
+  ticket's repo, Downloads, Desktop, and Documents, and attaches several
+  files at once; dropping several files on the terminal works too. On macOS
+  and Linux desktops it can also open the system file dialog. Try it: press
+  `c`, then `tab`, `enter`, and `s`.
+- **Choose your own icons.** The new `[icons]` table in `config.toml` replaces
+  any icon by name, such as the project or due date icon, or hides one to show
+  its label. Try it: run `asanamate config update`, then set
+  `project = "\uf07b"` under `[icons]` to bring back the folder icon.
+
+### Changed
+
+- **Easier-to-scan ticket fields.** Dots now separate the fields in the
+  streamlined view, and the built-in fields stack one to a row, labeled and
+  with their values lined up, while you select one. Every view now lists the
+  My Tasks section above the ticket's projects. Try it: press `v` until the
+  reader shows the streamlined view, then `tab` into the reader and move onto
+  Assignee.
+- **What's new is a list.** What's new lists each highlight's title under its
+  version, and shows the highlighted one in full beside the list, so you can
+  skim the titles and read only what interests you. Try it: press `,`, then
+  `e`, and move with `j` and `k`.
+
 ## v0.4.8
 
 ### New

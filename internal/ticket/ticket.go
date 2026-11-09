@@ -89,6 +89,19 @@ var flatten = strings.NewReplacer("\t", " ", "\n", " ")
 // must stay on one line (list rows, TSV cells).
 func OneLine(s string) string { return flatten.Replace(Clean(s)) }
 
+// Files returns the files attached to comment c, except its inline images,
+// which show in its text.
+func Files(c asana.Story) []asana.Ref {
+	inline := ImageGIDs(c.HTMLText)
+	var files []asana.Ref
+	for _, a := range c.Attachments {
+		if !slices.Contains(inline, a.GID) {
+			files = append(files, a)
+		}
+	}
+	return files
+}
+
 // AttachmentURL returns the best browser URL for an attachment.
 func AttachmentURL(a asana.Attachment) string {
 	if a.PermanentURL != "" {

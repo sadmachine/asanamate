@@ -107,6 +107,12 @@ func (s symbolSet) icon(name string) string {
 	return ""
 }
 
+// file returns the icon that leads an attached file's name and a space: the
+// paperclip, or "+" when the set has none.
+func (s symbolSet) file() string {
+	return cmp.Or(s.icon(iconClip), "+ ")
+}
+
 // newSymbols returns the named set with per-state overrides applied. An
 // overridden working symbol, or reduced motion, turns the spinner off.
 func newSymbols(set string, overrides map[string]string, reducedMotion bool) symbolSet {

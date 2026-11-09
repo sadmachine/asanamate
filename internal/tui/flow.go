@@ -668,15 +668,42 @@ func (m *Model) openAttachments() {
 		m.setStatus(statusInfo, "no attachments")
 		return
 	}
-	items := make([]pickItem, len(t.Attachments))
-	for i, a := range t.Attachments {
+	m.pickAttachment("Attachments", t.Attachments)
+}
+
+// openCommentFiles lists the files attached to comment c of the selected
+// ticket, to open like any other attachment.
+func (m *Model) openCommentFiles(c asana.Story) {
+	t, ok := m.selectedDetail()
+	if !ok {
+		m.setStatus(statusWarning, "ticket details are still loading")
+		return
+	}
+	var files []asana.Attachment
+	for _, f := range ticket.Files(c) {
+		if i := slices.IndexFunc(t.Attachments, func(a asana.Attachment) bool { return a.GID == f.GID }); i >= 0 {
+			files = append(files, t.Attachments[i])
+		}
+	}
+	if len(files) == 0 {
+		m.setStatus(statusInfo, "the comment's files are no longer on the task")
+		return
+	}
+	m.pickAttachment("Files on "+ticket.Author(c)+"'s comment", files)
+}
+
+// pickAttachment lists attachments under title; picking one views it when it
+// shows inline, and opens it in the browser otherwise.
+func (m *Model) pickAttachment(title string, attachments []asana.Attachment) {
+	items := make([]pickItem, len(attachments))
+	for i, a := range attachments {
 		hint := "open in browser"
 		if m.showsInline(a) {
 			hint = "view image"
 		}
 		items[i] = pickItem{Label: fmt.Sprintf("%d. %s", i+1, ticket.Clean(a.Name)), Hint: hint, Value: a}
 	}
-	m.modal = newPicker(pickValue(m.pickedAttachment), "Attachments", items)
+	m.modal = newPicker(pickValue(m.pickedAttachment), title, items)
 }
 
 // openContentLinks lists the links in the ticket's description and comments,

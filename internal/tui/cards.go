@@ -313,9 +313,10 @@ func (m *Model) progress(done, total int) string {
 }
 
 // comment renders one comment of the timeline: a colored dot, the author, and
-// the date and time, over the body behind a gutter in the author's color. A preview
-// above 0 keeps only that many lines of the body's text, ending in see more,
-// and reports whether it cut any.
+// the date and time, over the body, its attached files, and its reactions,
+// behind a gutter in the author's color. A preview above 0 keeps only that
+// many lines of the body's text, ending in see more, and reports whether it
+// cut any.
 func (m *Model) comment(c asana.Story, width int, selected bool, preview int) (string, bool) {
 	author := ticket.Author(c)
 	head := authorStyle(author).Render("●") + " " + titleStyle.Render(author) + dimStyle.Render(" · "+m.storyTime(c.CreatedAt))
@@ -332,6 +333,9 @@ func (m *Model) comment(c asana.Story, width int, selected bool, preview int) (s
 	clipped := false
 	if preview > 0 {
 		lines, clipped = previewText(lines, preview, width-2)
+	}
+	for _, f := range ticket.Files(c) {
+		lines = append(lines, ansi.Truncate(dimStyle.Render(m.sym.file()+ticket.OneLine(f.Name)), width-2, "…"))
 	}
 	if r := m.reactions(c.Reactions); r != "" {
 		lines = append(lines, ansi.Truncate(r, width-2, "…"))

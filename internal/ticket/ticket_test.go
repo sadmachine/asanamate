@@ -77,6 +77,22 @@ func TestMarkdownInterleavesActivity(t *testing.T) {
 	}
 }
 
+func TestCommentFilesSkipInlineImages(t *testing.T) {
+	utc(t)
+	tk := sample()
+	tk.Comments[0].HTMLText = `<body>See <img data-asana-gid="1" src="x"/></body>`
+	tk.Comments[0].Attachments = []asana.Ref{{GID: "1", Name: "shot.png"}, {GID: "2", Name: "notes.pdf"}, {GID: "3", Name: "log.txt"}}
+	if files := Files(tk.Comments[0]); len(files) != 2 || files[0].GID != "2" || files[1].GID != "3" {
+		t.Fatalf("Files = %+v", files)
+	}
+	if md := tk.Markdown(); !strings.Contains(md, "\n\nAttached: notes.pdf, log.txt") {
+		t.Fatalf("markdown missing the comment's files:\n%s", md)
+	}
+	if md := sample().Markdown(); strings.Contains(md, "Attached:") {
+		t.Fatalf("comment without files lists some:\n%s", md)
+	}
+}
+
 func TestMarkdownStripsControlCharacters(t *testing.T) {
 	md := sample().Markdown()
 	if strings.ContainsAny(md, "\x1b\u009b") {

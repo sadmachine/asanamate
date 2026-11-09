@@ -580,3 +580,43 @@ func TestCommentMenuReacts(t *testing.T) {
 		t.Fatalf("after 1: modal = %v, status = %q", m.modal, m.status)
 	}
 }
+
+func TestCommentListsAndOpensItsFiles(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	c := asana.Story{
+		GID: "9", CreatedBy: &asana.Ref{Name: "Bo"}, HTMLText: `<body>see <img data-asana-gid="51" src="x"/></body>`,
+		Attachments: []asana.Ref{{GID: "51", Name: "inline.png"}, {GID: "52", Name: "notes.pdf"}},
+	}
+	tk := ticket.Ticket{Task: asana.Task{GID: "1", Name: "Fix"}, Comments: []asana.Story{c}, Attachments: []asana.Attachment{
+		{GID: "51", Name: "inline.png", Host: "asana"}, {GID: "52", Name: "notes.pdf", Host: "asana"}, {GID: "53", Name: "other.txt", Host: "asana"},
+	}}
+	m.tasks, m.visible = []asana.Task{tk.Task}, []asana.Task{tk.Task}
+	m.details["1"] = tk
+	m.fieldKey, m.focusReader, m.loading = "comment:9", true, false
+
+	for set, icon := range map[string]string{config.SymbolsASCII: "+ ", config.SymbolsNerd: "\uf0c6 "} {
+		m.sym = newSymbols(set, nil, false)
+		body, _ := m.comment(c, 60, false, 0)
+		if body = ansi.Strip(body); !strings.Contains(body, icon+"notes.pdf") || strings.Contains(body, "inline.png") {
+			t.Fatalf("%s comment:\n%s", set, body)
+		}
+	}
+
+	m.Update(key("enter"))
+	m.Update(key("f"))
+	p := m.modal
+	if p == nil || p.title != "Files on Bo's comment" || len(p.items) != 1 || p.items[0].Value.(asana.Attachment).GID != "52" {
+		t.Fatalf("modal = %+v", p)
+	}
+}
+
+func TestCommentMenuOmitsFilesWithoutAny(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	c := asana.Story{GID: "9", HTMLText: `<body><img data-asana-gid="51" src="x"/></body>`, Attachments: []asana.Ref{{GID: "51"}}}
+	m.openCommentMenu("1", c)
+	for _, it := range m.modal.items {
+		if it.Value == commentFiles {
+			t.Fatalf("menu offers files for inline images only: %+v", m.modal.items)
+		}
+	}
+}

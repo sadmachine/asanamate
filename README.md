@@ -204,6 +204,7 @@ shows; see [Troubleshooting](#troubleshooting) for what its results prove.
 | Open in browser (`o`, `f`) | macOS `open`; Linux [xdg-utils](https://www.freedesktop.org/wiki/Software/xdg-utils/) and a desktop browser | always on | not needed | `browser` | the status line shows the error and the URL to copy |
 | Copy link or comment (`c`, `y`) | terminal OSC 52 support; in tmux, `set -g set-clipboard on` | always on | not needed | not checked | nothing is copied; asanamate cannot detect this |
 | Paste image into comment (`alt+v`) | macOS `osascript` (built in); Linux `wl-clipboard` (Wayland) or `xclip` (X11). On macOS the terminal must send Option as Alt (kitty `macos_option_as_alt`, Ghostty `macos-option-as-alt`, iTerm2 "Esc+") | always on | not needed | not checked | the comment box shows why; type the image's Markdown yourself |
+| System file dialog (comment **Files**) | macOS `osascript` (built in), outside SSH; Linux a desktop session with `zenity` or `kdialog` | always on | not needed | not checked | the Files menu hides it; search files or drop them on the terminal |
 | Paste into input (`Ctrl+V`) | macOS `pbpaste`; Linux `xclip` or `xsel` (X11) or `wl-clipboard` (Wayland) | always on | not needed | not checked | the input shows why, and your terminal's paste still works |
 | Agent status | an agents command, such as `asanamate-ccmux` for ccmux; see [Agents](#agents-optional) | `agents.command` | remove `[agents]` keys | `agents` | off |
 | Conversations | the [asana-sessions](packages/asana-sessions/README.md) package (Node 22+); see [Conversations](#conversations-optional) | `[conversations]` | remove `[conversations]` keys | `conversations` (shown only when on) | the `w` modal lists running agents only |
@@ -485,9 +486,21 @@ and staged details together. A comment is optional when details have changed.
 Save draft and Discard apply to the entire draft, including staged details.
 
 The **Files** row, above the task details, attaches files to a new comment.
-Press `tab` to select it and `enter` to type a path or drop a file on the
-terminal; once the comment has files, `enter` offers **Add file…** or removes
-the one you pick. Files upload to the task after the comment posts, each up to
+Press `tab` to select it and `enter` for its menu:
+
+- **Search files…** (`s`) lists the files in the ticket's linked repo (and
+  its branch's worktree) first, then `~/Downloads`, `~/Desktop`, and
+  `~/Documents`, each newest first. Type to search; `tab` checks files and
+  `enter` attaches the checked ones, or the highlighted one. Drop files on
+  the terminal, or type paths, and `enter` attaches those instead. Hidden
+  files, `node_modules`, and `vendor` are left out, and each folder lists at
+  most 5,000 files.
+- **Choose with system dialog…** (`d`) opens Finder's file chooser on macOS,
+  or zenity's or kdialog's on a Linux desktop, in the ticket's repo. It is
+  hidden where no dialog can open, such as over SSH.
+- Each attached file is listed below; `enter` removes it.
+
+Files upload to the task after the comment posts, each up to
 100 MB, and Asana shows an "attached" entry for each right after the comment.
 Asana's API cannot attach a file to the comment itself, as its web composer
 does. A comment needs text to carry files. If an upload fails after the comment

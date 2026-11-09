@@ -286,6 +286,19 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 	return pickResult{}, cmd
 }
 
+// paste types pasted text into the search, as when files are dropped on the
+// terminal; outside search it does nothing.
+func (p *picker) paste(msg tea.PasteMsg) tea.Cmd {
+	if !p.searching || p.keySelect {
+		return nil
+	}
+	var cmd tea.Cmd
+	p.input, cmd = p.input.Update(msg)
+	p.err = ""
+	p.refilter()
+	return cmd
+}
+
 // move moves the cursor step rows, staying on the list.
 func (p *picker) move(step int) {
 	p.cursor = max(min(p.cursor+step, p.rowCount()-1), 0)

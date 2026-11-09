@@ -433,6 +433,14 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 		return m, m.viewImage((m.viewIndex + msg.step + len(m.viewImages)) % len(m.viewImages))
 	case statusMsg:
 		m.setStatus(statusError, string(msg))
+	case fileScanMsg:
+		m.fileScanned(msg)
+	case fileDialogMsg:
+		m.filesChosen(msg)
+	case tea.PasteMsg:
+		if m.modal != nil {
+			return m, m.modal.paste(msg)
+		}
 	case tea.KeyPressMsg:
 		m.selection, m.drag = nil, nil
 		return m, m.handleKey(msg)
@@ -995,7 +1003,7 @@ func (m *Model) refreshViewing(tasks ...asana.Task) bool {
 // animating reports whether anything shown uses the spinner.
 func (m *Model) animating() bool {
 	return m.loading || m.waiting != "" || m.anyWorking() || m.activityOpen && m.activity.loading ||
-		m.composer != nil && m.composer.busy
+		m.composer != nil && (m.composer.busy || m.composer.box.progress != "") || m.modal != nil && m.modal.progress != ""
 }
 
 func (m *Model) modalLook() modalLook {

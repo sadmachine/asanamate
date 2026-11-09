@@ -63,7 +63,7 @@ func TestCommentCombinesAssignmentSectionAndText(t *testing.T) {
 	m.viewProject = &asana.Ref{GID: "p1"}
 	press(m, "c")
 	m.input.area.SetValue("Ready for review")
-	press(m, "tab", "enter", "down", "down", "enter")
+	press(m, "tab", "tab", "enter", "down", "down", "enter")
 	if len(*writes) != 0 || m.input != m.composer.box || m.input.area.Value() != "Ready for review" {
 		t.Fatal("assignment sent early or lost the comment")
 	}
@@ -263,8 +263,8 @@ func TestCommentFooterRendersAndPreservesTextFocus(t *testing.T) {
 func TestCommentFooterMovesWithJK(t *testing.T) {
 	m, _ := editModel(t)
 	press(m, "c", "tab")
-	want := []int{1, 2, 2, 1, 0, 0}
-	for i, k := range []string{"j", "j", "down", "k", "up", "k"} {
+	want := []int{footerAssignee, footerSection, footerMore, footerMore, footerSection, footerAssignee, footerFiles, footerFiles}
+	for i, k := range []string{"j", "j", "j", "down", "k", "up", "k", "k"} {
 		press(m, k)
 		if m.composer.footer != want[i] {
 			t.Fatalf("after %s footer = %d, want %d", k, m.composer.footer, want[i])

@@ -62,6 +62,11 @@ func fake(t *testing.T) (*asana.Client, *[]write) {
 				return
 			}
 			writes = append(writes, write{r.Method, r.URL.Path, map[string]any{"parent": r.FormValue("parent"), "name": h.Filename}})
+			if h.Filename == "fail.txt" {
+				w.WriteHeader(http.StatusBadRequest)
+				io.WriteString(w, `{"errors":[{"message":"upload rejected"}]}`)
+				return
+			}
 			io.WriteString(w, `{"data":{"gid":"a`+strconv.Itoa(len(writes))+`"}}`)
 		case r.Method != http.MethodGet:
 			var body struct {
@@ -310,6 +315,52 @@ func TestEditCommentChecksCurrentPermission(t *testing.T) {
 				t.Fatalf("err = %v, writes = %d", err, writes)
 			}
 		})
+	}
+}
+
+func TestCommentAttachesFilesAfterPosting(t *testing.T) {
+	c, writes := fake(t)
+	dir := t.TempDir()
+	notes, log := filepath.Join(dir, "notes.txt"), filepath.Join(dir, "log.csv")
+	for _, p := range []string{notes, log} {
+		if err := os.WriteFile(p, []byte("plain text"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var asked string
+	svc := Service{Client: c, Confirm: func(p string) (bool, error) { asked = p; return true, nil }}
+	if err := svc.Comment(ctx, "1", "see files", notes, log); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(asked, "Files: "+notes+", "+log) {
+		t.Fatalf("prompt = %q", asked)
+	}
+	want := []write{
+		{http.MethodPost, "/tasks/1/stories", map[string]any{"text": "see files"}},
+		{http.MethodPost, "/attachments", map[string]any{"parent": "1", "name": "notes.txt"}},
+		{http.MethodPost, "/attachments", map[string]any{"parent": "1", "name": "log.csv"}},
+	}
+	if !reflect.DeepEqual(*writes, want) {
+		t.Fatalf("writes = %+v", *writes)
+	}
+}
+
+func TestCommentFilesFailSafely(t *testing.T) {
+	c, writes := fake(t)
+	dir := t.TempDir()
+	if err := (Service{Client: c}).Comment(ctx, "1", "hi", filepath.Join(dir, "missing.txt")); err == nil || len(*writes) != 0 {
+		t.Fatalf("missing file: err = %v, writes = %+v", err, *writes)
+	}
+	if err := (Service{Client: c}).Comment(ctx, "1", "hi", dir); err == nil || len(*writes) != 0 {
+		t.Fatalf("directory: err = %v, writes = %+v", err, *writes)
+	}
+	fail := filepath.Join(dir, "fail.txt")
+	if err := os.WriteFile(fail, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := (Service{Client: c}).Comment(ctx, "1", "hi", fail)
+	if !errors.As(err, &WrittenError{}) || !strings.Contains(err.Error(), "comment posted, but attaching") || len(*writes) != 2 {
+		t.Fatalf("failed upload after posting: err = %v, writes = %+v", err, *writes)
 	}
 }
 

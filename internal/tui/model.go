@@ -1348,7 +1348,8 @@ func (m *Model) body() string {
 		kind = overlayExtension
 		content = m.extension.view(w, mh)
 	case m.whatsNew != nil:
-		kind = overlayExtension
+		kind = overlayPicker
+		w = max(min(m.width-4, 140), 10)
 		content = m.whatsNewView(w, mh)
 	case m.composer != nil && m.input == nil && !m.composer.reading:
 		content = "Loading task details…\n" + hintLine(m.accentStyle, [2]string{keyLabel("picker", "cancel"), "cancel"})

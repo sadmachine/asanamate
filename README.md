@@ -817,8 +817,10 @@ do not trigger it.
 
 After an update, the first launch of the TUI opens **What's new**: a short,
 curated list of the features and changes in each release since the one you last
-ran, newest first. It is built into the binary, so nothing is fetched. Press
-`esc` to close it, or `d` to stop it from opening on startup
+ran, newest first. It lists each highlight's title under its version and shows
+the highlighted one in full beside the list; `/` searches them. It is built
+into the binary, so nothing is fetched. Press `esc` to close it, or `d` to stop
+it from opening on startup
 (`whats_new.on_startup` in `settings.toml`). Reopen it any time from Settings &
 tools (`,`, then `e`; `u` turns startup display back on), or print it with
 `asanamate whats-new`. A fresh install and development builds never open it.

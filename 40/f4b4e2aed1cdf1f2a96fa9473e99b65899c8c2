@@ -1,0 +1,52 @@
+internal/tui/activity.go
+  s_cc14cd47c65539::t_6a18fdad9d79c7 756
+internal/tui/streamlined.go
+  s_cc14cd47c65539::t_6a18fdad9d79c7 70
+  s_cc14cd47c65539::t_c4b4bc64e2f138 67,71-72,77,82-83,85,88,90
+  s_cc14cd47c65539::t_4a12d2af9328a9 4,66,89,94-95,97
+  s_cc14cd47c65539::t_a143207f8bff28 68,74-75,84,91-93,96,102-104
+  s_cc14cd47c65539::t_8342db429f8d30 20-21,28,47,51
+  s_cc14cd47c65539::t_008e9bea5dd5a6 105-106
+internal/tui/edit_test.go
+  s_cc14cd47c65539::t_a143207f8bff28 701
+  s_cc14cd47c65539::t_a66a37aeb98647 697,699,703
+  s_cc14cd47c65539::t_b18f2cf04afc23 561-562,595,610,621
+  s_cc14cd47c65539::t_544be7da8159df 698,702
+  s_cc14cd47c65539::t_9bbc0759248ffa 680-693,696,704-709
+  s_cc14cd47c65539::t_6a18fdad9d79c7 700
+  s_cc14cd47c65539::t_aa223fe1a0155c 694-695
+internal/tui/symbols.go
+  s_cc14cd47c65539::t_99cc0a609b7d2f 69
+  s_cc14cd47c65539::t_6a18fdad9d79c7 41,53
+  s_cc14cd47c65539::t_a143207f8bff28 52
+internal/tui/keys_test.go
+  s_cc14cd47c65539::t_6a18fdad9d79c7 211
+internal/ticket/markdown.go
+  s_cc14cd47c65539::t_6a18fdad9d79c7 61-63
+internal/tui/cards.go
+  s_cc14cd47c65539::t_6a18fdad9d79c7 442-443
+internal/whatsnew/unreleased/streamlined-field-chips.md
+  s_cc14cd47c65539::t_836cd2bb852397 4
+  s_cc14cd47c65539::t_29594b7011ccd8 1-2,8
+  s_cc14cd47c65539::t_35845dceba047a 3,5-7
+README.md
+  s_cc14cd47c65539::t_77616f40e2e6bc 317
+  s_cc14cd47c65539::t_29594b7011ccd8 314-315
+  s_cc14cd47c65539::t_836cd2bb852397 316,318
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "40f4b4e2aed1cdf1f2a96fa9473e99b65899c8c2",
+  "prompts": {},
+  "sessions": {
+    "s_cc14cd47c65539": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0a43d8bb-98c4-45f7-b888-f148e13ad58d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

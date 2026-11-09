@@ -54,7 +54,7 @@ func (c *Client) RecentTasks(ctx context.Context, workspace string, since time.T
 // zero, oldest first, including comments and system changes. The caller uses
 // resource_subtype rather than parsing localized text.
 func (c *Client) Stories(ctx context.Context, gid string, since time.Time) ([]Story, error) {
-	q := fields("type,resource_subtype,created_at,created_by.name,text,html_text,is_editable,assignee.name,old_dates,new_dates,reaction_summary.variant,reaction_summary.count,reaction_summary.reacted")
+	q := fields("type,resource_subtype,created_at,created_by.name,text,html_text,is_editable,assignee.name,old_dates,new_dates,reaction_summary.variant,reaction_summary.count,reaction_summary.reacted,attachments.name")
 	if !since.IsZero() {
 		q.Set("created_after", since.UTC().Format(time.RFC3339Nano))
 	}

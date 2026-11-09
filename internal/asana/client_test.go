@@ -140,13 +140,13 @@ func TestProjectsIncludesNonMembers(t *testing.T) {
 func TestStoriesWithoutSinceLoadsWholeTimeline(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		if q.Has("created_after") || !strings.Contains(q.Get("opt_fields"), "is_editable") || !strings.Contains(q.Get("opt_fields"), "reaction_summary") {
+		if q.Has("created_after") || !strings.Contains(q.Get("opt_fields"), "is_editable") || !strings.Contains(q.Get("opt_fields"), "reaction_summary") || !strings.Contains(q.Get("opt_fields"), "attachments.name") {
 			t.Errorf("unexpected query %s", r.URL)
 		}
-		io.WriteString(w, `{"data":[{"gid":"1","type":"system"},{"gid":"2","type":"comment","is_editable":true,"html_text":"<body>hi</body>"}]}`)
+		io.WriteString(w, `{"data":[{"gid":"1","type":"system"},{"gid":"2","type":"comment","is_editable":true,"html_text":"<body>hi</body>","attachments":[{"gid":"5","name":"notes.pdf"}]}]}`)
 	})
 	stories, err := c.Stories(ctx, "9", time.Time{})
-	if err != nil || len(stories) != 2 || stories[1].GID != "2" || !stories[1].IsEditable {
+	if err != nil || len(stories) != 2 || stories[1].GID != "2" || !stories[1].IsEditable || len(stories[1].Attachments) != 1 || stories[1].Attachments[0].Name != "notes.pdf" {
 		t.Fatalf("stories = %+v, err = %v", stories, err)
 	}
 }

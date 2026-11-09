@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	tea "charm.land/bubbletea/v2"
@@ -16,6 +17,7 @@ const (
 	commentReact commentOp = iota
 	commentEdit
 	commentDelete
+	commentFiles
 )
 
 // quickReactions are the emoji the react picker offers on every comment.
@@ -27,6 +29,9 @@ var quickReactions = []struct{ emoji, name string }{
 // openCommentMenu lists what can be done to comment c of the ticket with gid.
 func (m *Model) openCommentMenu(gid string, c asana.Story) {
 	items := []pickItem{{Label: "React", Key: "r", Value: commentReact}}
+	if n := len(ticket.Files(c)); n > 0 {
+		items = append(items, pickItem{Label: fmt.Sprintf("Files (%d)", n), Key: "f", Value: commentFiles})
+	}
 	if c.IsEditable {
 		items = append(items,
 			pickItem{Label: "Edit", Key: "e", Value: commentEdit},
@@ -41,6 +46,8 @@ func (m *Model) openCommentMenu(gid string, c asana.Story) {
 			m.openCommentEditor(gid, c)
 		case commentDelete:
 			m.confirmDeleteComment(gid, c)
+		case commentFiles:
+			m.openCommentFiles(c)
 		}
 		return nil
 	}), "Comment by "+ticket.Author(c), items)

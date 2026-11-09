@@ -228,6 +228,9 @@ type Story struct {
 	NewDates        *StoryDates `json:"new_dates,omitempty"`
 	// Reactions are the story's emoji reactions, one per emoji.
 	Reactions []Reaction `json:"reaction_summary,omitempty"`
+	// Attachments are the files attached to a comment, including its inline
+	// images. Asana's API reads this field but does not document or write it.
+	Attachments []Ref `json:"attachments,omitempty"`
 }
 
 // StoryDates is the date state before or after a task's date change.

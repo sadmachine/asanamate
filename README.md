@@ -312,8 +312,11 @@ fills the screen and `enter` opens the reader in its place.
 
 The streamlined view shows the same ticket with less chrome: the built-in
 fields sit in rows of short chips under the title, each led by its label (or
-its icon with `symbols = "nerd"`), and custom fields keep their labels in
-rows under a Fields rule, with a long value on a row of its own. Agents and
+its icon with `symbols = "nerd"`) and set apart by dots, and custom fields
+keep their labels in rows under a Fields rule, with a long value on a row of
+its own. While you select a built-in field, they stack one to a row, each
+led by its icon and its full label, with their values lined up, and fold
+back into chips when you move on. Agents and
 subtasks sit side by side when the reader is wide enough for both. Every row
 you can select in the cards view is there in the same order and edits the
 same way, so `j`/`k`, `enter`, and the jump menu work alike in both, and
@@ -877,6 +880,7 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 | `conversations.command` | `""` (off) | saved-conversation lookup, such as `"asana-sessions asanamate list"`; requires `conversations.open`; see [Conversations](#conversations-optional) and the [extension contract](docs/extensions.md#conversation-history) |
 | `conversations.open` | `""` (off) | foreground opener reading a private selection snapshot, such as `"asana-sessions asanamate open"`; requires `conversations.command`. asana-sessions is not bundled |
 | `symbols` | `unicode` on UTF-8, else `ascii` | `unicode`, `nerd`, or `ascii` for ticket markers and agent states |
+| `icons.<name>` | unset | the icon for one name, replacing the symbol set's, such as `project = "\uec2f"`; `""` draws none and shows the label instead where there is one. Names: `user`, `due`, `my_tasks`, `project`, `project_color`, `view`, `filter`, `group`, `clock`, `branch`, `repo`, `clip`, `refresh`, `bell`, `warning`, `network`; the config template says where each shows |
 | `reduced_motion` | OS setting | `true` shows static agent symbols instead of the spinner |
 | `list.default_view.group_by` | `""` (ungrouped) | starting grouping, until the project has its own saved view: any `list.fields` name or [rule grouping](#rule-groupings); `b` picks another |
 | `groupings` | built-in `state` and `now` | [rule groupings](#rule-groupings): `name`, then `[[groupings.sections]]` with a `label`, `match` filter queries, and optional `folded` |

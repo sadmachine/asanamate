@@ -165,7 +165,7 @@ func TestCodeWrapMarkerOnlyOnContinuations(t *testing.T) {
 	for _, symbols := range []string{config.SymbolsUnicode, config.SymbolsNerd, config.SymbolsASCII} {
 		for _, theme := range []string{"dark", "light"} {
 			m, _ := testModel(t, config.Config{Theme: config.Theme{Name: "ansi-" + theme}, Symbols: symbols})
-			m.sym = newSymbols(symbols, nil, false)
+			m.sym = newSymbols(symbols, nil, nil, false)
 			out := m.renderBody("```\n    "+strings.Repeat("word ", 12)+"\n    next original line\n\n    last line\n```", 30)
 			marker := symbolSets[symbols].codeWrap
 			wrapped := 0

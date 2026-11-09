@@ -439,8 +439,8 @@ func detailMeta(t ticket.Ticket) []ticket.Field {
 		}
 	}
 	if index < 0 {
-		index = slices.IndexFunc(rows, func(f ticket.Field) bool { return f.Key == ticket.KeyMyTasks })
-		if index < 0 {
+		index = slices.IndexFunc(rows, func(f ticket.Field) bool { return f.Key == ticket.KeyMyTasks }) + 1
+		if index == 0 {
 			index = len(rows)
 		}
 	}

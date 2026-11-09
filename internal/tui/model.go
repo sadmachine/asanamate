@@ -228,7 +228,7 @@ func New(d Deps) *Model {
 		lightBackground: d.LightBackground,
 		projectFields:   map[string]map[string]bool{},
 		projectCatalogs: map[string][]asana.Ref{},
-		sym:             newSymbols(d.Symbols, d.Config.Agents.Symbols, d.ReducedMotion),
+		sym:             newSymbols(d.Symbols, d.Config.Agents.Symbols, d.Config.Icons, d.ReducedMotion),
 		loading:         true,
 		now:             time.Now,
 		readerHidden:    d.NoPreview || !d.Config.Layout.Reader,

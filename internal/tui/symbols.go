@@ -38,7 +38,7 @@ const (
 	iconView         = "view"
 	iconFilter       = "filter"
 	iconGroup        = "group"
-	iconFolder       = "folder"
+	iconProject      = "project"
 	iconProjectColor = "project_color"
 	iconDue          = "due"
 	iconClock        = "clock"
@@ -49,6 +49,8 @@ const (
 	iconBell         = "bell"
 	iconWarning      = "warning"
 	iconNetwork      = "network"
+	iconUser         = "user"
+	iconMyTasks      = "my_tasks"
 )
 
 // The classic line spinner reads clearly at any font size.
@@ -64,7 +66,7 @@ var (
 	// Nerd Font (Font Awesome) glyphs; needs a Nerd Font.
 	nerdSymbols = unicodeSymbols.with(symbolSet{open: "", done: "", robot: "󰚩", info: "\uf05a", statusInfo: "\U000f02fd", warning: "\uf071", failure: "\U000f05d6", states: map[agents.State]string{
 		agents.Waiting: "", agents.Working: "", agents.Completed: "", agents.Idle: "", agents.Unknown: ""},
-		icons: map[string]string{iconNetwork: "\uf1eb", iconView: "\uf01c", iconFilter: "\uf0b0", iconGroup: "\uf03a", iconFolder: "\uf07b", iconDue: "\uf073", iconClock: "\uf017", iconBranch: "\ue725", iconClip: "\uf0c6", iconRepo: "\ue702", iconRefresh: "\uf021", iconBell: "\uf0f3", iconWarning: "\uf071"}})
+		icons: map[string]string{iconNetwork: "\uf1eb", iconView: "\uf01c", iconFilter: "\uf0b0", iconGroup: "\uf03a", iconProject: "\uec2f", iconDue: "\uf073", iconClock: "\uf017", iconBranch: "\ue725", iconClip: "\uf0c6", iconRepo: "\ue702", iconRefresh: "\uf021", iconBell: "\uf0f3", iconWarning: "\uf071", iconUser: "\uf007", iconMyTasks: "\uf05d"}})
 )
 
 var symbolSets = map[string]symbolSet{
@@ -113,12 +115,17 @@ func (s symbolSet) file() string {
 	return cmp.Or(s.icon(iconClip), "+ ")
 }
 
-// newSymbols returns the named set with per-state overrides applied. An
-// overridden working symbol, or reduced motion, turns the spinner off.
-func newSymbols(set string, overrides map[string]string, reducedMotion bool) symbolSet {
+// newSymbols returns the named set with per-state overrides and icon
+// overrides applied. An overridden working symbol, or reduced motion, turns
+// the spinner off.
+func newSymbols(set string, overrides, icons map[string]string, reducedMotion bool) symbolSet {
 	base, ok := symbolSets[set]
 	if !ok {
 		base = symbolSets[config.SymbolsUnicode]
+	}
+	if len(icons) > 0 {
+		base.icons = maps.Clone(base.icons)
+		maps.Copy(base.icons, icons)
 	}
 	states := make(map[agents.State]string, len(overrides))
 	for k, v := range overrides {

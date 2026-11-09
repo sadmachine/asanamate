@@ -558,8 +558,8 @@ func TestInlineAddProjectRow(t *testing.T) {
 					t.Fatalf("add row must align with project name: %q", lines[line])
 				}
 			}
-			if (tc.myTasks && line >= m.fieldLines[ticket.KeyMyTasks]) || !m.editableTarget() {
-				t.Fatal("add row must be editable and precede My Tasks")
+			if (tc.myTasks && line <= m.fieldLines[ticket.KeyMyTasks]) || !m.editableTarget() {
+				t.Fatal("add row must be editable and follow My Tasks")
 			}
 			keys := m.fieldTargets(tk)
 			index := slices.Index(keys, addProjectKey)
@@ -592,7 +592,7 @@ func TestReaderFieldEdits(t *testing.T) {
 			press(m, "2", "j", "enter", "down", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee":"u2"}}`},
 		{"project section", func(m *Model) {
-			press(m, "2", "j", "j", "enter", "down", "enter")
+			press(m, "2", "j", "j", "j", "enter", "down", "enter")
 		}, `POST /sections/s2/addTask {"data":{"task":"1"}}`},
 		{"due date", func(m *Model) {
 			date := "2026-09-30"
@@ -607,7 +607,7 @@ func TestReaderFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"due_on":"2026-10-01"}}`},
 		{"my tasks section", func(m *Model) {
-			press(m, "2", "j", "j", "j", "j", "enter", "down", "enter")
+			press(m, "2", "j", "j", "enter", "down", "enter")
 		}, `PUT /tasks/1 {"data":{"assignee_section":"m2"}}`},
 		{"text field", func(m *Model) {
 			press(m, "2", "j", "j", "j", "j", "j", "enter")
@@ -618,7 +618,7 @@ func TestReaderFieldEdits(t *testing.T) {
 			send(m, ctrlS)
 		}, `PUT /tasks/1 {"data":{"custom_fields":{"f1":"feat/x"}}}`},
 		{"add project", func(m *Model) {
-			press(m, "2", "j", "j", "j", "enter")
+			press(m, "2", "j", "j", "j", "j", "enter")
 			if m.modal == nil || len(m.modal.items) != 1 || m.modal.items[0].Value.(asana.Ref).GID != "p2" {
 				t.Fatalf("add project choices = %v", m.modal)
 			}
@@ -674,6 +674,36 @@ func TestStreamlinedFieldLinesMatchChips(t *testing.T) {
 	m.jumpTo(tk, detailsKey)
 	if m.fieldKey != "assignee" || m.flashLines[0] != m.fieldLines["assignee"] || m.flashLines[1] < m.fieldLines[ticket.FieldKey("f2")] {
 		t.Fatalf("jump to details: target %q, flash %v, want the chips from line %d", m.fieldKey, m.flashLines, m.fieldLines["assignee"])
+	}
+}
+
+func TestStreamlinedBuiltInFieldsStackWhileSelected(t *testing.T) {
+	m, _ := editModel(t)
+	m.readerView = config.ViewStreamlined
+	tk := m.details["1"]
+	lines := cardLines(t, m, tk, 120)
+	if m.fieldLines["assignee"] != m.fieldLines["project:p1"] || !strings.Contains(lines[m.fieldLines["assignee"]], " · ") {
+		t.Fatalf("unselected built-in fields should share a dotted row:\n%s", strings.Join(lines, "\n"))
+	}
+	m.focusReader, m.fieldKey = true, "assignee"
+	lines = cardLines(t, m, tk, 120)
+	assignee, project := lines[m.fieldLines["assignee"]], lines[m.fieldLines["project:p1"]]
+	if m.fieldLines["project:p1"] <= m.fieldLines["assignee"] || strings.Contains(assignee, " · ") {
+		t.Fatalf("selected built-in fields should stack one to a row:\n%s", strings.Join(lines, "\n"))
+	}
+	if a, p := strings.Index(assignee, "Amy"), strings.Index(project, "Web"); a < 0 || a != p {
+		t.Fatalf("stacked values should align: assignee %q, project %q", assignee, project)
+	}
+	plain := m.sym
+	m.sym = nerdSymbols
+	lines = cardLines(t, m, tk, 120)
+	if project := lines[m.fieldLines["project:p1"]]; !strings.HasPrefix(project, m.sym.icon(iconProject)+"Project ") {
+		t.Fatalf("stacked project row = %q, want its icon, then its label", project)
+	}
+	m.sym, m.focusReader = plain, false
+	cardLines(t, m, tk, 120)
+	if m.fieldLines["project:p1"] != m.fieldLines["assignee"] {
+		t.Fatal("built-in fields should return to one row when the reader loses focus")
 	}
 }
 

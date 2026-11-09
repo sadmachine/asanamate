@@ -753,7 +753,7 @@ func (m *Model) activityRowLines(i, width int) []string {
 		case "due_date_changed", "due_today":
 			icon = m.sym.icon(iconDue)
 		case "section_changed", "added_to_project":
-			icon = m.sym.icon(iconFolder)
+			icon = m.sym.icon(iconProject)
 		}
 		rows = []string{lead + icon + ticket.OneLine(e.Task.Name), "  " + summary, "  " + at + "  " + kind}
 	}

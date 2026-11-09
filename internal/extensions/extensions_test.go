@@ -193,6 +193,18 @@ func TestPullRequestAdaptersShareTheCommandList(t *testing.T) {
 	if _, known := KnownCommand("pull_requests.commands", "asanamate-gitlab"); !known {
 		t.Fatal("asanamate-gitlab is a known provider")
 	}
+	// The other bundled adapter in the shared list is not a custom command;
+	// an unknown provider beside it still is.
+	cfg.PullRequests.Commands = []string{"asanamate-github", "asanamate-gitlab"}
+	for _, e := range []Entry{github, gitlab} {
+		if c := Inspect(e, Saved{Config: cfg}).Capabilities[0]; !c.Configured || c.Custom || c.Status != "configured" {
+			t.Fatalf("%s with both adapters: %+v", e.ID, c)
+		}
+	}
+	cfg.PullRequests.Commands = append(cfg.PullRequests.Commands, "custom-gitea")
+	if c := Inspect(github, Saved{Config: cfg}).Capabilities[0]; !c.Custom {
+		t.Fatalf("custom provider beside the adapters: %+v", c)
+	}
 	for _, e := range []Entry{github, gitlab} {
 		tool(t, dir, e.Check[0], `test "$#" = 1 && test "$1" = check`)
 		tool(t, dir, e.Dependencies[0], "exit 0")

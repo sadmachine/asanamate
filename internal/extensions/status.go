@@ -83,7 +83,9 @@ func Inspect(e Entry, saved Saved) Report {
 			for _, command := range c.Commands(saved.Config) {
 				if c.recognizes(command) {
 					cs.Configured, cs.Status = true, "configured"
-				} else if strings.TrimSpace(command) != "" {
+				} else if _, known := KnownCommand(c.Key, command); !known && strings.TrimSpace(command) != "" {
+					// Another entry's provider in a shared slot, such as
+					// asanamate-gitlab beside asanamate-github, is not custom.
 					cs.Custom = true
 				}
 			}

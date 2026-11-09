@@ -1,0 +1,48 @@
+cmd/asanamate/main.go
+  s_3f533e1178ec04::t_1584af86fcd1f1 66-68,235-241,328
+internal/writeback/writeback.go
+  s_3f533e1178ec04::t_ab85dd30023184 112-116,119-125,129,148,175,187-195,219-221,236-239,243,247,251,253,262-273,352-353,355-357,361,367,369-379,382-392,400
+internal/drafts/comment.go
+  s_3f533e1178ec04::t_026de07ab020ee 26,30
+internal/writeback/writeback_test.go
+  s_3f533e1178ec04::t_31840928ffe697 65-69,321-365
+  s_3f533e1178ec04::t_253208e40ca4e1 366
+internal/tui/batch_test.go
+  s_3f533e1178ec04::t_2cac044066ff44 66,266-267
+README.md
+  s_3f533e1178ec04::t_26a5ea2e209fad 396,487-497,506-507,2013
+cmd/asanamate/main_test.go
+  s_3f533e1178ec04::t_9d013468db1a32 11-13
+  s_3f533e1178ec04::t_d16539f6ed399c 151-187
+internal/tui/composerfiles_test.go
+  s_3f533e1178ec04::t_cf3aabab1e5205 53,112
+  s_3f533e1178ec04::t_34feace55ecf29 16,115
+  s_3f533e1178ec04::t_7a9be8fa13f85b 1-15,17-52,54-111,113-114,116-139
+internal/tui/composerfiles.go
+  s_3f533e1178ec04::t_053cd680e37f33 1-3,5-76,80-106
+  s_3f533e1178ec04::t_8930ab86103f4c 4,77-79
+internal/tui/comment.go
+  s_3f533e1178ec04::t_026de07ab020ee 32,63,94,96,283,285,294-297,299,301,311,395-398,466,530-534,572,623-624
+  s_3f533e1178ec04::t_3e5b283e711d54 625
+internal/whatsnew/unreleased/comment-files.md
+  s_3f533e1178ec04::t_26a5ea2e209fad 3-7
+internal/tui/batch.go
+  s_3f533e1178ec04::t_053cd680e37f33 6
+  s_3f533e1178ec04::t_026de07ab020ee 21,470-477,479-485,490-495,499-503
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5118adf9025414646940428491e13c1f4aa13342",
+  "prompts": {},
+  "sessions": {
+    "s_3f533e1178ec04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6a6b7425-de16-43a8-8e06-136b4af9ab0c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

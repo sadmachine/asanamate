@@ -62,19 +62,41 @@ func (m *Model) chipRows(chips []chip, width, top int) []string {
 	return rows
 }
 
+// stacked reports whether the focused reader selects one of fields, which
+// then stack one to a row.
+func (m *Model) stacked(fields []ticket.Field) bool {
+	return m.focusReader && slices.ContainsFunc(fields, func(f ticket.Field) bool { return f.Key != "" && f.Key == m.fieldKey })
+}
+
+// stack puts each chip on a row of its own, its prefix led by its glyph, in
+// aligned columns: glyphs, a space, labels, values.
+func stack(chips []chip, glyphs []string) {
+	glyphW, labelW := 0, 0
+	for i, c := range chips {
+		glyphW, labelW = max(glyphW, ansi.StringWidth(glyphs[i])), max(labelW, ansi.StringWidth(c.prefix))
+	}
+	if glyphW > 0 {
+		glyphW++
+	}
+	for i := range chips {
+		chips[i].prefix = padRight(glyphs[i], glyphW) + padRight(chips[i].prefix, labelW)
+		chips[i].alone = true
+	}
+}
+
 // metaChips are t's built-in fields, in the details card's order, each led
 // by its icon when the symbol set has one and its label otherwise. While the
-// focused reader selects one of them, they stack one to a row, each led by
-// its icon and then its label, in aligned columns.
+// focused reader selects one of them, they stack, each led by its icon and
+// then its label.
 func (m *Model) metaChips(t ticket.Ticket, width int) []chip {
 	icons := map[string]string{ticket.KeyAssignee: iconUser, ticket.KeyDue: iconDue, ticket.KeyMyTasks: iconMyTasks, ticket.KeyProject: iconProject}
 	meta := detailMeta(t)
-	stacked := m.focusReader && slices.ContainsFunc(meta, func(f ticket.Field) bool { return f.Key != "" && f.Key == m.fieldKey })
+	stacked := m.stacked(meta)
 	var chips []chip
 	glyphs := make([]string, len(meta))
 	for i, f := range meta {
 		if f.Key == addProjectKey {
-			chips = append(chips, chip{value: m.addRow(f.Key, f.Label), key: f.Key, alone: stacked})
+			chips = append(chips, chip{value: m.addRow(f.Key, f.Label), key: f.Key})
 			continue
 		}
 		kind, _, _ := strings.Cut(f.Key, ":")
@@ -85,16 +107,10 @@ func (m *Model) metaChips(t ticket.Ticket, width int) []chip {
 		case prefix == "" && (f.Label != "Status" || f.Key != ""):
 			prefix = dimStyle.Render(f.Label) + " "
 		}
-		chips = append(chips, chip{prefix: prefix, value: m.fieldValue(t, f, width), key: f.Key, alone: stacked})
+		chips = append(chips, chip{prefix: prefix, value: m.fieldValue(t, f, width), key: f.Key})
 	}
 	if stacked {
-		glyphW, labelW := 0, 0
-		for i, c := range chips {
-			glyphW, labelW = max(glyphW, ansi.StringWidth(glyphs[i])), max(labelW, ansi.StringWidth(c.prefix))
-		}
-		for i := range chips {
-			chips[i].prefix = padRight(glyphs[i], glyphW) + padRight(chips[i].prefix, labelW)
-		}
+		stack(chips, glyphs)
 	}
 	return chips
 }
@@ -105,7 +121,8 @@ func padRight(s string, width int) string {
 }
 
 // fieldChips are t's custom fields, each led by its label: the set ones, and
-// the empty ones once shown, else a row that shows them.
+// the empty ones once shown, else a row that shows them. While the focused
+// reader selects a shown one, the shown ones stack.
 func (m *Model) fieldChips(t ticket.Ticket, width int) []chip {
 	fields, empty := t.FieldValues(), t.EmptyFields()
 	if m.showEmpty {
@@ -114,6 +131,9 @@ func (m *Model) fieldChips(t ticket.Ticket, width int) []chip {
 	var chips []chip
 	for _, f := range fields {
 		chips = append(chips, chip{prefix: dimStyle.Render(ticket.Clean(f.Label)) + " ", value: m.fieldValue(t, f, width), key: f.Key})
+	}
+	if m.stacked(fields) {
+		stack(chips, make([]string, len(chips)))
 	}
 	if len(empty) > 0 {
 		style := dimStyle.Italic(true)

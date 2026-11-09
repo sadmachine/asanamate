@@ -316,7 +316,8 @@ its icon with `symbols = "nerd"`) and set apart by dots, and custom fields
 keep their labels in rows under a Fields rule, with a long value on a row of
 its own. While you select a built-in field, they stack one to a row, each
 led by its icon and its full label, with their values lined up, and fold
-back into chips when you move on. Agents and
+back into chips when you move on. Custom fields stack the same way while you
+select one; empty ones stay hidden until you show them. Agents and
 subtasks sit side by side when the reader is wide enough for both. Every row
 you can select in the cards view is there in the same order and edits the
 same way, so `j`/`k`, `enter`, and the jump menu work alike in both, and

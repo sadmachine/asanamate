@@ -697,13 +697,46 @@ func TestStreamlinedBuiltInFieldsStackWhileSelected(t *testing.T) {
 	plain := m.sym
 	m.sym = nerdSymbols
 	lines = cardLines(t, m, tk, 120)
-	if project := lines[m.fieldLines["project:p1"]]; !strings.HasPrefix(project, m.sym.icon(iconProject)+"Project ") {
-		t.Fatalf("stacked project row = %q, want its icon, then its label", project)
+	if project := lines[m.fieldLines["project:p1"]]; !strings.HasPrefix(project, m.sym.icon(iconProject)+" Project ") {
+		t.Fatalf("stacked project row = %q, want its icon, two spaces, then its label", project)
 	}
 	m.sym, m.focusReader = plain, false
 	cardLines(t, m, tk, 120)
 	if m.fieldLines["project:p1"] != m.fieldLines["assignee"] {
 		t.Fatal("built-in fields should return to one row when the reader loses focus")
+	}
+}
+
+func TestStreamlinedCustomFieldsStackWhileSelected(t *testing.T) {
+	m, _ := editModel(t)
+	m.readerView = config.ViewStreamlined
+	tk := m.details["1"]
+	for i, v := range map[int]string{0: "feat/x", 2: "FE"} {
+		tk.CustomFields[i].DisplayValue = &v
+	}
+	f1, f2, f3 := ticket.FieldKey("f1"), ticket.FieldKey("f2"), ticket.FieldKey("f3")
+	m.focusReader, m.fieldKey = true, emptyFieldsKey
+	lines := cardLines(t, m, tk, 120)
+	if m.fieldLines[f1] != m.fieldLines[f3] {
+		t.Fatalf("custom fields should share a row while the hidden ones' row is selected:\n%s", strings.Join(lines, "\n"))
+	}
+	m.fieldKey = f1
+	lines = cardLines(t, m, tk, 120)
+	branch, scope := lines[m.fieldLines[f1]], lines[m.fieldLines[f3]]
+	if m.fieldLines[f3] <= m.fieldLines[f1] || strings.Contains(branch, " · ") {
+		t.Fatalf("selected custom fields should stack one to a row:\n%s", strings.Join(lines, "\n"))
+	}
+	if b, s := strings.Index(branch, "feat/x"), strings.Index(scope, "FE"); b < 0 || b != s {
+		t.Fatalf("stacked values should align: branch %q, scope %q", branch, scope)
+	}
+	if _, ok := m.fieldLines[f2]; ok {
+		t.Fatal("hidden custom fields should stay hidden")
+	}
+	m.showEmpty, m.fieldKey = true, f2
+	lines = cardLines(t, m, tk, 120)
+	branch, due := lines[m.fieldLines[f1]], lines[m.fieldLines[f2]]
+	if m.fieldLines[f2] == m.fieldLines[f1] || m.fieldLines[f2] == m.fieldLines[f3] || strings.Index(due, "—") != strings.Index(branch, "feat/x") {
+		t.Fatalf("shown empty fields should stack with the others:\n%s", strings.Join(lines, "\n"))
 	}
 }
 

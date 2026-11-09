@@ -382,3 +382,71 @@ func TestPickerPreviewHasFullHeightDivider(t *testing.T) {
 		}
 	}
 }
+
+// headed returns items under header rows: "# v1" makes a header named v1.
+func headed(labels ...string) []pickItem {
+	out := items(labels...)
+	for i, it := range out {
+		if name, ok := strings.CutPrefix(it.Label, "# "); ok {
+			out[i] = pickItem{Label: name, Header: true}
+		}
+	}
+	return out
+}
+
+func TestPickerCursorSkipsHeaders(t *testing.T) {
+	p := newPicker(nil, "Pick", headed("# v2", "A", "B", "# v1", "C"))
+	label := func() string { return p.current().Label }
+	if label() != "A" {
+		t.Fatalf("starts on %q, want the first item", label())
+	}
+	for _, step := range []struct{ key, want string }{
+		{"up", "A"}, {"down", "B"}, {"down", "C"}, {"down", "C"}, {"up", "B"}, {"home", "A"}, {"end", "C"},
+	} {
+		p.update(key(step.key))
+		if label() != step.want {
+			t.Fatalf("after %s on %q, want %q", step.key, label(), step.want)
+		}
+	}
+	if res := p.choose(0); res.done {
+		t.Fatal("a header was chosen")
+	}
+	if _, ok := p.rowAt(40, 12, modalLook{}, 1); ok {
+		t.Fatal("a click on a header must not select it")
+	}
+	if row, ok := p.rowAt(40, 12, modalLook{}, 2); !ok || row != 1 {
+		t.Fatalf("click on A = %d, %v", row, ok)
+	}
+}
+
+func TestPickerSearchDropsEmptyHeaders(t *testing.T) {
+	p := newPicker(nil, "Pick", headed("# v2", "Apple", "# v1", "Banana", "Apricot"))
+	search(p, "ap")
+	var got []string
+	for _, i := range p.matches {
+		got = append(got, p.items[i].Label)
+	}
+	if strings.Join(got, ",") != "v2,Apple,v1,Apricot" {
+		t.Fatalf("matches = %v", got)
+	}
+	typeText(p, "ri")
+	if p.current() == nil || p.current().Label != "Apricot" {
+		t.Fatalf("cursor on %+v, want Apricot", p.current())
+	}
+	p.update(key("esc"))
+	if p.searching || p.current().Label != "Apricot" {
+		t.Fatalf("searching = %v, cursor on %+v", p.searching, p.current())
+	}
+	if view := ansi.Strip(p.view(40, 12, modalLook{})); !strings.Contains(view, "v1") || strings.Contains(view, "▸ v1") {
+		t.Fatalf("header row:\n%s", view)
+	}
+}
+
+func TestPickerCloseHintReplacesSelectAndCancel(t *testing.T) {
+	p := newPicker(nil, "Pick", items("A"))
+	p.closeHint = "got it"
+	hints := ansi.Strip(p.controls(lipgloss.NewStyle()))
+	if !strings.Contains(hints, "got it") || strings.Contains(hints, "select") || strings.Contains(hints, "cancel") {
+		t.Fatalf("hints = %q", hints)
+	}
+}

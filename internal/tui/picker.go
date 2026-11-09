@@ -3,6 +3,7 @@ package tui
 import (
 	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 
 	"charm.land/bubbles/v2/textinput"
@@ -15,6 +16,7 @@ import (
 
 type pickItem struct {
 	Disabled bool // visible but cannot be chosen
+	Header   bool // a rule naming the items after it; the cursor skips it
 	Label    string
 	Hint     string
 	Help     string // optional description shown below the list when selected
@@ -58,6 +60,9 @@ type picker struct {
 	notice      string      // owner's status lines shown under the list; search keeps them
 	noticeLevel statusLevel // notice severity; zero is info
 	extraHints  [][2]string // controls handled by the picker's owner
+	// closeHint, when set, labels cancel in the controls of a picker whose
+	// choose only closes it too, and drops the choose hint.
+	closeHint string
 	// preview draws the highlighted item, or nil for none, beside the list.
 	preview func(it *pickItem, width, height int) string
 	// listMaxWidth caps the list beside a preview; zero uses 32 columns.
@@ -103,11 +108,39 @@ func matchesWords(label, query string) bool {
 func (p *picker) refilter() {
 	p.matches = p.matches[:0]
 	for i, it := range p.items {
-		if matchesWords(it.Label+" "+it.Search, p.input.Value()) {
+		if it.Header || matchesWords(it.Label+" "+it.Search, p.input.Value()) {
 			p.matches = append(p.matches, i)
 		}
 	}
+	// Drop headers left with no items under them.
+	kept := p.matches[:0]
+	for j, i := range p.matches {
+		if p.items[i].Header && (j+1 == len(p.matches) || p.items[p.matches[j+1]].Header) {
+			continue
+		}
+		kept = append(kept, i)
+	}
+	p.matches = kept
 	p.cursor = max(min(p.cursor, p.rowCount()-1), 0)
+	p.skipHeader(1)
+}
+
+// isHeader reports whether row is a header.
+func (p *picker) isHeader(row int) bool {
+	return row >= 0 && row < len(p.matches) && p.items[p.matches[row]].Header
+}
+
+// skipHeader moves the cursor off a header to the nearest item, looking
+// step's way first.
+func (p *picker) skipHeader(step int) {
+	for _, s := range []int{step, -step} {
+		for row := p.cursor; row >= 0 && row < p.rowCount(); row += s {
+			if !p.isHeader(row) {
+				p.cursor = row
+				return
+			}
+		}
+	}
 }
 
 // useRow reports whether the list ends with a row that picks the search text.
@@ -134,7 +167,8 @@ func (p *picker) stopSearch() {
 	p.input.Blur()
 	p.input.SetValue("")
 	p.refilter()
-	p.cursor = selected
+	p.cursor = max(slices.Index(p.matches, selected), 0)
+	p.skipHeader(1)
 }
 
 // checkedResult returns the checked items of a multi picker, in list order.
@@ -150,7 +184,7 @@ func (p *picker) checkedResult() pickResult {
 
 func (p *picker) choose(i int) pickResult {
 	it := p.items[i]
-	if it.Disabled {
+	if it.Disabled || it.Header {
 		return pickResult{}
 	}
 	return pickResult{done: true, item: &it}
@@ -206,9 +240,11 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 		return pickResult{}, nil
 	case "top":
 		p.cursor = 0
+		p.skipHeader(1)
 		return pickResult{}, nil
 	case "bottom":
 		p.cursor = max(p.rowCount()-1, 0)
+		p.skipHeader(-1)
 		return pickResult{}, nil
 	case "choose":
 		return p.chooseCurrent(), nil
@@ -253,6 +289,7 @@ func (p *picker) update(msg tea.KeyPressMsg) (pickResult, tea.Cmd) {
 // move moves the cursor step rows, staying on the list.
 func (p *picker) move(step int) {
 	p.cursor = max(min(p.cursor+step, p.rowCount()-1), 0)
+	p.skipHeader(step)
 }
 
 // chooseCurrent returns what choose picks: a multi picker's checked items,
@@ -367,7 +404,7 @@ func (p *picker) layout(width, height int, look modalLook) pickerLayout {
 func (p *picker) rowAt(width, height int, look modalLook, line int) (int, bool) {
 	l := p.layout(width, height, look)
 	i := l.start + line - l.top
-	return i, line >= l.top && i < p.rowCount() && i < l.start+l.rows
+	return i, line >= l.top && i < p.rowCount() && i < l.start+l.rows && !p.isHeader(i)
 }
 
 // listView draws the title, search, list, and key hints.
@@ -393,6 +430,10 @@ func (p *picker) listView(width, height int, look modalLook) string {
 			line = fmt.Sprintf("Use %q", strings.TrimSpace(p.input.Value()))
 		} else {
 			it := p.items[p.matches[i]]
+			if it.Header {
+				b.WriteString(symbolRule(look.sym, look.accent.Bold(true).Render(it.Label), width) + "\n")
+				continue
+			}
 			line = it.Label
 			if it.Disabled {
 				line = dimStyle.Render(line)
@@ -450,7 +491,7 @@ func (p *picker) controls(accent lipgloss.Style) string {
 			copyKey = typedLabel("picker", "copy")
 		}
 		hints = append(hints, [2]string{keyLabel("picker", "choose"), "open"}, [2]string{copyKey, "copy"})
-	} else {
+	} else if p.closeHint == "" {
 		hints = append(hints, [2]string{keyLabel("picker", "choose"), "select"})
 	}
 	if p.onCopy != nil && !p.links {
@@ -470,7 +511,7 @@ func (p *picker) controls(accent lipgloss.Style) string {
 		hints = append(hints, [2]string{"ctrl+r", "defaults"})
 	}
 	hints = append(hints, p.extraHints...)
-	cancel := "cancel"
+	cancel := cmp.Or(p.closeHint, "cancel")
 	if p.searching && !p.keySelect {
 		cancel = "clear search"
 	}

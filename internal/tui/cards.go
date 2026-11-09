@@ -616,7 +616,12 @@ func (m *Model) ruleTitleStyle(selected, focused bool) lipgloss.Style {
 
 // styledRule draws a rule with an already styled title, cut to fit width.
 func (m *Model) styledRule(title string, width int) string {
-	line := m.sym.border.Top
+	return symbolRule(m.sym, title, width)
+}
+
+// symbolRule is styledRule drawn with sym's border.
+func symbolRule(sym symbolSet, title string, width int) string {
+	line := sym.border.Top
 	lead := line + line + " "
 	title = ansi.Truncate(title, max(width-ansi.StringWidth(lead)-2, 1), "…")
 	fill := max(width-ansi.StringWidth(lead)-ansi.StringWidth(title)-1, 0)

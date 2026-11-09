@@ -306,7 +306,7 @@ func TestTimeSummaryLivesInHeaderWithClock(t *testing.T) {
 	} {
 		t.Run(tc.style, func(t *testing.T) {
 			m, _ := timeModel(t)
-			m.sym = newSymbols(tc.style, nil, false)
+			m.sym = newSymbols(tc.style, nil, nil, false)
 			m.timeSummaries = map[string]timeSummaryState{"42": {summary: timetracking.Summary{TotalSeconds: 13500}}}
 			tk := m.details["42"]
 			for _, width := range []int{40, 120} {

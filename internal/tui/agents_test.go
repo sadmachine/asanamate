@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -31,7 +32,7 @@ func agentModel(t *testing.T, set string, reduced bool) *Model {
 		Agents:      config.Agents{Command: "unused"},
 		Actions:     []config.Action{goAction},
 	})
-	m.sym = newSymbols(set, nil, reduced)
+	m.sym = newSymbols(set, nil, nil, reduced)
 	st.LinkRepo("p1", "/code/web")
 	m.Update(tasksMsg{tasks: []asana.Task{agentTask("feat/x"), {GID: "2", Name: "Other"}}})
 	return m
@@ -176,9 +177,36 @@ func TestReducedMotionAndASCII(t *testing.T) {
 }
 
 func TestSymbolOverrides(t *testing.T) {
-	s := newSymbols(config.SymbolsUnicode, map[string]string{"working": "W", "idle": "i"}, false)
+	s := newSymbols(config.SymbolsUnicode, map[string]string{"working": "W", "idle": "i"}, nil, false)
 	if s.agent(agents.Working, 3) != "W" || s.agent(agents.Idle, 0) != "i" || s.spinner != nil {
 		t.Fatalf("overrides not applied: %+v", s)
+	}
+}
+
+func TestIconOverrides(t *testing.T) {
+	s := newSymbols(config.SymbolsNerd, nil, map[string]string{iconProject: "P", iconUser: ""}, false)
+	if s.icon(iconProject) != "P " || s.icon(iconUser) != "" || s.icon(iconDue) != nerdSymbols.icon(iconDue) {
+		t.Fatalf("icon overrides not applied: %q", s.icons)
+	}
+	if nerdSymbols.icon(iconProject) == "P " {
+		t.Fatal("overrides must not change the shared symbol set")
+	}
+}
+
+// Every icon a symbol set draws is one [icons] can override, and the reverse.
+func TestIconNamesMatchConfig(t *testing.T) {
+	drawn := map[string]bool{}
+	for _, set := range symbolSets {
+		for name := range set.icons {
+			drawn[name] = true
+		}
+	}
+	var names []string
+	for _, i := range config.Icons {
+		names = append(names, i.Name)
+	}
+	if got := slices.Sorted(maps.Keys(drawn)); !slices.Equal(got, slices.Sorted(slices.Values(names))) {
+		t.Fatalf("symbol set icons %q, config.Icons %q", got, names)
 	}
 }
 

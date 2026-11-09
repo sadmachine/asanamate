@@ -527,7 +527,7 @@ func TestActionBuilderInfoIconFollowsSymbolSet(t *testing.T) {
 	} {
 		t.Run(tc.set, func(t *testing.T) {
 			m, _ := testModel(t, config.Default())
-			m.sym = newSymbols(tc.set, nil, false)
+			m.sym = newSymbols(tc.set, nil, nil, false)
 			m.deps.ConfigPath = filepath.Join(t.TempDir(), "config.toml")
 			m.openActionBuilder()
 			m.Update(key("enter"))

@@ -865,6 +865,7 @@ saved with the action builder (`A`) apply at once. Run `asanamate doctor` to che
 | `conversations.command` | `""` (off) | saved-conversation lookup, such as `"asana-sessions asanamate list"`; requires `conversations.open`; see [Conversations](#conversations-optional) and the [extension contract](docs/extensions.md#conversation-history) |
 | `conversations.open` | `""` (off) | foreground opener reading a private selection snapshot, such as `"asana-sessions asanamate open"`; requires `conversations.command`. asana-sessions is not bundled |
 | `symbols` | `unicode` on UTF-8, else `ascii` | `unicode`, `nerd`, or `ascii` for ticket markers and agent states |
+| `icons.<name>` | unset | the icon for one name, replacing the symbol set's, such as `project = "\uec2f"`; `""` draws none and shows the label instead where there is one. Names: `user`, `due`, `my_tasks`, `project`, `project_color`, `view`, `filter`, `group`, `clock`, `branch`, `repo`, `clip`, `refresh`, `bell`, `warning`, `network`; the config template says where each shows |
 | `reduced_motion` | OS setting | `true` shows static agent symbols instead of the spinner |
 | `list.default_view.group_by` | `""` (ungrouped) | starting grouping, until the project has its own saved view: any `list.fields` name or [rule grouping](#rule-groupings); `b` picks another |
 | `groupings` | built-in `state` and `now` | [rule groupings](#rule-groupings): `name`, then `[[groupings.sections]]` with a `label`, `match` filter queries, and optional `folded` |

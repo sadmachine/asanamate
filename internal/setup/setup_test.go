@@ -210,6 +210,16 @@ func TestMergePreservesAgentFocus(t *testing.T) {
 	}
 }
 
+func TestMergeKeepsIcons(t *testing.T) {
+	updated, _, _, err := Merge("workspace = \"1\"\n[icons]\nproject = \"P\"\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg := loadString(t, updated); cfg.Icons["project"] != "P" || len(cfg.Icons) != 1 {
+		t.Fatalf("icons = %q", cfg.Icons)
+	}
+}
+
 func TestTemplateOptionsStayTopLevel(t *testing.T) {
 	// Uncomment every commented setting and table, but not prose.
 	setting := regexp.MustCompile(`^# (\[|[a-z_]+ +=)`)

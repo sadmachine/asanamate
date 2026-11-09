@@ -115,12 +115,17 @@ func (s symbolSet) file() string {
 	return cmp.Or(s.icon(iconClip), "+ ")
 }
 
-// newSymbols returns the named set with per-state overrides applied. An
-// overridden working symbol, or reduced motion, turns the spinner off.
-func newSymbols(set string, overrides map[string]string, reducedMotion bool) symbolSet {
+// newSymbols returns the named set with per-state overrides and icon
+// overrides applied. An overridden working symbol, or reduced motion, turns
+// the spinner off.
+func newSymbols(set string, overrides, icons map[string]string, reducedMotion bool) symbolSet {
 	base, ok := symbolSets[set]
 	if !ok {
 		base = symbolSets[config.SymbolsUnicode]
+	}
+	if len(icons) > 0 {
+		base.icons = maps.Clone(base.icons)
+		maps.Copy(base.icons, icons)
 	}
 	states := make(map[agents.State]string, len(overrides))
 	for k, v := range overrides {

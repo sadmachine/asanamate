@@ -595,7 +595,7 @@ func TestCommentListsAndOpensItsFiles(t *testing.T) {
 	m.fieldKey, m.focusReader, m.loading = "comment:9", true, false
 
 	for set, icon := range map[string]string{config.SymbolsASCII: "+ ", config.SymbolsNerd: "\uf0c6 "} {
-		m.sym = newSymbols(set, nil, false)
+		m.sym = newSymbols(set, nil, nil, false)
 		body, _ := m.comment(c, 60, false, 0)
 		if body = ansi.Strip(body); !strings.Contains(body, icon+"notes.pdf") || strings.Contains(body, "inline.png") {
 			t.Fatalf("%s comment:\n%s", set, body)

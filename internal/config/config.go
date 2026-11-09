@@ -59,14 +59,17 @@ var ErrNotConfigured = errors.New("asanamate is not configured; run `asanamate s
 type Config struct {
 	Workspace string `toml:"workspace"`
 	// Theme selects the color theme; Colors overrides its roles.
-	Theme         Theme      `toml:"theme"`
-	Colors        Colors     `toml:"colors"`
-	ConfirmWrites bool       `toml:"confirm_writes"`
-	BranchField   string     `toml:"branch_field"`
-	Symbols       string     `toml:"symbols"`
-	ReducedMotion *bool      `toml:"reduced_motion"`
-	RepoSource    RepoSource `toml:"repo_source"`
-	Agents        Agents     `toml:"agents"`
+	Theme         Theme  `toml:"theme"`
+	Colors        Colors `toml:"colors"`
+	ConfirmWrites bool   `toml:"confirm_writes"`
+	BranchField   string `toml:"branch_field"`
+	Symbols       string `toml:"symbols"`
+	// Icons overrides the symbol set's icons by name (see Icons); "" draws
+	// none.
+	Icons         map[string]string `toml:"icons"`
+	ReducedMotion *bool             `toml:"reduced_motion"`
+	RepoSource    RepoSource        `toml:"repo_source"`
+	Agents        Agents            `toml:"agents"`
 	// Conversations is disabled until both source and foreground opener are set.
 	Conversations Conversations `toml:"conversations"`
 	// TimeTracking is disabled until both its provider ID and command are set.
@@ -164,6 +167,29 @@ const (
 	SymbolsNerd    = "nerd"
 	SymbolsASCII   = "ascii"
 )
+
+// Icon is one icon [icons] can override: its name and where it shows.
+type Icon struct{ Name, Desc string }
+
+// Icons lists the icons [icons] can override.
+var Icons = []Icon{
+	{"user", "assignee in the streamlined reader"},
+	{"due", "due date in the streamlined reader and due events in Activity"},
+	{"my_tasks", "My Tasks section in the streamlined reader"},
+	{"project", "projects in the streamlined reader and project events in Activity"},
+	{"project_color", "project color dot before project names"},
+	{"view", "current view in the status line and other Activity events"},
+	{"filter", "filter in the status line and Activity"},
+	{"group", "grouping in the status line"},
+	{"clock", "time tracked in the reader"},
+	{"branch", "git branch in the reader and unpushed commits in the Feed panel"},
+	{"repo", "repository in the reader"},
+	{"clip", "attached files"},
+	{"refresh", "auto refresh in the status line"},
+	{"bell", "new activity in the Feed panel"},
+	{"warning", "failures in the Feed panel"},
+	{"network", "Asana connection in the status line"},
+}
 
 // SymbolSet returns the symbol set to use. When none is configured it is
 // unicode if the locale is UTF-8, else ascii.
@@ -420,6 +446,7 @@ func Default() Config {
 	return Config{
 		Theme:         Theme{Name: ThemeAuto, Auto: AutoThemes{Dark: "ansi-dark", Light: "ansi-light"}},
 		ConfirmWrites: true,
+		Icons:         map[string]string{},
 		Agents:        Agents{Focus: ""},
 		Conversations: Conversations{},
 		TimeTracking:  TimeTracking{},
@@ -607,6 +634,15 @@ func (c Config) validate() error {
 	if c.Symbols != "" {
 		if err := oneOf("symbols", c.Symbols, SymbolsUnicode, SymbolsNerd, SymbolsASCII); err != nil {
 			return err
+		}
+	}
+	for name := range c.Icons {
+		if !slices.ContainsFunc(Icons, func(i Icon) bool { return i.Name == name }) {
+			var known []string
+			for _, i := range Icons {
+				known = append(known, i.Name)
+			}
+			return fmt.Errorf("icons.%s: unknown icon (use %s)", name, strings.Join(known, ", "))
 		}
 	}
 	if r := c.RepoSource.Root; r != "" && r != "~" && !strings.HasPrefix(r, "~/") && !filepath.IsAbs(r) {

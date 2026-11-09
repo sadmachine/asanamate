@@ -167,7 +167,7 @@ func TestFeedFailedFeedKeepsItems(t *testing.T) {
 	if s := fresh.feedSummary(); s != "ci-feed failed" {
 		t.Fatalf("never-answered feed summary = %q", s)
 	}
-	fresh.sym = newSymbols(config.SymbolsNerd, nil, false)
+	fresh.sym = newSymbols(config.SymbolsNerd, nil, nil, false)
 	if s := fresh.feedSummary(); s != "\uf071 ci-feed failed" {
 		t.Fatalf("nerd failed summary = %q", s)
 	}

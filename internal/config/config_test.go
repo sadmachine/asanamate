@@ -405,6 +405,17 @@ func TestAgentsValidation(t *testing.T) {
 	}
 }
 
+func TestIconsConfig(t *testing.T) {
+	cfg, err := Load(writeFile(t, "workspace = \"1\"\n[icons]\nproject = \"\\uec2f\"\nuser = \"\"\n"))
+	if err != nil || cfg.Icons["project"] != "\uec2f" || cfg.Icons["user"] != "" || len(cfg.Icons) != 2 {
+		t.Fatalf("icons = %q, err = %v", cfg.Icons, err)
+	}
+	_, err = Load(writeFile(t, "workspace = \"1\"\n[icons]\nfolder = \"x\"\n"))
+	if err == nil || !strings.Contains(err.Error(), "icons.folder: unknown icon") {
+		t.Fatalf("unknown icon err = %v", err)
+	}
+}
+
 func TestAgentFocusConfig(t *testing.T) {
 	if cfg := Default(); cfg.Agents.Focus != "" {
 		t.Fatal("agent focus enabled by default")

@@ -189,7 +189,23 @@ func WriteWithBackup(path string, old, data []byte) (string, error) {
 func Render(workspace asana.Ref, repoRoot string) string {
 	name := strings.Join(strings.Fields(ticket.Clean(workspace.Name)), " ")
 	root, _ := formatValue(repoRoot) // a string always encodes
-	return fmt.Sprintf(configTemplate, name, workspace.GID, root) + keysTemplate()
+	return fmt.Sprintf(configTemplate, name, workspace.GID, root) + iconsTemplate() + keysTemplate()
+}
+
+// iconsTemplate is the [icons] section: every icon, commented out, generated
+// from config.Icons.
+func iconsTemplate() string {
+	var b strings.Builder
+	b.WriteString(`
+[icons]
+# Icons that lead labels, overriding the symbol set's (symbols = "nerd" draws
+# the most). Use any text or a "\uXXXX" escape, such as project = "\uec2f";
+# "" draws none, showing the label instead where there is one.
+`)
+	for _, i := range config.Icons {
+		fmt.Fprintf(&b, "# %s = \"\"  # %s\n", i.Name, i.Desc)
+	}
+	return b.String()
 }
 
 // keysTemplate is the [keys] section: every binding, commented out with its

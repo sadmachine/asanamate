@@ -5,6 +5,16 @@ section and, only when needed, a `### Changed` section; see AGENTS.md.
 Unreleased highlights wait in `unreleased/`, one file per change, until a
 release moves them here.
 
+## v0.4.8
+
+### New
+
+- **Files on comments.** Attach files to a new comment from the **Files** row
+  above the task details: type a path or drop a file on the terminal. Files
+  someone attached to a comment in Asana now show under that comment, and the
+  comment menu opens them. Try it: press `c`, then `tab` and `enter`; or
+  select a comment with files, press `enter`, then `f`.
+
 ## v0.4.7
 
 ### New

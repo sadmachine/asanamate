@@ -3,7 +3,6 @@ package tui
 import (
 	"strings"
 
-	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
@@ -11,10 +10,10 @@ import (
 	"github.com/sadmachine/asanamate/internal/whatsnew"
 )
 
-// whatsNewModal shows release highlights in a scrollable reader.
+// whatsNewModal lists release highlights by title beside the highlighted
+// entry in full.
 type whatsNewModal struct {
-	sections []whatsnew.Section
-	reader   viewport.Model
+	list *picker
 }
 
 // startupWhatsNew opens What's new on the first launch of a newer release, or
@@ -36,10 +35,35 @@ func (m *Model) startupWhatsNew() {
 	m.recordWhatsNewSeen()
 }
 
-// openWhatsNew shows sections, newest first.
+// openWhatsNew lists the titles of the entries in sections under their
+// versions, newest first, beside the highlighted entry in full.
 func (m *Model) openWhatsNew(sections []whatsnew.Section) {
 	m.modal = nil
-	m.whatsNew = &whatsNewModal{sections: sections, reader: viewport.New()}
+	var items []pickItem
+	prev := ""
+	for _, e := range whatsNewEntries(sections) {
+		if e.version != prev {
+			items = append(items, pickItem{Label: e.version, Header: true})
+			prev = e.version
+		}
+		items = append(items, pickItem{Label: e.title, Search: e.version + " " + e.body, Value: e})
+	}
+	list := newPicker(func(pickResult) tea.Cmd { m.closeWhatsNew(); return nil }, "What's new in asanamate", items)
+	list.listMaxWidth = 48
+	list.closeHint = "got it"
+	list.extraHints = [][2]string{{"d", "don't show on startup"}}
+	list.preview = func(it *pickItem, width, height int) string {
+		if it == nil {
+			return ""
+		}
+		e := it.Value.(whatsNewEntry)
+		out := m.accentStyle.Bold(true).Render(ansi.Wrap(e.title, width, "")) + "\n" +
+			dimStyle.Render(e.version+" · "+e.heading) + "\n\n" +
+			trimBlankLines(m.glamour(e.body, width, true))
+		lines := strings.Split(out, "\n")
+		return strings.Join(lines[:min(len(lines), height)], "\n")
+	}
+	m.whatsNew = &whatsNewModal{list: list}
 }
 
 // closeWhatsNew closes the modal and marks the running release as seen.
@@ -68,103 +92,80 @@ func (m *Model) setWhatsNewOnStartup(on bool) {
 }
 
 func (m *Model) updateWhatsNew(msg tea.KeyPressMsg) tea.Cmd {
-	w := m.whatsNew
-	if msg.String() == "d" {
+	list := m.whatsNew.list
+	if msg.String() == "d" && !list.searching {
 		m.setWhatsNewOnStartup(false)
 		m.closeWhatsNew()
 		return nil
 	}
-	switch bound("picker", msg, false) {
-	case "cancel", "choose":
+	res, cmd := list.update(msg)
+	if res.cancelled || res.done {
 		m.closeWhatsNew()
-	case "down":
-		w.reader.ScrollDown(1)
-	case "up":
-		w.reader.ScrollUp(1)
-	case "top":
-		w.reader.GotoTop()
-	case "bottom":
-		w.reader.GotoBottom()
-	default:
-		w.reader, _ = w.reader.Update(msg)
 	}
-	return nil
+	return cmd
 }
 
 func (m *Model) whatsNewView(width, height int) string {
-	w := m.whatsNew
-	footer := strings.Split(wrapHints(m.accentStyle, width,
-		[2]string{keyLabel("picker", "cancel"), "got it"},
-		[2]string{"d", "don't show on startup"},
-		[2]string{keyLabel("picker", "down", "up"), "scroll"},
-	), "\n")
-	if _, ok := updatecheck.ParseStable(m.deps.Version); ok {
+	var footer string
+	if _, ok := updatecheck.ParseStable(m.deps.Version); ok && height > 8 {
 		// GoReleaser injects the version without its tag's v.
 		url := "https://github.com/sadmachine/asanamate/releases/tag/v" + strings.TrimPrefix(m.deps.Version, "v")
-		footer = append(footer, dimStyle.Render(ansi.Truncate("Full notes: "+url, width, "…")))
+		footer = "\n" + dimStyle.Render(ansi.Truncate("Full notes: "+url, width, "…"))
 	}
-	// Keep at least one body line: drop the notes link, then the blank
-	// lines around the body, when the pane is short.
-	gap := "\n"
-	if height < 3+len(footer) {
-		footer = footer[:1]
-	}
-	if height < 5+len(footer) {
-		gap = ""
-	}
-	header := m.accentStyle.Bold(true).Render(ansi.Truncate("What's new in asanamate", width, "…"))
-	body := m.whatsNewBody(w.sections, width)
-	room := height - 2 - len(footer) - 2*strings.Count(gap, "\n")
-	w.reader.SetWidth(width)
-	w.reader.SetHeight(max(min(strings.Count(body, "\n")+1, room), 1))
-	w.reader.SetContent(body)
-	return header + "\n" + gap + w.reader.View() + "\n" + gap + strings.Join(footer, "\n")
+	return m.whatsNew.list.view(width, height-strings.Count(footer, "\n"), m.modalLook()) + footer
 }
 
-// whatsNewBody lays out each version under a rule, then its New and Changed
-// labels, each over its entries, reflowed to width and spaced apart.
-func (m *Model) whatsNewBody(sections []whatsnew.Section, width int) string {
-	if len(sections) == 0 {
-		return "No highlights for this version."
-	}
-	label := lipStyle(m.palette.Colors.Markdown.Heading).Bold(true)
-	var blocks []string
+// whatsNewEntry is one highlight: its version, its New or Changed heading,
+// its bold title, and the Markdown after the title.
+type whatsNewEntry struct {
+	version, heading, title, body string
+}
+
+// whatsNewEntries splits each section into its entries, in order. An
+// unindented line starts an entry; indented ones continue it.
+func whatsNewEntries(sections []whatsnew.Section) []whatsNewEntry {
+	var entries []whatsNewEntry
 	for _, s := range sections {
-		blocks = append(blocks, m.styledRule(m.accentStyle.Bold(true).Render(s.Version), width))
-		heading, entries := "", []string{}
+		heading := ""
 		var entry strings.Builder
-		flushEntry := func() {
+		flush := func() {
 			if md := strings.TrimSpace(entry.String()); md != "" {
-				entries = append(entries, trimBlankLines(m.glamour(md, width, true)))
+				title, body := splitWhatsNewEntry(md)
+				entries = append(entries, whatsNewEntry{version: s.Version, heading: heading, title: title, body: body})
 			}
 			entry.Reset()
 		}
-		flushGroup := func() {
-			flushEntry()
-			if len(entries) > 0 {
-				out := strings.Join(entries, "\n\n")
-				if heading != "" {
-					out = label.Render(heading) + "\n" + out
-				}
-				blocks = append(blocks, out)
-			}
-			heading, entries = "", nil
-		}
 		for _, line := range strings.Split(unwrapMarkdown(s.Body), "\n") {
 			if h, ok := strings.CutPrefix(strings.TrimSpace(line), "### "); ok {
-				flushGroup()
+				flush()
 				heading = h
 				continue
 			}
-			// An unindented line starts an entry; indented ones continue it.
 			if line != "" && line[0] != ' ' {
-				flushEntry()
+				flush()
 			}
-			entry.WriteString(line + "\n")
+			entry.WriteString(strings.TrimPrefix(line, "  ") + "\n")
 		}
-		flushGroup()
+		flush()
 	}
-	return strings.Join(blocks, "\n\n")
+	return entries
+}
+
+// splitWhatsNewEntry returns a list item's leading bold title as plain text,
+// without its code marks or closing period, and the Markdown after it. An
+// item with no bold title is all body, titled by its first line.
+func splitWhatsNewEntry(md string) (title, body string) {
+	for _, bullet := range []string{"- ", "* ", "+ "} {
+		md = strings.TrimPrefix(md, bullet)
+	}
+	title, body = md, md
+	if rest, ok := strings.CutPrefix(md, "**"); ok {
+		if t, after, ok := strings.Cut(rest, "**"); ok {
+			title, body = strings.TrimSuffix(strings.TrimSpace(t), "."), strings.TrimSpace(after)
+		}
+	}
+	title, _, _ = strings.Cut(title, "\n")
+	return strings.ReplaceAll(title, "`", ""), body
 }
 
 // trimBlankLines drops the leading and trailing lines that show nothing,

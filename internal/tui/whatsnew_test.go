@@ -44,6 +44,15 @@ func newWhatsNewModel(t *testing.T, version string, st *state.State, cfg config.
 	return New(Deps{ConfigPath: configPath, Config: cfg, State: st, StateDir: t.TempDir(), Version: version, WhatsNew: whatsNewFixture, Ticket: ticket})
 }
 
+// whatsNewRows lists the modal's rows, version headers and entry titles.
+func whatsNewRows(m *Model) string {
+	var rows []string
+	for _, it := range m.whatsNew.list.items {
+		rows = append(rows, it.Label)
+	}
+	return strings.Join(rows, ",")
+}
+
 func lastSeen(t *testing.T, st *state.State) string {
 	t.Helper()
 	loaded, err := state.Load(st.Path())
@@ -58,8 +67,8 @@ func TestWhatsNewOpensOnceAfterUpgrade(t *testing.T) {
 	if m.whatsNew == nil {
 		t.Fatal("modal did not open after an upgrade")
 	}
-	if md := whatsnew.Markdown(m.whatsNew.sections); !strings.Contains(md, "Five") || !strings.Contains(md, "Four-one") || strings.Contains(md, "**Four.**") {
-		t.Fatalf("markdown = %q", md)
+	if got := whatsNewRows(m); got != "v0.5.0,Five,v0.4.1,Four-one" {
+		t.Fatalf("rows = %q", got)
 	}
 	m.Update(key("esc"))
 	if m.whatsNew != nil {
@@ -76,7 +85,7 @@ func TestWhatsNewOpensOnceAfterUpgrade(t *testing.T) {
 
 func TestWhatsNewExistingUserFirstRelease(t *testing.T) {
 	m, _ := whatsNewModel(t, "v0.5.0", "recent_projects = []\n", config.Default(), "")
-	if m.whatsNew == nil || !strings.Contains(whatsnew.Markdown(m.whatsNew.sections), "Five") || strings.Contains(whatsnew.Markdown(m.whatsNew.sections), "Four") {
+	if m.whatsNew == nil || whatsNewRows(m) != "v0.5.0,Five" {
 		t.Fatalf("modal = %+v", m.whatsNew)
 	}
 }
@@ -144,7 +153,7 @@ func TestWhatsNewToolsMenu(t *testing.T) {
 	m.loading = false
 	m.Update(key(","))
 	m.Update(key("e"))
-	if m.whatsNew == nil || !strings.Contains(whatsnew.Markdown(m.whatsNew.sections), "**Four.**") {
+	if m.whatsNew == nil || !strings.HasSuffix(whatsNewRows(m), "v0.4.0,Four") {
 		t.Fatalf("modal = %+v", m.whatsNew)
 	}
 	m.Update(key("esc"))
@@ -181,22 +190,52 @@ func TestWhatsNewSaveErrorStillCloses(t *testing.T) {
 func TestWhatsNewTinyPane(t *testing.T) {
 	m, _ := whatsNewModel(t, "v0.5.0", "last_seen_version = \"v0.4.0\"\n", config.Default(), "")
 	m.Update(tea.WindowSizeMsg{Width: 20, Height: 6})
-	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "got it") {
+	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "▸ Five") {
 		t.Fatalf("view = %q", view)
 	}
 }
 
-func TestWhatsNewViewReflowsAndHidesMarkup(t *testing.T) {
+func TestWhatsNewListsTitlesBesideTheHighlightedEntry(t *testing.T) {
 	m, _ := whatsNewModel(t, "v0.5.0", "last_seen_version = \"v0.4.0\"\n", config.Default(), "")
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
-	m.openWhatsNew([]whatsnew.Section{{Version: "v0.5.0", Body: "### Changed\n\n- **Wrapped.** one two\n  three four\n- **Next.** five"}})
+	m.openWhatsNew([]whatsnew.Section{
+		{Version: "v0.5.0", Body: "### Changed\n\n- **Wrapped.** one two\n  three four\n- **Next.** five"},
+		{Version: "v0.4.0", Body: "### New\n\n- **Old.** six"},
+	})
 	view := ansi.Strip(m.View().Content)
-	for _, want := range []string{"v0.5.0", "Changed", "Wrapped. one two three four"} {
+	for _, want := range []string{"v0.5.0", "v0.4.0", "▸ Wrapped", "Next", "Old", "v0.5.0 · Changed", "one two three four", "esc got it"} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("view lacks %q:\n%s", want, view)
 		}
 	}
-	if strings.Contains(view, "##") {
-		t.Fatalf("view shows heading markup:\n%s", view)
+	for _, markup := range []string{"##", "**", "five"} {
+		if strings.Contains(view, markup) {
+			t.Fatalf("view shows %q:\n%s", markup, view)
+		}
+	}
+	m.Update(key("j"))
+	m.Update(key("j"))
+	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "▸ Old") || !strings.Contains(view, "six") {
+		t.Fatalf("j did not skip the header to Old:\n%s", view)
+	}
+}
+
+func TestWhatsNewSearchTypesD(t *testing.T) {
+	m, _ := whatsNewModel(t, "v0.5.0", "last_seen_version = \"v0.4.0\"\n", config.Default(), "")
+	m.Update(key("/"))
+	m.Update(key("d"))
+	if m.whatsNew == nil || !m.deps.Config.WhatsNew.OnStartup || m.whatsNew.list.input.Value() != "d" {
+		t.Fatalf("d while searching must type: modal = %v, on_startup = %v", m.whatsNew != nil, m.deps.Config.WhatsNew.OnStartup)
+	}
+}
+
+func TestSplitWhatsNewEntry(t *testing.T) {
+	for _, tc := range []struct{ md, title, body string }{
+		{"- **`ASANAMATE_X` takes true.** It does.", "ASANAMATE_X takes true", "It does."},
+		{"- No bold title here.\nMore.", "No bold title here.", "No bold title here.\nMore."},
+	} {
+		if title, body := splitWhatsNewEntry(tc.md); title != tc.title || body != tc.body {
+			t.Fatalf("splitWhatsNewEntry(%q) = %q, %q", tc.md, title, body)
+		}
 	}
 }

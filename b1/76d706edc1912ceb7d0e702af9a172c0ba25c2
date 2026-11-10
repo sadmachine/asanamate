@@ -1,0 +1,45 @@
+internal/tui/model.go
+  s_7a696c4756a149::t_ce85c25bca32e2 171,352,425-426,544,561-564,582-584,610,652-656,671,675,751,760,1029-1037,1039-1040
+  s_7a696c4756a149::t_59be5a8b9451f5 125,423,1038
+  s_7a696c4756a149::t_3f801f38a19e26 424,1041-1042,1386
+internal/tui/links.go
+  s_7a696c4756a149::t_804a5a34a3dc55 38
+internal/tui/edit.go
+  s_7a696c4756a149::t_804a5a34a3dc55 143,357,366
+  s_7a696c4756a149::t_83d12092e908f8 380,722
+internal/tui/flow_test.go
+  s_7a696c4756a149::t_8e103200857631 284-285,287-288,304-318
+  s_7a696c4756a149::t_a64d78eba339db 319-320
+internal/tui/flow.go
+  s_7a696c4756a149::t_59be5a8b9451f5 770,772
+  s_7a696c4756a149::t_804a5a34a3dc55 191,514
+internal/tui/model_test.go
+  s_7a696c4756a149::t_cd47871b9912c0 390-407
+  s_7a696c4756a149::t_f4a90fc54a4dab 515-531
+internal/whatsnew/unreleased/loading-modals.md
+  s_7a696c4756a149::t_7357a0746e37fe 1-6
+internal/tui/keys.go
+  s_7a696c4756a149::t_804a5a34a3dc55 508
+internal/tui/columns.go
+  s_7a696c4756a149::t_804a5a34a3dc55 69,71,75
+internal/tui/columns_test.go
+  s_7a696c4756a149::t_8e103200857631 194-204,207,210-214
+internal/tui/cmds.go
+  s_7a696c4756a149::t_6b1f72bdfe44b1 136,336,341,344
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b176d706edc1912ceb7d0e702af9a172c0ba25c2",
+  "prompts": {},
+  "sessions": {
+    "s_7a696c4756a149": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c0bd14f0-09a2-4305-b217-5fc4f4400271",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

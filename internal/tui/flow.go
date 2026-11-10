@@ -188,8 +188,7 @@ func (m *Model) requestMenu(open func() tea.Cmd) tea.Cmd {
 		return open()
 	}
 	m.menuFor, m.menuOpen = t.GID, open
-	m.setProgress("loading ticket…")
-	return m.loadDetail(t.GID)
+	return m.wait("Loading ticket…", m.loadDetail(t.GID))
 }
 
 func (m *Model) pickedAction(i int) tea.Cmd {
@@ -512,8 +511,7 @@ func (m *Model) runProjectFields(r *pendingRun) (tea.Cmd, bool) {
 		return nil, false
 	}
 	r.awaitingFields = true
-	m.setProgress("loading project fields…")
-	return loadProjectFields(m.deps.Client, p.GID), true
+	return m.wait("Loading project fields…", loadProjectFields(m.deps.Client, p.GID)), true
 }
 
 // runBranch picks the branch, asking for one when the command uses it and
@@ -769,9 +767,9 @@ func (m *Model) pickedAttachment(a asana.Attachment) tea.Cmd {
 // viewImage loads viewImages[i] for the attachment viewer.
 func (m *Model) viewImage(i int) tea.Cmd {
 	m.viewIndex = i
-	m.setProgress("loading image…")
+	m.viewerSeq++
 	// The image leaves room for a blank line and the two footer lines.
-	return loadImage(m.deps.Client, m.viewImages[i], max(m.width, 1), max(m.height-3, 1), m.imageCell, m.deps.InTmux)
+	return m.wait("Loading image…", loadImage(m.deps.Client, m.viewImages[i], max(m.width, 1), max(m.height-3, 1), m.imageCell, m.deps.InTmux, m.viewerSeq))
 }
 
 // viewerFooter is the image viewer's bottom bar, centered like a browser

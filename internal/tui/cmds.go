@@ -133,6 +133,7 @@ type editDoneMsg struct {
 }
 
 type imageMsg struct {
+	seq     uint64 // the request; a cancelled wait's late reply is dropped
 	payload string
 	url     string
 	err     error
@@ -332,14 +333,14 @@ func openURL(url string) tea.Cmd {
 	}
 }
 
-func loadImage(c *asana.Client, a asana.Attachment, cols, rows int, cell kitty.CellSize, inTmux bool) tea.Cmd {
+func loadImage(c *asana.Client, a asana.Attachment, cols, rows int, cell kitty.CellSize, inTmux bool, seq uint64) tea.Cmd {
 	url := ticket.AttachmentURL(a)
 	return request(func(ctx context.Context) tea.Msg {
 		data, err := fetchImage(ctx, c, a.GID)
 		if err != nil {
-			return imageMsg{url: url, err: err}
+			return imageMsg{seq: seq, url: url, err: err}
 		}
 		payload, err := kitty.Encode(data, cols, rows, cell, inTmux)
-		return imageMsg{payload: payload, url: url, err: err}
+		return imageMsg{seq: seq, payload: payload, url: url, err: err}
 	})
 }

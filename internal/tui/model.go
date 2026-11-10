@@ -122,6 +122,7 @@ type Model struct {
 	agentSeq        uint64           // the current agent poll chain; older chains stop
 	taskSeq         uint64           // the latest task load; an older load's result is stale
 	candidatesSeq   uint64           // the latest repo candidates request
+	viewerSeq       uint64           // the latest image viewer request
 	linkNamesSeq    uint64           // the latest linked-project names request
 
 	focusReader  bool
@@ -167,6 +168,7 @@ type Model struct {
 	timeSummarySeq uint64
 	lastAction     int            // index of the last picked action; -1 for none
 	menuFor        string         // gid whose menu opens once its details arrive
+	columnsFor     string         // project gid whose columns picker opens once its fields load
 	menuOpen       func() tea.Cmd // opens that menu
 	openGID        string         // history ticket to show once its details arrive
 	openedGID      string         // ticket the focused reader raised ticket_open for
@@ -347,7 +349,7 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 		if msg.seq != m.linkNamesSeq {
 			return m, nil
 		}
-		m.clearProgress()
+		m.waiting = ""
 		if !m.idle() {
 			return m, nil
 		}
@@ -418,11 +420,14 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	case inlineImageMsg:
 		return m, m.inlineImageLoaded(msg)
 	case imageMsg:
+		if m.waiting == "" || msg.seq != m.viewerSeq {
+			return m, nil
+		}
+		m.waiting = ""
 		if msg.err != nil {
 			m.setStatus(statusWarning, "image: "+msg.err.Error()+"; opening in browser")
 			return m, openURL(msg.url)
 		}
-		m.clearProgress()
 		viewer := kitty.NewViewer(msg.payload, m.viewerFooter(), len(m.viewImages) > 1, m.deps.InTmux)
 		return m, tea.Exec(viewer, func(err error) tea.Msg { return viewerDoneMsg{step: viewer.Step, err: err} })
 	case viewerDoneMsg:
@@ -536,7 +541,7 @@ func (m *Model) gotDetail(msg detailMsg) tea.Cmd {
 			m.openGID = ""
 		}
 		if m.menuFor == msg.gid {
-			m.menuFor = ""
+			m.menuFor, m.waiting = "", ""
 		}
 		return nil
 	}
@@ -553,8 +558,10 @@ func (m *Model) gotDetail(msg detailMsg) tea.Cmd {
 	}
 	if isSelected {
 		m.renderDetail(m.shownGID == msg.gid)
-		if m.menuFor == msg.gid {
-			m.menuFor = ""
+	}
+	if m.menuFor == msg.gid {
+		m.menuFor, m.waiting = "", ""
+		if isSelected {
 			return tea.Batch(images, m.menuOpen())
 		}
 	}
@@ -572,6 +579,9 @@ func (m *Model) gotProjects(msg projectsMsg) tea.Cmd {
 		// cannot open its picker for a ticket the user has left.
 		waiting := m.afterProjects != nil
 		m.afterProjects = nil
+		if waiting {
+			m.waiting = ""
+		}
 		if m.composer != nil && waiting {
 			m.setInlineError(message)
 			m.composer.setError(m.status)
@@ -584,11 +594,9 @@ func (m *Model) gotProjects(msg projectsMsg) tea.Cmd {
 				m.setBackgroundError("projects", message)
 			}
 		}
-		m.clearProgress()
 		return nil
 	}
 	delete(m.backgroundErrors, "projects")
-	m.clearProgress()
 	m.projects, m.projectsLoaded = msg.projects, true
 	m.allProjects = msg.allProjects
 	m.deps.State.Projects = make([]state.Project, len(msg.projects))
@@ -599,7 +607,7 @@ func (m *Model) gotProjects(msg projectsMsg) tea.Cmd {
 		m.setStatus(statusError, "saving state: "+err.Error())
 	}
 	if open := m.afterProjects; open != nil {
-		m.afterProjects = nil
+		m.afterProjects, m.waiting = nil, ""
 		return open()
 	}
 	return nil
@@ -641,8 +649,11 @@ func (m *Model) gotAgents(msg agentsMsg) tea.Cmd {
 // gotProjectFields stores a project's custom fields for the column picker
 // or a run waiting on them.
 func (m *Model) gotProjectFields(msg projectFieldsMsg) tea.Cmd {
-	if msg.columns && msg.gid != gidOf(m.viewProject) {
-		return nil
+	if msg.columns {
+		if msg.gid != m.columnsFor || msg.gid != gidOf(m.viewProject) {
+			return nil
+		}
+		m.columnsFor, m.waiting = "", ""
 	}
 	connectionError := m.observeAsana("loading project fields", msg.err)
 	if msg.err != nil {
@@ -650,7 +661,6 @@ func (m *Model) gotProjectFields(msg projectFieldsMsg) tea.Cmd {
 			m.setStatus(statusError, "loading project fields: "+msg.err.Error())
 		}
 		if msg.columns {
-			m.clearProgress()
 			return nil
 		}
 	}
@@ -658,12 +668,11 @@ func (m *Model) gotProjectFields(msg projectFieldsMsg) tea.Cmd {
 	if msg.catalog != nil {
 		m.cacheProjectFields(msg.gid, msg.catalog)
 	}
-	if msg.columns && msg.gid == gidOf(m.viewProject) {
-		m.clearProgress()
+	if msg.columns {
 		m.openColumnPicker()
 	}
 	if m.run != nil && m.run.awaitingFields {
-		m.run.awaitingFields = false
+		m.run.awaitingFields, m.waiting = false, ""
 		return m.resumeRun()
 	}
 	return nil
@@ -739,7 +748,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			}
 		} else if m.input == nil && m.modal == nil {
 			if bound("picker", msg, false) == "cancel" {
-				m.afterProjects = nil
+				m.afterProjects, m.waiting = nil, ""
 				m.returnToDraft()
 			}
 			return nil
@@ -748,11 +757,7 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	if m.waiting != "" {
 		switch {
 		case keys.Name("main", k) == "quit", keys.Name("picker", k) == "cancel":
-			if m.run != nil && m.run.formCancel != nil {
-				m.run.formCancel()
-			}
-			m.waiting, m.run, m.timeEntry = "", nil, nil
-			m.stopConversations()
+			m.cancelWait()
 			if keys.Name("main", k) == "quit" {
 				return tea.Quit
 			}
@@ -1019,6 +1024,20 @@ func (m *Model) modalLook() modalLook {
 func (m *Model) wait(text string, cmd tea.Cmd) tea.Cmd {
 	m.waiting = text
 	return tea.Batch(cmd, m.startSpinner())
+}
+
+// cancelWait closes the loading modal and abandons whatever waited behind
+// it, so its late reply opens nothing.
+func (m *Model) cancelWait() {
+	if m.run != nil && m.run.formCancel != nil {
+		m.run.formCancel()
+	}
+	m.waiting, m.run, m.timeEntry, m.edit, m.afterProjects = "", nil, nil, nil, nil
+	m.menuFor, m.columnsFor = "", ""
+	m.candidatesSeq++
+	m.viewerSeq++
+	m.linkNamesSeq++
+	m.stopConversations()
 }
 
 // startSpinner schedules a spinner tick unless one is scheduled or nothing animates.
@@ -1364,7 +1383,7 @@ func (m *Model) body() string {
 		w = max(min(m.width-4, 140), 10)
 		content = m.whatsNewView(w, mh)
 	case m.composer != nil && m.input == nil && !m.composer.reading:
-		content = "Loading task details…\n" + hintLine(m.accentStyle, [2]string{keyLabel("picker", "cancel"), "cancel"})
+		content = cmp.Or(m.waiting, "Loading task details…") + "\n" + hintLine(m.accentStyle, [2]string{keyLabel("picker", "cancel"), "cancel"})
 	case m.help:
 		kind = overlayHelp
 		if m.activityOpen {

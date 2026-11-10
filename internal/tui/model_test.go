@@ -387,6 +387,24 @@ func TestImageCellSizeChanges(t *testing.T) {
 	}
 }
 
+// An image loads behind a loading modal; esc closes it, and the late image
+// opens no viewer.
+func TestImageViewerLoadingModalCancels(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	m.deps.Images = true
+	m.Update(tasksMsg{seq: m.taskSeq, tasks: []asana.Task{openTask}})
+	att := asana.Attachment{GID: "a", Name: "one.png", Host: "asana"}
+	m.Update(detailMsg{gid: "1", ticket: ticket.Ticket{Task: openTask, Attachments: []asana.Attachment{att}}})
+	m.pickedAttachment(att)
+	if m.waiting != "Loading image…" {
+		t.Fatalf("waiting = %q, want the image loading modal", m.waiting)
+	}
+	m.Update(key("esc"))
+	if _, cmd := m.Update(imageMsg{seq: 1, payload: "img"}); cmd != nil || m.waiting != "" {
+		t.Fatalf("cancelled image still opened: waiting = %q", m.waiting)
+	}
+}
+
 func TestImageViewerStepsThroughImages(t *testing.T) {
 	m, _ := testModel(t, config.Config{})
 	m.deps.Images = true
@@ -491,6 +509,23 @@ func TestLoadedProjectsAreCachedOncePerSession(t *testing.T) {
 	}
 	if cmd := m.requestProjects(func() tea.Cmd { return nil }); cmd != nil || m.loadingProjects {
 		t.Fatal("projects loaded this session must not load again")
+	}
+}
+
+// Projects that are not cached load behind a loading modal; esc closes it,
+// and the late reply is cached without opening the picker.
+func TestProjectLoadingModalCancels(t *testing.T) {
+	m, _ := testModel(t, config.Config{})
+	m.deps.Client = asana.New("tok")
+	opened := false
+	m.requestProjects(func() tea.Cmd { opened = true; return nil })
+	if m.waiting != "Loading projects…" {
+		t.Fatalf("waiting = %q, want the projects loading modal", m.waiting)
+	}
+	m.Update(key("esc"))
+	m.Update(projectsMsg{projects: []asana.Project{{GID: "p2", Name: "API"}}})
+	if opened || m.waiting != "" || len(m.projects) != 1 {
+		t.Fatalf("opened = %v, waiting = %q, projects = %+v", opened, m.waiting, m.projects)
 	}
 }
 

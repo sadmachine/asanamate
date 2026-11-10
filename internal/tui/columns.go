@@ -66,14 +66,13 @@ func (m *Model) openColumns() tea.Cmd {
 				m.setStatus(statusWarning, "project fields are unavailable; reload and try again")
 				return nil
 			}
-			m.modal = nil
-			m.setProgress("loading project fields…")
+			m.modal, m.columnsFor = nil, gid
 			cmd := loadProjectFields(m.deps.Client, gid)
-			return func() tea.Msg {
+			return m.wait("Loading project fields…", func() tea.Msg {
 				msg := cmd().(projectFieldsMsg)
 				msg.columns = true
 				return msg
-			}
+			})
 		}
 	}
 	m.openColumnPicker()

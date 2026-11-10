@@ -112,6 +112,12 @@ type sectionsMsg struct {
 	err      error
 }
 
+// meMsg carries your user GID, loaded at startup.
+type meMsg struct {
+	gid string
+	err error
+}
+
 type usersMsg struct {
 	users []asana.Ref
 	me    string // your user GID; "" when Asana did not say
@@ -295,10 +301,16 @@ func loadSections(c *asana.Client, workspace string, project asana.Ref, edit *pe
 	})
 }
 
+func loadMe(c *asana.Client) tea.Cmd {
+	return request(func(ctx context.Context) tea.Msg {
+		me, err := c.Me(ctx)
+		return meMsg{gid: me.GID, err: err}
+	})
+}
+
 func loadUsers(c *asana.Client, workspace string) tea.Cmd {
 	return request(func(ctx context.Context) tea.Msg {
 		users, err := c.WorkspaceUsers(ctx, workspace)
-		// Knowing you only skips the log time prompt after assigning yourself.
 		me, _ := c.Me(ctx)
 		return usersMsg{users: users, me: me.GID, err: err}
 	})

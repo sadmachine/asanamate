@@ -76,6 +76,22 @@ func TestSinceCardListsNewEntriesOnce(t *testing.T) {
 	}
 }
 
+// Your user loads at startup, so the card leaves out your own entries
+// without waiting for the people picker to load the workspace users.
+func TestSinceCardSkipsYourEntriesOnceYouLoad(t *testing.T) {
+	m := sinceModel(t)
+	m.meGID = ""
+	m.Update(meMsg{gid: "u1"})
+	m.Update(usersMsg{users: []asana.Ref{{GID: "u1"}}})
+	if m.meGID != "u1" {
+		t.Fatalf("meGID = %q, want u1 kept when users load without you", m.meGID)
+	}
+	m.renderDetail(false)
+	if text := readerText(m); !strings.Contains(text, "Since you looked 2") {
+		t.Fatalf("the card must leave out your own comment:\n%s", text)
+	}
+}
+
 func TestSinceCardClearsOnTheNextVisit(t *testing.T) {
 	m := sinceModel(t)
 	m.renderDetail(false)

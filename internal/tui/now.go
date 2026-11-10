@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"cmp"
 	"slices"
 	"time"
 
@@ -95,7 +94,7 @@ func (m *Model) seenCutoff(gid string) (string, bool) {
 // your My Tasks tickets: seen state tracks those, and Activity caches every
 // story on them. The cached stories are indexed on first use.
 func (m *Model) attentionLookups() (newValues, waitingValues func(asana.Task) []string) {
-	me := cmp.Or(m.meGID, m.activity.cache.User)
+	me := m.meGID
 	var byTask map[string][]activity.Entry
 	entries := func(gid string) []activity.Entry {
 		if byTask == nil {

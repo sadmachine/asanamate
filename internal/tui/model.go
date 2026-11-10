@@ -142,7 +142,7 @@ type Model struct {
 	projectFields   map[string]map[string]bool // project gid -> its custom field gids
 	projectCatalogs map[string][]asana.Ref     // project gid -> its custom field names and gids
 	users           []asana.Ref                // workspace users, loaded on first assign
-	meGID           string                     // your user GID, loaded with users
+	meGID           string                     // your user GID; seeded from the activity cache, then loaded at startup
 
 	agents    []agents.Agent
 	linked    map[string][]agents.Agent // viewAgents by ticket gid; nil when stale
@@ -241,6 +241,7 @@ func New(d Deps) *Model {
 	}
 	m.bindings = keyBindings()
 	m.activity = newActivityView(d)
+	m.meGID = m.activity.cache.User
 	m.feed = newFeedPanel(d.Config.Feed)
 	m.restoreView()
 	m.refreshInterval, _ = config.ParseRefreshInterval(cmp.Or(d.Config.List.RefreshInterval, config.Default().List.RefreshInterval))
@@ -270,7 +271,7 @@ func (m *Model) Init() tea.Cmd {
 	if m.deps.Config.AgentsEnabled() {
 		cmd = tea.Batch(cmd, loadAgents(m.deps.Config.Agents, m.agentSeq))
 	}
-	return tea.Batch(cmd, checkForUpdate(m.deps.Version))
+	return tea.Batch(cmd, loadMe(m.deps.Client), checkForUpdate(m.deps.Version))
 }
 
 func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
@@ -399,10 +400,13 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	case sectionsMsg:
 		m.observeAsana("loading sections", msg.err)
 		m.openSectionPicker(msg)
+	case meMsg:
+		m.observeAsana("loading you", msg.err)
+		m.meGID = cmp.Or(msg.gid, m.meGID)
 	case usersMsg:
 		m.observeAsana("loading people", msg.err)
 		if msg.err == nil {
-			m.users, m.meGID = msg.users, msg.me
+			m.users, m.meGID = msg.users, cmp.Or(msg.me, m.meGID)
 		}
 		m.openUserPicker(msg.err)
 	case editDoneMsg:

@@ -281,11 +281,11 @@ func TestRepoLinksListLinkedFirstFromViewedProject(t *testing.T) {
 	st.LinkRepo("shared", "/code/shared")
 	st.LinkRepo("gone", "/code/old")
 	_, cmd := m.Update(key("L"))
-	if cmd == nil {
-		t.Fatal("want the names of linked projects outside the member projects to load")
+	if cmd == nil || m.waiting != "Loading projects…" {
+		t.Fatalf("want the names of linked projects outside the member projects to load behind a loading modal; waiting = %q", m.waiting)
 	}
-	m.Update(cmd())
-	if m.modal == nil || m.modal.title != "Repo links" {
+	drain(m, cmd)
+	if m.waiting != "" || m.modal == nil || m.modal.title != "Repo links" {
 		t.Fatalf("modal = %+v", m.modal)
 	}
 	var got []string
@@ -298,6 +298,23 @@ func TestRepoLinksListLinkedFirstFromViewedProject(t *testing.T) {
 	}
 	if it := m.modal.items[m.modal.matches[m.modal.cursor]]; it.Label != "Web" {
 		t.Fatalf("cursor on %q, want the viewed project", it.Label)
+	}
+}
+
+// Esc on the loading modal for linked project names drops their late reply.
+func TestRepoLinksLoadingModalCancels(t *testing.T) {
+	m, st := linksModel(t)
+	m.width, m.height = 100, 30
+	m.deps.Client = asana.New("tok")
+	st.LinkRepo("shared", "/code/shared")
+	m.Update(key("L"))
+	if !strings.Contains(ansi.Strip(m.View().Content), "Loading projects") {
+		t.Fatalf("loading modal missing:\n%s", ansi.Strip(m.View().Content))
+	}
+	m.Update(key("esc"))
+	m.Update(linkNamesMsg{names: map[string]string{"shared": "Shared"}, seq: 1})
+	if m.waiting != "" || m.modal != nil {
+		t.Fatalf("cancelled load still opened: waiting = %q, modal = %+v", m.waiting, m.modal)
 	}
 }
 

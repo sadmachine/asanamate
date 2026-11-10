@@ -191,14 +191,27 @@ func TestColumnPickerRetriesMetadataAndIgnoresOldProject(t *testing.T) {
 	m.deps.Client = asana.New("token")
 	m.deps.Client.BaseURL = server.URL
 	cmd := m.openColumns()
-	if cmd == nil || m.modal != nil {
-		t.Fatal("missing metadata did not start a request")
+	if cmd == nil || m.modal != nil || m.waiting != "Loading project fields…" {
+		t.Fatal("missing metadata did not start a request behind a loading modal")
 	}
-	msg := cmd().(projectFieldsMsg)
+	var msg projectFieldsMsg
+	for _, c := range cmd().(tea.BatchMsg) {
+		if c == nil {
+			continue
+		}
+		if fields, ok := c().(projectFieldsMsg); ok {
+			msg = fields
+		}
+	}
 	m.Update(projectFieldsMsg{gid: "p", columns: true, err: errors.New("offline")})
-	if m.modal != nil || !strings.Contains(m.status, "offline") {
+	if m.modal != nil || m.waiting != "" || !strings.Contains(m.status, "offline") {
 		t.Fatal("failed metadata silently offered incomplete choices")
 	}
+	m.Update(msg)
+	if m.modal != nil {
+		t.Fatal("a reply after the load ended opened a picker")
+	}
+	m.openColumns()
 	m.viewProject = &asana.Ref{GID: "other"}
 	m.Update(msg)
 	if m.modal != nil {

@@ -34,9 +34,8 @@ func (m *Model) openLinks() tea.Cmd {
 		names[gid] = cmp.Or(name, "unavailable project")
 	}
 	if len(missing) > 0 {
-		m.setProgress("loading projects…")
 		m.linkNamesSeq++
-		return loadLinkNames(m.deps.Client, missing, m.linkNamesSeq)
+		return m.wait("Loading projects…", loadLinkNames(m.deps.Client, missing, m.linkNamesSeq))
 	}
 	refs := make([]asana.Ref, 0, len(names))
 	for gid, name := range names {

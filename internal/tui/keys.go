@@ -505,8 +505,7 @@ func (m *Model) requestProjects(open func() tea.Cmd) tea.Cmd {
 		return tea.Batch(open(), refresh)
 	}
 	m.afterProjects = open
-	m.setProgress("loading projects…")
-	return refresh
+	return m.wait("Loading projects…", refresh)
 }
 
 // refreshProjects loads the projects from Asana once per session.

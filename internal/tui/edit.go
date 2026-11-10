@@ -140,8 +140,7 @@ func (m *Model) pickedEdit(op editOp) tea.Cmd {
 			return nil
 		}
 		m.afterProjects = func() tea.Cmd { m.openAddProjectPicker(); return nil }
-		m.setProgress("loading projects…")
-		return m.refreshProjects()
+		return m.wait("Loading projects…", m.refreshProjects())
 	case editRemoveProject:
 		m.openRemoveProjectPicker()
 	case editBranch:
@@ -355,8 +354,7 @@ func (m *Model) pickedEditProject(project asana.Ref) tea.Cmd {
 	if project.GID == "" {
 		m.edit.project = writeback.MyTasks
 	}
-	m.setProgress("loading sections…")
-	return loadSections(m.deps.Client, m.deps.Config.Workspace, project, m.edit)
+	return m.wait("Loading sections…", loadSections(m.deps.Client, m.deps.Config.Workspace, project, m.edit))
 }
 
 // requestUsers opens the user picker, first loading the workspace users.
@@ -365,8 +363,7 @@ func (m *Model) requestUsers() tea.Cmd {
 		m.openUserPicker(nil)
 		return nil
 	}
-	m.setProgress("loading people…")
-	return loadUsers(m.deps.Client, m.deps.Config.Workspace)
+	return m.wait("Loading people…", loadUsers(m.deps.Client, m.deps.Config.Workspace))
 }
 
 func (m *Model) openSectionPicker(msg sectionsMsg) {
@@ -380,11 +377,11 @@ func (m *Model) openSectionPicker(msg sectionsMsg) {
 	if m.composer != nil && m.edit.project != project {
 		return
 	}
+	m.waiting = ""
 	if msg.err != nil {
 		m.failEdit("loading sections", msg.err)
 		return
 	}
-	m.clearProgress()
 	current := ""
 	if m.edit.project == writeback.MyTasks {
 		current = m.edit.ticket.AssigneeSection.GID
@@ -722,11 +719,11 @@ func (m *Model) openUserPicker(err error) {
 	if m.edit == nil {
 		return
 	}
+	m.waiting = ""
 	if err != nil {
 		m.failEdit("loading people", err)
 		return
 	}
-	m.clearProgress()
 	users := slices.Clone(m.users)
 	slices.SortFunc(users, func(a, b asana.Ref) int {
 		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))

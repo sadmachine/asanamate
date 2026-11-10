@@ -1035,7 +1035,8 @@ folds; `-` opens it.
 
 Add your own `[[groupings]]` the same way; each joins the `b` picker and can
 be a `list.default_view.group_by` or a saved view's grouping. A grouping
-named like a built-in one replaces it, so copy `state` or `now` above to change it.
+named like a built-in one replaces it, so copy `state` or `now` above, or
+uncomment it at the end of the generated `config.toml`, to change it.
 Names must be unique, each section needs a label (not `Other`) and at least
 one query, and a query with an unknown key, such as `agnet:waiting`, is an
 error rather than title words.

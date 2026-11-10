@@ -219,3 +219,29 @@ count of pull requests that need you.
 **Why deferred:** Spec 24 kept to the protocol, the adapters, filtering, and
 the reader. Each follow-up is small once the data exists, and needs its own
 choice of what is worth showing.
+
+## Groupings directory
+
+**Now:** Rule groupings live in `config.toml` as `[[groupings]]` tables,
+released in v0.4.5. The built-in `state` and `now` groupings are in
+`builtinGroupings` (`internal/config/groupings.go`) and appear commented out
+at the end of the generated `config.toml`. `asanamate config update`
+rewrites `config.toml` from the template, so comments a user adds to a
+grouping are lost.
+
+**Idea:** Load groupings from `~/.config/asanamate/groupings/*.toml`, one
+grouping per file named for the grouping (`now.toml`), like `actions/` and
+`themes/`. Setup writes `state.toml.example` and `now.toml.example` with the
+built-in sections; renaming one to `.toml` replaces that built-in.
+`config update` never rewrites these files.
+
+**Why deferred:** It needs a directory loader, duplicate-name checks, and
+setup, README, and migration work. Do it before v1.0.0: removing
+`[[groupings]]` from `config.toml` is a breaking change, which costs a minor
+bump now and a major one after v1.0.0.
+
+**Watch out for:** Decide whether `[[groupings]]` in `config.toml` stays
+supported beside the directory (additive) or moves through the config update
+pipeline (breaking, with a `docs/migrations.md` entry). Take the name from
+the file name only, so a file and a `name` key cannot disagree. `doctor` must
+name the bad grouping file.

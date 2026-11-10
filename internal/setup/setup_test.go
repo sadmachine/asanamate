@@ -634,3 +634,25 @@ func TestMergeKeepsGroupings(t *testing.T) {
 		t.Fatalf("groupings = %+v\n%s", cfg.Groupings, updated)
 	}
 }
+
+func TestTemplateGroupingExamplesMatchBuiltins(t *testing.T) {
+	tmpl := Render(asana.Ref{GID: "1", Name: "W"}, "")
+	start := strings.Index(tmpl, "# [[groupings]]\n")
+	if start < 0 {
+		t.Fatal("template has no grouping examples")
+	}
+	example := regexp.MustCompile(`^# (\[\[groupings|[a-z_]+ = )`)
+	body := []string{`workspace = "1"`}
+	for _, line := range strings.Split(tmpl[start:], "\n") {
+		if !strings.HasPrefix(line, "#") {
+			break // the comment block holding the examples ends
+		}
+		if example.MatchString(line) {
+			body = append(body, strings.TrimPrefix(line, "# "))
+		}
+	}
+	got := loadString(t, strings.Join(body, "\n")).Groupings
+	if want := (config.Config{}).AllGroupings(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("template grouping examples drifted from the built-ins:\ngot  %+v\nwant %+v", got, want)
+	}
+}

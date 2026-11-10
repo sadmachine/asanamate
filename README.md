@@ -563,7 +563,9 @@ The mouse does what keys do, on what it points at:
   Places panel, the Feed panel, Activity, pickers, and forms.
 - **Click:** focuses a pane and selects the row, picker item, or form field
   under the pointer; in the Places panel it opens the row, as `enter` does.
-  In a text editor, such as the comment composer, it moves the cursor. A
+  In the reader, a click on a comment selects it, as `j` and `k` do, and
+  shows it in full when it was cut to a preview ending in "see more …". In
+  a text editor, such as the comment composer, it moves the cursor. A
   click closes key help, dismisses a toast or an error notice, and runs a
   statusline hint's key, such as `e edit`. Hints for a pair of keys, such as
   `j/k move`, do not run.

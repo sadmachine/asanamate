@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/sadmachine/asanamate/internal/asana"
 	"github.com/sadmachine/asanamate/internal/config"
 	"github.com/sadmachine/asanamate/internal/feed"
 	"github.com/sadmachine/asanamate/internal/form"
@@ -237,6 +238,32 @@ func TestReaderDrawsDescriptionLinksAsHyperlinks(t *testing.T) {
 	clickOn(t, m, "the docs")
 	if _, cmd := m.Update(tea.MouseReleaseMsg{X: x, Y: y, Button: tea.MouseLeft}); cmd == nil {
 		t.Fatal("clicking a link opens nothing")
+	}
+}
+
+func TestClickCommentSelectsIt(t *testing.T) {
+	m, _ := editModel(t)
+	m.deps.Config.Reader.Comments = config.Default().Reader.Comments
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 60})
+	tk := m.details["1"]
+	long := "<p>" + strings.Repeat("word ", 40) + "</p>"
+	for _, gid := range []string{"c1", "c2", "c3", "c4"} {
+		tk.Comments = append(tk.Comments, asana.Story{GID: gid, CreatedBy: &asana.Ref{Name: "Amy"}, HTMLText: long})
+	}
+	m.details["1"] = tk
+	m.renderDetail(false)
+	m.reader.GotoBottom()
+	clickOn(t, m, "see more")
+	if m.fieldKey != "comment:c2" || !m.openComments["comment:c2"] || m.clipped["comment:c2"] {
+		t.Fatalf("target %q, open %v: clicking a preview must select it and show it in full", m.fieldKey, m.openComments)
+	}
+	m.reader.GotoBottom()
+	m.View()
+	reader, _ := m.paneByID(paneReader)
+	c := reader.content()
+	m.Update(tea.MouseClickMsg{X: c.x + 4, Y: c.y + m.fieldLines["comment:c4"] - m.reader.YOffset(), Button: tea.MouseLeft})
+	if m.fieldKey != "comment:c4" || !m.clipped["comment:c3"] {
+		t.Fatalf("target %q, clipped %v: clicking a full comment must select it and leave other previews cut", m.fieldKey, m.clipped)
 	}
 }
 

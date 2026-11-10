@@ -10,6 +10,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/sadmachine/asanamate/internal/config"
 )
 
 // doubleClick is the longest gap between two clicks on one cell that make a
@@ -439,10 +441,12 @@ func (m *Model) mouseClick(ms tea.Mouse) tea.Cmd {
 		return m.doubleClickPane(p, inside)
 	}
 	// Find the row before a focus change redraws the pane.
-	a, row := m.activity, -1
+	a, row, comment := m.activity, -1, ""
 	if inside {
 		var rows []int
 		switch {
+		case p.id == paneReader:
+			comment = m.commentAt(m.reader.YOffset() + line)
 		case p.id == paneNav:
 			_, rows = m.navRows(c.w, c.h)
 		case p.id == paneList && len(m.visible) > 0:
@@ -478,6 +482,9 @@ func (m *Model) mouseClick(ms tea.Mouse) tea.Cmd {
 		if _, _, split := m.paneWidths(); split || m.showNav() {
 			m.focusReaderPane()
 		}
+		if comment != "" && m.focusReader {
+			m.selectComment(comment)
+		}
 	case paneActivityList:
 		m.focusNav, a.details = false, false
 		if row >= 0 {
@@ -488,6 +495,31 @@ func (m *Model) mouseClick(ms tea.Mouse) tea.Cmd {
 		m.focusNav, a.details = false, true
 	}
 	return nil
+}
+
+// commentAt returns the card target key of the comment the cards view drew
+// at reader line, or "".
+func (m *Model) commentAt(line int) string {
+	if m.readerView == config.ViewMarkdown {
+		return ""
+	}
+	for _, key := range m.cardTargets {
+		if strings.HasPrefix(key, "comment:") && line >= m.fieldLines[key] && line <= m.fieldEnds[key] {
+			return key
+		}
+	}
+	return ""
+}
+
+// selectComment selects the comment target key, as j and k do, and shows it
+// in full when the cards view cut it to a preview.
+func (m *Model) selectComment(key string) {
+	m.fieldKey = key
+	if m.clipped[key] {
+		m.openComment(key)
+		return
+	}
+	m.showTarget()
 }
 
 // doubleClickPane runs enter on what the first click selected. It does not

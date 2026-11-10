@@ -560,8 +560,8 @@ root = %s
 # group_by. A ticket joins the first section with a match query it
 # satisfies (any list filter query; see README "Filtering"), and the rest go
 # to Other. A section with folded = true starts folded. A grouping named
-# like a built-in one replaces it; the built-in "now" grouping decides what
-# the Now place lists (see README "Now"). The built-in "state" grouping is:
+# like a built-in one replaces it, so uncomment a built-in below to edit it.
+# The built-in "state" grouping is:
 # [[groupings]]
 # name = "state"
 #
@@ -584,6 +584,36 @@ root = %s
 # [[groupings.sections]]
 # label = "Ready"
 # match = ["is:open"]
+#
+# The built-in "now" grouping decides what the Now place lists (see README
+# "Now"):
+# [[groupings]]
+# name = "now"
+#
+# [[groupings.sections]]
+# label = "Needs reply"
+# match = ["new:mention", "new:comment"]
+#
+# [[groupings.sections]]
+# label = "Agent waiting"
+# match = ["agent:waiting"]
+#
+# [[groupings.sections]]
+# label = "Review feedback"
+# match = ["review:changes", "checks:failing"]
+#
+# [[groupings.sections]]
+# label = "New to you"
+# match = ["new:ticket", "new:assigned"]
+#
+# [[groupings.sections]]
+# label = "Updated"
+# match = ["new:change"]
+#
+# [[groupings.sections]]
+# label = "Waiting on others"
+# match = ["waiting:reply", "review:pending", "blocked:any"]
+# folded = true
 `
 
 // actionFiles are written to the actions directory by setup. The .example

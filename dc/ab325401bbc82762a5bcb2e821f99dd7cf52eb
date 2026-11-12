@@ -1,0 +1,49 @@
+internal/tui/cmds.go
+  s_bcc1525ce2cea1::t_38a152c42c8dbf 103-108
+internal/tui/flow.go
+  s_bcc1525ce2cea1::t_38a152c42c8dbf 581,585,588,590-595,602-607,614-634,636
+internal/tui/actionbuilder.go
+  s_bcc1525ce2cea1::t_a43b9112efdaac 184-185
+  s_bcc1525ce2cea1::t_eac44c252b191f 59
+internal/setup/setup.go
+  s_bcc1525ce2cea1::t_0bb555cf915a1c 635-636
+internal/whatsnew/unreleased/action-block-refresh.md
+  s_bcc1525ce2cea1::t_0bb555cf915a1c 1-8
+README.md
+  s_bcc1525ce2cea1::t_0bb555cf915a1c 1530-1531,1549-1555
+  s_bcc1525ce2cea1::t_40e6f997d822d5 1556
+internal/config/actionfiles.go
+  s_bcc1525ce2cea1::t_eac44c252b191f 38
+internal/tui/flow_test.go
+  s_bcc1525ce2cea1::t_c1b28b3eacd370 131-176
+internal/tui/model.go
+  s_bcc1525ce2cea1::t_38a152c42c8dbf 126,386,1035
+internal/tui/form_test.go
+  s_bcc1525ce2cea1::t_ca35c4003d7d98 259-260,281
+docs/extensions.md
+  s_bcc1525ce2cea1::t_0bb555cf915a1c 112-113,175-176,179-181
+internal/config/config_test.go
+  s_bcc1525ce2cea1::t_e477a1ee1c8dd9 118-124,154-169
+  s_bcc1525ce2cea1::t_db0cef72cc2cbc 170-171
+internal/config/config.go
+  s_bcc1525ce2cea1::t_eac44c252b191f 431-436,442-446,591-592
+  s_bcc1525ce2cea1::t_31699b6c21f711 593
+internal/tui/conversations.go
+  s_bcc1525ce2cea1::t_38a152c42c8dbf 366
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dcab325401bbc82762a5bcb2e821f99dd7cf52eb",
+  "prompts": {},
+  "sessions": {
+    "s_bcc1525ce2cea1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0728121-d11c-4e81-a06c-1a2e0e921f6b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

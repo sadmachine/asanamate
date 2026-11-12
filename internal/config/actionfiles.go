@@ -35,7 +35,7 @@ func LoadActionFiles(dir string) ([]ActionFile, error) {
 		if err != nil {
 			return nil, err
 		}
-		a := Action{Mode: ModeForeground}
+		a := NewAction()
 		md, err := toml.Decode(string(data), &a)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)

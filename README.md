@@ -1527,6 +1527,8 @@ context = ""            # "" (everywhere) | "comment"; see below
 command = '''git switch "$ASANAMATE_BRANCH" 2>/dev/null || git switch -c "$ASANAMATE_BRANCH" &&
 tmux new-window -c "$ASANAMATE_REPO" -n "$ASANAMATE_SLUG" -e "ASANAMATE_TICKET_MD=$ASANAMATE_TICKET_MD" -e "ASANAMATE_GID=$ASANAMATE_GID" -e "ASANA_SESSIONS_TASK=$ASANAMATE_GID" 'claude "$(cat "$ASANAMATE_TICKET_MD")"' '''
 confirm_writes = false  # optional per-action override
+block = false           # background only: loading modal until the command exits
+refresh = true          # reload the ticket after the command exits
 ```
 
 Commands run with `/bin/sh -c`. Ticket data is available only through
@@ -1543,6 +1545,14 @@ Modes:
 - `foreground`: suspends the TUI, runs in the same terminal, and resumes.
 - `background`: runs detached. Output goes to `~/.local/state/asanamate/actions.log`.
 - `exit`: quits asanamate, then runs the command. Best for popups.
+
+Blocking and refresh: after a foreground or background action exits,
+asanamate reloads the ticket so changes the command made, such as a branch
+name written with `asanamate field`, show at once. Set `refresh = false` to
+skip that. Set `block = true` on a background action to cover the TUI with a
+loading modal until the command exits; esc closes the modal early, and the
+command keeps running. `block` defaults to `false` and works only with
+`mode = "background"`.
 
 Context: an action with `context = "comment"` appears only when a comment is
 highlighted in the cards view, listed before the other actions. Press `space`

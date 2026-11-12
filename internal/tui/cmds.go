@@ -100,9 +100,12 @@ type linkTarget struct {
 }
 
 type actionDoneMsg struct {
-	name string
-	log  string
-	err  error
+	name    string
+	log     string
+	gid     string // the ticket to reload when refresh is set
+	refresh bool
+	block   uint64 // the blocking run's blockSeq; 0 when the run did not block
+	err     error
 }
 
 type sectionsMsg struct {

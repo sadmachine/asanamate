@@ -109,7 +109,8 @@ their documented interfaces and configure both `conversations.command` and
 
 An action is one TOML file in `~/.config/asanamate/actions/`. See the
 README's [Actions](../README.md#actions) section for its keys (`name`, `key`,
-`mode`, `repo`, `agent`, `context`, `form`, `input`, `confirm_writes`) and
+`mode`, `repo`, `agent`, `context`, `form`, `input`, `confirm_writes`,
+`block`, `refresh`) and
 for the action builder.
 
 **When it runs.** When you pick the action in the TUI's action menu, or a
@@ -171,9 +172,13 @@ given.
 `<name>: done` in the status line, and non-zero shows `<name> failed: exit
 status <n>` (with an output excerpt and the log path for background actions).
 An exit action replaces asanamate, so its exit status becomes asanamate's.
+Either way, the ticket then reloads unless the action sets `refresh = false`,
+so changes made through the write-back subcommands show without pressing `r`.
 
 **Timeouts.** None. A background action runs in its own session, without a
-terminal, and keeps running after asanamate quits.
+terminal, and keeps running after asanamate quits. With `block = true`, a loading
+modal covers the TUI until the command exits; esc closes it without stopping
+the command.
 
 **Example.** A shorter `internal/action/testdata/action.sh`:
 

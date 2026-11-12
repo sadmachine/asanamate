@@ -632,6 +632,8 @@ var actionFiles = []struct{ name, body string }{
 # form.fields. It reads a JSON ticket request and returns {"fields":[...]}.
 # mode: "foreground" (suspend the TUI), "background" (detached, logged), or
 # "exit" (quit asanamate, then run). repo = true resolves the ticket's repo first.
+# block = true (background only) shows a loading modal until the command exits.
+# The ticket reloads after the command exits; refresh = false skips that.
 # context = "comment" shows the action only on a highlighted comment, first in
 # the menu, with the comment in $ASANAMATE_COMMENT_*.
 name = "View ticket in pager"

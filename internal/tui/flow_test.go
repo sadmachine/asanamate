@@ -128,6 +128,52 @@ func TestBackgroundActionFailureDetailsInModal(t *testing.T) {
 	}
 }
 
+func TestBlockingActionShowsLoadingUntilDone(t *testing.T) {
+	m := splitModel(t)
+	m.loading = false
+	run := &pendingRun{
+		action: config.Action{Name: "Branch", Mode: config.ModeBackground, Block: true, Refresh: true, Command: "true"},
+		ticket: ticket.Ticket{Task: asana.Task{GID: "1", Name: "Fix"}},
+	}
+	if m.launch(run) == nil || m.waiting != "Branch: running…" {
+		t.Fatalf("waiting = %q, want the loading modal", m.waiting)
+	}
+	m.Update(actionDoneMsg{name: "Branch", gid: "1", refresh: true, block: m.blockSeq})
+	if m.waiting != "" || m.status != "Branch: done" || !m.loading || !m.background {
+		t.Fatalf("waiting = %q, status = %q, loading = %v, background = %v; want closed modal and a quiet refresh",
+			m.waiting, m.status, m.loading, m.background)
+	}
+}
+
+func TestCancelledBlockingActionLeavesLaterModal(t *testing.T) {
+	m := splitModel(t)
+	m.launch(&pendingRun{
+		action: config.Action{Name: "Branch", Mode: config.ModeBackground, Block: true, Command: "true"},
+		ticket: ticket.Ticket{Task: asana.Task{GID: "1", Name: "Fix"}},
+	})
+	seq := m.blockSeq
+	m.Update(key("esc"))
+	if m.waiting != "" {
+		t.Fatal("esc did not close the loading modal")
+	}
+	m.waiting = "Loading repos…"
+	m.Update(actionDoneMsg{name: "Branch", block: seq})
+	if m.waiting != "Loading repos…" || m.status != "Branch: done" {
+		t.Fatalf("waiting = %q, status = %q; a cancelled run must only report", m.waiting, m.status)
+	}
+}
+
+func TestActionRefreshesOnlyWhenAsked(t *testing.T) {
+	for _, refresh := range []bool{true, false} {
+		m := splitModel(t)
+		m.loading = false
+		m.Update(actionDoneMsg{name: "Export", gid: "1", refresh: refresh})
+		if m.loading != refresh {
+			t.Errorf("refresh = %v: loading = %v", refresh, m.loading)
+		}
+	}
+}
+
 func TestUnlinkedRepoPromptsAndSaves(t *testing.T) {
 	dir := gitRepo(t)
 	m, st := flowModel(t, web)

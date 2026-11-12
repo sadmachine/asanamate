@@ -115,12 +115,13 @@ func TestRepoSourceRootAcceptsHomeAndAbsolutePaths(t *testing.T) {
 
 func TestLoadRejectsInvalidActions(t *testing.T) {
 	cases := map[string]map[string]string{
-		"unknown key":   {"a.toml": "name = \"a\"\nkey = \"a\"\ncommand = \"true\"\nkye = \"b\"\n"},
-		"bad mode":      {"a.toml": "name = \"a\"\nkey = \"a\"\nmode = \"later\"\ncommand = \"true\"\n"},
-		"long key":      {"a.toml": "name = \"a\"\nkey = \"ab\"\ncommand = \"true\"\n"},
-		"no command":    {"a.toml": "name = \"a\"\nkey = \"a\"\n"},
-		"duplicate key": {"a.toml": "name = \"a\"\nkey = \"x\"\ncommand = \"true\"\n", "b.toml": "name = \"b\"\nkey = \"x\"\ncommand = \"true\"\n"},
-		"bad context":   {"a.toml": "name = \"a\"\nkey = \"a\"\ncontext = \"subtask\"\ncommand = \"true\"\n"},
+		"unknown key":      {"a.toml": "name = \"a\"\nkey = \"a\"\ncommand = \"true\"\nkye = \"b\"\n"},
+		"bad mode":         {"a.toml": "name = \"a\"\nkey = \"a\"\nmode = \"later\"\ncommand = \"true\"\n"},
+		"long key":         {"a.toml": "name = \"a\"\nkey = \"ab\"\ncommand = \"true\"\n"},
+		"no command":       {"a.toml": "name = \"a\"\nkey = \"a\"\n"},
+		"duplicate key":    {"a.toml": "name = \"a\"\nkey = \"x\"\ncommand = \"true\"\n", "b.toml": "name = \"b\"\nkey = \"x\"\ncommand = \"true\"\n"},
+		"bad context":      {"a.toml": "name = \"a\"\nkey = \"a\"\ncontext = \"subtask\"\ncommand = \"true\"\n"},
+		"foreground block": {"a.toml": "name = \"a\"\nkey = \"a\"\nblock = true\ncommand = \"true\"\n"},
 	}
 	for name, files := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -147,6 +148,24 @@ func TestLoadActionsInFileNameOrder(t *testing.T) {
 	}
 	if len(cfg.Actions) != 2 || cfg.Actions[0].Name != "a" || cfg.Actions[1].Name != "b" {
 		t.Fatalf("actions = %+v", cfg.Actions)
+	}
+}
+
+func TestLoadActionsDefaultBlockAndRefresh(t *testing.T) {
+	path := writeFile(t, `workspace = "1"`)
+	writeActions(t, path, map[string]string{
+		"a.toml": "name = \"a\"\nkey = \"a\"\ncommand = \"true\"\n",
+		"b.toml": "name = \"b\"\nkey = \"b\"\nmode = \"background\"\nblock = true\nrefresh = false\ncommand = \"true\"\n",
+	})
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a := cfg.Actions[0]; a.Block || !a.Refresh {
+		t.Errorf("omitted keys: block = %v, refresh = %v; want false, true", a.Block, a.Refresh)
+	}
+	if b := cfg.Actions[1]; !b.Block || b.Refresh {
+		t.Errorf("set keys: block = %v, refresh = %v; want true, false", b.Block, b.Refresh)
 	}
 }
 

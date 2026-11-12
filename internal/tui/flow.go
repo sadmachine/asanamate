@@ -578,33 +578,62 @@ func (m *Model) launch(r *pendingRun) tea.Cmd {
 		FormValues:    r.formValues,
 		Event:         r.event,
 	})
-	name, mode := r.action.Name, r.action.Mode
+	mode := r.action.Mode
 	if m.deps.ExitOnAction && mode == config.ModeBackground && r.event == "" {
 		mode = config.ModeExit
 	}
+	done := actionDoneMsg{name: r.action.Name, gid: r.ticket.GID, refresh: r.action.Refresh}
 	switch mode {
 	case config.ModeForeground:
-		return tea.ExecProcess(cmd, func(err error) tea.Msg { return actionDoneMsg{name: name, err: err} })
+		return tea.ExecProcess(cmd, func(err error) tea.Msg { done.err = err; return done })
 	case config.ModeBackground:
-		return m.runBackground(name, cmd, "")
+		if !r.action.Block {
+			return m.runBackground(done, cmd, "")
+		}
+		m.blockSeq++
+		done.block = m.blockSeq
+		return m.wait(done.name+": running…", m.runBackground(done, cmd, ""))
 	default:
 		m.exitCmd = cmd
 		return tea.Quit
 	}
 }
 
-// runBackground runs cmd detached, logging to actions.log, and reports it
-// done as name. hint, when set, follows a failure.
-func (m *Model) runBackground(name string, cmd *exec.Cmd, hint string) tea.Cmd {
-	m.setProgress(name + ": running…")
+// runBackground runs cmd detached, logging to actions.log, and reports done
+// when it exits. hint, when set, follows a failure.
+func (m *Model) runBackground(done actionDoneMsg, cmd *exec.Cmd, hint string) tea.Cmd {
+	if done.block == 0 {
+		m.setProgress(done.name + ": running…")
+	}
 	logPath := filepath.Join(m.deps.StateDir, "actions.log")
 	return func() tea.Msg {
 		err := action.RunBackground(cmd, logPath)
 		if err != nil && hint != "" {
 			err = fmt.Errorf("%w; %s", err, hint)
 		}
-		return actionDoneMsg{name: name, log: logPath, err: err}
+		done.log, done.err = logPath, err
+		return done
 	}
+}
+
+// actionDone reports a finished action, closes its loading modal unless it
+// was cancelled, and reloads its ticket when the action asks.
+func (m *Model) actionDone(msg actionDoneMsg) tea.Cmd {
+	if msg.block != 0 && msg.block == m.blockSeq {
+		m.waiting = ""
+	}
+	if msg.err != nil {
+		m.setStatus(statusError, actionStatus(msg))
+	} else {
+		m.setStatus(statusInfo, actionStatus(msg))
+	}
+	if !msg.refresh {
+		return nil
+	}
+	if m.shownGID != msg.gid {
+		delete(m.details, msg.gid)
+	}
+	return m.refresh()
 }
 
 // agentLabel is an agent's static symbol, state, and title; style colors the

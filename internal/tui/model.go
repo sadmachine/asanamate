@@ -123,6 +123,7 @@ type Model struct {
 	taskSeq         uint64           // the latest task load; an older load's result is stale
 	candidatesSeq   uint64           // the latest repo candidates request
 	viewerSeq       uint64           // the latest image viewer request
+	blockSeq        uint64           // the latest blocking action run
 	linkNamesSeq    uint64           // the latest linked-project names request
 
 	focusReader  bool
@@ -382,12 +383,7 @@ func (m *Model) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	case conversationsMsg:
 		return m, m.gotConversations(msg)
 	case actionDoneMsg:
-		status := actionStatus(msg)
-		if msg.err != nil {
-			m.setStatus(statusError, status)
-		} else {
-			m.setStatus(statusInfo, status)
-		}
+		return m, m.actionDone(msg)
 	case actionFormMsg:
 		m.gotActionForm(msg)
 	case editorDoneMsg:
@@ -1036,6 +1032,7 @@ func (m *Model) cancelWait() {
 	m.menuFor, m.columnsFor = "", ""
 	m.candidatesSeq++
 	m.viewerSeq++
+	m.blockSeq++
 	m.linkNamesSeq++
 	m.stopConversations()
 }

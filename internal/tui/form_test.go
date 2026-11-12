@@ -256,6 +256,8 @@ func TestActionBuilderCreatesEditsAndReloads(t *testing.T) {
 	builderText(t, m, "Input title", "Notes")
 	builderPick(t, m, "Confirm writes")
 	builderPick(t, m, "off")
+	builderPick(t, m, "Block UI")
+	builderPick(t, m, "Refresh ticket")
 	builderPick(t, m, "Form fields")
 	builderPick(t, m, "Add field")
 	builderText(t, m, "ID", "target")
@@ -276,7 +278,7 @@ func TestActionBuilderCreatesEditsAndReloads(t *testing.T) {
 	m.Update(key("esc"))
 	m.Update(key("esc"))
 	no := false
-	want := config.Action{Name: "Deploy", Key: "D", Mode: config.ModeBackground, Repo: true, Agent: true, Context: config.ContextComment, Command: command, Input: "Notes", ConfirmWrites: &no, File: "10-deploy",
+	want := config.Action{Name: "Deploy", Key: "D", Mode: config.ModeBackground, Repo: true, Agent: true, Context: config.ContextComment, Command: command, Input: "Notes", ConfirmWrites: &no, Block: true, File: "10-deploy",
 		Form: config.ActionForm{Spec: form.Spec{Fields: []form.Field{
 			{ID: "target", Label: "Target", Type: form.Select, Remember: true, Options: []form.Option{{ID: "prod", Name: "Production"}}},
 			{ID: "hours", Label: "Hours", Type: form.Hours},

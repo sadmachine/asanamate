@@ -56,7 +56,7 @@ func (m *Model) openActionBuilder() {
 		m.builder = b
 		return nil
 	}
-	items := []pickItem{{Label: "Create action", Value: config.ActionFile{Action: config.Action{Mode: config.ModeForeground}}}}
+	items := []pickItem{{Label: "Create action", Value: config.ActionFile{Action: config.NewAction()}}}
 	for _, file := range files {
 		items = append(items, pickItem{Label: ticket.OneLine(file.Action.Name), Hint: file.Name, Value: file})
 	}
@@ -181,6 +181,8 @@ func (b *actionBuilder) showAction() {
 				}
 			}, b.showAction)
 		}),
+		builderRow("Block UI", onOff(a.Block), "Background mode only: when on, show a loading modal until the command exits. Esc closes the modal; the command keeps running.", func() { a.Block = !a.Block; b.showAction() }),
+		builderRow("Refresh ticket", onOff(a.Refresh), "When on, reload the ticket after the command exits, so changes it made show.", func() { a.Refresh = !a.Refresh; b.showAction() }),
 		builderRow("Form fields", fmt.Sprint(len(a.Form.Fields)), "Optional select, true/false, number, string, hours, or date prompts before running. Answers become ASANAMATE_PARAM_<ID>.", func() { b.descend(b.showAction, b.showFields) }),
 		builderRow("Form command", a.Form.Command, "Optional command returning fresh form controls as JSON. Leave static form fields empty when using it.", func() {
 			b.text("Form command (/bin/sh -c)", &a.Form.Command, b.showAction, true)

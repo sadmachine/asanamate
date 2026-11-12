@@ -245,3 +245,61 @@ supported beside the directory (additive) or moves through the config update
 pipeline (breaking, with a `docs/migrations.md` entry). Take the name from
 the file name only, so a file and a `name` key cannot disagree. `doctor` must
 name the bad grouping file.
+
+## Homebrew formula for asana-sessions
+
+**Now:** `asana-sessions` installs with `install.mjs` from its GitHub release
+(`asana-sessions-release.yml` uploads the tarball, `install.mjs`, and
+`checksums.txt`). Each install gets its own `<prefix>/lib/asana-sessions/install-*`
+directory, and the `current` symlink points at the active one.
+`bin/asana-sessions` links through `current`. Claude Code reads plugin files
+from the registered marketplace folder for as long as a session runs, so
+`registeredPackage` (`packages/asana-sessions/src/setup.js`) registers the
+Claude plugin through `current`. Codex copies plugins into its own cache, so
+it registers the real directory. The installer runs `setup --refresh` after
+each install, then prunes old install directories. Core asanamate already
+builds a Homebrew cask (`homebrew_casks` in `.goreleaser.yaml`), but
+`skip_upload` stays on until `sadmachine/homebrew-tap` and
+`HOMEBREW_TAP_TOKEN` exist.
+
+**Idea:** Ship `asana-sessions` as a formula in the same tap. Homebrew
+replaces the installer: `Cellar/asana-sessions/<version>` is the install
+directory, `opt/asana-sessions` is the stable link, `brew cleanup` is the
+prune, and `brew uninstall` removes it. The work:
+
+- Create `sadmachine/homebrew-tap` and the `HOMEBREW_TAP_TOKEN` secret, then
+  drop `skip_upload` for the core cask.
+- Write the formula (`Formula/asana-sessions.rb`). Point it at the release
+  tarball and its sha256, add `depends_on "node"`, unpack into `libexec`, and
+  run `npm ci --omit=dev` there so the shipped shrinkwrap stays in force.
+  Link `libexec/bin/asana-sessions.js` into `bin`. Do not use
+  `std_npm_args`: a global tarball install can re-resolve dependencies.
+- Have `asana-sessions-release.yml` update the formula's `url` and `sha256`
+  in the tap after it publishes the release.
+- In `registeredPackage`, also accept Homebrew's stable link. Node resolves
+  the real path, so the package sees `<brew prefix>/Cellar/asana-sessions/<version>/libexec`.
+  Use `<brew prefix>/opt/asana-sessions/libexec` when it resolves to the
+  package. Without this, setup registers the Cellar path, and the
+  `brew cleanup` after an upgrade breaks open sessions the same way the
+  installer's prune did. Add a setup test like the `current` one.
+- Formulas must not write to the user's home, and `post_install` is
+  sandboxed, so the formula cannot run `setup --refresh`. Print
+  `asana-sessions setup --refresh` (and `asana-sessions remove` before
+  `brew uninstall`) in `caveats`. Open sessions keep working without the
+  refresh because Claude reads through `opt`; `doctor` shows `stale` until
+  the user runs it.
+- Document Homebrew as the main install in the package README and keep
+  `install.mjs` for machines without Homebrew. Update `RELEASING.md` so the
+  release checks also install with `brew install` from the tap.
+
+**Why deferred:** The tap does not exist yet. The `current` link fixes the
+installer, and the Homebrew path detection should be written once a real
+Cellar layout can be tested.
+
+**Watch out for:** Someone moving from `install.mjs` to Homebrew has both
+`~/.local/bin/asana-sessions` and the brew one. Whichever comes first on the
+provider's PATH runs the hooks, and `setup` warns when that is another
+installation. The migration notes should say to run `asana-sessions remove`,
+then delete `~/.local/bin/asana-sessions` and `~/.local/lib/asana-sessions`.
+A cask would run install hooks that can write to the home directory, but
+Homebrew gives casks no `opt` link, so a cask would need its own stable path.

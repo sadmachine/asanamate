@@ -1,0 +1,33 @@
+packages/asana-sessions/install.mjs
+  s_1c6553fd94284f::t_9e10da2ec14d75 6,18,25-37,68,82-85,103-104,106
+packages/asana-sessions/src/setup.js
+  s_1c6553fd94284f::t_37260f083e0bc9 126-127
+  s_1c6553fd94284f::t_5a5e9203d8ca8a 24-25,29,79-86,123-125,304-305
+  s_1c6553fd94284f::t_c24dd5e21b9479 23
+packages/asana-sessions/test/install.test.js
+  s_1c6553fd94284f::t_c24dd5e21b9479 64-68,71-76,95,150
+  s_1c6553fd94284f::t_e853a7e90f400a 69-70
+packages/asana-sessions/README.md
+  s_1c6553fd94284f::t_3e1576ced858b4 40-41,43-48
+packages/asana-sessions/test/setup.test.js
+  s_1c6553fd94284f::t_2597597a0475fa 118-122,125-140
+  s_1c6553fd94284f::t_f97954223604de 2,124
+  s_1c6553fd94284f::t_d96ab2ed5669f3 123
+  s_1c6553fd94284f::t_d7832cc67b14e9 141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f345cb0ac3ae06d3ffb6e90776ad568b79f81b70",
+  "prompts": {},
+  "sessions": {
+    "s_1c6553fd94284f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "be793f0d-a7ae-4a40-9ec5-cc28056023a5",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

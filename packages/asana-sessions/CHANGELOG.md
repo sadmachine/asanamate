@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.5
+
+- Open Claude Code sessions keep their hooks across reinstalls. Claude reads
+  plugin files from the registered folder for as long as a session runs, and
+  setup registered each install's own directory, so after two more installs
+  pruned it, every hook failed with `Plugin directory does not exist`. The
+  installer now keeps a `<prefix>/lib/asana-sessions/current` symlink to the
+  active install, the command links through it, and setup registers the
+  Claude plugin through it. Installing 0.1.5 moves an existing Claude
+  registration to `current`; sessions opened before that install still use
+  the old path until they restart or run `/reload-plugins`.
+
 ## 0.1.4
 
 - `asanamate list` reads generated Claude titles concurrently, backward from

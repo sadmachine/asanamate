@@ -451,3 +451,35 @@ helper derives the Codex home from `transcript_path`, as designed. Not repeated
 for this guard-only hook change: interactive title generation before
 PostToolUse, the explicit skill, disable/remove, and missing-helper cases.
 Earlier observations above remain the evidence for those.
+
+## 0.1.5 live gate (2026-11-12)
+
+The user authorized a focused live gate for 0.1.5, which changes only how the
+installer and setup lay out and register the plugin. Versions: Claude Code
+2.1.322, Codex CLI 0.167.2, Node 24.18.0, and the pinned Claude Agent SDK
+0.3.301. Provider executables ran through `caveman`. Claude used a disposable
+CLAUDE_CONFIG_DIR, XDG_STATE_HOME, CODEX_HOME, and install prefix. No personal
+history was copied. Disposable homes were removed after verification.
+
+- Claude's plugin passed `claude plugin validate`.
+- The published `asana-sessions/v0.1.4` release assets matched their
+  checksums. Installed with the 0.1.4 installer, `setup --provider claude`
+  registered the plugin at its `install-*` directory and reported `ready`.
+- Installing the packed 0.1.5 tarball ran `setup --refresh`, which replaced
+  that registration. Claude's `readFromFolder` became
+  `<prefix>/lib/asana-sessions/current/plugins/claude/asana-sessions`, at
+  version 0.1.5, enabled, and `ready`.
+- Two more 0.1.5 installs, with the install directories aged past the prune
+  window, removed the 0.1.4 directory. The registered folder still resolved
+  through `current` and held `hooks.json`. Same-version reinstalls stayed
+  `ready` without re-registering.
+- `scripts/live-reentrancy.sh both` passed all 24 checks. One hook claimed
+  each link, both batches finished in 1 second, and no lock remained.
+
+Not run: a real Claude turn. The disposable CLAUDE_CONFIG_DIR has no login
+(Claude keeps credentials in the keychain per config directory), and the user
+chose to skip it. The hook command and `hooks.json` are unchanged since 0.1.4;
+only the registered folder path changed, which the migration checks cover.
+Codex registration is unchanged. Earlier observations above remain the
+evidence for hook firing, trust, the explicit skill, disable/remove, and
+missing-helper cases.

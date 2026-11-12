@@ -258,6 +258,10 @@ func (m *Model) startDrag(ms tea.Mouse) *drag {
 		switch p.id {
 		case paneReader:
 			d.link = viewportLink(m.reader, ms.X-area.x, ms.Y-area.y)
+			if text, ok := m.commentTextAt(area, ms.Y); ok {
+				area = text
+				d.anchor.x = max(area.x, min(d.anchor.x, area.x+area.w-1))
+			}
 		case paneActivityReader:
 			d.link = viewportLink(m.activity.reader, ms.X-area.x, ms.Y-area.y)
 		}
@@ -266,11 +270,25 @@ func (m *Model) startDrag(ms tea.Mouse) *drag {
 	default:
 		area = m.hits.boxContent()
 	}
-	if !area.contains(ms.X, ms.Y) {
+	if !area.contains(d.anchor.x, d.anchor.y) {
 		return nil
 	}
 	d.area = area
 	return d
+}
+
+// commentTextAt returns the screen cells of the comment text on row y of
+// the reader's content area, cut to the rows shown, so a drag from there
+// selects only that comment's text and not its gutter.
+func (m *Model) commentTextAt(area hitArea, y int) (hitArea, bool) {
+	offset := m.reader.YOffset()
+	t, ok := m.commentText[m.commentAt(offset+y-area.y)]
+	if !ok || offset+y-area.y < t.y {
+		return hitArea{}, false
+	}
+	// The cards sit one column in, past the reader's left padding.
+	top, bottom := max(area.y, area.y+t.y-offset), min(area.y+area.h, area.y+t.y-offset+t.h)
+	return hitArea{area.x + 1 + t.x, top, t.w, bottom - top}, true
 }
 
 // editorAt returns the text editor under x, y, with its top-left cell.

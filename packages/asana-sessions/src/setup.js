@@ -20,9 +20,13 @@ export const AUTO_LINK_RULE = 'Automatic linking: when a prompt you submit conta
   + 'the hook links that conversation to the task, even if you only quoted the link. It never replaces an existing link. '
   + 'For deliberate linking only, skip the plugins and run `asana-sessions link` yourself.';
 
+// Providers marked stable read plugin files from the registered folder while a
+// session runs, so they register through the installer's `current` link.
+// Codex copies plugins into its own cache and resolves the folder's path.
 const NATIVE = {
   claude: {
     label: 'Claude Code',
+    stable: true,
     register: (root) => [['plugin', 'marketplace', 'add', root], ['plugin', 'install', PLUGIN_ID]],
     unregister: [['plugin', 'uninstall', PLUGIN_ID], ['plugin', 'marketplace', 'remove', MARKETPLACE]],
     next: 'Start a new Claude Code session, or run /reload-plugins in an open one, to load the hooks and skill.',
@@ -72,6 +76,14 @@ function older(a, b) {
 
 const same = async (a, b) => Boolean(a && b) && (await realpath(a).catch(() => a)) === (await realpath(b).catch(() => b));
 
+// registeredPackage returns the package path a provider registers: the
+// installer's `current` link while it points at pkg, so the registration
+// outlives this install directory, and pkg itself otherwise.
+async function registeredPackage(name, pkg) {
+  const current = join(dirname(pkg), 'current');
+  return NATIVE[name].stable && (await same(current, pkg)) ? current : pkg;
+}
+
 function json(r) {
   try {
     return JSON.parse(r.stdout);
@@ -108,7 +120,11 @@ export async function pluginStatus(name, c, version) {
     return { state: 'not registered', detail: 'run `asana-sessions setup`' };
   }
   const source = native.source(entry);
-  if (entry.version !== c.version || !(await same(source, pluginRoot(name, c.pkg ?? PKG)))) {
+  const root = pluginRoot(name, await registeredPackage(name, c.pkg ?? PKG));
+  // A stable provider registered at this install's own directory is stale:
+  // its sessions break once later installs prune that directory.
+  const matches = native.stable ? source === root : await same(source, root);
+  if (entry.version !== c.version || !matches) {
     return { state: 'stale', detail: `registered ${display(entry.version)} from ${display(source ?? 'unknown')}; rerun \`asana-sessions setup\`` };
   }
   if (entry.enabled === false) {
@@ -285,7 +301,8 @@ async function register(c, name, state, say) {
     out.forEach(say);
     return false;
   }
-  if (!(await run(c, name, NATIVE[name].register(marketplaceRoot(name, c.pkg ?? PKG)), out))) {
+  const pkg = await registeredPackage(name, c.pkg ?? PKG);
+  if (!(await run(c, name, NATIVE[name].register(marketplaceRoot(name, pkg)), out))) {
     out.forEach(say);
     return false;
   }

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, symlink } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, realpath, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -114,4 +114,28 @@ test('refresh re-registers only stale registrations of the helper on PATH', asyn
   assert.equal(await refresh(elsewhere), 0);
   assert.deepEqual(elsewhere.calls, [], 'an installation hooks do not run never changes plugins');
   assert.match(elsewhere.output, /not refreshed/);
+});
+
+test('Claude registers through the installer current link; Codex keeps its resolved path', async (t) => {
+  const library = await mkdtemp(join(tmpdir(), 'asana-sessions-library-'));
+  t.after(() => rm(library, { recursive: true, force: true }));
+  const install = join(library, 'install-a');
+  for (const name of ['claude', 'codex']) await mkdir(join(install, 'plugins', name, 'asana-sessions'), { recursive: true });
+  await copyFile(join(pkg, 'package.json'), join(install, 'package.json')); // Setup checks its runtime first.
+  await symlink(install, join(library, 'current'));
+  const linked = (name, fields) => ({ ...context(name, fields), pkg: install });
+  const current = join(library, 'current', 'plugins', 'claude', 'asana-sessions');
+  const direct = join(install, 'plugins', 'claude', 'asana-sessions');
+
+  assert.equal((await pluginStatus('claude', linked('claude', { entry: entry('claude', { readFromFolder: current }) }))).state, 'ready');
+  const stale = linked('claude', { entry: entry('claude', { readFromFolder: direct }) });
+  assert.equal((await pluginStatus('claude', stale)).state, 'stale', 'a registration at the install directory breaks once pruned');
+  await setup(stale, { provider: 'claude' });
+  assert.ok(stale.calls.some((call) => call.join(' ') === `claude plugin marketplace add ${join(library, 'current', 'plugins', 'claude')}`));
+
+  const resolved = join(await realpath(install), 'plugins', 'codex', 'asana-sessions');
+  assert.equal((await pluginStatus('codex', linked('codex', { entry: entry('codex', { source: { path: resolved } }) }))).state, 'ready');
+  const codex = linked('codex');
+  await setup(codex, { provider: 'codex' });
+  assert.ok(codex.calls.some((call) => call.join(' ') === `codex plugin marketplace add ${join(install, 'plugins', 'codex')}`));
 });

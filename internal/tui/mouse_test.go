@@ -306,6 +306,26 @@ func TestDragSelectsTextInsideOnePane(t *testing.T) {
 	}
 }
 
+func TestDragInCommentSelectsOnlyItsText(t *testing.T) {
+	m, _ := editModel(t)
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 60})
+	tk := m.details["1"]
+	tk.Comments = append(tk.Comments, asana.Story{GID: "c1", CreatedBy: &asana.Ref{Name: "Amy"},
+		HTMLText: "<p>" + strings.Repeat("alpha ", 30) + "</p><p>omega</p>"})
+	m.details["1"] = tk
+	m.renderDetail(false)
+	m.reader.GotoBottom()
+	m.focusReaderPane()
+	x, y := cellOf(t, m, "alpha")
+	ox, oy := cellOf(t, m, "omega")
+	// From the gutter to past the pane's right edge, below the comment.
+	dragFrom(m, cell{x - 2, y}, cell{ox + 200, oy + 5})
+	got := m.selection.text(m.hits.frame)
+	if !strings.HasPrefix(got, "alpha") || !strings.HasSuffix(got, "omega") || strings.Contains(got, "│") {
+		t.Fatalf("selection = %q, want only the comment's text", got)
+	}
+}
+
 func TestDragOverLinkCopiesInsteadOfOpening(t *testing.T) {
 	m := splitModel(t)
 	m.focusReaderPane()

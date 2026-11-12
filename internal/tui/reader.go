@@ -25,29 +25,30 @@ type readerState struct {
 	viewImages     []asana.Attachment      // images the attachment viewer steps through
 	viewIndex      int                     // viewImages index of the image in the viewer
 	shownGID       string
-	draftSaved     bool              // the selected ticket has a saved comment draft
-	composerH      int               // rows the reader gives the composer pane; 0 without one
-	shownWidth     int               // text width shownGID was rendered at
-	shownAgents    string            // agents section rendered for shownGID
-	fieldKey       string            // selected cards view target; "" for none
-	showEmpty      bool              // the cards view lists empty custom fields; resets per ticket
-	showOthers     bool              // Agents lists agents on other branches; resets per ticket
-	allActivity    bool              // the cards view shows the All tab, every story, not only comments; kept across tickets
-	showComments   bool              // the cards view lists every comment or story, not only the newest; resets per ticket
-	openComments   map[string]bool   // comments shown in full instead of a preview, by target key; resets per ticket
-	sinceShow      bool              // the reader lists what is new since you looked; reader.since.show
-	sinceGID       string            // ticket sinceCutoff belongs to
-	sinceCutoff    string            // sinceGID's modified_at when last seen, saved as its visit began; "" when never seen
-	clipped        map[string]bool   // comments the last render cut to a preview, by target key
-	fieldLines     map[string]int    // reader line of each cards view target, by key
-	fieldEnds      map[string]int    // last reader line of multi-line targets, by key
-	cardTargets    []string          // cards view targets in reading order
-	flashKey       string            // section the jump menu just picked, drawn in the accent color; "" for none
-	flashGID       string            // ticket flashKey belongs to
-	flashSeq       uint64            // identifies the newest flash, so older timers leave it
-	flashLines     [2]int            // first and last reader line of a flashed open section; empty when first > last
-	detailSeq      uint64            // identifies the newest detail request per ticket
-	detailRequests map[string]uint64 // in-flight detail requests by ticket gid
+	draftSaved     bool               // the selected ticket has a saved comment draft
+	composerH      int                // rows the reader gives the composer pane; 0 without one
+	shownWidth     int                // text width shownGID was rendered at
+	shownAgents    string             // agents section rendered for shownGID
+	fieldKey       string             // selected cards view target; "" for none
+	showEmpty      bool               // the cards view lists empty custom fields; resets per ticket
+	showOthers     bool               // Agents lists agents on other branches; resets per ticket
+	allActivity    bool               // the cards view shows the All tab, every story, not only comments; kept across tickets
+	showComments   bool               // the cards view lists every comment or story, not only the newest; resets per ticket
+	openComments   map[string]bool    // comments shown in full instead of a preview, by target key; resets per ticket
+	sinceShow      bool               // the reader lists what is new since you looked; reader.since.show
+	sinceGID       string             // ticket sinceCutoff belongs to
+	sinceCutoff    string             // sinceGID's modified_at when last seen, saved as its visit began; "" when never seen
+	clipped        map[string]bool    // comments the last render cut to a preview, by target key
+	fieldLines     map[string]int     // reader line of each cards view target, by key
+	fieldEnds      map[string]int     // last reader line of multi-line targets, by key
+	commentText    map[string]hitArea // reader cells of each comment's text below its head, by key
+	cardTargets    []string           // cards view targets in reading order
+	flashKey       string             // section the jump menu just picked, drawn in the accent color; "" for none
+	flashGID       string             // ticket flashKey belongs to
+	flashSeq       uint64             // identifies the newest flash, so older timers leave it
+	flashLines     [2]int             // first and last reader line of a flashed open section; empty when first > last
+	detailSeq      uint64             // identifies the newest detail request per ticket
+	detailRequests map[string]uint64  // in-flight detail requests by ticket gid
 }
 
 // renderDetail renders the selected ticket in the reader, from the top or at

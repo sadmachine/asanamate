@@ -577,8 +577,9 @@ The mouse does what keys do, on what it points at:
   them can also open them itself.
 - **Drag:** selects text and copies it on release. The selection stays in
   the pane, modal, or editor where the drag started, so dragging over the
-  reader never picks up the list beside it. Trailing blanks are dropped from
-  each line. A drag that starts on a link copies instead of opening it. The
+  reader never picks up the list beside it. A drag that starts in a comment's
+  text stays in that text, leaving out its gutter and the rest of the ticket.
+  Trailing blanks are dropped from each line. A drag that starts on a link copies instead of opening it. The
   next key or click clears the highlight.
 
 Hold `shift` (`option` in iTerm2) as you drag for the terminal's own

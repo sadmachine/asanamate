@@ -80,12 +80,13 @@ func lastCommentKey(t ticket.Ticket) string {
 	return commentTarget(t.Comments[len(t.Comments)-1], len(t.Comments)-1)
 }
 
-// entryBlocks renders entries width columns wide, the first starting on
-// reader line line, as blocks to join with blank lines: each comment alone,
-// and consecutive changes together, a line each. It records each comment's
-// lines and target. Comments but lastKey and opened ones keep preview lines
-// of text; 0 shows them in full.
-func (m *Model) entryBlocks(entries []keyedEntry, width, line, preview int, lastKey string) []string {
+// entryBlocks renders entries width columns wide from column col of the
+// cards, the first starting on reader line line, as blocks to join with
+// blank lines: each comment alone, and consecutive changes together, a line
+// each. It records each comment's lines, text cells, and target. Comments
+// but lastKey and opened ones keep preview lines of text; 0 shows them in
+// full.
+func (m *Model) entryBlocks(entries []keyedEntry, col, width, line, preview int, lastKey string) []string {
 	var blocks []string
 	event := false
 	for _, e := range entries {
@@ -111,6 +112,8 @@ func (m *Model) entryBlocks(entries []keyedEntry, width, line, preview int, last
 		block, clipped := m.comment(e.Story, width, m.fieldKey == e.key, cut)
 		m.clipped[e.key] = clipped
 		m.fieldEnds[e.key] = line + lipgloss.Height(block) - 1
+		// The text sits past the two-column gutter, below the head.
+		m.commentText[e.key] = hitArea{col + 2, line + 1, width - 2, lipgloss.Height(block) - 1}
 		line += lipgloss.Height(block) + 1
 		blocks = append(blocks, block)
 	}
@@ -124,7 +127,7 @@ func (m *Model) sinceCard(fresh []keyedEntry, width, top int) string {
 	if len(fresh) == 0 {
 		return ""
 	}
-	body := strings.Join(m.entryBlocks(fresh, width-4, top+1, 0, ""), "\n\n")
+	body := strings.Join(m.entryBlocks(fresh, 2, width-4, top+1, 0, ""), "\n\n")
 	title := warnStyle.Bold(true).Render("Since you looked") + dimStyle.Render(fmt.Sprintf(" %d", len(fresh)))
 	return m.box(title, body, width, warnStyle.GetForeground())
 }

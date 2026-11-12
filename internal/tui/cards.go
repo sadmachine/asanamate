@@ -30,6 +30,7 @@ const sideBySideW = 90
 // m.fieldLines, and the last line of each multi-line one in m.fieldEnds.
 func (m *Model) renderCards(t ticket.Ticket, width int) string {
 	m.fieldLines, m.fieldEnds, m.clipped = map[string]int{}, map[string]int{}, map[string]bool{}
+	m.commentText = map[string]hitArea{}
 	head := m.titleHead(t, width)
 	if line := m.branchLine(t.Task, width); line != "" {
 		head += "\n" + line
@@ -216,7 +217,7 @@ func (m *Model) renderCards(t ticket.Ticket, width int) string {
 			rest = rest[len(rest)-latest:]
 			line += 2
 		}
-		items = append(items, m.entryBlocks(rest, width, line, opts.PreviewLines, lastCommentKey(t))...)
+		items = append(items, m.entryBlocks(rest, 0, width, line, opts.PreviewLines, lastCommentKey(t))...)
 	}
 	addComment := m.addRow(commentKey, "+ Add comment")
 	activity := m.tabs(t, width) + "\n" + addComment

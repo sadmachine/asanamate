@@ -428,9 +428,20 @@ type Action struct {
 	// runs; the typed text reaches the command as $ASANAMATE_INPUT_FILE.
 	Input         string `toml:"input"`
 	ConfirmWrites *bool  `toml:"confirm_writes"`
+	// Block covers the TUI with a loading modal until a background action
+	// exits.
+	Block bool `toml:"block"`
+	// Refresh reloads the ticket after the action exits. NewAction turns it
+	// on, so a file that omits it refreshes.
+	Refresh bool `toml:"refresh"`
 	// File is the action's file name in ActionsDir without .toml, which
 	// hooks name it by; set by Load.
 	File string `toml:"-"`
+}
+
+// NewAction returns the values an action file's omitted keys take.
+func NewAction() Action {
+	return Action{Mode: ModeForeground, Refresh: true}
 }
 
 // Interactive reports whether running the action can ask for something or
@@ -576,6 +587,9 @@ func (a Action) validate() error {
 	}
 	if err := oneOf("context", a.Context, "", ContextComment); err != nil {
 		return err
+	}
+	if a.Block && a.Mode != ModeBackground {
+		return errors.New(`block requires mode = "background"`)
 	}
 	if len([]rune(a.Key)) != 1 {
 		return errors.New("key must be a single character")

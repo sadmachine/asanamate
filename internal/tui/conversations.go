@@ -363,7 +363,7 @@ func (m *Model) focusConversation(t ticket.Ticket, selected conversations.Record
 		m.setStatus(statusError, "Focus agent failed: "+err.Error())
 		return nil
 	}
-	return m.runBackground("Focus agent", cmd, "refresh conversations before retrying")
+	return m.runBackground(actionDoneMsg{name: "Focus agent"}, cmd, "refresh conversations before retrying")
 }
 
 // focusAgent runs agents.focus in the background for a, with the exports an

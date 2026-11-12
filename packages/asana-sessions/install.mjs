@@ -3,7 +3,7 @@
 import { spawnSync } from 'node:child_process';
 import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, stat, symlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 
 // Install directories younger than this may belong to a concurrent install.
 const PRUNE_AGE_MS = 60 * 60 * 1000;
@@ -15,11 +15,24 @@ function run(command, args, options = {}) {
   return result.stdout;
 }
 
-async function checkCommand(path) {
+async function checkLink(path) {
   const entry = await lstat(path).catch((error) => {
     if (error.code !== 'ENOENT') throw error;
   });
   if (entry && !entry.isSymbolicLink()) throw new Error(`Refusing to replace existing file or directory: ${path}`);
+}
+
+// replaceLink atomically points path at target. Concurrent installs can only
+// switch between complete installations; running processes keep their files.
+async function replaceLink(target, path) {
+  const staging = await mkdtemp(join(dirname(path), `.${basename(path)}-`));
+  try {
+    await symlink(target, join(staging, 'link'));
+    await checkLink(path);
+    await rename(join(staging, 'link'), path);
+  } finally {
+    await rm(staging, { recursive: true, force: true });
+  }
 }
 
 // installDirectory returns the install directory the command links to, if any.
@@ -52,7 +65,7 @@ async function install(archive, prefix) {
   const command = join(bin, 'asana-sessions');
   let library = join(prefix, 'lib', 'asana-sessions');
   await mkdir(bin, { recursive: true });
-  await checkCommand(command);
+  await checkLink(command);
 
   // npm archives contain only regular files and directories under package/.
   // Reject traversal and links before extracting into the installation tree.
@@ -66,9 +79,12 @@ async function install(archive, prefix) {
 
   await mkdir(library, { recursive: true });
   library = await realpath(library);
+  // Claude reads registered plugin files from this stable path for as long as
+  // a session runs, so pruning an old install directory cannot break its hooks.
+  const current = join(library, 'current');
+  await checkLink(current);
   const previous = await installDirectory(command, library);
   const directory = await mkdtemp(join(library, 'install-'));
-  let linkDirectory;
   let installed = false;
   try {
     run('tar', ['-xzf', archive, '-C', directory, '--strip-components=1', '--no-same-owner', '--no-same-permissions']);
@@ -84,14 +100,10 @@ async function install(archive, prefix) {
     await chmod(executable, 0o755);
     run(process.execPath, [executable, 'version']);
 
-    // Each installation gets its own directory. Concurrent installs can only
-    // switch between complete installations; running processes keep their files.
-    linkDirectory = await mkdtemp(join(bin, '.asana-sessions-'));
-    const link = join(linkDirectory, 'command');
-    await symlink(executable, link);
-    await checkCommand(command);
-    await rename(link, command);
+    // Each installation gets its own directory; the command follows current.
+    await replaceLink(directory, current);
     installed = true;
+    await replaceLink(join(current, 'bin', 'asana-sessions.js'), command);
     console.log(`Installed asana-sessions ${pkg.version}: ${command}`);
     console.log(`
 If asanamate-ccmux is installed, you can link running agents to Asana tickets using asana-sessions.
@@ -104,7 +116,6 @@ This is optional and independent of conversation history. Existing repo/branch m
 Preserve custom agent commands unless you intend to replace them. Restart asanamate after editing config.
 Installation has not changed your configuration.`);
   } finally {
-    if (linkDirectory) await rm(linkDirectory, { recursive: true, force: true });
     if (!installed) await rm(directory, { recursive: true, force: true });
   }
   // Registered plugins point at the previous installation's hooks until

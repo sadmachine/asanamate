@@ -37,11 +37,15 @@ on every provider's `PATH`, before any older npm-global installation.
 
 The installer unpacks into a separate directory under
 `<prefix>/lib/asana-sessions`, runs `npm ci --omit=dev` against the shipped
-shrinkwrap, and switches the executable symlink only after installation succeeds.
+shrinkwrap, and switches the `<prefix>/lib/asana-sessions/current` symlink to it
+only after installation succeeds. The command links through `current`.
 An unsuccessful install leaves the current command intact. Existing ordinary
-files or directories at the command path are never replaced. The previous
-install directory remains available to processes and plugins already using it;
-after plugins refresh, older install directories are removed.
+files or directories at the command or `current` path are never replaced. The
+previous install directory remains available to processes already using it;
+after plugins refresh, older install directories are removed. Claude Code reads
+plugin files from the registered folder while a session runs, so setup registers
+the Claude plugin through `current`: open sessions keep their hooks across
+installs. Codex copies the plugin into its own cache.
 
 Dependencies install only at installation time. Package CI targets Node 22, 24,
 and 26 on Linux and Node 26 on macOS. Use this installer rather than `npm install --global`:

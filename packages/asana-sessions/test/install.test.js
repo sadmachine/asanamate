@@ -61,6 +61,19 @@ test('installer handles spaces and upgrades without removing running installatio
   assert.equal(execFileSync(process.execPath, [old], { encoding: 'utf8' }), '0.0.1\n');
 });
 
+test('installer keeps a stable current link that follows each upgrade', async (t) => {
+  const { root, prefix, command, library } = await fixture(t);
+  for (const version of ['0.0.1', '0.0.2']) {
+    const result = install(await archive(root, version), prefix);
+    assert.equal(result.status, 0, result.stderr);
+    const current = join(await realpath(library), 'current');
+    const throughCurrent = join(current, 'bin', 'asana-sessions.js');
+    assert.equal(await readlink(command), throughCurrent);
+    assert.equal(await realpath(current), dirname(dirname(await realpath(command))));
+    assert.equal(execFileSync(process.execPath, [throughCurrent], { encoding: 'utf8' }), `${version}\n`);
+  }
+});
+
 test('installer keeps only the current, previous, and recent installations', async (t) => {
   const { root, prefix, command, library } = await fixture(t);
   const installDir = async () => dirname(dirname(await realpath(command)));
@@ -79,7 +92,7 @@ test('installer keeps only the current, previous, and recent installations', asy
   assert.equal(result.status, 0, result.stderr);
   const current = await installDir();
   const names = (await readdir(library)).sort();
-  assert.deepEqual(names, [basename(current), basename(installed[2]), 'keep-me'].sort());
+  assert.deepEqual(names, [basename(current), basename(installed[2]), 'current', 'keep-me'].sort());
 });
 
 test('failed dependency installation preserves command and cleans staging files', async (t) => {
@@ -134,6 +147,6 @@ test('concurrent installers switch only between complete installations', async (
   const archives = await Promise.all(['0.0.1', '0.0.2'].map((version) => archive(root, version)));
   await Promise.all(archives.map((path) => execute(process.execPath, [installer, path, '--prefix', prefix])));
   assert.match(execFileSync(process.execPath, [command], { encoding: 'utf8' }), /^0\.0\.[12]\n$/);
-  assert.equal((await readdir(library)).length, 2);
+  assert.equal((await readdir(library)).length, 3);
   assert.deepEqual(await readdir(dirname(command)), ['asana-sessions']);
 });

@@ -4,10 +4,11 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"slices"
 	"testing"
 )
 
-func TestDescends(t *testing.T) {
+func TestProcessArgsAndDescends(t *testing.T) {
 	ctx := context.Background()
 	cmd := exec.Command("sleep", "30")
 	if err := cmd.Start(); err != nil {
@@ -16,6 +17,12 @@ func TestDescends(t *testing.T) {
 	t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait() })
 	other := cmd.Process.Pid
 
+	if got := processArgs(ctx, other); !slices.Equal(got, []string{"sleep", "30"}) {
+		t.Errorf("processArgs = %q", got)
+	}
+	if got := processArgs(ctx, 0); got != nil {
+		t.Errorf("processArgs(0) = %q", got)
+	}
 	if !descends(ctx, os.Getpid(), os.Getppid()) || !descends(ctx, other, os.Getpid()) {
 		t.Error("want a process to descend from its parent")
 	}

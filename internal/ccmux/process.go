@@ -7,6 +7,19 @@ import (
 	"strings"
 )
 
+// processArgs is process pid's command line split on spaces, nil when unknown.
+// An argument containing a space splits too, so callers match whole tokens.
+func processArgs(ctx context.Context, pid int) []string {
+	if pid <= 0 {
+		return nil
+	}
+	out, err := exec.CommandContext(ctx, "ps", "-o", "args=", "-p", strconv.Itoa(pid)).Output()
+	if err != nil {
+		return nil
+	}
+	return strings.Fields(string(out))
+}
+
 // descends reports whether process pid is root or runs under it.
 func descends(ctx context.Context, pid, root int) bool {
 	out, err := exec.CommandContext(ctx, "ps", "-A", "-o", "pid=,ppid=").Output()

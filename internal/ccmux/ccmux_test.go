@@ -51,7 +51,7 @@ func reported() map[string]live {
 }
 
 func TestParse(t *testing.T) {
-	got, err := parse([]byte(ccmuxJSON), reported())
+	got, err := parse([]byte(ccmuxJSON), reported(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestParse(t *testing.T) {
 			t.Errorf("session %d = %+v, want %+v", i, got[i], want[i])
 		}
 	}
-	if _, err := parse([]byte("not json"), nil); err == nil {
+	if _, err := parse([]byte("not json"), nil, nil); err == nil {
 		t.Fatal("want a parse error")
 	}
 }
@@ -100,7 +100,7 @@ func TestListWithoutCcmux(t *testing.T) {
 // for the preset's cases). A status ccmux reports that is no state name still
 // maps through agents.states.
 func TestOutputThroughAgentsCommand(t *testing.T) {
-	list, err := parse([]byte(ccmuxJSON), reported())
+	list, err := parse([]byte(ccmuxJSON), reported(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,5 +214,68 @@ func TestReadClaudeSessions(t *testing.T) {
 	readClaudeSessions(dir, got)
 	if len(got) != 1 || got["a"].State != agents.Working || !got["a"].At.Equal(time.UnixMilli(1790000000000)) {
 		t.Fatalf("got %+v", got)
+	}
+}
+
+// A pane-tracked Codex session without a native or hook-reported ID takes the
+// thread its process was resumed with; one the hook named keeps that ID.
+func TestParseResumedThread(t *testing.T) {
+	data := `[
+ {"id":"codex_pane8","agentType":"codex","trackingMode":"pane","tmuxPane":"%8","pid":88,"cwd":"/r","status":"working","paneTitle":"⠼ Fix editor | r"},
+ {"id":"codex_pane9","agentType":"codex","trackingMode":"pane","tmuxPane":"%9","pid":99,"cwd":"/r","status":"working","paneTitle":"⠼ Fix editor | r"}
+]`
+	reported := map[string]live{"hooked": {State: agents.Working, At: time.Now(), Pane: "%9"}}
+	var asked []int
+	resumed := func(pid int, title string) string {
+		asked = append(asked, pid)
+		if title != "⠼ Fix editor | r" {
+			t.Errorf("title = %q", title)
+		}
+		return "resumed"
+	}
+	got, err := parse([]byte(data), reported, resumed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].SessionID != "resumed" || got[1].SessionID != "hooked" || len(asked) != 1 || asked[0] != 88 {
+		t.Fatalf("got %+v, asked %v", got, asked)
+	}
+}
+
+func TestResumedThread(t *testing.T) {
+	const id = "01a1d19c-92eb-7963-ab8d-25feca8f543e"
+	home := t.TempDir()
+	index := `{"id":"` + id + `","thread_name":"Merge release for PHP 8.4","updated_at":"2026-11-12T21:15:40Z"}
+{"id":"01a1d19c-9309-7cd1-b249-a72d2efa14da","thread_name":"Guardian review"}
+not json
+{"id":"` + id + `","thread_name":"Merge release for PHP 8.4 [asana:1212429826770825]"}
+`
+	if err := os.WriteFile(filepath.Join(home, "session_index.jsonl"), []byte(index), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	resume := []string{"/opt/homebrew/bin/codex", "resume", id}
+	for _, c := range []struct {
+		name  string
+		args  []string
+		title string
+		home  string
+		want  string
+	}{
+		{"shortened current name", resume, "⠹ Merge release for PHP 8.4 [asana:121242982677... | fuse", home, id},
+		{"name from before a rename", resume, "Merge release for PHP 8.4 | fuse", home, id},
+		{"waiting prefix", resume, "[ ! ] Action Required | Merge release for PHP 8.4 | fuse", home, id},
+		{"options before the ID", []string{"codex", "resume", "-m", "gpt", id}, "Merge release for PHP 8.4 | fuse", home, id},
+		{"another thread after /new", resume, "Guardian review | fuse", home, ""},
+		{"unnamed thread", resume, "fuse", home, ""},
+		{"shortened other name", resume, "Merge release for PHP 9... | fuse", home, ""},
+		{"not resumed", []string{"codex"}, "Merge release for PHP 8.4 | fuse", home, ""},
+		{"resume --last", []string{"codex", "resume", "--last"}, "Merge release for PHP 8.4 | fuse", home, ""},
+		{"other program", []string{"node", "resume", id}, "Merge release for PHP 8.4 | fuse", home, ""},
+		{"no Codex home", resume, "Merge release for PHP 8.4 | fuse", "", ""},
+		{"no session index", resume, "Merge release for PHP 8.4 | fuse", t.TempDir(), ""},
+	} {
+		if got := resumedThread(c.args, c.title, c.home); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
 	}
 }

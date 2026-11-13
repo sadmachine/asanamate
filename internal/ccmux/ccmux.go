@@ -4,11 +4,15 @@
 package ccmux
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -29,7 +33,8 @@ const homepage = "https://github.com/motherskitchenblr2/ccmux"
 // report is newer than ccmux's, else a Codex pane title's state. Statuses
 // other than these pass through as ccmux reports them. ccmux knows no session
 // ID for a pane-tracked Codex session, so it takes the one the Codex hook last
-// reported from that tmux pane.
+// reported from that tmux pane, else the one Codex was resumed with when the
+// pane title still shows that thread (see resumedThread).
 func List(ctx context.Context, hookDir string) ([]agents.Agent, error) {
 	if _, err := exec.LookPath(command[0]); err != nil {
 		return nil, fmt.Errorf("%s not installed; see %s", command[0], homepage)
@@ -38,10 +43,15 @@ func List(ctx context.Context, hookDir string) ([]agents.Agent, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ccmux show --json failed: %w", err)
 	}
-	return parse(out, liveStates(hookDir))
+	codexHome, _ := CodexHome()
+	return parse(out, liveStates(hookDir), func(pid int, title string) string {
+		return resumedThread(processArgs(ctx, pid), title, codexHome)
+	})
 }
 
-func parse(data []byte, reported map[string]live) ([]agents.Agent, error) {
+// parse reads ccmux's sessions. resumed names a pane-tracked Codex session's
+// thread from its process and pane title, "" when unsure; nil skips it.
+func parse(data []byte, reported map[string]live, resumed func(pid int, paneTitle string) string) ([]agents.Agent, error) {
 	var sessions []struct {
 		ID             string   `json:"id"`
 		Cwd            string   `json:"cwd"`
@@ -57,6 +67,7 @@ func parse(data []byte, reported map[string]live) ([]agents.Agent, error) {
 		ChangedAt      *string  `json:"statusChangedAt"`
 		AgentType      string   `json:"agentType"`
 		TrackingMode   string   `json:"trackingMode"`
+		PID            int      `json:"pid"`
 	}
 	if err := json.Unmarshal(data, &sessions); err != nil {
 		return nil, fmt.Errorf("parsing ccmux output: %w", err)
@@ -69,6 +80,9 @@ func parse(data []byte, reported map[string]live) ([]agents.Agent, error) {
 			paneStatus, a.Title = codexPane(s.PaneTitle)
 			if a.SessionID == "" {
 				a.SessionID = paneSession(reported, s.TmuxPane)
+			}
+			if a.SessionID == "" && resumed != nil {
+				a.SessionID = resumed(s.PID, s.PaneTitle)
 			}
 		}
 		if len(s.Prompts) > 0 && agents.Title(s.Prompts[0]) != "" {
@@ -145,11 +159,91 @@ const codexPaneWaiting = "[ ! ] Action Required"
 // status is "" without a prefix. ccmux can leave these sessions "idle" while
 // Codex works, so the prefix overrides only an "idle" status.
 func codexPane(pane string) (status, rest string) {
+	status, rest = codexPaneRaw(pane)
+	return status, agents.Title(rest)
+}
+
+// codexPaneRaw is codexPane without shortening the title.
+func codexPaneRaw(pane string) (status, rest string) {
 	if rest, ok := strings.CutPrefix(pane, codexPaneWaiting); ok {
-		return string(agents.Waiting), agents.Title(strings.TrimPrefix(strings.TrimSpace(rest), "|"))
+		return string(agents.Waiting), strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(rest), "|"))
 	}
 	if r, size := utf8.DecodeRuneInString(pane); r >= 0x2800 && r <= 0x28FF {
-		return string(agents.Working), agents.Title(pane[size:])
+		return string(agents.Working), strings.TrimSpace(pane[size:])
 	}
-	return "", agents.Title(pane)
+	return "", strings.TrimSpace(pane)
+}
+
+// resumedThread is the thread a Codex process with command line args was
+// resumed with (`codex resume <id>`), "" when its pane title,
+// "<thread name> | <dir>", no longer shows one of that thread's names in
+// codexHome. Codex keeps its arguments after /new switches threads, and its
+// app-server daemon runs hooks outside the pane, so the title is the only
+// check left that the pane still shows the thread.
+func resumedThread(args []string, paneTitle, codexHome string) string {
+	id := resumeArg(args)
+	if id == "" || codexHome == "" {
+		return ""
+	}
+	_, title := codexPaneRaw(paneTitle)
+	if i := strings.LastIndex(title, " | "); i >= 0 {
+		title = title[:i]
+	}
+	if !showsName(title, threadNames(filepath.Join(codexHome, "session_index.jsonl"), id)) {
+		return ""
+	}
+	return id
+}
+
+// threadID matches a Codex thread ID.
+var threadID = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+// resumeArg is the thread ID in `codex resume [options] <id>` arguments, ""
+// for any other command.
+func resumeArg(args []string) string {
+	if len(args) < 3 || filepath.Base(args[0]) != "codex" || args[1] != "resume" {
+		return ""
+	}
+	for _, a := range args[2:] {
+		if threadID.MatchString(a) {
+			return a
+		}
+	}
+	return ""
+}
+
+// threadNames lists every name thread id has had in Codex's session index,
+// one JSON object per line, appended on each rename. A running Codex can show
+// a name from before a rename.
+func threadNames(path, id string) []string {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+	var names []string
+	lines := bufio.NewScanner(f)
+	lines.Buffer(nil, 1<<20)
+	for lines.Scan() {
+		var e struct {
+			ID   string `json:"id"`
+			Name string `json:"thread_name"`
+		}
+		if json.Unmarshal(lines.Bytes(), &e) == nil && e.ID == id && e.Name != "" {
+			names = append(names, e.Name)
+		}
+	}
+	return names
+}
+
+// showsName reports whether title is one of names, or the start of a longer
+// one followed by "...", as Codex shortens long names.
+func showsName(title string, names []string) bool {
+	short, cut := strings.CutSuffix(title, "...")
+	for _, n := range names {
+		if n == title || cut && short != "" && len(n) > len(short) && strings.HasPrefix(n, short) {
+			return true
+		}
+	}
+	return false
 }

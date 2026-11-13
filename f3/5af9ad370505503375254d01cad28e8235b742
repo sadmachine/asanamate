@@ -1,0 +1,21 @@
+packages/asana-sessions/npm-shrinkwrap.json
+  s_527c99e9d1a04d::t_a262da3ff04cbf 195-197,844-846
+packages/asana-sessions/CHANGELOG.md
+  s_527c99e9d1a04d::t_f165e8517a7b71 3-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f35af9ad370505503375254d01cad28e8235b742",
+  "prompts": {},
+  "sessions": {
+    "s_527c99e9d1a04d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f92ae2f2-0cc2-433f-a4f4-bc6902366a8c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}

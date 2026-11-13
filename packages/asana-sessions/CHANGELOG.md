@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Update the shipped `hono` (4.13.18) and `@hono/node-server` (2.1.8)
+  dependencies to fix published vulnerabilities.
+
 ## 0.1.5
 
 - Open Claude Code sessions keep their hooks across reinstalls. Claude reads

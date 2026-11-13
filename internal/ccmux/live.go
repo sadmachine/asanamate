@@ -1,14 +1,17 @@
 package ccmux
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"io/fs"
 	"maps"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -77,8 +80,17 @@ func WriteHook(in io.Reader, dir, pane string) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	return safefile.Write(path, []byte(string(s)+"\n"+strings.TrimSpace(pane)+"\n"), 0o600)
+	data := string(s) + "\n"
+	if pane = strings.TrimSpace(pane); pane != "" {
+		data += panePrefix + pane + "\n"
+	}
+	return safefile.Write(path, []byte(data), 0o600)
 }
+
+// panePrefix marks a hook file's pane line. Hooks before it recorded
+// $TMUX_PANE unchecked, which names the wrong pane when Codex runs hooks in
+// its shared app-server daemon, so lines without it are ignored.
+const panePrefix = "pane "
 
 // RunHook serves `hook codex`: it records the Codex hook event on in, with
 // the tmux pane Codex runs in. It never fails: Codex runs it on every event,
@@ -88,8 +100,30 @@ func RunHook(args []string, in io.Reader) {
 		return
 	}
 	if stateDir, err := config.StateDir(); err == nil {
-		_ = WriteHook(in, HookDir(stateDir), os.Getenv("TMUX_PANE"))
+		_ = WriteHook(in, HookDir(stateDir), hookPane())
 	}
+}
+
+// hookPane is the tmux pane the hook runs in, "" when unknown. Codex can run
+// hooks in a shared app-server daemon, whose $TMUX_PANE is the pane that
+// started the daemon, so the pane counts only when this process runs under
+// the pane's own process.
+func hookPane() string {
+	pane := os.Getenv("TMUX_PANE")
+	if pane == "" {
+		return ""
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "tmux", "display-message", "-p", "-t", pane, "#{pane_pid}").Output()
+	if err != nil {
+		return ""
+	}
+	root, err := strconv.Atoi(strings.TrimSpace(string(out)))
+	if err != nil || !descends(ctx, os.Getpid(), root) {
+		return ""
+	}
+	return pane
 }
 
 // validSessionID reports whether id is safe to use as a file name.
@@ -156,7 +190,7 @@ func readClaudeSessions(dir string, into map[string]live) {
 }
 
 // readHookFiles reads the files WriteHook leaves in dir: a state line, then a
-// pane line that files from older hooks lack.
+// pane line when the hook knew its pane.
 func readHookFiles(dir string, into map[string]live) {
 	entries, _ := os.ReadDir(dir)
 	for _, e := range entries {
@@ -168,7 +202,11 @@ func readHookFiles(dir string, into map[string]live) {
 		if err != nil || ierr != nil {
 			continue
 		}
-		state, pane, _ := strings.Cut(strings.TrimSpace(string(data)), "\n")
+		state, rest, _ := strings.Cut(strings.TrimSpace(string(data)), "\n")
+		pane, ok := strings.CutPrefix(strings.TrimSpace(rest), panePrefix)
+		if !ok {
+			pane = "" // an older hook's unchecked pane
+		}
 		if s := agents.State(state); s != agents.Unknown && slices.Contains(agents.States, s) {
 			into[e.Name()] = live{State: s, At: info.ModTime(), Pane: strings.TrimSpace(pane)}
 		}

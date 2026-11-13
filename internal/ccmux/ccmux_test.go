@@ -156,6 +156,16 @@ func TestHookRecordsSessionState(t *testing.T) {
 	if got["s1"].Pane != "%3" {
 		t.Fatalf("pane = %q, want %%3", got["s1"].Pane)
 	}
+	// Hooks before the pane check recorded $TMUX_PANE as is, which can name
+	// the pane that started Codex's daemon; their pane is ignored.
+	if err := os.WriteFile(filepath.Join(dir, "legacy"), []byte("working\n%61\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got = map[string]live{}
+	readHookFiles(dir, got)
+	if got["legacy"].State != agents.Working || got["legacy"].Pane != "" {
+		t.Fatalf("legacy = %+v, want working without a pane", got["legacy"])
+	}
 	hook("PermissionRequest", "s1")
 	if got := state("s1"); got != agents.Waiting {
 		t.Fatalf("after permission request = %q", got)

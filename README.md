@@ -1848,7 +1848,9 @@ reported itself, when that report is newer than ccmux's:
   (else `~/.local/state/asanamate/agents/`), with the tmux pane Codex runs
   in. ccmux reports no session ID for Codex, so the adapter takes the one the
   hook last recorded from the session's pane; that ID links the agent to its
-  saved conversation.
+  saved conversation. The hook records a pane only when it runs inside that
+  pane: Codex's shared app-server daemon runs hooks outside every pane, so
+  its sessions record none.
   Without the hook, Codex states fall back to the Codex pane title, and are
   inaccurate or wrong when the title format changes.
 

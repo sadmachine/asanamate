@@ -1,0 +1,32 @@
+internal/ccmux/live.go
+  s_527c99e9d1a04d::t_f516804c0673fe 206-208
+  s_527c99e9d1a04d::t_b10da005a34b99 4,11,14,83-87,90-94,103-114,116-126,193,205
+  s_527c99e9d1a04d::t_e55bc76b695f13 209
+internal/ccmux/process.go
+  s_527c99e9d1a04d::t_01f89ba16a1b44 1-35
+internal/ccmux/ccmux_test.go
+  s_527c99e9d1a04d::t_4a77a275333fb0 159-163,168
+  s_527c99e9d1a04d::t_7a24b7f9b61b40 164-167
+internal/ccmux/process_test.go
+  s_527c99e9d1a04d::t_7a24b7f9b61b40 1-9,11-39
+  s_527c99e9d1a04d::t_c6f5bddc78da6e 10
+README.md
+  s_527c99e9d1a04d::t_9aa044d7b666e0 1851-1852
+  s_527c99e9d1a04d::t_c6f5bddc78da6e 1853
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d1b213286a2120edf65816f0341a4f2c4fea6145",
+  "prompts": {},
+  "sessions": {
+    "s_527c99e9d1a04d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f92ae2f2-0cc2-433f-a4f4-bc6902366a8c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Austin Fishbaugh <austinfishbaugh@imarc.com>"
+    }
+  }
+}
